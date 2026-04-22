@@ -1,2 +1,0 @@
-int layout widget_initial 0x0
-int xml netlens_widget_info 0x0

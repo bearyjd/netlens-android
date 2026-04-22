@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import us.beary.netlens.core.data.NetLensDatabase
+import us.beary.netlens.core.data.dao.WolTargetDao
 import javax.inject.Singleton
 
 @Module
@@ -24,4 +25,8 @@ object DataModule {
         )
             .fallbackToDestructiveMigration()
             .build()
+
+    @Provides
+    fun provideWolTargetDao(database: NetLensDatabase): WolTargetDao =
+        database.wolTargetDao()
 }

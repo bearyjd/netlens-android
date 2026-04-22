@@ -1,0 +1,98 @@
+00:03:93	(hex)	Apple, Inc.
+3C:22:FB	(hex)	Apple, Inc.
+A4:83:E7	(hex)	Apple, Inc.
+00:A0:40	(hex)	Apple, Inc.
+AC:DE:48	(hex)	Apple, Inc.
+F0:B4:79	(hex)	Apple, Inc.
+D0:03:4B	(hex)	Apple, Inc.
+78:7B:8A	(hex)	Apple, Inc.
+00:07:AB	(hex)	Samsung Electronics Co.,Ltd
+08:D4:2B	(hex)	Samsung Electronics Co.,Ltd
+94:35:0A	(hex)	Samsung Electronics Co.,Ltd
+A8:7C:01	(hex)	Samsung Electronics Co.,Ltd
+C0:BD:D1	(hex)	Samsung Electronics Co.,Ltd
+3C:5A:B4	(hex)	Google, Inc.
+F4:F5:D8	(hex)	Google, Inc.
+54:60:09	(hex)	Google, Inc.
+A4:77:33	(hex)	Google, Inc.
+00:1B:21	(hex)	Intel Corporate
+68:05:CA	(hex)	Intel Corporate
+8C:EC:4B	(hex)	Intel Corporate
+48:51:B7	(hex)	Intel Corporate
+F8:63:3F	(hex)	Intel Corporate
+A0:36:9F	(hex)	Intel Corporate
+00:00:0C	(hex)	Cisco Systems, Inc
+00:1A:A1	(hex)	Cisco Systems, Inc
+00:25:45	(hex)	Cisco Systems, Inc
+58:97:1E	(hex)	Cisco Systems, Inc
+B8:27:EB	(hex)	Raspberry Pi Foundation
+DC:A6:32	(hex)	Raspberry Pi Foundation
+E4:5F:01	(hex)	Raspberry Pi Foundation
+D8:3A:DD	(hex)	Raspberry Pi Foundation
+00:14:22	(hex)	Dell Inc.
+B0:83:FE	(hex)	Dell Inc.
+24:B6:FD	(hex)	Dell Inc.
+F8:DB:88	(hex)	Dell Inc.
+00:1A:4B	(hex)	Hewlett Packard
+3C:D9:2B	(hex)	Hewlett Packard
+94:57:A5	(hex)	Hewlett Packard
+00:E0:FC	(hex)	Huawei Technologies Co.,Ltd
+48:46:FB	(hex)	Huawei Technologies Co.,Ltd
+CC:A2:23	(hex)	Huawei Technologies Co.,Ltd
+88:66:A5	(hex)	Huawei Technologies Co.,Ltd
+00:04:1F	(hex)	Sony Corporation
+00:13:A9	(hex)	Sony Corporation
+AC:9B:0A	(hex)	Sony Corporation
+00:50:F2	(hex)	Microsoft Corporation
+28:18:78	(hex)	Microsoft Corporation
+7C:1E:52	(hex)	Microsoft Corporation
+DC:53:60	(hex)	Microsoft Corporation
+50:C7:BF	(hex)	TP-Link Technologies Co.,Ltd
+60:32:B1	(hex)	TP-Link Technologies Co.,Ltd
+98:DA:C4	(hex)	TP-Link Technologies Co.,Ltd
+C0:25:E9	(hex)	TP-Link Technologies Co.,Ltd
+00:09:5B	(hex)	Netgear, Inc.
+A4:2B:8C	(hex)	Netgear, Inc.
+E0:91:F5	(hex)	Netgear, Inc.
+00:1A:92	(hex)	ASUSTek Computer Inc.
+1C:87:2C	(hex)	ASUSTek Computer Inc.
+04:D9:F5	(hex)	ASUSTek Computer Inc.
+00:1E:58	(hex)	D-Link Corporation
+B8:A3:86	(hex)	D-Link Corporation
+C4:A8:1D	(hex)	D-Link Corporation
+00:24:B2	(hex)	Netgear, Inc.
+00:1C:B3	(hex)	Apple, Inc.
+F4:8C:50	(hex)	Intel Corporate
+00:26:AB	(hex)	Seiko Epson Corporation
+B4:99:BA	(hex)	Hewlett Packard
+00:17:88	(hex)	Signify B.V.
+EC:B5:FA	(hex)	Signify B.V.
+00:1D:C9	(hex)	GainSpan Corp.
+44:65:0D	(hex)	Amazon Technologies Inc.
+F0:F0:A4	(hex)	Amazon Technologies Inc.
+40:B4:CD	(hex)	Amazon Technologies Inc.
+68:54:FD	(hex)	Amazon Technologies Inc.
+74:C2:46	(hex)	Amazon Technologies Inc.
+FC:65:DE	(hex)	Amazon Technologies Inc.
+30:AE:A4	(hex)	Espressif Inc.
+24:0A:C4	(hex)	Espressif Inc.
+CC:50:E3	(hex)	Espressif Inc.
+10:52:1C	(hex)	Espressif Inc.
+7C:DF:A1	(hex)	Espressif Inc.
+60:01:94	(hex)	Espressif Inc.
+84:CC:A8	(hex)	Espressif Inc.
+B4:E6:2D	(hex)	Espressif Inc.
+08:3A:F2	(hex)	Espressif Inc.
+A4:CF:12	(hex)	Espressif Inc.
+B0:B2:1C	(hex)	Espressif Inc.
+C8:2B:96	(hex)	Espressif Inc.
+EC:FA:BC	(hex)	Espressif Inc.
+34:86:5D	(hex)	Espressif Inc.
+00:1E:68	(hex)	Quanta Computer Inc.
+00:26:5A	(hex)	D-Link Corporation
+18:D6:C7	(hex)	TP-Link Technologies Co.,Ltd
+5C:E9:1E	(hex)	Samsung Electronics Co.,Ltd
+00:22:6B	(hex)	Cisco-Linksys, LLC
+00:06:25	(hex)	Linksys Group, Inc.
+2C:F0:5D	(hex)	Micro-Star International Co., Ltd.
+00:1D:60	(hex)	ASUSTek Computer Inc.
