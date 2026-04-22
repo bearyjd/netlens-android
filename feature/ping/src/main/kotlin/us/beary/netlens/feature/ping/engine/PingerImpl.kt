@@ -11,9 +11,21 @@ import javax.inject.Inject
 
 class PingerImpl @Inject constructor() : Pinger {
 
+    private companion object {
+        val HOST_PATTERN = Regex("^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\$")
+    }
+
+    private fun validateHost(host: String): String {
+        require(host.isNotBlank() && host.length <= 253 && !host.startsWith("-") && HOST_PATTERN.matches(host)) {
+            "Invalid host: must be a valid hostname or IPv4 address (IPv6 not supported)"
+        }
+        return host
+    }
+
     override fun ping(host: String, count: Int): Flow<PingResult> = callbackFlow {
+        val sanitized = validateHost(host)
         val process = withContext(Dispatchers.IO) {
-            ProcessBuilder("ping", "-c", count.toString(), host)
+            ProcessBuilder("ping", "-c", count.toString(), sanitized)
                 .redirectErrorStream(true)
                 .start()
         }
@@ -31,6 +43,9 @@ class PingerImpl @Inject constructor() : Pinger {
                 }
             }
             channel.close()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            channel.close()
+            throw e
         } catch (e: Exception) {
             channel.close(e)
         } finally {
