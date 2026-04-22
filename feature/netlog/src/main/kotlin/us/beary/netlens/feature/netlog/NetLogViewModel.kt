@@ -31,6 +31,7 @@ class NetLogViewModel @Inject constructor(
     init {
         networkEventDao.getRecent(MAX_DISPLAYED_EVENTS)
             .onEach { events -> _state.update { it.copy(events = events) } }
+            .catch { e -> _state.update { it.copy(error = e.message ?: "Failed to load events") } }
             .launchIn(viewModelScope)
     }
 

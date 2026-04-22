@@ -6,6 +6,7 @@ import us.beary.netlens.feature.whois.model.WhoisResult
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.net.InetAddress
 import java.net.Socket
 import javax.inject.Inject
 
@@ -122,12 +123,20 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
             Regex("^\\[?fe80:"),
         )
 
-        fun validateReferServer(server: String): String {
+        private fun validateReferServer(server: String): String {
             require(REFER_HOSTNAME_REGEX.matches(server)) {
                 "Invalid refer server hostname: $server"
             }
             require(BLOCKED_IP_PATTERNS.none { it.containsMatchIn(server) }) {
                 "Refer server points to a blocked address: $server"
+            }
+            val addresses = try {
+                InetAddress.getAllByName(server)
+            } catch (_: Exception) {
+                throw IllegalArgumentException("Cannot resolve refer server: $server")
+            }
+            require(addresses.none { it.isLoopbackAddress || it.isLinkLocalAddress || it.isSiteLocalAddress }) {
+                "Refer server resolves to a private/loopback address: $server"
             }
             return server
         }

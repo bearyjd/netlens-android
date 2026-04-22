@@ -176,7 +176,7 @@ private fun SwipeToDeleteEndpointCard(
     modifier: Modifier = Modifier,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
-    var deleted by remember { mutableStateOf(false) }
+    var deleted by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart && !deleted) {
