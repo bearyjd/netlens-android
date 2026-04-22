@@ -3,11 +3,14 @@ package us.beary.netlens.feature.whois
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import us.beary.netlens.feature.whois.engine.RdnsResolver
 import us.beary.netlens.feature.whois.engine.WhoisClient
 import us.beary.netlens.feature.whois.model.RdnsResult
@@ -47,7 +50,15 @@ class WhoisViewModel @Inject constructor(
                     val rdns = rdnsResolver.resolve(trimmed)
                     _state.value = WhoisUiState.Success(whois = null, rdns = rdns)
                 } else {
-                    val whoisDeferred = async { runCatching { whoisClient.query(trimmed) } }
+                    val whoisDeferred = async {
+                        try {
+                            Result.success(whoisClient.query(trimmed))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Result.failure(e)
+                        }
+                    }
                     val rdnsDeferred = async { resolveAndReverseDns(trimmed) }
 
                     val whoisResult = whoisDeferred.await()
@@ -64,6 +75,8 @@ class WhoisViewModel @Inject constructor(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = WhoisUiState.Error(e.message ?: "Lookup failed")
             }
@@ -71,15 +84,19 @@ class WhoisViewModel @Inject constructor(
     }
 
     private suspend fun resolveAndReverseDns(domain: String): RdnsResult? {
-        return runCatching {
-            val address = InetAddress.getByName(domain)
+        return try {
+            val address = withContext(Dispatchers.IO) { InetAddress.getByName(domain) }
             val ip = address.hostAddress ?: return null
             rdnsResolver.resolve(ip)
-        }.getOrNull()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private companion object {
-        val IP_REGEX = Regex("^\\d{1,3}(\\.\\d{1,3}){3}$")
+        val IP_REGEX = Regex("^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$")
 
         fun looksLikeIp(input: String): Boolean = IP_REGEX.matches(input)
     }

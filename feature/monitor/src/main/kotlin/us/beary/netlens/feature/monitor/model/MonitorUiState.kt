@@ -8,4 +8,5 @@ data class MonitorUiState(
     val selectedEndpoint: MonitoredEndpoint? = null,
     val checks: List<EndpointCheck> = emptyList(),
     val isChecking: Boolean = false,
+    val error: String? = null,
 )

@@ -6,6 +6,7 @@ import us.beary.netlens.feature.whois.model.WhoisResult
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.net.InetAddress
 import java.net.Socket
 import javax.inject.Inject
 
@@ -43,16 +44,19 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
             writer.flush()
             BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
                 .readText()
+                .take(MAX_RESPONSE_BYTES)
         }
     }
 
     private fun parseRefer(response: String): String? {
-        return response.lineSequence()
+        val raw = response.lineSequence()
             .map { it.trim() }
             .firstOrNull { it.startsWith("refer:", ignoreCase = true) }
             ?.substringAfter(":")
             ?.trim()
             ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return validateReferServer(raw)
     }
 
     private fun parseWhoisResponse(domain: String, raw: String): WhoisResult {
@@ -101,6 +105,41 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
         const val IANA_HOST = "whois.iana.org"
         const val WHOIS_PORT = 43
         const val TIMEOUT_MS = 10_000
+        const val MAX_RESPONSE_BYTES = 65_536
+
+        val REFER_HOSTNAME_REGEX = Regex(
+            "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$"
+        )
+
+        private val BLOCKED_IP_PATTERNS = listOf(
+            Regex("^127\\."),
+            Regex("^10\\."),
+            Regex("^192\\.168\\."),
+            Regex("^172\\.(1[6-9]|2\\d|3[01])\\."),
+            Regex("^0\\."),
+            Regex("^localhost$", RegexOption.IGNORE_CASE),
+            Regex("^\\[?::1]?$"),
+            Regex("^\\[?fd[0-9a-fA-F]{2}:"),
+            Regex("^\\[?fe80:"),
+        )
+
+        private fun validateReferServer(server: String): String {
+            require(REFER_HOSTNAME_REGEX.matches(server)) {
+                "Invalid refer server hostname: $server"
+            }
+            require(BLOCKED_IP_PATTERNS.none { it.containsMatchIn(server) }) {
+                "Refer server points to a blocked address: $server"
+            }
+            val addresses = try {
+                InetAddress.getAllByName(server)
+            } catch (_: Exception) {
+                throw IllegalArgumentException("Cannot resolve refer server: $server")
+            }
+            require(addresses.none { it.isLoopbackAddress || it.isLinkLocalAddress || it.isSiteLocalAddress }) {
+                "Refer server resolves to a private/loopback address: $server"
+            }
+            return server
+        }
 
         val HOSTNAME_REGEX = Regex(
             "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$"

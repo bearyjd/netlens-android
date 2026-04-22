@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import us.beary.netlens.feature.mdns.engine.MdnsScanner
@@ -45,9 +44,6 @@ class MdnsViewModel @Inject constructor(
                                 state.copy(error = e.message ?: "Discovery failed")
                             }
                         }
-                        .onCompletion {
-                            // Individual type scan completed
-                        }
                         .collect { service ->
                             _uiState.update { state ->
                                 val isDuplicate = state.services.any { existing ->
@@ -64,14 +60,9 @@ class MdnsViewModel @Inject constructor(
                 }
             }
         }
-
-        scanJob?.invokeOnCompletion {
-            _uiState.update { it.copy(isScanning = false) }
-        }
     }
 
     fun stopScan() {
-        mdnsScanner.stopDiscovery()
         scanJob?.cancel()
         scanJob = null
         _uiState.update { it.copy(isScanning = false) }

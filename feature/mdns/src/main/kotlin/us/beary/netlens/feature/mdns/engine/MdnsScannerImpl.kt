@@ -4,12 +4,17 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import us.beary.netlens.feature.mdns.model.MdnsService
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class MdnsScannerImpl @Inject constructor(
@@ -20,10 +25,9 @@ class MdnsScannerImpl @Inject constructor(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
-    @Volatile
-    private var activeListener: NsdManager.DiscoveryListener? = null
-
     override fun discoverServices(serviceType: String): Flow<MdnsService> = callbackFlow {
+        val resolveQueue = Channel<NsdServiceInfo>(Channel.UNLIMITED)
+
         val discoveryListener = object : NsdManager.DiscoveryListener {
 
             override fun onDiscoveryStarted(regType: String) {
@@ -31,9 +35,7 @@ class MdnsScannerImpl @Inject constructor(
             }
 
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-                resolveService(serviceInfo) { resolved ->
-                    resolved?.let { trySend(it) }
-                }
+                resolveQueue.trySend(serviceInfo)
             }
 
             override fun onServiceLost(serviceInfo: NsdServiceInfo) {
@@ -57,7 +59,13 @@ class MdnsScannerImpl @Inject constructor(
             }
         }
 
-        activeListener = discoveryListener
+        // Process resolves serially to avoid FAILURE_ALREADY_ACTIVE on API < 34
+        launch {
+            for (service in resolveQueue) {
+                val resolved = resolveServiceSuspending(service)
+                resolved?.let { trySend(it) }
+            }
+        }
 
         nsdManager.discoverServices(
             serviceType,
@@ -66,49 +74,53 @@ class MdnsScannerImpl @Inject constructor(
         )
 
         awaitClose {
+            resolveQueue.close()
             stopDiscoveryQuietly(discoveryListener)
-            activeListener = null
         }
     }
 
     override fun stopDiscovery() {
-        activeListener?.let { listener ->
-            stopDiscoveryQuietly(listener)
-            activeListener = null
-        }
+        // No-op: cleanup is handled by coroutine cancellation via awaitClose
     }
 
-    private fun resolveService(
+    private suspend fun resolveServiceSuspending(
         serviceInfo: NsdServiceInfo,
-        onResolved: (MdnsService?) -> Unit,
-    ) {
-        nsdManager.resolveService(
-            serviceInfo,
-            object : NsdManager.ResolveListener {
+    ): MdnsService? = suspendCancellableCoroutine { cont ->
+        try {
+            nsdManager.resolveService(
+                serviceInfo,
+                object : NsdManager.ResolveListener {
 
-                override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) {
-                    onResolved(null)
-                }
-
-                override fun onServiceResolved(info: NsdServiceInfo) {
-                    val attributes = buildMap {
-                        info.attributes.forEach { (key, value) ->
-                            put(key, value?.let { String(it, Charsets.UTF_8) } ?: "")
-                        }
+                    override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) {
+                        if (cont.isActive) cont.resume(null)
                     }
 
-                    onResolved(
-                        MdnsService(
-                            serviceName = info.serviceName,
-                            serviceType = info.serviceType,
-                            host = info.host?.hostAddress,
-                            port = info.port,
-                            attributes = attributes,
-                        ),
-                    )
-                }
-            },
-        )
+                    override fun onServiceResolved(info: NsdServiceInfo) {
+                        val attributes = buildMap {
+                            info.attributes.forEach { (key, value) ->
+                                put(key, value?.let { String(it, Charsets.UTF_8) } ?: "")
+                            }
+                        }
+
+                        if (cont.isActive) {
+                            cont.resume(
+                                MdnsService(
+                                    serviceName = info.serviceName,
+                                    serviceType = info.serviceType,
+                                    host = info.host?.hostAddress,
+                                    port = info.port,
+                                    attributes = attributes,
+                                ),
+                            )
+                        }
+                    }
+                },
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            if (cont.isActive) cont.resume(null)
+        }
     }
 
     private fun stopDiscoveryQuietly(listener: NsdManager.DiscoveryListener) {
