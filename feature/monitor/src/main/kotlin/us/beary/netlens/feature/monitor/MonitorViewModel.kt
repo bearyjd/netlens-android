@@ -4,16 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import us.beary.netlens.core.data.dao.EndpointDao
 import us.beary.netlens.core.data.model.MonitoredEndpoint
 import us.beary.netlens.feature.monitor.engine.EndpointChecker
 import us.beary.netlens.feature.monitor.model.MonitorUiState
+import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 
@@ -38,6 +41,7 @@ class MonitorViewModel @Inject constructor(
 
     fun addEndpoint(label: String, url: String, intervalSeconds: Int = 60) {
         val trimmedUrl = url.trim()
+        val host: String
         try {
             val parsed = URL(trimmedUrl)
             val scheme = parsed.protocol.lowercase()
@@ -45,17 +49,36 @@ class MonitorViewModel @Inject constructor(
                 _state.update { it.copy(error = "URL must use http or https scheme") }
                 return
             }
+            host = parsed.host
         } catch (_: Exception) {
             _state.update { it.copy(error = "Invalid URL format") }
             return
         }
         viewModelScope.launch {
+            if (isPrivateOrLoopback(host)) {
+                _state.update { it.copy(error = "Private or loopback addresses are not allowed") }
+                return@launch
+            }
             val endpoint = MonitoredEndpoint(
                 label = label.trim(),
                 url = trimmedUrl,
                 intervalSeconds = intervalSeconds,
             )
             endpointDao.insertEndpoint(endpoint)
+        }
+    }
+
+    private suspend fun isPrivateOrLoopback(host: String): Boolean {
+        if (host.equals("localhost", ignoreCase = true)) return true
+        val addresses = try {
+            withContext(Dispatchers.IO) {
+                InetAddress.getAllByName(host)
+            }
+        } catch (_: Exception) {
+            return true
+        }
+        return addresses.any { addr ->
+            addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isSiteLocalAddress
         }
     }
 

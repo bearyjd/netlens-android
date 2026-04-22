@@ -3,13 +3,15 @@ package us.beary.netlens.feature.whois.engine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.beary.netlens.feature.whois.model.RdnsResult
+import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.InetAddress
 import javax.inject.Inject
 
 class RdnsResolverImpl @Inject constructor() : RdnsResolver {
 
     override suspend fun resolve(ip: String): RdnsResult = withContext(Dispatchers.IO) {
-        require(IP_PATTERN.matches(ip)) { "Input must be a valid IP address, not a hostname: $ip" }
+        require(isValidIpLiteral(ip)) { "Input must be a valid IP address, not a hostname: $ip" }
         val address = InetAddress.getByName(ip)
         val hostName = address.canonicalHostName
         val hostnames = if (hostName == address.hostAddress) {
@@ -21,9 +23,19 @@ class RdnsResolverImpl @Inject constructor() : RdnsResolver {
     }
 
     private companion object {
-        val IP_PATTERN = Regex(
-            "^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$" +
-                "|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$",
+        private val IPV4_PATTERN = Regex(
+            "^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$",
         )
+
+        fun isValidIpLiteral(ip: String): Boolean {
+            if (IPV4_PATTERN.matches(ip)) return true
+            if (!ip.contains(':')) return false
+            return try {
+                val addr = InetAddress.getByName(ip)
+                addr is Inet4Address || addr is Inet6Address
+            } catch (_: Exception) {
+                false
+            }
+        }
     }
 }
