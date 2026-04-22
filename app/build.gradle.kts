@@ -23,6 +23,12 @@ dependencies {
     implementation(project(":feature:dns"))
     implementation(project(":feature:ping"))
     implementation(project(":feature:wol"))
+    implementation(project(":feature:tls"))
+    implementation(project(":feature:whois"))
+    implementation(project(":feature:httptester"))
+    implementation(project(":feature:mdns"))
+    implementation(project(":feature:netlog"))
+    implementation(project(":feature:monitor"))
 
     // Widget
     implementation(project(":widget"))
