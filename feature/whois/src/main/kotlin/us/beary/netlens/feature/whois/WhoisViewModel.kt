@@ -50,7 +50,15 @@ class WhoisViewModel @Inject constructor(
                     val rdns = rdnsResolver.resolve(trimmed)
                     _state.value = WhoisUiState.Success(whois = null, rdns = rdns)
                 } else {
-                    val whoisDeferred = async { runCatching { whoisClient.query(trimmed) } }
+                    val whoisDeferred = async {
+                        try {
+                            Result.success(whoisClient.query(trimmed))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Result.failure(e)
+                        }
+                    }
                     val rdnsDeferred = async { resolveAndReverseDns(trimmed) }
 
                     val whoisResult = whoisDeferred.await()

@@ -107,7 +107,7 @@ private fun isPrivateOrLoopback(host: String): Boolean {
     val addresses = try {
         InetAddress.getAllByName(host)
     } catch (_: Exception) {
-        return false
+        return true // fail-closed: can't resolve → block
     }
 
     return addresses.any { addr ->
