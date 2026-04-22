@@ -15,6 +15,8 @@ class WolSenderImpl @Inject constructor() : WolSender {
         port: Int,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            require(port in 1..MAX_PORT) { "Port must be in range 1-65535" }
+            require(IPV4_PATTERN.matches(broadcastIp)) { "Invalid broadcast IP address" }
             val macBytes = parseMac(macAddress)
             val packet = buildMagicPacket(macBytes)
             sendPacket(packet, broadcastIp, port)
@@ -65,5 +67,7 @@ class WolSenderImpl @Inject constructor() : WolSender {
         const val MAC_BYTE_COUNT = 6
         const val MAC_REPEAT_COUNT = 16
         const val HEX_RADIX = 16
+        const val MAX_PORT = 65535
+        val IPV4_PATTERN = Regex("^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$")
     }
 }

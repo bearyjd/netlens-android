@@ -21,6 +21,9 @@ class PortScannerImpl @Inject constructor() : PortScanner {
         ports: List<Int>,
         timeoutMs: Int,
     ): Flow<PortResult> = channelFlow {
+        require(ports.size <= MAX_SCAN_PORTS) { "Too many ports: ${ports.size} exceeds limit of $MAX_SCAN_PORTS" }
+        require(ports.all { it in 1..MAX_PORT }) { "All ports must be in range 1-65535" }
+        require(host.isNotBlank() && !host.startsWith("-") && HOST_PATTERN.matches(host)) { "Invalid host" }
         val batches = ports.chunked(BATCH_SIZE)
         for (batch in batches) {
             coroutineScope {
@@ -68,6 +71,9 @@ class PortScannerImpl @Inject constructor() : PortScanner {
 
     private companion object {
         const val BATCH_SIZE = 50
+        const val MAX_SCAN_PORTS = 10_000
+        const val MAX_PORT = 65535
         const val NS_PER_MS = 1_000_000L
+        val HOST_PATTERN = Regex("^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\$")
     }
 }
