@@ -5,7 +5,8 @@ import kotlinx.coroutines.withContext
 import us.beary.netlens.feature.tls.model.TlsCertInfo
 import us.beary.netlens.feature.tls.model.TlsInspectResult
 import java.security.cert.X509Certificate
-import java.text.SimpleDateFormat
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -21,7 +22,9 @@ class TlsInspectorImpl @Inject constructor() : TlsInspector {
             "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)*" +
                 "[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?$",
         )
-        val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
+        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss z", Locale.US)
+            .withZone(ZoneId.systemDefault())
     }
 
     override suspend fun inspect(host: String, port: Int): TlsInspectResult =
@@ -84,8 +87,8 @@ class TlsInspectorImpl @Inject constructor() : TlsInspector {
             subjectCN = extractCN(cert.subjectX500Principal.name),
             issuerCN = extractCN(cert.issuerX500Principal.name),
             serialNumber = cert.serialNumber.toString(16),
-            notBefore = DATE_FORMAT.format(cert.notBefore),
-            notAfter = DATE_FORMAT.format(cert.notAfter),
+            notBefore = DATE_FORMAT.format(cert.notBefore.toInstant()),
+            notAfter = DATE_FORMAT.format(cert.notAfter.toInstant()),
             signatureAlgorithm = cert.sigAlgName,
             isExpired = isExpired,
             daysUntilExpiry = daysUntilExpiry,

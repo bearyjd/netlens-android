@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,6 +73,7 @@ fun MonitorScreen(
         onSelectEndpoint = viewModel::selectEndpoint,
         onDeselectEndpoint = viewModel::deselectEndpoint,
         onCheckNow = viewModel::checkNow,
+        onDismissError = viewModel::dismissError,
         modifier = modifier,
     )
 }
@@ -83,10 +85,24 @@ private fun MonitorContent(
     onRemoveEndpoint: (MonitoredEndpoint) -> Unit,
     onSelectEndpoint: (MonitoredEndpoint) -> Unit,
     onDeselectEndpoint: () -> Unit,
+    onDismissError: () -> Unit,
     onCheckNow: (MonitoredEndpoint) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+
+    state.error?.let { errorMessage ->
+        AlertDialog(
+            onDismissRequest = onDismissError,
+            title = { Text("Error") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                TextButton(onClick = onDismissError) {
+                    Text("OK")
+                }
+            },
+        )
+    }
 
     if (state.selectedEndpoint != null) {
         EndpointDetailView(
@@ -160,9 +176,11 @@ private fun SwipeToDeleteEndpointCard(
     modifier: Modifier = Modifier,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
+    var deleted by remember { mutableStateOf(false) }
 
     LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart && !deleted) {
+            deleted = true
             onDelete()
         }
     }
@@ -396,9 +414,9 @@ private fun LatencyChart(
 ) {
     val successColor = MaterialTheme.colorScheme.primary
     val errorColor = MaterialTheme.colorScheme.error
+    val reversed = remember(checks) { checks.reversed() }
 
     Canvas(modifier = modifier) {
-        val reversed = checks.reversed()
         val maxLatency = reversed.maxOfOrNull { it.latencyMs }?.toFloat() ?: return@Canvas
         if (maxLatency <= 0f) return@Canvas
 
