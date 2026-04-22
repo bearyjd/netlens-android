@@ -8,6 +8,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import us.beary.netlens.core.data.NetLensDatabase
+import us.beary.netlens.core.data.dao.EndpointDao
+import us.beary.netlens.core.data.dao.NetworkEventDao
 import us.beary.netlens.core.data.dao.WolTargetDao
 import javax.inject.Singleton
 
@@ -29,4 +31,12 @@ object DataModule {
     @Provides
     fun provideWolTargetDao(database: NetLensDatabase): WolTargetDao =
         database.wolTargetDao()
+
+    @Provides
+    fun provideNetworkEventDao(database: NetLensDatabase): NetworkEventDao =
+        database.networkEventDao()
+
+    @Provides
+    fun provideEndpointDao(database: NetLensDatabase): EndpointDao =
+        database.endpointDao()
 }
