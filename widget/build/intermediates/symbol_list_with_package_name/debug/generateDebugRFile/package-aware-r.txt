@@ -1,0 +1,3 @@
+us.beary.netlens.widget
+layout widget_initial
+xml netlens_widget_info
