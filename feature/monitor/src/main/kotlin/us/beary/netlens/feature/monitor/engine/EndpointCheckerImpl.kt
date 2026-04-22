@@ -7,10 +7,11 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import us.beary.netlens.core.data.model.EndpointCheck
+import java.io.Closeable
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-class EndpointCheckerImpl @Inject constructor() : EndpointChecker {
+class EndpointCheckerImpl @Inject constructor() : EndpointChecker, Closeable {
 
     private val client = HttpClient(io.ktor.client.engine.cio.CIO) {
         install(HttpTimeout) {
@@ -53,6 +54,10 @@ class EndpointCheckerImpl @Inject constructor() : EndpointChecker {
                 errorMessage = e.message ?: "Unknown error",
             )
         }
+    }
+
+    override fun close() {
+        client.close()
     }
 
     private suspend fun tryHead(url: String): HttpResponse {

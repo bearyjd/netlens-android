@@ -3,6 +3,7 @@ package us.beary.netlens.feature.tls
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,8 @@ class TlsViewModel @Inject constructor(
             try {
                 val result = inspector.inspect(host, port)
                 _uiState.value = TlsUiState.Success(result)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = TlsUiState.Error(
                     e.localizedMessage ?: "TLS inspection failed",

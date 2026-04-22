@@ -2,6 +2,8 @@ package us.beary.netlens.core.data.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +19,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DataModule {
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_network_events_timestamp` ON `network_events` (`timestamp`)",
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -25,6 +35,7 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
+            .addMigrations(MIGRATION_4_5)
             .fallbackToDestructiveMigration()
             .build()
 
