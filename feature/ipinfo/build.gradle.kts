@@ -14,4 +14,5 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.compose.material.icons)
 }

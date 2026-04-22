@@ -1,14 +1,16 @@
 package us.beary.netlens.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import us.beary.netlens.feature.dns.DnsLookupScreen
+import us.beary.netlens.feature.ipinfo.IpInfoScreen
+import us.beary.netlens.feature.lanscan.LanScanScreen
+import us.beary.netlens.feature.ping.PingScreen
+import us.beary.netlens.feature.portscan.PortScanScreen
+import us.beary.netlens.feature.wol.WolScreen
 
 @Composable
 fun NetLensNavHost(
@@ -20,20 +22,11 @@ fun NetLensNavHost(
         startDestination = TopLevelDestination.IpInfo.route,
         modifier = modifier,
     ) {
-        TopLevelDestination.entries.forEach { destination ->
-            composable(destination.route) {
-                PlaceholderScreen(title = destination.label)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(title: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = title)
+        composable(TopLevelDestination.IpInfo.route) { IpInfoScreen() }
+        composable(TopLevelDestination.LanScan.route) { LanScanScreen() }
+        composable(TopLevelDestination.PortScan.route) { PortScanScreen() }
+        composable(TopLevelDestination.Dns.route) { DnsLookupScreen() }
+        composable(TopLevelDestination.Ping.route) { PingScreen() }
+        composable(TopLevelDestination.Wol.route) { WolScreen() }
     }
 }
