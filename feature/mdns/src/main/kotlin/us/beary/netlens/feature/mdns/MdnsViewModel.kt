@@ -7,9 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import us.beary.netlens.feature.mdns.engine.MdnsScanner
@@ -38,35 +36,29 @@ class MdnsViewModel @Inject constructor(
         }
 
         scanJob = viewModelScope.launch {
-            coroutineScope {
-                COMMON_SERVICE_TYPES.forEach { serviceType ->
-                    launch {
-                        mdnsScanner.discoverServices(serviceType)
-                            .catch { e ->
-                                _uiState.update { state ->
-                                    state.copy(error = e.message ?: "Discovery failed")
+            COMMON_SERVICE_TYPES.forEach { serviceType ->
+                launch {
+                    mdnsScanner.discoverServices(serviceType)
+                        .catch { e ->
+                            _uiState.update { state ->
+                                state.copy(error = e.message ?: "Discovery failed")
+                            }
+                        }
+                        .collect { service ->
+                            _uiState.update { state ->
+                                val isDuplicate = state.services.any { existing ->
+                                    existing.serviceName == service.serviceName &&
+                                        existing.serviceType == service.serviceType
+                                }
+                                if (isDuplicate) {
+                                    state
+                                } else {
+                                    state.copy(services = state.services + service)
                                 }
                             }
-                            .onCompletion {
-                                // Individual type scan completed
-                            }
-                            .collect { service ->
-                                _uiState.update { state ->
-                                    val isDuplicate = state.services.any { existing ->
-                                        existing.serviceName == service.serviceName &&
-                                            existing.serviceType == service.serviceType
-                                    }
-                                    if (isDuplicate) {
-                                        state
-                                    } else {
-                                        state.copy(services = state.services + service)
-                                    }
-                                }
-                            }
-                    }
+                        }
                 }
             }
-            _uiState.update { it.copy(isScanning = false) }
         }
     }
 
