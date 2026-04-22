@@ -29,7 +29,7 @@ class RdnsResolverImpl @Inject constructor() : RdnsResolver {
 
         fun isValidIpLiteral(ip: String): Boolean {
             if (IPV4_PATTERN.matches(ip)) return true
-            if (!ip.contains(':')) return false
+            if (ip.count { it == ':' } < 2) return false
             return try {
                 val addr = InetAddress.getByName(ip)
                 addr is Inet4Address || addr is Inet6Address

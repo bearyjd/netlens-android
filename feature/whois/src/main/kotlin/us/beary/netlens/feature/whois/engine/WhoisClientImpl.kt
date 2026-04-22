@@ -3,10 +3,10 @@ package us.beary.netlens.feature.whois.engine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.beary.netlens.feature.whois.model.WhoisResult
+import us.beary.netlens.core.network.SsrfGuard
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import java.net.InetAddress
 import java.net.Socket
 import javax.inject.Inject
 
@@ -42,9 +42,18 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
             val writer = OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8)
             writer.write("$query\r\n")
             writer.flush()
-            BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
-                .readText()
-                .take(MAX_RESPONSE_BYTES)
+            val reader = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
+            val buffer = CharArray(8192)
+            val result = StringBuilder()
+            var totalRead = 0
+            while (totalRead < MAX_RESPONSE_BYTES) {
+                val maxToRead = minOf(buffer.size, MAX_RESPONSE_BYTES - totalRead)
+                val read = reader.read(buffer, 0, maxToRead)
+                if (read == -1) break
+                result.append(buffer, 0, read)
+                totalRead += read
+            }
+            result.toString()
         }
     }
 
@@ -130,12 +139,7 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
             require(BLOCKED_IP_PATTERNS.none { it.containsMatchIn(server) }) {
                 "Refer server points to a blocked address: $server"
             }
-            val addresses = try {
-                InetAddress.getAllByName(server)
-            } catch (_: Exception) {
-                throw IllegalArgumentException("Cannot resolve refer server: $server")
-            }
-            require(addresses.none { it.isLoopbackAddress || it.isLinkLocalAddress || it.isSiteLocalAddress }) {
+            require(!SsrfGuard.isPrivateOrLoopback(server)) {
                 "Refer server resolves to a private/loopback address: $server"
             }
             return server

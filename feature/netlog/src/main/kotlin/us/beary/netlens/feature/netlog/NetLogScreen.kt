@@ -267,8 +267,9 @@ private fun EmptyState(isMonitoring: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+private val TIMESTAMP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         .withZone(ZoneId.systemDefault())
-    return formatter.format(Instant.ofEpochMilli(timestamp))
-}
+
+private fun formatTimestamp(timestamp: Long): String =
+    TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(timestamp))
