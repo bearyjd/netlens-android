@@ -14,8 +14,8 @@ import kotlinx.io.readString
 import us.beary.netlens.feature.httptester.model.HttpMethod
 import us.beary.netlens.feature.httptester.model.HttpRequestConfig
 import us.beary.netlens.feature.httptester.model.HttpResponseResult
+import us.beary.netlens.core.network.SsrfGuard
 import java.io.Closeable
-import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 
@@ -38,7 +38,7 @@ class HttpRequesterImpl @Inject constructor() : HttpRequester, Closeable {
 
         val parsedUrl = URL(url)
         val host = parsedUrl.host
-        require(!isPrivateOrLoopback(host)) {
+        require(!SsrfGuard.isPrivateOrLoopback(host)) {
             "Requests to private or loopback network addresses are not allowed"
         }
 
@@ -99,39 +99,4 @@ class HttpRequesterImpl @Inject constructor() : HttpRequester, Closeable {
     companion object {
         private const val MAX_RESPONSE_BODY_BYTES = 1_048_576L // 1 MB
     }
-}
-
-private fun isPrivateOrLoopback(host: String): Boolean {
-    if (host.equals("localhost", ignoreCase = true)) return true
-
-    val addresses = try {
-        InetAddress.getAllByName(host)
-    } catch (_: Exception) {
-        return true // fail-closed: can't resolve → block
-    }
-
-    return addresses.any { addr ->
-        addr.isLoopbackAddress ||
-            addr.isLinkLocalAddress ||
-            addr.isSiteLocalAddress ||
-            isCarrierGradeNatOrUniqueLocal(addr)
-    }
-}
-
-private fun isCarrierGradeNatOrUniqueLocal(addr: InetAddress): Boolean {
-    val bytes = addr.address
-    if (bytes.size == 4) {
-        // 169.254.0.0/16 is covered by isLinkLocalAddress
-        // 10.0.0.0/8 and 192.168.0.0/16 and 172.16.0.0/12 are covered by isSiteLocalAddress
-        // Nothing extra needed for IPv4 — the JDK helpers cover all private ranges
-        return false
-    }
-    if (bytes.size == 16) {
-        // fc00::/7 (unique local) — first byte 0xFC or 0xFD
-        val first = bytes[0].toInt() and 0xFF
-        if (first == 0xFC || first == 0xFD) return true
-        // fe80::/10 is covered by isLinkLocalAddress
-        // ::1 is covered by isLoopbackAddress
-    }
-    return false
 }

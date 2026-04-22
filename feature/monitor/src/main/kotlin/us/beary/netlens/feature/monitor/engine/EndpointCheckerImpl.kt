@@ -7,7 +7,9 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import us.beary.netlens.core.data.model.EndpointCheck
+import us.beary.netlens.core.network.SsrfGuard
 import java.io.Closeable
+import java.net.URL
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -26,6 +28,11 @@ class EndpointCheckerImpl @Inject constructor() : EndpointChecker, Closeable {
         val trimmedUrl = url.trim()
         require(trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")) {
             "URL must start with http:// or https://"
+        }
+
+        val host = URL(trimmedUrl).host
+        require(!SsrfGuard.isPrivateOrLoopback(host)) {
+            "Requests to private or loopback network addresses are not allowed"
         }
 
         val startNanos = System.nanoTime()

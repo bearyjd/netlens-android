@@ -14,9 +14,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.beary.netlens.core.data.dao.EndpointDao
 import us.beary.netlens.core.data.model.MonitoredEndpoint
+import us.beary.netlens.core.network.SsrfGuard
 import us.beary.netlens.feature.monitor.engine.EndpointChecker
 import us.beary.netlens.feature.monitor.model.MonitorUiState
-import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 
@@ -68,19 +68,8 @@ class MonitorViewModel @Inject constructor(
         }
     }
 
-    private suspend fun isPrivateOrLoopback(host: String): Boolean {
-        if (host.equals("localhost", ignoreCase = true)) return true
-        val addresses = try {
-            withContext(Dispatchers.IO) {
-                InetAddress.getAllByName(host)
-            }
-        } catch (_: Exception) {
-            return true
-        }
-        return addresses.any { addr ->
-            addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isSiteLocalAddress
-        }
-    }
+    private suspend fun isPrivateOrLoopback(host: String): Boolean =
+        withContext(Dispatchers.IO) { SsrfGuard.isPrivateOrLoopback(host) }
 
     fun removeEndpoint(endpoint: MonitoredEndpoint) {
         viewModelScope.launch {
