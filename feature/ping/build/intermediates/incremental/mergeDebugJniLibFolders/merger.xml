@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/var/home/user/Documents/vibe-code/netatlas-android/feature/ping/src/main/jniLibs"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/var/home/user/Documents/vibe-code/netatlas-android/feature/ping/src/debug/jniLibs"/></dataSet></merger>
