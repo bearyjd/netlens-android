@@ -19,7 +19,7 @@ import us.beary.netlens.core.data.model.WolTarget
         MonitoredEndpoint::class,
         EndpointCheck::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {

@@ -29,9 +29,13 @@ class NetLogViewModel @Inject constructor(
     private var monitorJob: Job? = null
 
     init {
-        networkEventDao.getAll()
+        networkEventDao.getRecent(MAX_DISPLAYED_EVENTS)
             .onEach { events -> _state.update { it.copy(events = events) } }
             .launchIn(viewModelScope)
+    }
+
+    companion object {
+        private const val MAX_DISPLAYED_EVENTS = 500
     }
 
     fun startMonitoring() {

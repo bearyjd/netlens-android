@@ -40,8 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.beary.netlens.core.data.model.NetworkEvent
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -266,7 +267,9 @@ private fun EmptyState(isMonitoring: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    return formatter.format(Date(timestamp))
-}
+private val TIMESTAMP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
+
+private fun formatTimestamp(timestamp: Long): String =
+    TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(timestamp))
