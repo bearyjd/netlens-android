@@ -1,8 +1,8 @@
 package us.beary.netlens.widget.util
 
 object Deeplink {
-    private const val SCHEME = "netlens"
-    private const val HOST = "feature"
+    const val SCHEME = "netlens"
+    const val HOST = "feature"
 
     const val IPINFO = "$SCHEME://$HOST/ipinfo"
     const val LAN_SCAN = "$SCHEME://$HOST/lanscan"

@@ -10,7 +10,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":feature:ipinfo"))
     implementation(project(":core:network"))
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)

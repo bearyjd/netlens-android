@@ -49,7 +49,7 @@ class NetLensWidgetReceiver : GlanceAppWidgetReceiver() {
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
+        val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 enqueueRefresh(context)
             }
@@ -57,17 +57,24 @@ class NetLensWidgetReceiver : GlanceAppWidgetReceiver() {
             override fun onLost(network: Network) {
                 enqueueRefresh(context)
             }
-        })
+        }
+        networkCallback = callback
+        cm.registerNetworkCallback(request, callback)
     }
 
     private fun unregisterNetworkCallback(context: Context) {
-        // Callback is implicitly unregistered when the process dies.
-        // For a more robust approach, store the callback reference in a singleton,
-        // but BroadcastReceiver lifecycle makes that fragile. The periodic worker
-        // handles the steady-state updates.
+        val callback = networkCallback ?: return
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        try {
+            cm.unregisterNetworkCallback(callback)
+        } catch (_: IllegalArgumentException) {
+            // Already unregistered
+        }
+        networkCallback = null
     }
 
     private companion object {
         const val PERIODIC_WORK_NAME = "netlens_widget_periodic_refresh"
+        var networkCallback: ConnectivityManager.NetworkCallback? = null
     }
 }

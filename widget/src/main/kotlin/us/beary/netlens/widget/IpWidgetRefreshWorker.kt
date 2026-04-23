@@ -16,7 +16,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import us.beary.netlens.feature.ipinfo.model.IpApiResponse
+import us.beary.netlens.widget.model.WidgetIpResponse
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -64,9 +64,9 @@ class IpWidgetRefreshWorker(
             var countryCode = ""
             if (isConnected) {
                 try {
-                    val response = client.get(IP_API_URL).body<IpApiResponse>()
-                    publicIp = response.query
-                    isp = response.isp
+                    val response = client.get(IP_API_URL).body<WidgetIpResponse>()
+                    publicIp = response.ip
+                    isp = response.org
                     countryCode = response.countryCode
                 } catch (_: Exception) {
                     // Keep empty — offline or API unreachable
@@ -108,7 +108,6 @@ class IpWidgetRefreshWorker(
 
     private companion object {
         const val TIMEOUT_MS = 10_000L
-        const val IP_API_URL =
-            "http://ip-api.com/json/?fields=query,isp,org,as,country,countryCode,regionName,city,lat,lon,proxy,hosting"
+        const val IP_API_URL = "https://ipapi.co/json/"
     }
 }
