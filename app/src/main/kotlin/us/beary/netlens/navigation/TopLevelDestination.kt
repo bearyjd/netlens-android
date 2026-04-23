@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Http
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.AltRoute
 import androidx.compose.material.icons.filled.NetworkPing
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Router
@@ -25,6 +26,7 @@ enum class TopLevelDestination(
     PortScan(route = "portscan", icon = Icons.Default.Security, label = "Ports"),
     Dns(route = "dns", icon = Icons.Default.Dns, label = "DNS"),
     Ping(route = "ping", icon = Icons.Default.NetworkPing, label = "Ping"),
+    Traceroute(route = "traceroute", icon = Icons.Default.AltRoute, label = "Traceroute"),
     Wol(route = "wol", icon = Icons.Default.Power, label = "WoL"),
     Tls(route = "tls", icon = Icons.Default.Lock, label = "TLS"),
     Whois(route = "whois", icon = Icons.Default.Search, label = "WHOIS"),

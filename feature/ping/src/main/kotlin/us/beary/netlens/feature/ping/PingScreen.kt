@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -98,8 +99,8 @@ private fun PingContent(
             OutlinedTextField(
                 value = state.host,
                 onValueChange = onHostChange,
-                label = { Text("Host") },
-                placeholder = { Text("e.g. 8.8.8.8") },
+                label = { Text(stringResource(R.string.ping_label_host)) },
+                placeholder = { Text(stringResource(R.string.ping_placeholder_host)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -107,7 +108,7 @@ private fun PingContent(
                 IconButton(onClick = onCopyResults) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy results",
+                        contentDescription = stringResource(R.string.ping_cd_copy_results),
                     )
                 }
             }
@@ -135,12 +136,12 @@ private fun PingContent(
                 onClick = { onStartPing(state.host, selectedCount) },
                 enabled = state.host.isNotBlank() && !state.isPinging,
             ) {
-                Text("Ping")
+                Text(stringResource(R.string.ping_button_start))
             }
 
             if (state.isPinging) {
                 OutlinedButton(onClick = onStopPing) {
-                    Text("Stop")
+                    Text(stringResource(R.string.ping_button_stop))
                 }
             }
         }
@@ -235,7 +236,7 @@ private fun SummaryCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "Summary",
+                text = stringResource(R.string.ping_label_summary),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -243,19 +244,19 @@ private fun SummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                StatItem(label = "Sent", value = "${summary.transmitted}")
-                StatItem(label = "Recv", value = "${summary.received}")
-                StatItem(label = "Loss", value = "%.1f%%".format(summary.lossPercent))
+                StatItem(label = stringResource(R.string.ping_stat_sent), value = "${summary.transmitted}")
+                StatItem(label = stringResource(R.string.ping_stat_recv), value = "${summary.received}")
+                StatItem(label = stringResource(R.string.ping_stat_loss), value = "%.1f%%".format(summary.lossPercent))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                StatItem(label = "Min", value = "%.1f ms".format(summary.minMs))
-                StatItem(label = "Avg", value = "%.1f ms".format(summary.avgMs))
-                StatItem(label = "Max", value = "%.1f ms".format(summary.maxMs))
-                StatItem(label = "Jitter", value = "%.1f ms".format(summary.jitterMs))
+                StatItem(label = stringResource(R.string.ping_stat_min), value = "%.1f ms".format(summary.minMs))
+                StatItem(label = stringResource(R.string.ping_stat_avg), value = "%.1f ms".format(summary.avgMs))
+                StatItem(label = stringResource(R.string.ping_stat_max), value = "%.1f ms".format(summary.maxMs))
+                StatItem(label = stringResource(R.string.ping_stat_jitter), value = "%.1f ms".format(summary.jitterMs))
             }
         }
     }
@@ -297,7 +298,7 @@ private fun ResultRow(
         )
         if (result.isTimeout) {
             Text(
-                text = "timeout",
+                text = stringResource(R.string.ping_result_timeout),
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.error,
             )

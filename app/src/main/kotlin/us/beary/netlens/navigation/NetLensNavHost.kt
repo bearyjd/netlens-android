@@ -13,6 +13,7 @@ import us.beary.netlens.feature.mdns.MdnsScreen
 import us.beary.netlens.feature.monitor.MonitorScreen
 import us.beary.netlens.feature.netlog.NetLogScreen
 import us.beary.netlens.feature.ping.PingScreen
+import us.beary.netlens.feature.traceroute.TracerouteScreen
 import us.beary.netlens.feature.portscan.PortScanScreen
 import us.beary.netlens.feature.tls.TlsScreen
 import us.beary.netlens.feature.whois.WhoisScreen
@@ -33,6 +34,7 @@ fun NetLensNavHost(
         composable(TopLevelDestination.PortScan.route) { PortScanScreen() }
         composable(TopLevelDestination.Dns.route) { DnsLookupScreen() }
         composable(TopLevelDestination.Ping.route) { PingScreen() }
+        composable(TopLevelDestination.Traceroute.route) { TracerouteScreen() }
         composable(TopLevelDestination.Wol.route) { WolScreen() }
         composable(TopLevelDestination.Tls.route) { TlsScreen() }
         composable(TopLevelDestination.Whois.route) { WhoisScreen() }

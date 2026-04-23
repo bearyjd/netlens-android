@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -57,7 +58,7 @@ fun DnsLookupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("DNS Lookup") },
+                title = { Text(stringResource(R.string.dns_title)) },
                 actions = {
                     if (state.results.isNotEmpty()) {
                         IconButton(
@@ -72,7 +73,7 @@ fun DnsLookupScreen(
                                 clipboardManager.setText(AnnotatedString(text))
                             },
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy all records")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.dns_cd_copy_all))
                         }
                     }
                 },
@@ -110,13 +111,13 @@ private fun DnsLookupContent(
                 value = state.domain,
                 onValueChange = onDomainChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Domain") },
-                placeholder = { Text("example.com") },
+                label = { Text(stringResource(R.string.dns_label_domain)) },
+                placeholder = { Text(stringResource(R.string.dns_placeholder_domain)) },
                 singleLine = true,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Lookup",
+                        contentDescription = stringResource(R.string.dns_cd_lookup),
                     )
                 },
                 keyboardOptions = KeyboardOptions(
@@ -131,7 +132,7 @@ private fun DnsLookupContent(
 
         item {
             Text(
-                text = "Record Types",
+                text = stringResource(R.string.dns_label_record_types),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -165,7 +166,7 @@ private fun DnsLookupContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Lookup")
+                Text(stringResource(R.string.dns_button_lookup))
             }
         }
 
@@ -246,7 +247,7 @@ private fun DnsResultCard(result: DnsResult) {
                 ) {
                     Icon(
                         Icons.Default.ContentCopy,
-                        contentDescription = "Copy",
+                        contentDescription = stringResource(R.string.dns_cd_copy),
                         modifier = Modifier.size(16.dp),
                     )
                 }
