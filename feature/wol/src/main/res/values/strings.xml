@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wol_title">Wake-on-LAN</string>
+    <string name="wol_cd_add_target">Add target</string>
+    <string name="wol_label_saved_targets">Saved Targets</string>
+    <string name="wol_empty_state">No saved targets yet. Tap + to add one.</string>
+    <string name="wol_label_quick_send">Quick Send</string>
+    <string name="wol_cd_delete">Delete</string>
+    <string name="wol_cd_edit_target">Edit target</string>
+    <string name="wol_cd_send_magic_packet">Send magic packet</string>
+    <string name="wol_label_mac_address">MAC Address</string>
+    <string name="wol_placeholder_mac">AA:BB:CC:DD:EE:FF</string>
+    <string name="wol_label_broadcast_ip">Broadcast IP</string>
+    <string name="wol_label_port">Port</string>
+    <string name="wol_button_send_magic_packet">Send Magic Packet</string>
+    <string name="wol_dialog_title_edit">Edit WoL Target</string>
+    <string name="wol_dialog_title_add">Add WoL Target</string>
+    <string name="wol_label_label">Label</string>
+    <string name="wol_placeholder_label">e.g. Desktop PC</string>
+    <string name="wol_button_update">Update</string>
+    <string name="wol_button_save">Save</string>
+    <string name="wol_button_cancel">Cancel</string>
+</resources>

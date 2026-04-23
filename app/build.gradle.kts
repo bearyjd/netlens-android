@@ -22,6 +22,7 @@ dependencies {
     implementation(project(":feature:portscan"))
     implementation(project(":feature:dns"))
     implementation(project(":feature:ping"))
+    implementation(project(":feature:traceroute"))
     implementation(project(":feature:wol"))
     implementation(project(":feature:tls"))
     implementation(project(":feature:whois"))
