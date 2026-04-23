@@ -10,24 +10,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,18 +46,47 @@ import us.beary.netlens.feature.dns.model.DnsLookupUiState
 import us.beary.netlens.feature.dns.model.DnsRecordType
 import us.beary.netlens.feature.dns.model.DnsResult
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DnsLookupScreen(
     viewModel: DnsLookupViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
 
-    DnsLookupContent(
-        state = state,
-        onDomainChanged = viewModel::onDomainChanged,
-        onTypeToggled = viewModel::onTypeToggled,
-        onLookup = viewModel::lookup,
-    )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("DNS Lookup") },
+                actions = {
+                    if (state.results.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                val text = state.results
+                                    .groupBy { it.type }
+                                    .entries
+                                    .joinToString("\n\n") { (type, records) ->
+                                        "${type.displayName} Records:\n" +
+                                            records.joinToString("\n") { it.value }
+                                    }
+                                clipboardManager.setText(AnnotatedString(text))
+                            },
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy all records")
+                        }
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        DnsLookupContent(
+            state = state,
+            onDomainChanged = viewModel::onDomainChanged,
+            onTypeToggled = viewModel::onTypeToggled,
+            onLookup = viewModel::lookup,
+            modifier = Modifier.padding(padding),
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -59,9 +96,10 @@ private fun DnsLookupContent(
     onDomainChanged: (String) -> Unit,
     onTypeToggled: (DnsRecordType) -> Unit,
     onLookup: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -162,6 +200,8 @@ private fun DnsLookupContent(
 
 @Composable
 private fun DnsResultCard(result: DnsResult) {
+    val clipboardManager = LocalClipboardManager.current
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -190,12 +230,27 @@ private fun DnsResultCard(result: DnsResult) {
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = result.value,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = FontFamily.Monospace,
-                ),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = result.value,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = { clipboardManager.setText(AnnotatedString(result.value)) },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
         }
     }
 }

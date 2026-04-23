@@ -1,8 +1,10 @@
 import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 class AndroidLibraryConventionPlugin : Plugin<Project> {
@@ -37,13 +39,13 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
             }
 
-            extensions.configure<LibraryExtension> {
-                @Suppress("UnstableApiUsage")
-                testOptions {
-                    unitTests.all {
-                        it.useJUnitPlatform()
-                    }
+            val hasTestSources = !project.fileTree("src/test").isEmpty
+            tasks.withType<Test>().configureEach {
+                useJUnitPlatform()
+                filter {
+                    isFailOnNoMatchingTests = false
                 }
+                enabled = hasTestSources
             }
         }
     }

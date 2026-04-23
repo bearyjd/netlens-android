@@ -89,14 +89,52 @@ class PingViewModel @Inject constructor(
         } else {
             0f
         }
+        val avg = if (latencies.isNotEmpty()) latencies.average().toFloat() else 0f
+        val jitter = if (latencies.size >= 2) {
+            val variance = latencies.map { (it - avg) * (it - avg) }.average().toFloat()
+            kotlin.math.sqrt(variance.toDouble()).toFloat()
+        } else {
+            0f
+        }
 
         return PingSummary(
             transmitted = transmitted,
             received = received,
             lossPercent = lossPercent,
             minMs = latencies.minOrNull() ?: 0f,
-            avgMs = if (latencies.isNotEmpty()) latencies.average().toFloat() else 0f,
+            avgMs = avg,
             maxMs = latencies.maxOrNull() ?: 0f,
+            jitterMs = jitter,
         )
+    }
+
+    fun buildCopyText(): String {
+        val current = _state.value
+        val sb = StringBuilder()
+        sb.appendLine("Ping results for ${current.host}:")
+        current.results.forEach { r ->
+            if (r.isTimeout) {
+                sb.appendLine("seq=${r.sequenceNumber} timeout")
+            } else {
+                val ttlPart = r.ttl?.let { " ttl=$it" } ?: ""
+                val msPart = r.latencyMs?.let { " time=%.1fms".format(it) } ?: ""
+                sb.appendLine("seq=${r.sequenceNumber}$msPart$ttlPart")
+            }
+        }
+        current.summary?.let { s ->
+            sb.appendLine("--- Statistics ---")
+            sb.appendLine(
+                "Sent: ${s.transmitted}, Received: ${s.received}, Loss: %.0f%%".format(s.lossPercent),
+            )
+            sb.appendLine(
+                "Min: %.1fms, Avg: %.1fms, Max: %.1fms, Jitter: %.1fms".format(
+                    s.minMs,
+                    s.avgMs,
+                    s.maxMs,
+                    s.jitterMs,
+                ),
+            )
+        }
+        return sb.toString().trimEnd()
     }
 }
