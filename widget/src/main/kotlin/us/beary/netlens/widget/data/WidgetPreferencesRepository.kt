@@ -53,15 +53,18 @@ object WidgetPreferencesRepository {
         }
     }
 
-    private fun Preferences.toWidgetPreferences(): WidgetPreferences = WidgetPreferences(
-        backgroundAlpha = this[BG_ALPHA] ?: 0.6f,
-        backgroundColor = this[BG_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: WidgetColor.BLACK,
-        accentColor = this[ACCENT_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: WidgetColor.GREEN,
-        textSize = this[TEXT_SIZE]?.let { runCatching { WidgetTextSize.valueOf(it) }.getOrNull() } ?: WidgetTextSize.MEDIUM,
-        cornerRadius = this[CORNER_RADIUS] ?: 16,
-        widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.getOrNull() } ?: WidgetSize.SMALL,
-        pages = this[PAGES]?.split(",")?.mapNotNull { runCatching { WidgetPage.valueOf(it) }.getOrNull() }
-            ?.ifEmpty { null } ?: listOf(WidgetPage.CONNECTION, WidgetPage.NETWORK),
-        autoAdvanceSeconds = this[AUTO_ADVANCE] ?: 0,
-    )
+    private fun Preferences.toWidgetPreferences(): WidgetPreferences {
+        val defaults = WidgetPreferences()
+        return WidgetPreferences(
+            backgroundAlpha = this[BG_ALPHA] ?: defaults.backgroundAlpha,
+            backgroundColor = this[BG_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: defaults.backgroundColor,
+            accentColor = this[ACCENT_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: defaults.accentColor,
+            textSize = this[TEXT_SIZE]?.let { runCatching { WidgetTextSize.valueOf(it) }.getOrNull() } ?: defaults.textSize,
+            cornerRadius = this[CORNER_RADIUS] ?: defaults.cornerRadius,
+            widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.getOrNull() } ?: defaults.widgetSize,
+            pages = this[PAGES]?.split(",")?.mapNotNull { runCatching { WidgetPage.valueOf(it) }.getOrNull() }
+                ?.ifEmpty { null } ?: defaults.pages,
+            autoAdvanceSeconds = this[AUTO_ADVANCE] ?: defaults.autoAdvanceSeconds,
+        )
+    }
 }

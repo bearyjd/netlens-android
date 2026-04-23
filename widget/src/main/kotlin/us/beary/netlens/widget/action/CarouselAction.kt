@@ -12,30 +12,24 @@ import us.beary.netlens.widget.data.WidgetPreferencesRepository
 
 class CarouselNextAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val prefs = WidgetPreferencesRepository.get(context)
-        val pageCount = prefs.pages.size
-        if (pageCount <= 1) return
-
-        val dataStore = IpWidgetStateDefinition.getDataStore(context, "ip_widget")
-        dataStore.edit { widgetPrefs ->
-            val current = widgetPrefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] ?: 0
-            widgetPrefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] = (current + 1) % pageCount
-        }
-        NetLensWidget().updateAll(context)
+        advanceCarousel(context, 1)
     }
 }
 
 class CarouselPrevAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val prefs = WidgetPreferencesRepository.get(context)
-        val pageCount = prefs.pages.size
-        if (pageCount <= 1) return
-
-        val dataStore = IpWidgetStateDefinition.getDataStore(context, "ip_widget")
-        dataStore.edit { widgetPrefs ->
-            val current = widgetPrefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] ?: 0
-            widgetPrefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] = (current - 1 + pageCount) % pageCount
-        }
-        NetLensWidget().updateAll(context)
+        advanceCarousel(context, -1)
     }
+}
+
+private suspend fun advanceCarousel(context: Context, delta: Int) {
+    val pageCount = WidgetPreferencesRepository.get(context).pages.size
+    if (pageCount <= 1) return
+
+    val dataStore = IpWidgetStateDefinition.getDataStore(context, "ip_widget")
+    dataStore.edit { prefs ->
+        val current = prefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] ?: 0
+        prefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] = (current + delta + pageCount) % pageCount
+    }
+    NetLensWidget().updateAll(context)
 }
