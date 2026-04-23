@@ -1,0 +1,55 @@
+name: Bump Version & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version
+        id: bump
+        run: |
+          CURRENT=$(grep '^netlens.versionName=' gradle.properties | cut -d= -f2)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          CODE=$(grep '^netlens.versionCode=' gradle.properties | cut -d= -f2)
+
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEW_CODE=$((CODE + 1))
+
+          sed -i "s/^netlens.versionName=.*/netlens.versionName=${NEW_VERSION}/" gradle.properties
+          sed -i "s/^netlens.versionCode=.*/netlens.versionCode=${NEW_CODE}/" gradle.properties
+
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Bumped ${CURRENT} → ${NEW_VERSION} (code ${CODE} → ${NEW_CODE})"
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push && git push --tags

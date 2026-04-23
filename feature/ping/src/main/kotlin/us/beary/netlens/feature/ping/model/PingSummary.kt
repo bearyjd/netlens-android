@@ -7,4 +7,5 @@ data class PingSummary(
     val minMs: Float = 0f,
     val avgMs: Float = 0f,
     val maxMs: Float = 0f,
+    val jitterMs: Float = 0f,
 )

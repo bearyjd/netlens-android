@@ -16,8 +16,11 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import us.beary.netlens.feature.lanscan.engine.SubnetScanner
+import us.beary.netlens.feature.lanscan.model.LanDevice
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
 import javax.inject.Inject
+
+enum class SortOrder { IP, VENDOR, LATENCY }
 
 @HiltViewModel
 class LanScanViewModel @Inject constructor(
@@ -28,7 +31,17 @@ class LanScanViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LanScanUiState())
     val uiState: StateFlow<LanScanUiState> = _uiState.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow(SortOrder.IP)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
     private var scanJob: Job? = null
+
+    fun setSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+        _uiState.update { state ->
+            state.copy(devices = state.devices.sortedWith(order.comparator()))
+        }
+    }
 
     fun startScan() {
         if (_uiState.value.isScanning) return
@@ -82,8 +95,10 @@ class LanScanViewModel @Inject constructor(
                 .collect { device ->
                     deviceCount++
                     _uiState.update { state ->
+                        val updatedDevices = (state.devices + device)
+                            .sortedWith(_sortOrder.value.comparator())
                         state.copy(
-                            devices = state.devices + device,
+                            devices = updatedDevices,
                             progress = (deviceCount.toFloat() / MAX_EXPECTED_DEVICES)
                                 .coerceAtMost(0.95f),
                         )
@@ -101,6 +116,16 @@ class LanScanViewModel @Inject constructor(
     companion object {
         private const val MAX_EXPECTED_DEVICES = 254f
     }
+}
+
+private fun SortOrder.comparator(): Comparator<LanDevice> = when (this) {
+    SortOrder.IP -> compareBy { ipToLong(it.ip) }
+    SortOrder.VENDOR -> compareBy(nullsLast()) { it.vendor }
+    SortOrder.LATENCY -> compareBy { it.latencyMs }
+}
+
+private fun ipToLong(ip: String): Long {
+    return ip.split(".").fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
 }
 
 private fun LinkAddress.isIpv4(): Boolean {
