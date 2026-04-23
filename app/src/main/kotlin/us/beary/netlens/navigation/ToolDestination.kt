@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -120,6 +121,13 @@ enum class ToolDestination(
         icon = Icons.Default.History,
         label = "Network Log",
         description = "Connection history",
+        category = ToolCategory.Tools,
+    ),
+    WidgetSettings(
+        route = "widgetsettings",
+        icon = Icons.Default.Widgets,
+        label = "Widget Settings",
+        description = "Customize home screen widget",
         category = ToolCategory.Tools,
     ),
     ;
