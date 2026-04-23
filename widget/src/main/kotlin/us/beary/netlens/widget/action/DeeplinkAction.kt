@@ -19,8 +19,10 @@ val CopyLabelKey = ActionParameters.Key<String>("copy_label")
 
 class OpenDeeplinkAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val uri = parameters[DeeplinkUriKey] ?: return
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        val raw = parameters[DeeplinkUriKey] ?: return
+        val uri = Uri.parse(raw)
+        if (uri.scheme != Deeplink.SCHEME || uri.host != Deeplink.HOST) return
+        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         context.startActivity(intent)
