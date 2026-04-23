@@ -11,5 +11,6 @@ data class WolUiState(
     val showAddDialog: Boolean = false,
     val addLabel: String = "",
     val addMac: String = "",
+    val editingTarget: WolTarget? = null,
     val error: String? = null,
 )

@@ -10,26 +10,39 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,26 +51,83 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.beary.netlens.feature.lanscan.model.LanDevice
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanScanScreen(
     viewModel: LanScanViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
 
     LanScanContent(
         uiState = uiState,
+        sortOrder = sortOrder,
         onStartScan = viewModel::startScan,
         onCancelScan = viewModel::cancelScan,
+        onSortOrderChange = viewModel::setSortOrder,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LanScanContent(
     uiState: LanScanUiState,
+    sortOrder: SortOrder,
     onStartScan: () -> Unit,
     onCancelScan: () -> Unit,
+    onSortOrderChange: (SortOrder) -> Unit,
 ) {
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("LAN Scan") },
+                actions = {
+                    IconButton(onClick = { sortMenuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Sort devices",
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Sort by IP") },
+                            onClick = {
+                                onSortOrderChange(SortOrder.IP)
+                                sortMenuExpanded = false
+                            },
+                            trailingIcon = if (sortOrder == SortOrder.IP) {
+                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by Vendor") },
+                            onClick = {
+                                onSortOrderChange(SortOrder.VENDOR)
+                                sortMenuExpanded = false
+                            },
+                            trailingIcon = if (sortOrder == SortOrder.VENDOR) {
+                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by Latency") },
+                            onClick = {
+                                onSortOrderChange(SortOrder.LATENCY)
+                                sortMenuExpanded = false
+                            },
+                            trailingIcon = if (sortOrder == SortOrder.LATENCY) {
+                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                        )
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = if (uiState.isScanning) onCancelScan else onStartScan,
@@ -134,6 +204,8 @@ private fun LanScanContent(
 
 @Composable
 private fun DeviceCard(device: LanDevice) {
+    val clipboardManager = LocalClipboardManager.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -195,6 +267,32 @@ private fun DeviceCard(device: LanDevice) {
                         )
                     },
                 )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            IconButton(
+                onClick = { clipboardManager.setText(AnnotatedString(device.ip)) },
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy IP",
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            if (device.mac != null) {
+                IconButton(
+                    onClick = { clipboardManager.setText(AnnotatedString(device.mac)) },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy MAC",
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
         }
     }

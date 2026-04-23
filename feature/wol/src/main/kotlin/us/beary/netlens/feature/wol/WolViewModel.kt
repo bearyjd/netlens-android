@@ -33,7 +33,7 @@ class WolViewModel @Inject constructor(
     }
 
     fun onMacInputChanged(mac: String) {
-        _state.update { it.copy(macInput = mac) }
+        _state.update { it.copy(macInput = formatMac(mac)) }
     }
 
     fun onBroadcastIpChanged(ip: String) {
@@ -65,11 +65,11 @@ class WolViewModel @Inject constructor(
     }
 
     fun showAddDialog() {
-        _state.update { it.copy(showAddDialog = true, addLabel = "", addMac = "") }
+        _state.update { it.copy(showAddDialog = true, addLabel = "", addMac = "", editingTarget = null) }
     }
 
     fun hideAddDialog() {
-        _state.update { it.copy(showAddDialog = false, addLabel = "", addMac = "") }
+        _state.update { it.copy(showAddDialog = false, addLabel = "", addMac = "", editingTarget = null) }
     }
 
     fun onAddLabelChanged(label: String) {
@@ -77,7 +77,18 @@ class WolViewModel @Inject constructor(
     }
 
     fun onAddMacChanged(mac: String) {
-        _state.update { it.copy(addMac = mac) }
+        _state.update { it.copy(addMac = formatMac(mac)) }
+    }
+
+    fun editTarget(target: WolTarget) {
+        _state.update {
+            it.copy(
+                showAddDialog = true,
+                addLabel = target.label,
+                addMac = target.macAddress,
+                editingTarget = target,
+            )
+        }
     }
 
     fun saveTarget(label: String, macAddress: String, broadcastIp: String, port: Int) {
@@ -93,6 +104,25 @@ class WolViewModel @Inject constructor(
                 )
             }.onFailure { error ->
                 _state.update { it.copy(error = error.message ?: "Failed to save target") }
+            }
+            hideAddDialog()
+        }
+    }
+
+    fun updateTarget(label: String, macAddress: String, broadcastIp: String, port: Int) {
+        val target = _state.value.editingTarget ?: return
+        viewModelScope.launch {
+            runCatching {
+                wolTargetDao.update(
+                    target.copy(
+                        label = label,
+                        macAddress = macAddress,
+                        broadcastIp = broadcastIp,
+                        port = port,
+                    ),
+                )
+            }.onFailure { error ->
+                _state.update { it.copy(error = error.message ?: "Failed to update target") }
             }
             hideAddDialog()
         }
@@ -114,6 +144,13 @@ class WolViewModel @Inject constructor(
 
     fun clearStatus() {
         _state.update { it.copy(lastSentStatus = null) }
+    }
+
+    private fun formatMac(input: String): String {
+        // Strip everything except hex digits, limit to 12 chars
+        val digits = input.filter { it.isLetterOrDigit() }.uppercase().take(12)
+        // Re-insert colons after every 2 hex digits
+        return digits.chunked(2).joinToString(":")
     }
 
     private companion object {
