@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ipinfo_title">IP Info</string>
+    <string name="navigate_back">Back</string>
     <string name="ipinfo_cd_share">Share IP info</string>
     <string name="ipinfo_button_retry">Retry</string>
     <string name="ipinfo_label_public_ip">Public IP</string>

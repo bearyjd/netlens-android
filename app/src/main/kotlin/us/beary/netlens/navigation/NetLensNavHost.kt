@@ -17,6 +17,7 @@ import us.beary.netlens.feature.traceroute.TracerouteScreen
 import us.beary.netlens.feature.portscan.PortScanScreen
 import us.beary.netlens.feature.tls.TlsScreen
 import us.beary.netlens.feature.whois.WhoisScreen
+import us.beary.netlens.feature.widgetsettings.WidgetSettingsScreen
 import us.beary.netlens.feature.wol.WolScreen
 import us.beary.netlens.ui.home.HomeScreen
 
@@ -33,7 +34,9 @@ fun NetLensNavHost(
         composable("home") {
             HomeScreen(
                 onToolClick = { tool ->
-                    navController.navigate(tool.route)
+                    navController.navigate(tool.route) {
+                        launchSingleTop = true
+                    }
                 },
             )
         }
@@ -50,5 +53,6 @@ fun NetLensNavHost(
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.WidgetSettings.route) { WidgetSettingsScreen(onBack = navController::popBackStack) }
     }
 }

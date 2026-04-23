@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="wol_title">Wake-on-LAN</string>
+    <string name="navigate_back">Back</string>
     <string name="wol_cd_add_target">Add target</string>
     <string name="wol_label_saved_targets">Saved Targets</string>
     <string name="wol_empty_state">No saved targets yet. Tap + to add one.</string>
