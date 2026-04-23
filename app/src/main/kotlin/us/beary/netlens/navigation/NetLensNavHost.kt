@@ -18,6 +18,7 @@ import us.beary.netlens.feature.portscan.PortScanScreen
 import us.beary.netlens.feature.tls.TlsScreen
 import us.beary.netlens.feature.whois.WhoisScreen
 import us.beary.netlens.feature.wol.WolScreen
+import us.beary.netlens.ui.home.HomeScreen
 
 @Composable
 fun NetLensNavHost(
@@ -26,21 +27,28 @@ fun NetLensNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = TopLevelDestination.IpInfo.route,
+        startDestination = "home",
         modifier = modifier,
     ) {
-        composable(TopLevelDestination.IpInfo.route) { IpInfoScreen() }
-        composable(TopLevelDestination.LanScan.route) { LanScanScreen() }
-        composable(TopLevelDestination.PortScan.route) { PortScanScreen() }
-        composable(TopLevelDestination.Dns.route) { DnsLookupScreen() }
-        composable(TopLevelDestination.Ping.route) { PingScreen() }
-        composable(TopLevelDestination.Traceroute.route) { TracerouteScreen() }
-        composable(TopLevelDestination.Wol.route) { WolScreen() }
-        composable(TopLevelDestination.Tls.route) { TlsScreen() }
-        composable(TopLevelDestination.Whois.route) { WhoisScreen() }
-        composable(TopLevelDestination.HttpTester.route) { HttpTesterScreen() }
-        composable(TopLevelDestination.Mdns.route) { MdnsScreen() }
-        composable(TopLevelDestination.NetLog.route) { NetLogScreen() }
-        composable(TopLevelDestination.Monitor.route) { MonitorScreen() }
+        composable("home") {
+            HomeScreen(
+                onToolClick = { tool ->
+                    navController.navigate(tool.route)
+                },
+            )
+        }
+        composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.LanScan.route) { LanScanScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.PortScan.route) { PortScanScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Dns.route) { DnsLookupScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Ping.route) { PingScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Traceroute.route) { TracerouteScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Wol.route) { WolScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Tls.route) { TlsScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Whois.route) { WhoisScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.HttpTester.route) { HttpTesterScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
     }
 }

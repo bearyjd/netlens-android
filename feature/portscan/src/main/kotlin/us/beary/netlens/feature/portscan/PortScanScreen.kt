@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -62,6 +63,7 @@ private const val PRESET_CUSTOM = 2
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortScanScreen(
+    onBack: () -> Unit = {},
     viewModel: PortScanViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
@@ -71,6 +73,14 @@ fun PortScanScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.portscan_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
                 actions = {
                     if (uiState.openCount > 0) {
                         IconButton(

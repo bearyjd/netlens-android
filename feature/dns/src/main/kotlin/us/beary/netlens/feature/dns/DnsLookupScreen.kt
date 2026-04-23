@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +51,7 @@ import us.beary.netlens.feature.dns.model.DnsResult
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DnsLookupScreen(
+    onBack: () -> Unit = {},
     viewModel: DnsLookupViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -59,6 +61,14 @@ fun DnsLookupScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.dns_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
                 actions = {
                     if (state.results.isNotEmpty()) {
                         IconButton(

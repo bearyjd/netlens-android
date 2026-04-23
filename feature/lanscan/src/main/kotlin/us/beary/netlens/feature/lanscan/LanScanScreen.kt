@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,12 +56,14 @@ import us.beary.netlens.feature.lanscan.model.LanScanUiState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanScanScreen(
+    onBack: () -> Unit = {},
     viewModel: LanScanViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
 
     LanScanContent(
+        onBack = onBack,
         uiState = uiState,
         sortOrder = sortOrder,
         onStartScan = viewModel::startScan,
@@ -72,6 +75,7 @@ fun LanScanScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LanScanContent(
+    onBack: () -> Unit,
     uiState: LanScanUiState,
     sortOrder: SortOrder,
     onStartScan: () -> Unit,
@@ -84,6 +88,14 @@ private fun LanScanContent(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.lanscan_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = { sortMenuExpanded = true }) {
                         Icon(
