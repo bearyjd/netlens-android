@@ -15,6 +15,10 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
+
 dependencies {
     // Feature modules
     implementation(project(":feature:ipinfo"))
@@ -39,6 +43,10 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:data"))
     implementation(project(":core:oui"))
+
+    // Test
+    testImplementation(libs.junit5.api)
+    testRuntimeOnly(libs.junit5.engine)
 
     // AndroidX / Compose
     implementation(libs.activity.compose)
