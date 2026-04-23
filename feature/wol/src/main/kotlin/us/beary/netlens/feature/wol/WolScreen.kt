@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -116,6 +117,7 @@ fun WolScreen(
                 WolTargetCard(
                     target = target,
                     onSend = { viewModel.sendWolToTarget(target) },
+                    onEdit = { viewModel.editTarget(target) },
                     onDelete = { viewModel.deleteTarget(target) },
                 )
             }
@@ -158,16 +160,26 @@ fun WolScreen(
         AddTargetDialog(
             label = uiState.addLabel,
             mac = uiState.addMac,
+            isEditing = uiState.editingTarget != null,
             onLabelChanged = viewModel::onAddLabelChanged,
             onMacChanged = viewModel::onAddMacChanged,
             onDismiss = viewModel::hideAddDialog,
             onSave = {
-                viewModel.saveTarget(
-                    label = uiState.addLabel,
-                    macAddress = uiState.addMac,
-                    broadcastIp = uiState.broadcastIp,
-                    port = uiState.port,
-                )
+                if (uiState.editingTarget != null) {
+                    viewModel.updateTarget(
+                        label = uiState.addLabel,
+                        macAddress = uiState.addMac,
+                        broadcastIp = uiState.broadcastIp,
+                        port = uiState.port,
+                    )
+                } else {
+                    viewModel.saveTarget(
+                        label = uiState.addLabel,
+                        macAddress = uiState.addMac,
+                        broadcastIp = uiState.broadcastIp,
+                        port = uiState.port,
+                    )
+                }
             },
         )
     }
@@ -178,6 +190,7 @@ fun WolScreen(
 private fun WolTargetCard(
     target: WolTarget,
     onSend: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -240,6 +253,13 @@ private fun WolTargetCard(
                         text = "${target.broadcastIp}:${target.port}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit target",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onSend) {
@@ -311,6 +331,7 @@ private fun ManualSendSection(
 private fun AddTargetDialog(
     label: String,
     mac: String,
+    isEditing: Boolean,
     onLabelChanged: (String) -> Unit,
     onMacChanged: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -318,7 +339,7 @@ private fun AddTargetDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add WoL Target") },
+        title = { Text(if (isEditing) "Edit WoL Target" else "Add WoL Target") },
         text = {
             Column {
                 OutlinedTextField(
@@ -345,7 +366,7 @@ private fun AddTargetDialog(
                 onClick = onSave,
                 enabled = label.isNotBlank() && mac.isNotBlank(),
             ) {
-                Text("Save")
+                Text(if (isEditing) "Update" else "Save")
             }
         },
         dismissButton = {

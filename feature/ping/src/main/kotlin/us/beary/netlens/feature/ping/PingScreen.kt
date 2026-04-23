@@ -15,10 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -32,8 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,12 +52,16 @@ fun PingScreen(
     viewModel: PingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
 
     PingContent(
         state = state,
         onHostChange = viewModel::onHostChange,
         onStartPing = viewModel::startPing,
         onStopPing = viewModel::stopPing,
+        onCopyResults = {
+            clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
+        },
         modifier = modifier,
     )
 }
@@ -65,6 +73,7 @@ private fun PingContent(
     onHostChange: (String) -> Unit,
     onStartPing: (String, Int) -> Unit,
     onStopPing: () -> Unit,
+    onCopyResults: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val countOptions = listOf(4, 8, 16)
@@ -82,14 +91,27 @@ private fun PingContent(
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        OutlinedTextField(
-            value = state.host,
-            onValueChange = onHostChange,
-            label = { Text("Host") },
-            placeholder = { Text("e.g. 8.8.8.8") },
-            singleLine = true,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = state.host,
+                onValueChange = onHostChange,
+                label = { Text("Host") },
+                placeholder = { Text("e.g. 8.8.8.8") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            if (state.results.isNotEmpty()) {
+                IconButton(onClick = onCopyResults) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy results",
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -233,6 +255,7 @@ private fun SummaryCard(
                 StatItem(label = "Min", value = "%.1f ms".format(summary.minMs))
                 StatItem(label = "Avg", value = "%.1f ms".format(summary.avgMs))
                 StatItem(label = "Max", value = "%.1f ms".format(summary.maxMs))
+                StatItem(label = "Jitter", value = "%.1f ms".format(summary.jitterMs))
             }
         }
     }
