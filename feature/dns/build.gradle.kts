@@ -10,4 +10,5 @@ dependencies {
     implementation(project(":core:network"))
     implementation(libs.dnsjava)
     implementation(libs.core.ktx)
+    implementation(libs.compose.material.icons)
 }

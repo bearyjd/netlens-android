@@ -18,12 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,10 +64,30 @@ fun PortScanScreen(
     viewModel: PortScanViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Port Scanner") })
+            TopAppBar(
+                title = { Text("Port Scanner") },
+                actions = {
+                    if (uiState.openCount > 0) {
+                        IconButton(
+                            onClick = {
+                                val openPorts = uiState.results
+                                    .filter { it.isOpen }
+                                    .sortedBy { it.port }
+                                    .joinToString("\n") { "${it.port} (${it.serviceName})" }
+                                clipboardManager.setText(
+                                    AnnotatedString("Open ports:\n$openPorts"),
+                                )
+                            },
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy open ports")
+                        }
+                    }
+                },
+            )
         },
     ) { padding ->
         PortScanContent(
