@@ -18,7 +18,7 @@ class DeviceFingerprinter @Inject constructor() {
     private fun guessDeviceType(vendor: String, hostname: String): String? {
         // Router/Gateway detection
         if (vendor.contains("cisco") || vendor.contains("netgear") || vendor.contains("tp-link") ||
-            vendor.contains("asus") || vendor.contains("linksys") || vendor.contains("ubiquiti") ||
+            vendor.contains("linksys") || vendor.contains("ubiquiti") ||
             vendor.contains("mikrotik") || vendor.contains("juniper") || vendor.contains("aruba") ||
             hostname.contains("router") || hostname.contains("gateway")
         ) {
