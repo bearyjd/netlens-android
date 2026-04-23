@@ -26,6 +26,11 @@ class TracerImpl @Inject constructor() : Tracer {
 
     override fun trace(host: String, maxHops: Int): Flow<TracerouteHop> = flow {
         val sanitized = validateHost(host)
+        val targetIp = try {
+            java.net.InetAddress.getByName(sanitized).hostAddress
+        } catch (_: Exception) {
+            sanitized
+        }
 
         for (ttl in 1..maxHops) {
             if (!coroutineContext.isActive) break
@@ -34,23 +39,22 @@ class TracerImpl @Inject constructor() : Tracer {
                 .redirectErrorStream(true)
                 .start()
 
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
+            val output: String
+            try {
+                output = process.inputStream.bufferedReader().readText()
+                process.waitFor()
+            } finally {
+                process.destroyForcibly()
+            }
 
             val hop = parseHopOutput(ttl, output, sanitized)
             emit(hop)
 
-            if (!hop.isTimeout && hop.ip != null) {
-                val resolvedTarget = try {
-                    java.net.InetAddress.getByName(sanitized).hostAddress
-                } catch (_: Exception) {
-                    sanitized
-                }
-                if (hop.ip == resolvedTarget || hop.ip == sanitized) break
-            }
+            if (!hop.isTimeout && hop.ip == targetIp) break
         }
     }.flowOn(Dispatchers.IO)
 
+    // ICMP TTL-exceeded replies don't include time= so intermediate hops have no RTT data
     private fun parseHopOutput(ttl: Int, output: String, targetHost: String): TracerouteHop {
         FROM_REGEX.find(output)?.let { match ->
             val ip = match.groupValues[1]

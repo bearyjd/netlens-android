@@ -28,7 +28,7 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Run unit tests
-        run: ./gradlew :core:network:testDebugUnitTest :feature:whois:testDebugUnitTest :feature:monitor:testDebugUnitTest
+        run: ./gradlew :core:network:testDebugUnitTest :feature:lanscan:testDebugUnitTest :feature:whois:testDebugUnitTest :feature:monitor:testDebugUnitTest
 
       - name: Upload test results
         if: always()
