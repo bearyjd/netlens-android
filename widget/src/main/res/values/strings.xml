@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_small_description">Compact network info (2×1)</string>
+    <string name="widget_medium_description">Full network info with navigation (2×2)</string>
+</resources>
