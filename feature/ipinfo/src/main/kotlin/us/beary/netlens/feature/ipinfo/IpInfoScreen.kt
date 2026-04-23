@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,7 +67,7 @@ fun IpInfoScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("IP Info") },
+            title = { Text(stringResource(R.string.ipinfo_title)) },
             actions = {
                 if (shareText != null) {
                     IconButton(
@@ -80,7 +81,7 @@ fun IpInfoScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share IP info",
+                            contentDescription = stringResource(R.string.ipinfo_cd_share),
                         )
                     }
                 }
@@ -141,7 +142,7 @@ private fun ErrorContent(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp),
                 )
-                Text("Retry")
+                Text(stringResource(R.string.ipinfo_button_retry))
             }
         }
     }
@@ -173,7 +174,7 @@ private fun SuccessContent(data: IpApiResponse) {
             ) {
                 Column {
                     Text(
-                        text = "Public IP",
+                        text = stringResource(R.string.ipinfo_label_public_ip),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
@@ -190,7 +191,7 @@ private fun SuccessContent(data: IpApiResponse) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy IP address",
+                        contentDescription = stringResource(R.string.ipinfo_cd_copy_ip),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
@@ -204,11 +205,11 @@ private fun SuccessContent(data: IpApiResponse) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                InfoRow(label = "ISP", value = data.isp, onCopy = { clipboardManager.setText(AnnotatedString(data.isp)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_isp), value = data.isp, onCopy = { clipboardManager.setText(AnnotatedString(data.isp)) })
                 HorizontalDivider()
-                InfoRow(label = "Organization", value = data.org, onCopy = { clipboardManager.setText(AnnotatedString(data.org)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_organization), value = data.org, onCopy = { clipboardManager.setText(AnnotatedString(data.org)) })
                 HorizontalDivider()
-                InfoRow(label = "AS Number", value = data.asNumber, onCopy = { clipboardManager.setText(AnnotatedString(data.asNumber)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_as_number), value = data.asNumber, onCopy = { clipboardManager.setText(AnnotatedString(data.asNumber)) })
             }
         }
 
@@ -220,13 +221,13 @@ private fun SuccessContent(data: IpApiResponse) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val coords = "${data.lat}, ${data.lon}"
-                InfoRow(label = "Country", value = data.country, onCopy = { clipboardManager.setText(AnnotatedString(data.country)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_country), value = data.country, onCopy = { clipboardManager.setText(AnnotatedString(data.country)) })
                 HorizontalDivider()
-                InfoRow(label = "Region", value = data.regionName, onCopy = { clipboardManager.setText(AnnotatedString(data.regionName)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_region), value = data.regionName, onCopy = { clipboardManager.setText(AnnotatedString(data.regionName)) })
                 HorizontalDivider()
-                InfoRow(label = "City", value = data.city, onCopy = { clipboardManager.setText(AnnotatedString(data.city)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_city), value = data.city, onCopy = { clipboardManager.setText(AnnotatedString(data.city)) })
                 HorizontalDivider()
-                InfoRow(label = "Coordinates", value = coords, onCopy = { clipboardManager.setText(AnnotatedString(coords)) })
+                InfoRow(label = stringResource(R.string.ipinfo_label_coordinates), value = coords, onCopy = { clipboardManager.setText(AnnotatedString(coords)) })
             }
         }
 
@@ -238,13 +239,13 @@ private fun SuccessContent(data: IpApiResponse) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 InfoRow(
-                    label = "Proxy / VPN",
-                    value = if (data.proxy) "Detected" else "Not detected",
+                    label = stringResource(R.string.ipinfo_label_proxy_vpn),
+                    value = if (data.proxy) stringResource(R.string.ipinfo_value_detected) else stringResource(R.string.ipinfo_value_not_detected),
                 )
                 HorizontalDivider()
                 InfoRow(
-                    label = "Hosting",
-                    value = if (data.hosting) "Yes" else "No",
+                    label = stringResource(R.string.ipinfo_label_hosting),
+                    value = if (data.hosting) stringResource(R.string.ipinfo_value_yes) else stringResource(R.string.ipinfo_value_no),
                 )
             }
         }
@@ -275,7 +276,7 @@ private fun InfoRow(label: String, value: String, onCopy: (() -> Unit)? = null) 
                 IconButton(onClick = onCopy) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy $label",
+                        contentDescription = stringResource(R.string.ipinfo_cd_copy_field, label),
                         modifier = Modifier.size(18.dp),
                     )
                 }

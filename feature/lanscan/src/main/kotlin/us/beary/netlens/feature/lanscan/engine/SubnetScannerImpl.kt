@@ -13,6 +13,7 @@ import javax.inject.Inject
 
 class SubnetScannerImpl @Inject constructor(
     private val ouiLookup: OuiLookup,
+    private val fingerprinter: DeviceFingerprinter,
 ) : SubnetScanner {
 
     override fun scan(subnet: String, prefixLength: Int): Flow<LanDevice> = flow {
@@ -29,16 +30,15 @@ class SubnetScannerImpl @Inject constructor(
                 val vendor = mac?.let { ouiLookup.lookup(it) }
                 val hostname = resolveHostname(ip)
 
-                emit(
-                    LanDevice(
-                        ip = ip,
-                        mac = mac,
-                        vendor = vendor,
-                        hostname = hostname,
-                        isReachable = true,
-                        latencyMs = 0,
-                    ),
+                val device = LanDevice(
+                    ip = ip,
+                    mac = mac,
+                    vendor = vendor,
+                    hostname = hostname,
+                    isReachable = true,
+                    latencyMs = 0,
                 )
+                emit(fingerprinter.fingerprint(device))
             }
 
             // Also emit unreachable devices found in ARP table from this batch
@@ -47,16 +47,15 @@ class SubnetScannerImpl @Inject constructor(
                     val mac = arpTable[ip]
                     val vendor = mac?.let { ouiLookup.lookup(it) }
 
-                    emit(
-                        LanDevice(
-                            ip = ip,
-                            mac = mac,
-                            vendor = vendor,
-                            hostname = null,
-                            isReachable = false,
-                            latencyMs = 0,
-                        ),
+                    val device = LanDevice(
+                        ip = ip,
+                        mac = mac,
+                        vendor = vendor,
+                        hostname = null,
+                        isReachable = false,
+                        latencyMs = 0,
                     )
+                    emit(fingerprinter.fingerprint(device))
                 }
             }
         }
