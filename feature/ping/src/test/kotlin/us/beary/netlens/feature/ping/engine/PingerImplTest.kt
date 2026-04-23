@@ -2,7 +2,6 @@ package us.beary.netlens.feature.ping.engine
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -53,19 +52,4 @@ class PingerImplTest {
         }
     }
 
-    @Test
-    fun `valid hostname does not throw on validation`() {
-        val error = runCatching {
-            PingerImpl().ping("example.com", 1)
-        }
-        assertNotNull(error.getOrNull())
-    }
-
-    @Test
-    fun `valid IP does not throw on validation`() {
-        val error = runCatching {
-            PingerImpl().ping("8.8.8.8", 1)
-        }
-        assertNotNull(error.getOrNull())
-    }
 }

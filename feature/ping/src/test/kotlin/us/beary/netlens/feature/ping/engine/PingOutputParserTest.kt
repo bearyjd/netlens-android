@@ -16,6 +16,7 @@ class PingOutputParserTest {
         assertEquals(1, result!!.sequenceNumber)
         assertEquals(12.3f, result.latencyMs)
         assertEquals(118, result.ttl)
+        // REPLY_REGEX captures trailing colon as part of (\S+) group
         assertEquals("8.8.8.8:", result.ip)
         assertEquals(false, result.isTimeout)
     }

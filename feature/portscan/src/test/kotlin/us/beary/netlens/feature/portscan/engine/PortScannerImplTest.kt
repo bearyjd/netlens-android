@@ -20,9 +20,10 @@ class PortScannerImplTest {
     @Test
     fun `exactly 10000 ports does not throw validation error`() = runTest {
         val ports = (1..10_000).toList()
-        // Won't throw on validation, but will fail on I/O — that's fine
         try {
             scanner.scan("127.0.0.1", ports, 1).toList()
+        } catch (e: IllegalArgumentException) {
+            throw e
         } catch (_: Exception) {
             // I/O failure expected, validation passed
         }
@@ -46,6 +47,8 @@ class PortScannerImplTest {
     fun `port 65535 is valid`() = runTest {
         try {
             scanner.scan("127.0.0.1", listOf(65535), 1).toList()
+        } catch (e: IllegalArgumentException) {
+            throw e
         } catch (_: Exception) {
             // I/O failure expected, validation passed
         }

@@ -11,7 +11,7 @@ class DnsResolverImplTest {
     private val resolver = DnsResolverImpl()
 
     @Test
-    fun `empty domain throws TextParseException`() = runTest {
+    fun `empty domain throws exception`() = runTest {
         assertThrows<Exception> {
             resolver.lookup("", setOf(DnsRecordType.A))
         }
