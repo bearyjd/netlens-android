@@ -44,11 +44,16 @@ import us.beary.netlens.widget.action.DeeplinkUriKey
 import us.beary.netlens.widget.action.OpenAppAction
 import us.beary.netlens.widget.action.OpenDeeplinkAction
 import us.beary.netlens.widget.data.WidgetPreferencesRepository
+import us.beary.netlens.widget.model.WidgetColor
 import us.beary.netlens.widget.model.WidgetPage
 import us.beary.netlens.widget.model.WidgetPreferences
 import us.beary.netlens.widget.model.WidgetSize
 import us.beary.netlens.widget.util.Deeplink
 import us.beary.netlens.widget.util.toFlagEmoji
+
+private const val FLAG_EMOJI_SIZE_OFFSET = 4
+private const val LABEL_SIZE_OFFSET = -2
+private const val DETAIL_SIZE_OFFSET = -1
 
 class NetLensWidget : GlanceAppWidget() {
 
@@ -74,25 +79,21 @@ private fun WidgetRoot(
 ) {
     val bgColor = Color(widgetPrefs.backgroundColor.argb).copy(alpha = widgetPrefs.backgroundAlpha)
     val accentColor = Color(widgetPrefs.accentColor.argb)
-    val textColor = if (widgetPrefs.backgroundColor.argb == 0xFFFFFFFF.toLong()) Color.Black else Color.White
+    val textColor = if (widgetPrefs.backgroundColor == WidgetColor.WHITE) Color.Black else Color.White
     val textSizeSp = widgetPrefs.textSize.sp.sp
     val pages = widgetPrefs.pages
     val safeIndex = if (pages.isEmpty()) 0 else pageIndex.coerceIn(0, pages.lastIndex)
     val currentPage = pages.getOrNull(safeIndex) ?: WidgetPage.CONNECTION
     val isSmall = widgetPrefs.widgetSize == WidgetSize.SMALL
 
+    val baseModifier = GlanceModifier
+        .fillMaxSize()
+        .cornerRadius(widgetPrefs.cornerRadius.dp)
+        .background(ColorProvider(bgColor))
     val rootModifier = if (isSmall) {
-        GlanceModifier
-            .fillMaxSize()
-            .cornerRadius(widgetPrefs.cornerRadius.dp)
-            .background(ColorProvider(bgColor))
-            .clickable(actionRunCallback<CarouselNextAction>())
+        baseModifier.clickable(actionRunCallback<CarouselNextAction>())
     } else {
-        GlanceModifier
-            .fillMaxSize()
-            .cornerRadius(widgetPrefs.cornerRadius.dp)
-            .background(ColorProvider(bgColor))
-            .clickable(actionRunCallback<OpenAppAction>())
+        baseModifier.clickable(actionRunCallback<OpenAppAction>())
     }
 
     Column(
@@ -131,7 +132,7 @@ private fun ConnectionPage(
         if (state.countryCode.isNotEmpty()) {
             Text(
                 text = state.countryCode.toFlagEmoji(),
-                style = TextStyle(fontSize = (textSizeSp.value + 4).sp),
+                style = TextStyle(fontSize = (textSizeSp.value + FLAG_EMOJI_SIZE_OFFSET).sp),
                 modifier = GlanceModifier.clickable(
                     actionRunCallback<OpenDeeplinkAction>(
                         actionParametersOf(DeeplinkUriKey to Deeplink.IPINFO),
@@ -146,7 +147,7 @@ private fun ConnectionPage(
             text = "${vpnDot}vpn",
             style = TextStyle(
                 color = ColorProvider(if (state.isVpn) accentColor else textColor.copy(alpha = 0.5f)),
-                fontSize = (textSizeSp.value - 2).sp,
+                fontSize = (textSizeSp.value + LABEL_SIZE_OFFSET).sp,
             ),
         )
 
@@ -183,7 +184,7 @@ private fun ConnectionPage(
             text = "$ssidText · $localIpText",
             style = TextStyle(
                 color = ColorProvider(textColor.copy(alpha = 0.7f)),
-                fontSize = (textSizeSp.value - 2).sp,
+                fontSize = (textSizeSp.value + LABEL_SIZE_OFFSET).sp,
             ),
             modifier = GlanceModifier.clickable(
                 actionRunCallback<OpenDeeplinkAction>(
@@ -218,7 +219,7 @@ private fun NetworkPage(
             text = "Gateway",
             style = TextStyle(
                 color = ColorProvider(textColor.copy(alpha = 0.6f)),
-                fontSize = (textSizeSp.value - 2).sp,
+                fontSize = (textSizeSp.value + LABEL_SIZE_OFFSET).sp,
             ),
         )
         Spacer(modifier = GlanceModifier.width(8.dp))
@@ -244,7 +245,7 @@ private fun NetworkPage(
             text = "DNS",
             style = TextStyle(
                 color = ColorProvider(textColor.copy(alpha = 0.6f)),
-                fontSize = (textSizeSp.value - 2).sp,
+                fontSize = (textSizeSp.value + LABEL_SIZE_OFFSET).sp,
             ),
         )
         Spacer(modifier = GlanceModifier.width(8.dp))
@@ -265,7 +266,7 @@ private fun NetworkPage(
             text = dnsText,
             style = TextStyle(
                 color = ColorProvider(textColor),
-                fontSize = (textSizeSp.value - 1).sp,
+                fontSize = (textSizeSp.value + DETAIL_SIZE_OFFSET).sp,
             ),
             modifier = dnsModifier,
             maxLines = 1,
