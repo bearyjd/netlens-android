@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dns_title">DNS Lookup</string>
+    <string name="navigate_back">Back</string>
     <string name="dns_cd_copy_all">Copy all records</string>
     <string name="dns_label_domain">Domain</string>
     <string name="dns_placeholder_domain">example.com</string>
