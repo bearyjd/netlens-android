@@ -10,6 +10,7 @@ data class IpApiResponse(
     val org: String,
     @SerialName("as") val asNumber: String,
     val country: String,
+    val countryCode: String = "",
     val regionName: String,
     val city: String,
     val lat: Double,
