@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -82,12 +83,12 @@ private fun LanScanContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("LAN Scan") },
+                title = { Text(stringResource(R.string.lanscan_title)) },
                 actions = {
                     IconButton(onClick = { sortMenuExpanded = true }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = "Sort devices",
+                            contentDescription = stringResource(R.string.lanscan_cd_sort),
                         )
                     }
                     DropdownMenu(
@@ -95,7 +96,7 @@ private fun LanScanContent(
                         onDismissRequest = { sortMenuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Sort by IP") },
+                            text = { Text(stringResource(R.string.lanscan_sort_by_ip)) },
                             onClick = {
                                 onSortOrderChange(SortOrder.IP)
                                 sortMenuExpanded = false
@@ -105,7 +106,7 @@ private fun LanScanContent(
                             } else null,
                         )
                         DropdownMenuItem(
-                            text = { Text("Sort by Vendor") },
+                            text = { Text(stringResource(R.string.lanscan_sort_by_vendor)) },
                             onClick = {
                                 onSortOrderChange(SortOrder.VENDOR)
                                 sortMenuExpanded = false
@@ -115,7 +116,7 @@ private fun LanScanContent(
                             } else null,
                         )
                         DropdownMenuItem(
-                            text = { Text("Sort by Latency") },
+                            text = { Text(stringResource(R.string.lanscan_sort_by_latency)) },
                             onClick = {
                                 onSortOrderChange(SortOrder.LATENCY)
                                 sortMenuExpanded = false
@@ -138,7 +139,7 @@ private fun LanScanContent(
                     } else {
                         Icons.Default.Search
                     },
-                    contentDescription = if (uiState.isScanning) "Stop scan" else "Start scan",
+                    contentDescription = if (uiState.isScanning) stringResource(R.string.lanscan_cd_stop_scan) else stringResource(R.string.lanscan_cd_start_scan),
                 )
             }
         },
@@ -253,6 +254,28 @@ private fun DeviceCard(device: LanDevice) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                device.osGuess?.let { os ->
+                    Text(
+                        text = os,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
+
+            device.deviceType?.let { type ->
+                Spacer(modifier = Modifier.width(8.dp))
+                SuggestionChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            text = type,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    },
+                )
             }
 
             device.vendor?.let { vendor ->
@@ -277,7 +300,7 @@ private fun DeviceCard(device: LanDevice) {
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy IP",
+                    contentDescription = stringResource(R.string.lanscan_cd_copy_ip),
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -289,7 +312,7 @@ private fun DeviceCard(device: LanDevice) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy MAC",
+                        contentDescription = stringResource(R.string.lanscan_cd_copy_mac),
                         modifier = Modifier.size(16.dp),
                     )
                 }
