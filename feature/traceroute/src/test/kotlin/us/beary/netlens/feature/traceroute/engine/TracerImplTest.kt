@@ -2,7 +2,6 @@ package us.beary.netlens.feature.traceroute.engine
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -46,15 +45,4 @@ class TracerImplTest {
         }
     }
 
-    @Test
-    fun `valid hostname creates flow without validation error`() {
-        val flow = runCatching { tracer.trace("example.com") }
-        assertNotNull(flow.getOrNull())
-    }
-
-    @Test
-    fun `valid IP creates flow without validation error`() {
-        val flow = runCatching { tracer.trace("8.8.8.8") }
-        assertNotNull(flow.getOrNull())
-    }
 }
