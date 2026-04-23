@@ -10,8 +10,8 @@ android {
 
     defaultConfig {
         applicationId = "us.beary.netlens"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = property("netlens.versionCode").toString().toInt()
+        versionName = property("netlens.versionName").toString()
     }
 }
 
