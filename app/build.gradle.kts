@@ -10,8 +10,8 @@ android {
 
     defaultConfig {
         applicationId = "us.beary.netlens"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = property("netlens.versionCode").toString().toInt()
+        versionName = property("netlens.versionName").toString()
     }
 }
 
@@ -22,7 +22,15 @@ dependencies {
     implementation(project(":feature:portscan"))
     implementation(project(":feature:dns"))
     implementation(project(":feature:ping"))
+    implementation(project(":feature:traceroute"))
     implementation(project(":feature:wol"))
+    implementation(project(":feature:tls"))
+    implementation(project(":feature:whois"))
+    implementation(project(":feature:httptester"))
+    implementation(project(":feature:mdns"))
+    implementation(project(":feature:netlog"))
+    implementation(project(":feature:monitor"))
+    implementation(project(":feature:widgetsettings"))
 
     // Widget
     implementation(project(":widget"))

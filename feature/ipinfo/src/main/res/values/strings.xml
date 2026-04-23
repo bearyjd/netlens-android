@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ipinfo_title">IP Info</string>
+    <string name="navigate_back">Back</string>
+    <string name="ipinfo_cd_share">Share IP info</string>
+    <string name="ipinfo_button_retry">Retry</string>
+    <string name="ipinfo_label_public_ip">Public IP</string>
+    <string name="ipinfo_cd_copy_ip">Copy IP address</string>
+    <string name="ipinfo_label_isp">ISP</string>
+    <string name="ipinfo_label_organization">Organization</string>
+    <string name="ipinfo_label_as_number">AS Number</string>
+    <string name="ipinfo_label_country">Country</string>
+    <string name="ipinfo_label_region">Region</string>
+    <string name="ipinfo_label_city">City</string>
+    <string name="ipinfo_label_coordinates">Coordinates</string>
+    <string name="ipinfo_label_proxy_vpn">Proxy / VPN</string>
+    <string name="ipinfo_value_detected">Detected</string>
+    <string name="ipinfo_value_not_detected">Not detected</string>
+    <string name="ipinfo_label_hosting">Hosting</string>
+    <string name="ipinfo_value_yes">Yes</string>
+    <string name="ipinfo_value_no">No</string>
+    <string name="ipinfo_cd_copy_field">Copy %1$s</string>
+</resources>

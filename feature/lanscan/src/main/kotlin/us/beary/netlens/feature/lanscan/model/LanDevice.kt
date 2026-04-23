@@ -7,4 +7,6 @@ data class LanDevice(
     val hostname: String? = null,
     val isReachable: Boolean = true,
     val latencyMs: Long = 0,
+    val deviceType: String? = null,
+    val osGuess: String? = null,
 )

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigate_back">Back</string>
+    <string name="ping_label_host">Host</string>
+    <string name="ping_placeholder_host">e.g. 8.8.8.8</string>
+    <string name="ping_cd_copy_results">Copy results</string>
+    <string name="ping_button_start">Ping</string>
+    <string name="ping_button_stop">Stop</string>
+    <string name="ping_label_summary">Summary</string>
+    <string name="ping_stat_sent">Sent</string>
+    <string name="ping_stat_recv">Recv</string>
+    <string name="ping_stat_loss">Loss</string>
+    <string name="ping_stat_min">Min</string>
+    <string name="ping_stat_avg">Avg</string>
+    <string name="ping_stat_max">Max</string>
+    <string name="ping_stat_jitter">Jitter</string>
+    <string name="ping_result_timeout">timeout</string>
+</resources>

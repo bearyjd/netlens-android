@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lanscan_title">LAN Scan</string>
+    <string name="navigate_back">Back</string>
+    <string name="lanscan_cd_sort">Sort devices</string>
+    <string name="lanscan_sort_by_ip">Sort by IP</string>
+    <string name="lanscan_sort_by_vendor">Sort by Vendor</string>
+    <string name="lanscan_sort_by_latency">Sort by Latency</string>
+    <string name="lanscan_cd_stop_scan">Stop scan</string>
+    <string name="lanscan_cd_start_scan">Start scan</string>
+    <string name="lanscan_cd_copy_ip">Copy IP</string>
+    <string name="lanscan_cd_copy_mac">Copy MAC</string>
+</resources>

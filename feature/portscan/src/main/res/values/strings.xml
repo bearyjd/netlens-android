@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="portscan_title">Port Scanner</string>
+    <string name="navigate_back">Back</string>
+    <string name="portscan_cd_copy_open_ports">Copy open ports</string>
+    <string name="portscan_label_host">Host or IP address</string>
+    <string name="portscan_chip_common">Common</string>
+    <string name="portscan_chip_all">All (1-1024)</string>
+    <string name="portscan_chip_custom">Custom</string>
+    <string name="portscan_button_cancel">Cancel Scan</string>
+    <string name="portscan_button_scan">Scan Ports</string>
+    <string name="portscan_cd_open">Open</string>
+    <string name="portscan_cd_closed">Closed</string>
+</resources>

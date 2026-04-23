@@ -1,5 +1,6 @@
 package us.beary.netlens.feature.ipinfo
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,12 +28,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,34 +47,82 @@ import us.beary.netlens.feature.ipinfo.model.IpInfoUiState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IpInfoScreen(
+    onBack: () -> Unit = {},
     viewModel: IpInfoViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    PullToRefreshBox(
-        isRefreshing = uiState is IpInfoUiState.Loading,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        when (val state = uiState) {
-            is IpInfoUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+    val shareText = if (uiState is IpInfoUiState.Success) {
+        val data = (uiState as IpInfoUiState.Success).data
+        buildString {
+            appendLine("IP: ${data.query}")
+            appendLine("ISP: ${data.isp}")
+            appendLine("Organization: ${data.org}")
+            appendLine("AS: ${data.asNumber}")
+            appendLine("Country: ${data.country}")
+            appendLine("Region: ${data.regionName}")
+            appendLine("City: ${data.city}")
+            appendLine("Coordinates: ${data.lat}, ${data.lon}")
+        }
+    } else null
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(stringResource(R.string.ipinfo_title)) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                    )
                 }
-            }
+            },
+            actions = {
+                if (shareText != null) {
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, null))
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.ipinfo_cd_share),
+                        )
+                    }
+                }
+            },
+        )
 
-            is IpInfoUiState.Error -> {
-                ErrorContent(
-                    message = state.message,
-                    onRetry = viewModel::refresh,
-                )
-            }
+        PullToRefreshBox(
+            isRefreshing = uiState is IpInfoUiState.Loading,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when (val state = uiState) {
+                is IpInfoUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
 
-            is IpInfoUiState.Success -> {
-                SuccessContent(data = state.data)
+                is IpInfoUiState.Error -> {
+                    ErrorContent(
+                        message = state.message,
+                        onRetry = viewModel::refresh,
+                    )
+                }
+
+                is IpInfoUiState.Success -> {
+                    SuccessContent(data = state.data)
+                }
             }
         }
     }
@@ -97,7 +152,7 @@ private fun ErrorContent(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp),
                 )
-                Text("Retry")
+                Text(stringResource(R.string.ipinfo_button_retry))
             }
         }
     }
@@ -129,7 +184,7 @@ private fun SuccessContent(data: IpApiResponse) {
             ) {
                 Column {
                     Text(
-                        text = "Public IP",
+                        text = stringResource(R.string.ipinfo_label_public_ip),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
@@ -146,7 +201,7 @@ private fun SuccessContent(data: IpApiResponse) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy IP address",
+                        contentDescription = stringResource(R.string.ipinfo_cd_copy_ip),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
@@ -160,11 +215,11 @@ private fun SuccessContent(data: IpApiResponse) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                InfoRow(label = "ISP", value = data.isp)
+                InfoRow(label = stringResource(R.string.ipinfo_label_isp), value = data.isp, onCopy = { clipboardManager.setText(AnnotatedString(data.isp)) })
                 HorizontalDivider()
-                InfoRow(label = "Organization", value = data.org)
+                InfoRow(label = stringResource(R.string.ipinfo_label_organization), value = data.org, onCopy = { clipboardManager.setText(AnnotatedString(data.org)) })
                 HorizontalDivider()
-                InfoRow(label = "AS Number", value = data.asNumber)
+                InfoRow(label = stringResource(R.string.ipinfo_label_as_number), value = data.asNumber, onCopy = { clipboardManager.setText(AnnotatedString(data.asNumber)) })
             }
         }
 
@@ -175,13 +230,14 @@ private fun SuccessContent(data: IpApiResponse) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                InfoRow(label = "Country", value = data.country)
+                val coords = "${data.lat}, ${data.lon}"
+                InfoRow(label = stringResource(R.string.ipinfo_label_country), value = data.country, onCopy = { clipboardManager.setText(AnnotatedString(data.country)) })
                 HorizontalDivider()
-                InfoRow(label = "Region", value = data.regionName)
+                InfoRow(label = stringResource(R.string.ipinfo_label_region), value = data.regionName, onCopy = { clipboardManager.setText(AnnotatedString(data.regionName)) })
                 HorizontalDivider()
-                InfoRow(label = "City", value = data.city)
+                InfoRow(label = stringResource(R.string.ipinfo_label_city), value = data.city, onCopy = { clipboardManager.setText(AnnotatedString(data.city)) })
                 HorizontalDivider()
-                InfoRow(label = "Coordinates", value = "${data.lat}, ${data.lon}")
+                InfoRow(label = stringResource(R.string.ipinfo_label_coordinates), value = coords, onCopy = { clipboardManager.setText(AnnotatedString(coords)) })
             }
         }
 
@@ -193,13 +249,13 @@ private fun SuccessContent(data: IpApiResponse) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 InfoRow(
-                    label = "Proxy / VPN",
-                    value = if (data.proxy) "Detected" else "Not detected",
+                    label = stringResource(R.string.ipinfo_label_proxy_vpn),
+                    value = if (data.proxy) stringResource(R.string.ipinfo_value_detected) else stringResource(R.string.ipinfo_value_not_detected),
                 )
                 HorizontalDivider()
                 InfoRow(
-                    label = "Hosting",
-                    value = if (data.hosting) "Yes" else "No",
+                    label = stringResource(R.string.ipinfo_label_hosting),
+                    value = if (data.hosting) stringResource(R.string.ipinfo_value_yes) else stringResource(R.string.ipinfo_value_no),
                 )
             }
         }
@@ -209,20 +265,32 @@ private fun SuccessContent(data: IpApiResponse) {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String, onCopy: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (onCopy != null) {
+                IconButton(onClick = onCopy) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.ipinfo_cd_copy_field, label),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
     }
 }

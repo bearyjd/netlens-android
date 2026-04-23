@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,6 +56,7 @@ import us.beary.netlens.core.data.model.WolTarget
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WolScreen(
+    onBack: () -> Unit = {},
     viewModel: WolViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
@@ -74,12 +78,22 @@ fun WolScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Wake-on-LAN") })
+            TopAppBar(
+                title = { Text(stringResource(R.string.wol_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::showAddDialog) {
-                Icon(Icons.Default.Add, contentDescription = "Add target")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.wol_cd_add_target))
             }
         },
     ) { padding ->
@@ -92,7 +106,7 @@ fun WolScreen(
         ) {
             item {
                 Text(
-                    text = "Saved Targets",
+                    text = stringResource(R.string.wol_label_saved_targets),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
@@ -101,7 +115,7 @@ fun WolScreen(
             if (uiState.savedTargets.isEmpty()) {
                 item {
                     Text(
-                        text = "No saved targets yet. Tap + to add one.",
+                        text = stringResource(R.string.wol_empty_state),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 16.dp),
@@ -116,6 +130,7 @@ fun WolScreen(
                 WolTargetCard(
                     target = target,
                     onSend = { viewModel.sendWolToTarget(target) },
+                    onEdit = { viewModel.editTarget(target) },
                     onDelete = { viewModel.deleteTarget(target) },
                 )
             }
@@ -124,7 +139,7 @@ fun WolScreen(
 
             item {
                 Text(
-                    text = "Quick Send",
+                    text = stringResource(R.string.wol_label_quick_send),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
@@ -158,16 +173,26 @@ fun WolScreen(
         AddTargetDialog(
             label = uiState.addLabel,
             mac = uiState.addMac,
+            isEditing = uiState.editingTarget != null,
             onLabelChanged = viewModel::onAddLabelChanged,
             onMacChanged = viewModel::onAddMacChanged,
             onDismiss = viewModel::hideAddDialog,
             onSave = {
-                viewModel.saveTarget(
-                    label = uiState.addLabel,
-                    macAddress = uiState.addMac,
-                    broadcastIp = uiState.broadcastIp,
-                    port = uiState.port,
-                )
+                if (uiState.editingTarget != null) {
+                    viewModel.updateTarget(
+                        label = uiState.addLabel,
+                        macAddress = uiState.addMac,
+                        broadcastIp = uiState.broadcastIp,
+                        port = uiState.port,
+                    )
+                } else {
+                    viewModel.saveTarget(
+                        label = uiState.addLabel,
+                        macAddress = uiState.addMac,
+                        broadcastIp = uiState.broadcastIp,
+                        port = uiState.port,
+                    )
+                }
             },
         )
     }
@@ -178,6 +203,7 @@ fun WolScreen(
 private fun WolTargetCard(
     target: WolTarget,
     onSend: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -210,7 +236,7 @@ private fun WolTargetCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.wol_cd_delete),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
@@ -242,10 +268,17 @@ private fun WolTargetCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.wol_cd_edit_target),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 IconButton(onClick = onSend) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send magic packet",
+                        contentDescription = stringResource(R.string.wol_cd_send_magic_packet),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -269,8 +302,8 @@ private fun ManualSendSection(
             OutlinedTextField(
                 value = macInput,
                 onValueChange = onMacChanged,
-                label = { Text("MAC Address") },
-                placeholder = { Text("AA:BB:CC:DD:EE:FF") },
+                label = { Text(stringResource(R.string.wol_label_mac_address)) },
+                placeholder = { Text(stringResource(R.string.wol_placeholder_mac)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -279,7 +312,7 @@ private fun ManualSendSection(
                 OutlinedTextField(
                     value = broadcastIp,
                     onValueChange = onBroadcastIpChanged,
-                    label = { Text("Broadcast IP") },
+                    label = { Text(stringResource(R.string.wol_label_broadcast_ip)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
@@ -287,7 +320,7 @@ private fun ManualSendSection(
                 OutlinedTextField(
                     value = port.toString(),
                     onValueChange = onPortChanged,
-                    label = { Text("Port") },
+                    label = { Text(stringResource(R.string.wol_label_port)) },
                     modifier = Modifier.width(80.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -301,7 +334,7 @@ private fun ManualSendSection(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Send Magic Packet")
+                Text(stringResource(R.string.wol_button_send_magic_packet))
             }
         }
     }
@@ -311,6 +344,7 @@ private fun ManualSendSection(
 private fun AddTargetDialog(
     label: String,
     mac: String,
+    isEditing: Boolean,
     onLabelChanged: (String) -> Unit,
     onMacChanged: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -318,14 +352,14 @@ private fun AddTargetDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add WoL Target") },
+        title = { Text(if (isEditing) stringResource(R.string.wol_dialog_title_edit) else stringResource(R.string.wol_dialog_title_add)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = label,
                     onValueChange = onLabelChanged,
-                    label = { Text("Label") },
-                    placeholder = { Text("e.g. Desktop PC") },
+                    label = { Text(stringResource(R.string.wol_label_label)) },
+                    placeholder = { Text(stringResource(R.string.wol_placeholder_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -333,8 +367,8 @@ private fun AddTargetDialog(
                 OutlinedTextField(
                     value = mac,
                     onValueChange = onMacChanged,
-                    label = { Text("MAC Address") },
-                    placeholder = { Text("AA:BB:CC:DD:EE:FF") },
+                    label = { Text(stringResource(R.string.wol_label_mac_address)) },
+                    placeholder = { Text(stringResource(R.string.wol_placeholder_mac)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -345,12 +379,12 @@ private fun AddTargetDialog(
                 onClick = onSave,
                 enabled = label.isNotBlank() && mac.isNotBlank(),
             ) {
-                Text("Save")
+                Text(if (isEditing) stringResource(R.string.wol_button_update) else stringResource(R.string.wol_button_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.wol_button_cancel))
             }
         },
     )

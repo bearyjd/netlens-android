@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import us.beary.netlens.core.data.model.WolTarget
 
@@ -15,6 +16,9 @@ interface WolTargetDao {
 
     @Insert
     suspend fun insert(target: WolTarget)
+
+    @Update
+    suspend fun update(target: WolTarget)
 
     @Delete
     suspend fun delete(target: WolTarget)

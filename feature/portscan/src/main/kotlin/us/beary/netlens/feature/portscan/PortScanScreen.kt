@@ -16,14 +16,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -57,13 +63,42 @@ private const val PRESET_CUSTOM = 2
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortScanScreen(
+    onBack: () -> Unit = {},
     viewModel: PortScanViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Port Scanner") })
+            TopAppBar(
+                title = { Text(stringResource(R.string.portscan_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    if (uiState.openCount > 0) {
+                        IconButton(
+                            onClick = {
+                                val openPorts = uiState.results
+                                    .filter { it.isOpen }
+                                    .sortedBy { it.port }
+                                    .joinToString("\n") { "${it.port} (${it.serviceName})" }
+                                clipboardManager.setText(
+                                    AnnotatedString("Open ports:\n$openPorts"),
+                                )
+                            },
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.portscan_cd_copy_open_ports))
+                        }
+                    }
+                },
+            )
         },
     ) { padding ->
         PortScanContent(
@@ -96,7 +131,7 @@ private fun PortScanContent(
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
-            label = { Text("Host or IP address") },
+            label = { Text(stringResource(R.string.portscan_label_host)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -109,17 +144,17 @@ private fun PortScanContent(
             FilterChip(
                 selected = selectedPreset == PRESET_COMMON,
                 onClick = { selectedPreset = PRESET_COMMON },
-                label = { Text("Common") },
+                label = { Text(stringResource(R.string.portscan_chip_common)) },
             )
             FilterChip(
                 selected = selectedPreset == PRESET_ALL,
                 onClick = { selectedPreset = PRESET_ALL },
-                label = { Text("All (1-1024)") },
+                label = { Text(stringResource(R.string.portscan_chip_all)) },
             )
             FilterChip(
                 selected = selectedPreset == PRESET_CUSTOM,
                 onClick = { selectedPreset = PRESET_CUSTOM },
-                label = { Text("Custom") },
+                label = { Text(stringResource(R.string.portscan_chip_custom)) },
             )
         }
 
@@ -135,7 +170,7 @@ private fun PortScanContent(
             ) {
                 Icon(Icons.Default.Close, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Cancel Scan")
+                Text(stringResource(R.string.portscan_button_cancel))
             }
         } else {
             Button(
@@ -148,7 +183,7 @@ private fun PortScanContent(
             ) {
                 Icon(Icons.Default.Search, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Scan Ports")
+                Text(stringResource(R.string.portscan_button_scan))
             }
         }
 
@@ -224,7 +259,7 @@ private fun PortResultRow(result: PortResult) {
     ) {
         Icon(
             imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
-            contentDescription = if (result.isOpen) "Open" else "Closed",
+            contentDescription = if (result.isOpen) stringResource(R.string.portscan_cd_open) else stringResource(R.string.portscan_cd_closed),
             tint = iconColor,
             modifier = Modifier.size(20.dp),
         )
