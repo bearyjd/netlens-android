@@ -17,18 +17,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -48,18 +52,37 @@ import us.beary.netlens.feature.httptester.model.HttpRequestConfig
 import us.beary.netlens.feature.httptester.model.HttpResponseResult
 import us.beary.netlens.feature.httptester.model.HttpTesterUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HttpTesterScreen(
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HttpTesterViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    HttpTesterContent(
-        state = state,
-        onSendRequest = viewModel::sendRequest,
+    Scaffold(
         modifier = modifier,
-    )
+        topBar = {
+            TopAppBar(
+                title = { Text("HTTP Tester") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        HttpTesterContent(
+            state = state,
+            onSendRequest = viewModel::sendRequest,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

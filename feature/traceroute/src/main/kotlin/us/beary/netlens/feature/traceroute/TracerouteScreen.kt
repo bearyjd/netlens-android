@@ -14,16 +14,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,24 +42,43 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.beary.netlens.feature.traceroute.model.TracerouteHop
 import us.beary.netlens.feature.traceroute.model.TracerouteUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TracerouteScreen(
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TracerouteViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
 
-    TracerouteContent(
-        state = state,
-        onHostChange = viewModel::onHostChange,
-        onStartTrace = viewModel::startTrace,
-        onStopTrace = viewModel::stopTrace,
-        onCopyResults = {
-            clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
-        },
+    Scaffold(
         modifier = modifier,
-    )
+        topBar = {
+            TopAppBar(
+                title = { Text("Traceroute") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        TracerouteContent(
+            state = state,
+            onHostChange = viewModel::onHostChange,
+            onStartTrace = viewModel::startTrace,
+            onStopTrace = viewModel::stopTrace,
+            onCopyResults = {
+                clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
+            },
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable

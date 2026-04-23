@@ -14,15 +14,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,19 +46,38 @@ import us.beary.netlens.feature.whois.model.RdnsResult
 import us.beary.netlens.feature.whois.model.WhoisResult
 import us.beary.netlens.feature.whois.model.WhoisUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhoisScreen(
+    onBack: () -> Unit = {},
     viewModel: WhoisViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    WhoisContent(
-        query = query,
-        state = state,
-        onQueryChanged = viewModel::onQueryChanged,
-        onLookup = { viewModel.lookup() },
-    )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("WHOIS") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        WhoisContent(
+            query = query,
+            state = state,
+            onQueryChanged = viewModel::onQueryChanged,
+            onLookup = { viewModel.lookup() },
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable
@@ -62,11 +86,12 @@ private fun WhoisContent(
     state: WhoisUiState,
     onQueryChanged: (String) -> Unit,
     onLookup: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isLoading = state is WhoisUiState.Loading
 
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

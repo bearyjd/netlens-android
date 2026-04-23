@@ -17,14 +17,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +47,10 @@ import us.beary.netlens.feature.tls.model.TlsCertInfo
 import us.beary.netlens.feature.tls.model.TlsInspectResult
 import us.beary.netlens.feature.tls.model.TlsUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TlsScreen(
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TlsViewModel = hiltViewModel(),
 ) {
@@ -49,9 +58,26 @@ fun TlsScreen(
     var host by rememberSaveable { mutableStateOf("") }
     var portText by rememberSaveable { mutableStateOf("443") }
 
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("TLS Inspector") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
@@ -118,6 +144,7 @@ fun TlsScreen(
                 ResultContent(result = state.result)
             }
         }
+    }
     }
 }
 

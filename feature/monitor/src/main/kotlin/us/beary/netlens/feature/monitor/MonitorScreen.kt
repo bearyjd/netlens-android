@@ -27,6 +27,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +38,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +63,7 @@ import us.beary.netlens.feature.monitor.model.MonitorUiState
 
 @Composable
 fun MonitorScreen(
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MonitorViewModel = hiltViewModel(),
 ) {
@@ -74,10 +77,12 @@ fun MonitorScreen(
         onDeselectEndpoint = viewModel::deselectEndpoint,
         onCheckNow = viewModel::checkNow,
         onDismissError = viewModel::dismissError,
+        onBack = onBack,
         modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MonitorContent(
     state: MonitorUiState,
@@ -87,6 +92,7 @@ private fun MonitorContent(
     onDeselectEndpoint: () -> Unit,
     onDismissError: () -> Unit,
     onCheckNow: (MonitoredEndpoint) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
@@ -116,6 +122,19 @@ private fun MonitorContent(
     } else {
         Scaffold(
             modifier = modifier,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Endpoint Monitor") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                            )
+                        }
+                    },
+                )
+            },
             floatingActionButton = {
                 FloatingActionButton(onClick = { showAddDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = "Add endpoint")
