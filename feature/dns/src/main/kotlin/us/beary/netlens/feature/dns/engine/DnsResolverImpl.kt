@@ -9,6 +9,7 @@ import org.xbill.DNS.AAAARecord
 import org.xbill.DNS.CNAMERecord
 import org.xbill.DNS.Lookup
 import org.xbill.DNS.MXRecord
+import org.xbill.DNS.SimpleResolver
 import org.xbill.DNS.NSRecord
 import org.xbill.DNS.PTRRecord
 import org.xbill.DNS.SOARecord
@@ -32,9 +33,24 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
     }
 
     private fun resolveType(domain: String, type: DnsRecordType): List<DnsResult> {
+        val resolver = SimpleResolver().apply {
+            setTimeout(java.time.Duration.ofSeconds(TIMEOUT_SECONDS))
+        }
         val lookup = Lookup(domain, type.dnsType)
-        val records = lookup.run() ?: return emptyList()
+        lookup.setResolver(resolver)
+        val records = lookup.run()
+        if (records == null) {
+            val nonErrorResults = setOf(Lookup.SUCCESSFUL, Lookup.HOST_NOT_FOUND, Lookup.TYPE_NOT_FOUND)
+            if (lookup.result !in nonErrorResults) {
+                throw java.io.IOException(lookup.errorString)
+            }
+            return emptyList()
+        }
         return records.mapNotNull { record -> mapRecord(record, type) }
+    }
+
+    companion object {
+        private const val TIMEOUT_SECONDS = 10L
     }
 
     private fun mapRecord(
