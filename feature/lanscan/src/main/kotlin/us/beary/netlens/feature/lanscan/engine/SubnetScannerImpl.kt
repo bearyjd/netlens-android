@@ -2,81 +2,58 @@ package us.beary.netlens.feature.lanscan.engine
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import us.beary.netlens.core.oui.OuiLookup
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
+import us.beary.netlens.feature.lanscan.model.DiscoveryMethod
 import us.beary.netlens.feature.lanscan.model.LanDevice
 import java.net.InetAddress
 import javax.inject.Inject
 
-class SubnetScannerImpl @Inject constructor(
-    private val ouiLookup: OuiLookup,
-    private val fingerprinter: DeviceFingerprinter,
-) : SubnetScanner {
+class SubnetScannerImpl @Inject constructor() : SubnetScanner {
 
     override fun scan(subnet: String, prefixLength: Int): Flow<LanDevice> = flow {
         val ipAddresses = calculateIpRange(subnet, prefixLength)
-        val batchSize = 50
-        val batches = ipAddresses.chunked(batchSize)
-
-        for ((batchIndex, batch) in batches.withIndex()) {
-            val reachableIps = pingBatch(batch)
-            val arpTable = ArpTableReader.read()
-
-            for (ip in reachableIps) {
-                val mac = arpTable[ip]
-                val vendor = mac?.let { ouiLookup.lookup(it) }
-                val hostname = resolveHostname(ip)
-
-                val device = LanDevice(
-                    ip = ip,
-                    mac = mac,
-                    vendor = vendor,
-                    hostname = hostname,
-                    isReachable = true,
-                    latencyMs = 0,
-                )
-                emit(fingerprinter.fingerprint(device))
-            }
-
-            // Also emit unreachable devices found in ARP table from this batch
-            for (ip in batch) {
-                if (ip !in reachableIps && arpTable.containsKey(ip)) {
-                    val mac = arpTable[ip]
-                    val vendor = mac?.let { ouiLookup.lookup(it) }
-
-                    val device = LanDevice(
-                        ip = ip,
-                        mac = mac,
-                        vendor = vendor,
-                        hostname = null,
-                        isReachable = false,
-                        latencyMs = 0,
-                    )
-                    emit(fingerprinter.fingerprint(device))
-                }
-            }
+        val reachableDevices = pingSweep(ipAddresses)
+        for (device in reachableDevices) {
+            emit(device)
         }
     }.flowOn(Dispatchers.IO)
 
-    private suspend fun pingBatch(ips: List<String>): Set<String> = coroutineScope {
-        val results = ips.map { ip ->
+    private suspend fun pingSweep(ips: List<String>): List<LanDevice> = coroutineScope {
+        val semaphore = Semaphore(64)
+        ips.map { ip ->
             async {
-                val reachable = runCatching {
-                    InetAddress.getByName(ip).isReachable(PING_TIMEOUT_MS)
-                }.getOrDefault(false)
-                if (reachable) ip else null
+                semaphore.withPermit {
+                    val startTime = System.currentTimeMillis()
+                    val reachable = withTimeoutOrNull(PING_TIMEOUT_MS.toLong()) {
+                        runCatching { InetAddress.getByName(ip).isReachable(PING_TIMEOUT_MS) }
+                            .getOrDefault(false)
+                    } ?: false
+                    if (reachable) {
+                        val latency = System.currentTimeMillis() - startTime
+                        val hostname = resolveHostname(ip)
+                        LanDevice(
+                            ip = ip,
+                            hostname = hostname,
+                            isReachable = true,
+                            latencyMs = latency,
+                            discoveryMethod = DiscoveryMethod.PING,
+                        )
+                    } else null
+                }
             }
-        }
-        results.mapNotNull { it.await() }.toSet()
+        }.awaitAll().filterNotNull()
     }
 
     private fun resolveHostname(ip: String): String? = runCatching {
         val address = InetAddress.getByName(ip)
         val hostname = address.canonicalHostName
-        // InetAddress returns the IP if hostname can't be resolved
         if (hostname != ip) hostname else null
     }.getOrNull()
 
