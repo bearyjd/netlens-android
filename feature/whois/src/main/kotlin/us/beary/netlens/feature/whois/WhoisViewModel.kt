@@ -4,25 +4,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import us.beary.netlens.feature.whois.engine.DomainResolver
 import us.beary.netlens.feature.whois.engine.RdnsResolver
 import us.beary.netlens.feature.whois.engine.WhoisClient
 import us.beary.netlens.feature.whois.model.RdnsResult
 import us.beary.netlens.feature.whois.model.WhoisResult
 import us.beary.netlens.feature.whois.model.WhoisUiState
-import java.net.InetAddress
 import javax.inject.Inject
 
 @HiltViewModel
 class WhoisViewModel @Inject constructor(
     private val whoisClient: WhoisClient,
     private val rdnsResolver: RdnsResolver,
+    private val domainResolver: DomainResolver,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -84,9 +83,8 @@ class WhoisViewModel @Inject constructor(
     }
 
     private suspend fun resolveAndReverseDns(domain: String): RdnsResult? {
+        val ip = domainResolver.resolve(domain) ?: return null
         return try {
-            val address = withContext(Dispatchers.IO) { InetAddress.getByName(domain) }
-            val ip = address.hostAddress ?: return null
             rdnsResolver.resolve(ip)
         } catch (e: CancellationException) {
             throw e

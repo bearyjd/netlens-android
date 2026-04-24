@@ -37,6 +37,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 add("testRuntimeOnly", libs.findLibrary("junit5-engine").get())
                 add("testImplementation", libs.findLibrary("junit5-params").get())
                 add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
+                add("testImplementation", libs.findLibrary("turbine").get())
             }
 
             val hasTestSources = !project.fileTree("src/test").isEmpty
