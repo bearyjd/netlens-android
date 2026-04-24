@@ -9,4 +9,9 @@
     <string name="dns_label_record_types">Record Types</string>
     <string name="dns_button_lookup">Lookup</string>
     <string name="dns_cd_copy">Copy</string>
+    <string name="dns_error_empty_domain">Please enter a domain</string>
+    <string name="dns_error_no_types">Please select at least one record type</string>
+    <string name="dns_error_lookup_failed">DNS lookup failed</string>
+    <string name="dns_records_header">%1$s Records</string>
+    <string name="dns_ttl_label">TTL %1$d</string>
 </resources>
