@@ -1,20 +1,22 @@
 package us.beary.netlens.feature.mdns.engine
 
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import us.beary.netlens.feature.mdns.model.MdnsService
 
 class FakeMdnsScanner : MdnsScanner {
-    val channel = Channel<MdnsService>(Channel.UNLIMITED)
+    private val _services = MutableSharedFlow<MdnsService>(extraBufferCapacity = 64)
     var error: Throwable? = null
+
+    fun emit(service: MdnsService) {
+        _services.tryEmit(service)
+    }
 
     override fun discoverServices(serviceType: String): Flow<MdnsService> {
         error?.let { throw it }
-        return channel.receiveAsFlow()
+        return _services.asSharedFlow()
     }
 
-    override fun stopDiscovery() {
-        channel.close()
-    }
+    override fun stopDiscovery() {}
 }

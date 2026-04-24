@@ -116,6 +116,7 @@ class WolViewModelTest {
             val withStatus = awaitItem()
             assertEquals("Magic packet sent to AA:BB:CC:DD:EE:FF", withStatus.lastSentStatus)
             assertNull(withStatus.error)
+            cancelAndConsumeRemainingEvents()
         }
     }
 
@@ -282,6 +283,7 @@ class WolViewModelTest {
 
             val withStatus = awaitItem()
             assertEquals("Magic packet sent to 11:22:33:44:55:66", withStatus.lastSentStatus)
+            cancelAndConsumeRemainingEvents()
         }
     }
 }

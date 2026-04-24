@@ -82,12 +82,12 @@ class MdnsViewModelTest {
             viewModel.startScan()
             awaitItem() // isScanning = true
 
-            fakeScanner.channel.send(service1)
+            fakeScanner.emit(service1)
             val stateWith1 = awaitItem()
             assertEquals(1, stateWith1.services.size)
             assertEquals(service1, stateWith1.services[0])
 
-            fakeScanner.channel.send(service2)
+            fakeScanner.emit(service2)
             val stateWith2 = awaitItem()
             assertEquals(2, stateWith2.services.size)
             assertEquals(service2, stateWith2.services[1])
@@ -109,12 +109,12 @@ class MdnsViewModelTest {
             viewModel.startScan()
             awaitItem() // isScanning = true
 
-            fakeScanner.channel.send(service)
+            fakeScanner.emit(service)
             val stateWith1 = awaitItem()
             assertEquals(1, stateWith1.services.size)
 
             // Send the same service again -- should be deduped by name+type
-            fakeScanner.channel.send(service)
+            fakeScanner.emit(service)
             // No new emission expected since state didn't change (same object returned)
             expectNoEvents()
         }

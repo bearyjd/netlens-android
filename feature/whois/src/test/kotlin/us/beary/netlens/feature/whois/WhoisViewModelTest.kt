@@ -4,7 +4,6 @@ import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -15,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import us.beary.netlens.feature.whois.engine.FakeDomainResolver
 import us.beary.netlens.feature.whois.engine.FakeRdnsResolver
 import us.beary.netlens.feature.whois.engine.FakeWhoisClient
 import us.beary.netlens.feature.whois.model.RdnsResult
@@ -26,6 +26,7 @@ class WhoisViewModelTest {
 
     private lateinit var fakeWhoisClient: FakeWhoisClient
     private lateinit var fakeRdnsResolver: FakeRdnsResolver
+    private lateinit var fakeDomainResolver: FakeDomainResolver
     private lateinit var viewModel: WhoisViewModel
 
     @BeforeEach
@@ -33,7 +34,8 @@ class WhoisViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeWhoisClient = FakeWhoisClient()
         fakeRdnsResolver = FakeRdnsResolver()
-        viewModel = WhoisViewModel(fakeWhoisClient, fakeRdnsResolver)
+        fakeDomainResolver = FakeDomainResolver()
+        viewModel = WhoisViewModel(fakeWhoisClient, fakeRdnsResolver, fakeDomainResolver)
     }
 
     @AfterEach
@@ -79,9 +81,6 @@ class WhoisViewModelTest {
 
     @Test
     fun `lookup domain success transitions to Success`() = runTest {
-        // Domain lookup calls resolveAndReverseDns which uses withContext(Dispatchers.IO)
-        // and InetAddress.getByName. In unit tests, DNS resolution will fail, causing
-        // resolveAndReverseDns to return null. The whois result should still succeed.
         val whoisResult = WhoisResult(
             domain = "example.com",
             registrar = "Test Registrar",
@@ -91,49 +90,67 @@ class WhoisViewModelTest {
             rawResponse = "Domain: example.com\nRegistrar: Test Registrar",
         )
         fakeWhoisClient.result = whoisResult
+        fakeDomainResolver.ip = "93.184.216.34"
         fakeRdnsResolver.result = RdnsResult(
             ip = "93.184.216.34",
             hostnames = listOf("example.com"),
         )
 
-        viewModel.lookup("example.com")
+        viewModel.state.test {
+            awaitItem() // Idle
 
-        // Allow Dispatchers.IO work (InetAddress.getByName) to complete
-        advanceUntilIdle()
-        Thread.sleep(100) // allow IO dispatcher thread to finish
-        advanceUntilIdle()
+            viewModel.lookup("example.com")
 
-        val finalState = viewModel.state.value
+            val finalState = expectMostRecentItem()
+            assertTrue(finalState is WhoisUiState.Success)
+            val success = finalState as WhoisUiState.Success
+            assertNotNull(success.whois)
+            assertEquals("example.com", success.whois!!.domain)
+            assertEquals("Test Registrar", success.whois.registrar)
+            assertNotNull(success.rdns)
+            assertEquals("93.184.216.34", success.rdns!!.ip)
+        }
+    }
 
-        // The domain path does InetAddress.getByName on IO -- it may fail in unit tests,
-        // yielding rdns=null. If whois succeeds, we still get Success.
-        assertTrue(finalState is WhoisUiState.Success || finalState is WhoisUiState.Loading)
-        if (finalState is WhoisUiState.Success) {
-            assertNotNull(finalState.whois)
-            assertEquals("example.com", finalState.whois!!.domain)
-            assertEquals("Test Registrar", finalState.whois.registrar)
+    @Test
+    fun `lookup domain with dns failure still succeeds with whois only`() = runTest {
+        val whoisResult = WhoisResult(
+            domain = "example.com",
+            registrar = "Test Registrar",
+            createdDate = "2020-01-01",
+            expiryDate = "2025-01-01",
+            nameServers = listOf("ns1.example.com"),
+            rawResponse = "Domain: example.com",
+        )
+        fakeWhoisClient.result = whoisResult
+        fakeDomainResolver.ip = null
+
+        viewModel.state.test {
+            awaitItem() // Idle
+
+            viewModel.lookup("example.com")
+
+            val finalState = expectMostRecentItem()
+            assertTrue(finalState is WhoisUiState.Success)
+            val success = finalState as WhoisUiState.Success
+            assertNotNull(success.whois)
+            assertNull(success.rdns)
         }
     }
 
     @Test
     fun `lookup domain failure transitions to Error`() = runTest {
-        // When both whois and rdns fail, lookup transitions to Error.
-        // resolveAndReverseDns catches exceptions and returns null.
-        // With whois failure + rdns null => Error state.
         fakeWhoisClient.error = RuntimeException("Connection refused")
-        fakeRdnsResolver.error = RuntimeException("DNS failed")
+        fakeDomainResolver.ip = null
 
-        viewModel.lookup("example.com")
+        viewModel.state.test {
+            awaitItem() // Idle
 
-        // Allow Dispatchers.IO work to complete
-        advanceUntilIdle()
-        Thread.sleep(100)
-        advanceUntilIdle()
+            viewModel.lookup("example.com")
 
-        val finalState = viewModel.state.value
-        // If IO resolved in time, we get Error. Accept Loading as a timing edge case.
-        if (finalState is WhoisUiState.Error) {
-            assertEquals("Connection refused", finalState.message)
+            val finalState = expectMostRecentItem()
+            assertTrue(finalState is WhoisUiState.Error)
+            assertEquals("Connection refused", (finalState as WhoisUiState.Error).message)
         }
     }
 

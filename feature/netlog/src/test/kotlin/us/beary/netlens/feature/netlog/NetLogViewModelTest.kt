@@ -87,8 +87,6 @@ class NetLogViewModelTest {
 
     @Test
     fun `startMonitoring inserts emitted events into DAO`() = runTest {
-        viewModel.startMonitoring()
-
         val event = NetworkEvent(
             id = 0,
             timestamp = 2000L,
@@ -97,13 +95,19 @@ class NetLogViewModelTest {
             networkDetails = "carrier=Test",
             isVpn = false,
         )
-        monitor.channel.send(event)
 
         viewModel.state.test {
-            val state = awaitItem()
-            assertTrue(state.isMonitoring)
-            assertEquals(1, state.events.size)
-            assertEquals("LOST", state.events[0].eventType)
+            awaitItem() // initial
+
+            viewModel.startMonitoring()
+            val monitoring = awaitItem()
+            assertTrue(monitoring.isMonitoring)
+
+            monitor.channel.send(event)
+
+            val withEvent = awaitItem()
+            assertEquals(1, withEvent.events.size)
+            assertEquals("LOST", withEvent.events[0].eventType)
         }
     }
 
@@ -208,21 +212,22 @@ class NetLogViewModelTest {
 
     @Test
     fun `clearError clears error`() = runTest {
-        // Manually set error via reflection is not possible, so trigger it indirectly.
-        // We can test clearError by setting an error state first.
-        // The simplest approach: clearError on a no-error state is a no-op,
-        // but let's test the real flow by checking state transitions.
+        viewModel.startMonitoring()
 
         viewModel.state.test {
-            awaitItem() // initial with no error
+            val monitoring = awaitItem()
+            assertTrue(monitoring.isMonitoring)
 
-            // clearError on null error just re-emits (or doesn't emit if same)
+            monitor.channel.close(RuntimeException("Monitoring error"))
+
+            val errorState = awaitItem()
+            assertEquals("Monitoring error", errorState.error)
+            assertFalse(errorState.isMonitoring)
+
             viewModel.clearError()
 
-            // Since error was already null, state may not change.
-            // Verify current state has no error
-            val currentState = viewModel.state.value
-            assertNull(currentState.error)
+            val cleared = awaitItem()
+            assertNull(cleared.error)
         }
     }
 }

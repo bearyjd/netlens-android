@@ -53,7 +53,19 @@ class IpInfoViewModelTest {
         viewModel = IpInfoViewModel(fakeRepository)
 
         viewModel.uiState.test {
-            // With UnconfinedTestDispatcher, init refresh completes immediately
+            assertEquals(IpInfoUiState.Success(testIpData), awaitItem())
+        }
+    }
+
+    @Test
+    fun `init shows Loading while fetching`() = runTest {
+        fakeRepository.result = Result.success(testIpData)
+        fakeRepository.enableSuspend()
+        viewModel = IpInfoViewModel(fakeRepository)
+
+        viewModel.uiState.test {
+            assertEquals(IpInfoUiState.Loading, awaitItem())
+            fakeRepository.resume()
             assertEquals(IpInfoUiState.Success(testIpData), awaitItem())
         }
     }

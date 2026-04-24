@@ -65,7 +65,27 @@ class TlsViewModelTest {
         viewModel.uiState.test {
             assertEquals(TlsUiState.Idle, awaitItem())
             viewModel.inspect("example.com")
-            // With UnconfinedTestDispatcher, goes straight to Success
+            assertEquals(TlsUiState.Success(expectedResult), awaitItem())
+        }
+    }
+
+    @Test
+    fun `inspect emits Loading before Success`() = runTest {
+        val expectedResult = TlsInspectResult(
+            host = "example.com",
+            port = 443,
+            protocol = "TLSv1.3",
+            cipherSuite = "TLS_AES_256_GCM_SHA384",
+            certificates = emptyList(),
+        )
+        fakeInspector.result = expectedResult
+        fakeInspector.enableSuspend()
+
+        viewModel.uiState.test {
+            assertEquals(TlsUiState.Idle, awaitItem())
+            viewModel.inspect("example.com")
+            assertEquals(TlsUiState.Loading, awaitItem())
+            fakeInspector.resume()
             assertEquals(TlsUiState.Success(expectedResult), awaitItem())
         }
     }

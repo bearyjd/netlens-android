@@ -96,12 +96,10 @@ class MonitorViewModelTest {
 
             viewModel.removeEndpoint(endpoint)
 
-            // After removal, selectedEndpoint should be null and checks empty
-            val events = cancelAndConsumeRemainingEvents()
-            val lastState = viewModel.state.value
-            assertNull(lastState.selectedEndpoint)
-            assertTrue(lastState.checks.isEmpty())
-            assertTrue(lastState.endpoints.isEmpty())
+            val finalState = expectMostRecentItem()
+            assertNull(finalState.selectedEndpoint)
+            assertTrue(finalState.checks.isEmpty())
+            assertTrue(finalState.endpoints.isEmpty())
         }
     }
 
@@ -161,13 +159,9 @@ class MonitorViewModelTest {
 
             viewModel.checkNow(endpoint)
 
-            // isChecking transitions: true then false
-            // The check result should appear via the DAO flow collection
-            val events = cancelAndConsumeRemainingEvents()
-            val finalState = viewModel.state.value
+            val finalState = expectMostRecentItem()
             assertFalse(finalState.isChecking)
             assertNull(finalState.error)
-            // The check was inserted into DAO with correct endpointId
             assertEquals(1, finalState.checks.size)
             assertEquals(endpoint.id, finalState.checks[0].endpointId)
             assertEquals(200, finalState.checks[0].statusCode)
@@ -187,9 +181,7 @@ class MonitorViewModelTest {
 
             viewModel.checkNow(endpoint)
 
-            // Consume until we get the error state
-            val events = cancelAndConsumeRemainingEvents()
-            val finalState = viewModel.state.value
+            val finalState = expectMostRecentItem()
             assertEquals("Connection refused", finalState.error)
             assertFalse(finalState.isChecking)
         }
