@@ -1,16 +1,13 @@
 plugins {
-    alias(libs.plugins.kotlin.serialization)
     id("netlens.android.feature")
 }
 
 android {
-    namespace = "us.beary.netlens.feature.portscan"
+    namespace = "us.beary.netlens.feature.history"
 }
 
 dependencies {
-    implementation(project(":core:network"))
     implementation(project(":core:data"))
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.core.ktx)
     implementation(libs.compose.material.icons)
 }

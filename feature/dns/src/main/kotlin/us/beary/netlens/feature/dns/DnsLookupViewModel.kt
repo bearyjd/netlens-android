@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import us.beary.netlens.core.data.dao.DnsHistoryDao
+import us.beary.netlens.core.data.model.DnsHistoryEntry
 import us.beary.netlens.feature.dns.engine.DnsResolver
 import us.beary.netlens.feature.dns.model.DnsError
 import us.beary.netlens.feature.dns.model.DnsLookupUiState
@@ -18,6 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DnsLookupViewModel @Inject constructor(
     private val dnsResolver: DnsResolver,
+    private val dnsHistoryDao: DnsHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DnsLookupUiState())
@@ -58,6 +63,13 @@ class DnsLookupViewModel @Inject constructor(
             dnsResolver.lookup(domain, current.selectedTypes)
                 .onSuccess { results ->
                     _state.update { it.copy(isLoading = false, results = results) }
+                    dnsHistoryDao.insert(
+                        DnsHistoryEntry(
+                            query = domain,
+                            recordType = current.selectedTypes.joinToString(",") { it.name },
+                            resultsJson = Json.encodeToString(results.map { "${it.type.name}: ${it.value}" }),
+                        ),
+                    )
                 }
                 .onFailure { throwable ->
                     _state.update {
