@@ -2,6 +2,7 @@ package com.ventoux.netlens.feature.lanscan.engine
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 
@@ -140,5 +141,93 @@ class DeviceFingerprinterTest {
     fun `unknown hostname returns null osGuess`() {
         val result = fp.fingerprint(device(hostname = "generic-host"))
         assertNull(result.osGuess)
+    }
+
+    // --- fingerprintWithPorts tests ---
+
+    @Test
+    fun `port 631 detects Printer`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(631))
+        assertEquals("Printer", result.deviceType)
+        assertTrue(result.evidence.any { "631" in it })
+    }
+
+    @Test
+    fun `port 9100 detects Printer`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(9100))
+        assertEquals("Printer", result.deviceType)
+        assertTrue(result.evidence.any { "9100" in it })
+    }
+
+    @Test
+    fun `port 3389 detects Windows`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(3389))
+        assertEquals("Windows", result.osGuess)
+        assertTrue(result.evidence.any { "3389" in it })
+    }
+
+    @Test
+    fun `port 548 detects macOS`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(548))
+        assertEquals("macOS", result.osGuess)
+        assertTrue(result.evidence.any { "548" in it })
+    }
+
+    @Test
+    fun `ports 22 and 53 detect Router`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(22, 53))
+        assertEquals("Router", result.deviceType)
+        assertTrue(result.evidence.any { "22+53" in it })
+    }
+
+    @Test
+    fun `web ports detect Web Server when no prior type`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(80))
+        assertEquals("Web Server", result.deviceType)
+        assertTrue(result.evidence.any { "web" in it.lowercase() })
+    }
+
+    @Test
+    fun `web ports do not override existing device type`() {
+        val printerDevice = device().copy(deviceType = "Printer")
+        val result = fp.fingerprintWithPorts(printerDevice, listOf(80, 443))
+        assertEquals("Printer", result.deviceType)
+    }
+
+    @Test
+    fun `existing type preserved over port-based detection`() {
+        val routerDevice = device().copy(deviceType = "Router")
+        val result = fp.fingerprintWithPorts(routerDevice, listOf(631))
+        assertEquals("Router", result.deviceType)
+        assertTrue(result.evidence.any { "631" in it })
+    }
+
+    @Test
+    fun `existing OS preserved over port-based detection`() {
+        val linuxDevice = device().copy(osGuess = "Linux")
+        val result = fp.fingerprintWithPorts(linuxDevice, listOf(3389))
+        assertEquals("Linux", result.osGuess)
+        assertTrue(result.evidence.any { "3389" in it })
+    }
+
+    @Test
+    fun `hostname added to evidence`() {
+        val result = fp.fingerprintWithPorts(device(hostname = "my-host"), emptyList())
+        assertTrue(result.evidence.any { "hostname: my-host" in it })
+    }
+
+    @Test
+    fun `mDNS services added to evidence`() {
+        val dev = device().copy(services = listOf("_http._tcp."))
+        val result = fp.fingerprintWithPorts(dev, emptyList())
+        assertTrue(result.evidence.any { "mDNS: http" in it })
+    }
+
+    @Test
+    fun `empty ports and no hostname returns no type or OS`() {
+        val result = fp.fingerprintWithPorts(device(), emptyList())
+        assertNull(result.deviceType)
+        assertNull(result.osGuess)
+        assertTrue(result.evidence.isEmpty())
     }
 }

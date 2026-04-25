@@ -27,6 +27,7 @@ import com.ventoux.netlens.feature.lanscan.model.LanDevice
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
 import com.ventoux.netlens.feature.portscan.engine.PortScanner
+import com.ventoux.netlens.feature.portscan.model.PortResult
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 import javax.inject.Inject
 
@@ -212,8 +213,10 @@ class LanScanViewModel @Inject constructor(
             try {
                 var scanned = 0
                 val total = ports.size
+                val allResults = mutableListOf<PortResult>()
                 portScanner.scan(detail.device.ip, ports).collect { result ->
                     scanned++
+                    allResults.add(result)
                     _hostDetail.update { state ->
                         val updated = state?.portResults.orEmpty() + result
                         state?.copy(
@@ -223,8 +226,7 @@ class LanScanViewModel @Inject constructor(
                         )
                     }
                 }
-                val openPorts = _hostDetail.value
-                    ?.portResults?.filter { it.isOpen }?.map { it.port }.orEmpty()
+                val openPorts = allResults.filter { it.isOpen }.map { it.port }
                 val fp = fingerprinter.fingerprintWithPorts(detail.device, openPorts)
                 _hostDetail.update {
                     it?.copy(
@@ -238,7 +240,7 @@ class LanScanViewModel @Inject constructor(
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _hostDetail.update { it?.copy(isScanning = false, error = e.message) }
+                _hostDetail.update { it?.copy(isScanning = false, error = e.message ?: "Port scan failed") }
             }
         }
     }
