@@ -35,11 +35,10 @@ class WidgetSettingsViewModel @Inject constructor(
     fun setAutoAdvance(seconds: Int) = update { it.copy(autoAdvanceSeconds = seconds) }
 
     fun togglePage(page: WidgetPage) = update { current ->
-        val pages = current.pages.toMutableList()
-        if (pages.contains(page)) {
-            if (pages.size > 1) pages.remove(page)
+        val pages = if (page in current.pages) {
+            if (current.pages.size > 1) current.pages - page else current.pages
         } else {
-            pages.add(page)
+            current.pages + page
         }
         current.copy(pages = pages)
     }
