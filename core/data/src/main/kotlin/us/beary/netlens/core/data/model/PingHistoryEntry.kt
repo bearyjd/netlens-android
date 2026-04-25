@@ -14,4 +14,5 @@ data class PingHistoryEntry(
     val minMs: Float,
     val avgMs: Float,
     val maxMs: Float,
+    val mode: String = "FIXED",
 )
