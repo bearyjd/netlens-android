@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import us.beary.netlens.core.data.dao.LanScanHistoryDao
+import us.beary.netlens.core.data.model.LanScanHistoryEntry
 import us.beary.netlens.feature.lanscan.engine.DeviceFingerprinter
 import us.beary.netlens.feature.lanscan.engine.LanMdnsScanner
 import us.beary.netlens.feature.lanscan.engine.SubnetScanner
@@ -30,6 +34,7 @@ class LanScanViewModel @Inject constructor(
     private val mdnsScanner: LanMdnsScanner,
     private val fingerprinter: DeviceFingerprinter,
     @ApplicationContext private val context: Context,
+    private val lanScanHistoryDao: LanScanHistoryDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -137,7 +142,21 @@ class LanScanViewModel @Inject constructor(
             pingJob.join()
             mdnsJob.join()
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
+            saveToHistory()
         }
+    }
+
+    private suspend fun saveToHistory() {
+        val state = _uiState.value
+        if (state.devices.isEmpty()) return
+        lanScanHistoryDao.insert(
+            LanScanHistoryEntry(
+                ssid = null,
+                subnet = state.subnetInfo,
+                deviceCount = state.devices.size,
+                devicesJson = Json.encodeToString(state.devices.map { it.ip }),
+            ),
+        )
     }
 
     fun cancelScan() {

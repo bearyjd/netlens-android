@@ -15,6 +15,10 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import us.beary.netlens.core.data.dao.PingHistoryDao
+import us.beary.netlens.core.data.model.PingHistoryEntry
 import us.beary.netlens.feature.ping.engine.FakePinger
 import us.beary.netlens.feature.ping.model.PingResult
 import us.beary.netlens.feature.ping.model.PingUiState
@@ -25,11 +29,20 @@ class PingViewModelTest {
     private lateinit var fakePinger: FakePinger
     private lateinit var viewModel: PingViewModel
 
+    private val fakePingHistoryDao = object : PingHistoryDao {
+        override fun getRecent(limit: Int): Flow<List<PingHistoryEntry>> = flowOf(emptyList())
+        override fun search(query: String, limit: Int): Flow<List<PingHistoryEntry>> = flowOf(emptyList())
+        override suspend fun insert(entry: PingHistoryEntry) {}
+        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteOlderThan(before: Long) {}
+        override suspend fun deleteAll() {}
+    }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakePinger = FakePinger()
-        viewModel = PingViewModel(fakePinger)
+        viewModel = PingViewModel(fakePinger, fakePingHistoryDao)
     }
 
     @AfterEach

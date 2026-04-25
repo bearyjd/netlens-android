@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import us.beary.netlens.core.data.dao.PortScanHistoryDao
+import us.beary.netlens.core.data.model.PortScanHistoryEntry
 import us.beary.netlens.feature.portscan.engine.FakePortScanner
 import us.beary.netlens.feature.portscan.engine.PortScanner
 import us.beary.netlens.feature.portscan.model.PortResult
@@ -28,11 +30,20 @@ class PortScanViewModelTest {
     private lateinit var fakePortScanner: FakePortScanner
     private lateinit var viewModel: PortScanViewModel
 
+    private val fakePortScanHistoryDao = object : PortScanHistoryDao {
+        override fun getRecent(limit: Int): kotlinx.coroutines.flow.Flow<List<PortScanHistoryEntry>> = kotlinx.coroutines.flow.flowOf(emptyList())
+        override fun search(query: String, limit: Int): kotlinx.coroutines.flow.Flow<List<PortScanHistoryEntry>> = kotlinx.coroutines.flow.flowOf(emptyList())
+        override suspend fun insert(entry: PortScanHistoryEntry) {}
+        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteOlderThan(before: Long) {}
+        override suspend fun deleteAll() {}
+    }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakePortScanner = FakePortScanner()
-        viewModel = PortScanViewModel(fakePortScanner)
+        viewModel = PortScanViewModel(fakePortScanner, fakePortScanHistoryDao)
     }
 
     @AfterEach
@@ -115,7 +126,7 @@ class PortScanViewModelTest {
                 awaitCancellation()
             }
         }
-        val vm = PortScanViewModel(hangingScanner)
+        val vm = PortScanViewModel(hangingScanner, fakePortScanHistoryDao)
 
         vm.state.test {
             awaitItem() // initial state

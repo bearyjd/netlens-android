@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.beary.netlens.core.data.dao.IpInfoHistoryDao
+import us.beary.netlens.core.data.model.IpInfoHistoryEntry
 import us.beary.netlens.feature.ipinfo.data.IpInfoRepository
 import us.beary.netlens.feature.ipinfo.model.IpInfoUiState
 import javax.inject.Inject
@@ -14,6 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class IpInfoViewModel @Inject constructor(
     private val repository: IpInfoRepository,
+    private val ipInfoHistoryDao: IpInfoHistoryDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<IpInfoUiState>(IpInfoUiState.Loading)
@@ -29,6 +32,16 @@ class IpInfoViewModel @Inject constructor(
             repository.fetchIpInfo()
                 .onSuccess { data ->
                     _uiState.value = IpInfoUiState.Success(data)
+                    ipInfoHistoryDao.insert(
+                        IpInfoHistoryEntry(
+                            ip = data.query,
+                            isp = data.isp,
+                            org = data.org,
+                            countryCode = data.countryCode,
+                            city = data.city,
+                            isVpn = data.proxy,
+                        ),
+                    )
                 }
                 .onFailure { error ->
                     _uiState.value = IpInfoUiState.Error(

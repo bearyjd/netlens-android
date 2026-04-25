@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import us.beary.netlens.core.data.dao.PortScanHistoryDao
+import us.beary.netlens.core.data.model.PortScanHistoryEntry
 import us.beary.netlens.feature.portscan.engine.PortScanner
 import us.beary.netlens.feature.portscan.model.PortScanUiState
 import javax.inject.Inject
@@ -16,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PortScanViewModel @Inject constructor(
     private val portScanner: PortScanner,
+    private val portScanHistoryDao: PortScanHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PortScanUiState())
@@ -35,6 +40,7 @@ class PortScanViewModel @Inject constructor(
 
         val totalPorts = ports.size
         var scannedCount = 0
+        val startTime = System.currentTimeMillis()
 
         scanJob = viewModelScope.launch {
             try {
@@ -50,6 +56,17 @@ class PortScanViewModel @Inject constructor(
                     }
                 }
                 _state.update { it.copy(isScanning = false) }
+                val currentState = _state.value
+                if (currentState.results.isNotEmpty()) {
+                    portScanHistoryDao.insert(
+                        PortScanHistoryEntry(
+                            host = host,
+                            openPorts = Json.encodeToString(currentState.results.filter { it.isOpen }.map { it.port }),
+                            totalScanned = currentState.results.size,
+                            durationMs = System.currentTimeMillis() - startTime,
+                        ),
+                    )
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update {
