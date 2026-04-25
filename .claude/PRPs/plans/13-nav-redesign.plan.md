@@ -20,25 +20,25 @@ As a user, I want a dashboard home screen that organizes all network tools into 
 ## Patterns to Mirror
 
 ### NAVIGATION
-// SOURCE: app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt
+// SOURCE: app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt
 - Replace PlaceholderScreen loop with explicit composable() blocks
 
 ### SCAFFOLD
-// SOURCE: app/src/main/kotlin/us/beary/netlens/ui/NetLensApp.kt
+// SOURCE: app/src/main/kotlin/com.ventoux.netlens/ui/NetLensApp.kt
 - Remove NavigationBar from Scaffold, add TopAppBar + back navigation
 
 ## Files to Change
 
 | File | Action | Description |
 |------|--------|-------------|
-| `app/src/main/kotlin/us/beary/netlens/navigation/TopLevelDestination.kt` | DELETE/REPLACE | Remove enum. Replace with FeatureRoute sealed interface or object routes |
-| `app/src/main/kotlin/us/beary/netlens/navigation/FeatureCategory.kt` | CREATE | Enum: NetworkInfo, Scan, Tools, Monitor — each with label, icon, list of feature routes |
-| `app/src/main/kotlin/us/beary/netlens/navigation/FeatureRoute.kt` | CREATE | Sealed interface / object per feature with route string, icon, label, category |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace enum iteration with explicit composable() per feature route. Add "dashboard" as startDestination. Add back-navigation support. |
-| `app/src/main/kotlin/us/beary/netlens/ui/NetLensApp.kt` | UPDATE | Remove bottom NavigationBar. Add TopAppBar with title + back arrow (when not on dashboard). Pass navController for back navigation. |
-| `app/src/main/kotlin/us/beary/netlens/ui/DashboardScreen.kt` | CREATE | Grid of category cards. Each category is an expandable section or card containing feature icons. Categories: Network Info (IP Info, WHOIS, DNS, TLS), Scan (LAN, Port, mDNS, Ping), Tools (WoL, HTTP Request), Monitor (Network Log, Uptime, Widget Config). |
-| `app/src/main/kotlin/us/beary/netlens/ui/CategoryCard.kt` | CREATE | Composable card for a category: title, icon, grid of feature chips inside |
-| `app/src/main/kotlin/us/beary/netlens/ui/FeatureChip.kt` | CREATE | Composable chip/button for a single feature: icon + label, onClick navigates to route |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/TopLevelDestination.kt` | DELETE/REPLACE | Remove enum. Replace with FeatureRoute sealed interface or object routes |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/FeatureCategory.kt` | CREATE | Enum: NetworkInfo, Scan, Tools, Monitor — each with label, icon, list of feature routes |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/FeatureRoute.kt` | CREATE | Sealed interface / object per feature with route string, icon, label, category |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace enum iteration with explicit composable() per feature route. Add "dashboard" as startDestination. Add back-navigation support. |
+| `app/src/main/kotlin/com.ventoux.netlens/ui/NetLensApp.kt` | UPDATE | Remove bottom NavigationBar. Add TopAppBar with title + back arrow (when not on dashboard). Pass navController for back navigation. |
+| `app/src/main/kotlin/com.ventoux.netlens/ui/DashboardScreen.kt` | CREATE | Grid of category cards. Each category is an expandable section or card containing feature icons. Categories: Network Info (IP Info, WHOIS, DNS, TLS), Scan (LAN, Port, mDNS, Ping), Tools (WoL, HTTP Request), Monitor (Network Log, Uptime, Widget Config). |
+| `app/src/main/kotlin/com.ventoux.netlens/ui/CategoryCard.kt` | CREATE | Composable card for a category: title, icon, grid of feature chips inside |
+| `app/src/main/kotlin/com.ventoux.netlens/ui/FeatureChip.kt` | CREATE | Composable chip/button for a single feature: icon + label, onClick navigates to route |
 
 ## Step-by-Step Tasks
 

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.ping"
+    namespace = "com.ventoux.netlens.feature.ping"
 }
 
 dependencies {

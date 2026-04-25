@@ -20,24 +20,24 @@ As a user, I want to browse mDNS/Bonjour services on my local network, so that I
 ## Patterns to Mirror
 
 ### CALLBACKFLOW
-// SOURCE: core/network/src/main/kotlin/us/beary/netlens/core/network/ConnectivityManagerNetworkMonitor.kt
+// SOURCE: core/network/src/main/kotlin/com.ventoux.netlens/core/network/ConnectivityManagerNetworkMonitor.kt
 - callbackFlow wrapping system callbacks with awaitClose for cleanup
 
 ## Files to Change
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/mdns/build.gradle.kts` | CREATE | netlens.android.feature, namespace us.beary.netlens.feature.mdns, dep :core:network |
+| `feature/mdns/build.gradle.kts` | CREATE | netlens.android.feature, namespace com.ventoux.netlens.feature.mdns, dep :core:network |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:mdns")` |
 | `app/build.gradle.kts` | UPDATE | Add implementation project dep |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/model/MdnsService.kt` | CREATE | data class: name, type, host, port, txtRecords (Map<String,String>) |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/model/MdnsUiState.kt` | CREATE | data class: services list, isDiscovering, error |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/engine/MdnsScanner.kt` | CREATE | Interface: fun discover(): Flow<List<MdnsService>> |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/engine/MdnsScannerImpl.kt` | CREATE | Uses NsdManager. First discovers "_services._dns-sd._udp" to get service types, then discovers each type. Wraps DiscoveryListener in callbackFlow. Resolves each found service for host/port/txt. |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/di/MdnsModule.kt` | CREATE | @Module @Binds MdnsScanner |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/MdnsViewModel.kt` | CREATE | @HiltViewModel, startDiscovery(), stopDiscovery(), accumulate services |
-| `feature/mdns/src/main/kotlin/us/beary/netlens/feature/mdns/MdnsScreen.kt` | CREATE | LazyColumn of service cards (name, type, host:port), FAB to start/stop discovery, progress indicator while discovering |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for mdns |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/model/MdnsService.kt` | CREATE | data class: name, type, host, port, txtRecords (Map<String,String>) |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/model/MdnsUiState.kt` | CREATE | data class: services list, isDiscovering, error |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/engine/MdnsScanner.kt` | CREATE | Interface: fun discover(): Flow<List<MdnsService>> |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/engine/MdnsScannerImpl.kt` | CREATE | Uses NsdManager. First discovers "_services._dns-sd._udp" to get service types, then discovers each type. Wraps DiscoveryListener in callbackFlow. Resolves each found service for host/port/txt. |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/di/MdnsModule.kt` | CREATE | @Module @Binds MdnsScanner |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/MdnsViewModel.kt` | CREATE | @HiltViewModel, startDiscovery(), stopDiscovery(), accumulate services |
+| `feature/mdns/src/main/kotlin/com.ventoux.netlens/feature/mdns/MdnsScreen.kt` | CREATE | LazyColumn of service cards (name, type, host:port), FAB to start/stop discovery, progress indicator while discovering |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for mdns |
 
 ## Step-by-Step Tasks
 

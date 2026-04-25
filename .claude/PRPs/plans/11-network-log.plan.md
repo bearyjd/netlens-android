@@ -20,7 +20,7 @@ As a user, I want a log of all network changes on my device, so that I can troub
 ## Patterns to Mirror
 
 ### NETWORK_CALLBACK
-// SOURCE: core/network/src/main/kotlin/us/beary/netlens/core/network/ConnectivityManagerNetworkMonitor.kt
+// SOURCE: core/network/src/main/kotlin/com.ventoux.netlens/core/network/ConnectivityManagerNetworkMonitor.kt
 - ConnectivityManager.registerDefaultNetworkCallback pattern
 
 ### ROOM_ENTITY
@@ -30,20 +30,20 @@ As a user, I want a log of all network changes on my device, so that I can troub
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/netlog/build.gradle.kts` | CREATE | netlens.android.feature, namespace us.beary.netlens.feature.netlog, deps: :core:network, :core:data |
+| `feature/netlog/build.gradle.kts` | CREATE | netlens.android.feature, namespace com.ventoux.netlens.feature.netlog, deps: :core:network, :core:data |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:netlog")` |
 | `app/build.gradle.kts` | UPDATE | Add implementation project dep |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/entity/NetworkChangeEventEntity.kt` | CREATE | @Entity: id (auto PK), timestamp, eventType (CONNECTED/DISCONNECTED/IP_CHANGED/VPN_ON/VPN_OFF), oldIp, newIp, networkType (WIFI/CELLULAR/ETHERNET/VPN), isVpn |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/dao/NetworkChangeEventDao.kt` | CREATE | @Dao: getAll (Flow, ordered by timestamp DESC), getByType, insert, deleteOlderThan, deleteAll |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/NetLensDatabase.kt` | UPDATE | Add entity, bump version, add abstract DAO |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/di/DataModule.kt` | UPDATE | @Provides DAO |
-| `feature/netlog/src/main/kotlin/us/beary/netlens/feature/netlog/service/NetworkLogService.kt` | CREATE | Singleton service started from Application.onCreate(). Registers ConnectivityManager.NetworkCallback. On onAvailable/onLost/onCapabilitiesChanged: determine event type, extract IP from LinkProperties, detect VPN, persist to Room. Runs in CoroutineScope(SupervisorJob + Dispatchers.IO). |
-| `feature/netlog/src/main/kotlin/us/beary/netlens/feature/netlog/di/NetLogModule.kt` | CREATE | @Module providing NetworkLogService |
-| `feature/netlog/src/main/kotlin/us/beary/netlens/feature/netlog/model/NetworkLogUiState.kt` | CREATE | data class: events list, selectedFilter (ALL/CONNECTED/DISCONNECTED/IP_CHANGED/VPN), isLoading |
-| `feature/netlog/src/main/kotlin/us/beary/netlens/feature/netlog/NetworkLogViewModel.kt` | CREATE | @HiltViewModel, observes events from DAO, filter by type, clear log |
-| `feature/netlog/src/main/kotlin/us/beary/netlens/feature/netlog/NetworkLogScreen.kt` | CREATE | Filter chips row (All, Connected, Disconnected, IP Changed, VPN). LazyColumn of event cards: timestamp, event type icon/color, old/new IP, network type badge. Clear log button in top bar. |
-| `app/src/main/kotlin/us/beary/netlens/NetLensApplication.kt` | UPDATE | Start NetworkLogService in onCreate |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for netlog |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/NetworkChangeEventEntity.kt` | CREATE | @Entity: id (auto PK), timestamp, eventType (CONNECTED/DISCONNECTED/IP_CHANGED/VPN_ON/VPN_OFF), oldIp, newIp, networkType (WIFI/CELLULAR/ETHERNET/VPN), isVpn |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/NetworkChangeEventDao.kt` | CREATE | @Dao: getAll (Flow, ordered by timestamp DESC), getByType, insert, deleteOlderThan, deleteAll |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add entity, bump version, add abstract DAO |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides DAO |
+| `feature/netlog/src/main/kotlin/com.ventoux.netlens/feature/netlog/service/NetworkLogService.kt` | CREATE | Singleton service started from Application.onCreate(). Registers ConnectivityManager.NetworkCallback. On onAvailable/onLost/onCapabilitiesChanged: determine event type, extract IP from LinkProperties, detect VPN, persist to Room. Runs in CoroutineScope(SupervisorJob + Dispatchers.IO). |
+| `feature/netlog/src/main/kotlin/com.ventoux.netlens/feature/netlog/di/NetLogModule.kt` | CREATE | @Module providing NetworkLogService |
+| `feature/netlog/src/main/kotlin/com.ventoux.netlens/feature/netlog/model/NetworkLogUiState.kt` | CREATE | data class: events list, selectedFilter (ALL/CONNECTED/DISCONNECTED/IP_CHANGED/VPN), isLoading |
+| `feature/netlog/src/main/kotlin/com.ventoux.netlens/feature/netlog/NetworkLogViewModel.kt` | CREATE | @HiltViewModel, observes events from DAO, filter by type, clear log |
+| `feature/netlog/src/main/kotlin/com.ventoux.netlens/feature/netlog/NetworkLogScreen.kt` | CREATE | Filter chips row (All, Connected, Disconnected, IP Changed, VPN). LazyColumn of event cards: timestamp, event type icon/color, old/new IP, network type badge. Clear log button in top bar. |
+| `app/src/main/kotlin/com.ventoux.netlens/NetLensApplication.kt` | UPDATE | Start NetworkLogService in onCreate |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for netlog |
 
 ## Step-by-Step Tasks
 

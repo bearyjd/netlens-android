@@ -3,8 +3,8 @@
 -dontnote kotlinx.serialization.AnnotationsKt
 -keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
 -keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
--keep,includedescriptorclasses class us.beary.netlens.**$$serializer { *; }
--keepclasseswithmembers class us.beary.netlens.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep,includedescriptorclasses class com.ventoux.netlens.**$$serializer { *; }
+-keepclasseswithmembers class com.ventoux.netlens.** { kotlinx.serialization.KSerializer serializer(...); }
 
 # Ktor CIO engine
 -keep class io.ktor.client.engine.cio.** { *; }

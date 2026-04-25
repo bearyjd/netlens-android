@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.ipinfo"
+    namespace = "com.ventoux.netlens.feature.ipinfo"
 }
 
 dependencies {

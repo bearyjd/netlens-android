@@ -55,7 +55,7 @@ All dependencies verified FOSS-compatible:
 | `fastlane/metadata/android/en-US/full_description.txt` | CREATE | Full listing |
 | `fastlane/metadata/android/en-US/changelogs/1.txt` | CREATE | v1 changelog |
 | `fastlane/metadata/android/en-US/images/phoneScreenshots/.gitkeep` | CREATE | Placeholder |
-| `fdroid/us.beary.netlens.yml` | CREATE | fdroiddata recipe |
+| `fdroid/com.ventoux.netlens.yml` | CREATE | fdroiddata recipe |
 | `app/build.gradle.kts` | UPDATE | Reproducible build config |
 | `gradle.properties` | UPDATE | Reproducibility flags |
 
@@ -80,7 +80,7 @@ All dependencies verified FOSS-compatible:
 - **VALIDATE**: Two consecutive `assembleRelease` produce identical APKs
 
 ### Task 3: Draft fdroiddata Recipe
-- **ACTION**: Create `fdroid/us.beary.netlens.yml`
+- **ACTION**: Create `fdroid/com.ventoux.netlens.yml`
 - **IMPLEMENT**: Categories, License, Repo, Builds section, AntiFeatures: [NonFreeNet], AutoUpdateMode
 - **GOTCHA**: Recipe may need iteration after fdroiddata review
 - **VALIDATE**: `fdroid lint` passes (if fdroidserver available)

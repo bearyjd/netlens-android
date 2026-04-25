@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.widget"
+    namespace = "com.ventoux.netlens.widget"
 }
 
 dependencies {

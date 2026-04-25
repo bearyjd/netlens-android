@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.core.network"
+    namespace = "com.ventoux.netlens.core.network"
 }
 
 dependencies {

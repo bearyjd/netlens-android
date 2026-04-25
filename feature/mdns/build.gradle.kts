@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.mdns"
+    namespace = "com.ventoux.netlens.feature.mdns"
 }
 
 dependencies {

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.monitor"
+    namespace = "com.ventoux.netlens.feature.monitor"
 }
 
 dependencies {

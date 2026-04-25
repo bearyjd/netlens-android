@@ -2,8 +2,8 @@
 
 A comprehensive Android network diagnostics toolkit. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, fully open-source.
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/us.beary.netlens)
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=us.beary.netlens)
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.ventoux.netlens)
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=com.ventoux.netlens)
 
 Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netatlas-android/releases).
 

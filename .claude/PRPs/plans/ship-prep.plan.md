@@ -21,8 +21,8 @@ As the developer, I want the app to have a professional icon, secure release sig
 | P0 | `app/build.gradle.kts` | all | Current versionCode/versionName, no signing config |
 | P0 | `build-logic/convention/src/main/kotlin/AndroidApplicationConventionPlugin.kt` | all | compileSdk 35, minSdk 29, targetSdk 35, Java 17 |
 | P1 | `app/src/main/AndroidManifest.xml` | all | No android:icon or android:roundIcon set |
-| P1 | `app/src/main/kotlin/us/beary/netlens/ui/theme/Color.kt` | all | Teal500 (#009688), Cyan500 (#00BCD4), DarkBackground (#0F1318) |
-| P2 | `app/src/main/kotlin/us/beary/netlens/navigation/ToolDestination.kt` | all | 13 tools across 5 categories for README |
+| P1 | `app/src/main/kotlin/com.ventoux.netlens/ui/theme/Color.kt` | all | Teal500 (#009688), Cyan500 (#00BCD4), DarkBackground (#0F1318) |
+| P2 | `app/src/main/kotlin/com.ventoux.netlens/navigation/ToolDestination.kt` | all | 13 tools across 5 categories for README |
 | P2 | `LICENSE` | 1-10 | GNU AGPL v3 |
 | P2 | `.gitignore` | all | Already ignores local.properties but not *.jks |
 

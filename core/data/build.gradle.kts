@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.core.data"
+    namespace = "com.ventoux.netlens.core.data"
 }
 
 room {

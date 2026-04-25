@@ -33,7 +33,7 @@
         </activity>
 
         <receiver
-            android:name="us.beary.netlens.widget.NetLensWidgetReceiver"
+            android:name="com.ventoux.netlens.widget.NetLensWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

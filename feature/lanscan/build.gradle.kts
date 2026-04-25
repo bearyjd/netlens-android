@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.lanscan"
+    namespace = "com.ventoux.netlens.feature.lanscan"
 }
 
 dependencies {

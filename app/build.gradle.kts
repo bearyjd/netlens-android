@@ -8,10 +8,10 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens"
+    namespace = "com.ventoux.netlens"
 
     defaultConfig {
-        applicationId = "us.beary.netlens"
+        applicationId = "com.ventoux.netlens"
         versionCode = property("netlens.versionCode").toString().toInt()
         versionName = property("netlens.versionName").toString()
     }

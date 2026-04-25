@@ -1,0 +1,13 @@
+package com.ventoux.netlens.feature.lanscan.model
+
+data class LanScanUiState(
+    val devices: List<LanDevice> = emptyList(),
+    val isScanning: Boolean = false,
+    val subnetInfo: String = "",
+    val progress: Float = 0f,
+    val error: String? = null,
+    val deviceCount: Int = 0,
+    val rangeMode: ScanRangeMode = ScanRangeMode.AUTO,
+    val customRange: String = "",
+    val rangeError: String? = null,
+)
