@@ -1,0 +1,34 @@
+NetLens is a comprehensive network diagnostics toolkit for Android. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, fully open-source.
+
+<b>Network Info</b>
+- IP Info — look up your public IP address and geolocation
+- WHOIS — query domain and IP ownership records
+
+<b>Connectivity</b>
+- Ping — test latency and reachability with single or continuous mode
+- DNS Lookup — query A, AAAA, MX, TXT, CNAME, and other record types
+- Traceroute — trace the full network path to any host
+
+<b>Discovery</b>
+- LAN Scan — discover devices on your local network with MAC vendor identification
+- mDNS Browser — find Bonjour and .local services on the network
+- Port Scanner — scan for open TCP ports on any target
+
+<b>Security & Web</b>
+- TLS Inspector — inspect SSL/TLS certificates and cipher suites
+- HTTP Tester — send custom HTTP requests and inspect responses
+
+<b>Tools</b>
+- Wake-on-LAN — send magic packets to wake network devices
+- Endpoint Monitor — track uptime and latency of HTTP endpoints over time
+- Network Log — view connection history and network events
+- History — browse past scan results with search and filtering
+
+<b>Home Screen Widget</b>
+Configurable widget for at-a-glance network status right on your home screen.
+
+<b>Built with</b>
+Jetpack Compose, Material 3, and modern Android architecture. Requires Android 10+.
+
+<b>Open Source</b>
+Licensed under AGPL-3.0. Source code available on GitHub.

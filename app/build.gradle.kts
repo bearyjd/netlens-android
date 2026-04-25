@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.serialization)
     id("netlens.android.application")
@@ -12,6 +14,38 @@ android {
         applicationId = "us.beary.netlens"
         versionCode = property("netlens.versionCode").toString().toInt()
         versionName = property("netlens.versionName").toString()
+    }
+
+    signingConfigs {
+        create("release") {
+            val props = rootProject.file("local.properties")
+            if (props.exists()) {
+                val localProps = Properties().apply {
+                    props.inputStream().use { load(it) }
+                }
+                storeFile = localProps.getProperty("release.storeFile")?.let(::file)
+                storePassword = localProps.getProperty("release.storePassword")
+                keyAlias = localProps.getProperty("release.keyAlias")
+                keyPassword = localProps.getProperty("release.keyPassword")
+            } else {
+                storeFile = System.getenv("RELEASE_STORE_FILE")?.let(::file)
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 
