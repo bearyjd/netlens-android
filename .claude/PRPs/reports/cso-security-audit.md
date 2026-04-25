@@ -10,7 +10,7 @@
 
 ### FINDING 1 — HIGH: ProcessBuilder Argument Injection (FIXED)
 
-**File:** `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/engine/PingerImpl.kt:16`
+**File:** `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/engine/PingerImpl.kt:16`
 
 `ProcessBuilder("ping", "-c", count.toString(), host)` — user-supplied `host` passed directly.
 
@@ -22,7 +22,7 @@
 
 ### FINDING 2 — MEDIUM: HTTP Cleartext to ip-api.com
 
-**File:** `feature/ipinfo/src/main/kotlin/us/beary/netlens/feature/ipinfo/data/IpInfoRepositoryImpl.kt`
+**File:** `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/data/IpInfoRepositoryImpl.kt`
 **File:** `app/src/main/res/xml/network_security_config.xml`
 
 Public IP, ISP, geolocation, and proxy status sent over plaintext HTTP. The `network_security_config.xml` correctly blocks cleartext as base config but carves out an explicit exception for `ip-api.com`.
@@ -35,7 +35,7 @@ Public IP, ISP, geolocation, and proxy status sent over plaintext HTTP. The `net
 
 ### FINDING 3 — MEDIUM: Unbounded Port Scan Input (FIXED)
 
-**File:** `feature/portscan/src/main/kotlin/us/beary/netlens/feature/portscan/engine/PortScannerImpl.kt`
+**File:** `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/engine/PortScannerImpl.kt`
 
 No upper bound on port list size. A caller passing all 65535 ports creates 1311 batches of 50 concurrent sockets.
 
@@ -45,7 +45,7 @@ No upper bound on port list size. A caller passing all 65535 ports creates 1311 
 
 ### FINDING 4 — LOW: WoL Broadcast IP/Port Unvalidated (FIXED)
 
-**File:** `feature/wol/src/main/kotlin/us/beary/netlens/feature/wol/engine/WolSenderImpl.kt`
+**File:** `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/engine/WolSenderImpl.kt`
 
 `broadcastIp` and `port` accepted without format or range validation.
 
@@ -55,7 +55,7 @@ No upper bound on port list size. A caller passing all 65535 ports creates 1311 
 
 ### FINDING 5 — INFO: ArpTableReader — No Risk
 
-**File:** `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/engine/ArpTableReader.kt`
+**File:** `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/engine/ArpTableReader.kt`
 
 Path is hardcoded constant `/proc/net/arp`. No user-controlled input reaches the file path. Clean.
 
@@ -63,7 +63,7 @@ Path is hardcoded constant `/proc/net/arp`. No user-controlled input reaches the
 
 ### FINDING 6 — INFO: DnsResolverImpl — No Risk
 
-**File:** `feature/dns/src/main/kotlin/us/beary/netlens/feature/dns/engine/DnsResolverImpl.kt`
+**File:** `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/engine/DnsResolverImpl.kt`
 
 dnsjava `Lookup` encodes domain as DNS wire-format label octets. No injection surface analogous to SQL or shell. Malformed domains return null, which is handled.
 

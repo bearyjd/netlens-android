@@ -122,7 +122,7 @@ Code patterns discovered in the codebase. Follow these exactly.
 
 ### ENTITY_DEFINITION
 ```kotlin
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/model/NetworkEvent.kt:1-15
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/model/NetworkEvent.kt:1-15
 @Entity(tableName = "network_events", indices = [Index("timestamp")])
 data class NetworkEvent(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -136,7 +136,7 @@ data class NetworkEvent(
 
 ### DAO_CONVENTION
 ```kotlin
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/dao/NetworkEventDao.kt:1-26
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/NetworkEventDao.kt:1-26
 @Dao
 interface NetworkEventDao {
     @Query("SELECT * FROM network_events ORDER BY timestamp DESC")
@@ -158,7 +158,7 @@ interface NetworkEventDao {
 
 ### DATABASE_CLASS
 ```kotlin
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/NetLensDatabase.kt:14-29
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt:14-29
 @Database(
     entities = [...],
     version = 5,
@@ -172,7 +172,7 @@ abstract class NetLensDatabase : RoomDatabase() {
 
 ### MIGRATION_PATTERN
 ```kotlin
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/di/DataModule.kt:22-28
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt:22-28
 private val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE INDEX IF NOT EXISTS ...")
@@ -183,7 +183,7 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
 
 ### DAO_PROVIDER_PATTERN
 ```kotlin
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/di/DataModule.kt:43-52
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt:43-52
 @Provides
 fun provideNetworkEventDao(database: NetLensDatabase): NetworkEventDao =
     database.networkEventDao()
@@ -285,7 +285,7 @@ plugins {
     id("netlens.android.feature")
 }
 android {
-    namespace = "us.beary.netlens.feature.ping"
+    namespace = "com.ventoux.netlens.feature.ping"
 }
 dependencies {
     implementation(project(":core:network"))
@@ -431,12 +431,12 @@ Examples: ping_label_host, ping_button_start, ping_stat_sent, ping_cd_copy_resul
 
 ### Task 1: Create Room Entities (6 files)
 
-- **ACTION**: Create 6 entity data classes in `core/data/src/main/kotlin/us/beary/netlens/core/data/model/`
+- **ACTION**: Create 6 entity data classes in `core/data/src/main/kotlin/com.ventoux.netlens/core/data/model/`
 - **IMPLEMENT**:
 
 **PingHistoryEntry.kt**:
 ```kotlin
-package us.beary.netlens.core.data.model
+package com.ventoux.netlens.core.data.model
 
 import androidx.room.Entity
 import androidx.room.Index
@@ -528,17 +528,17 @@ data class IpInfoHistoryEntry(
 
 ### Task 2: Create DAOs (6 files)
 
-- **ACTION**: Create 6 DAO interfaces in `core/data/src/main/kotlin/us/beary/netlens/core/data/dao/`
+- **ACTION**: Create 6 DAO interfaces in `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/`
 - **IMPLEMENT**: Each DAO follows the same pattern. Example for Ping:
 
 ```kotlin
-package us.beary.netlens.core.data.dao
+package com.ventoux.netlens.core.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
-import us.beary.netlens.core.data.model.PingHistoryEntry
+import com.ventoux.netlens.core.data.model.PingHistoryEntry
 
 @Dao
 interface PingHistoryDao {
@@ -736,16 +736,16 @@ fun provideHistoryRepository(
 
 ### Task 5: Create HistoryRepository
 
-- **ACTION**: Create `core/data/src/main/kotlin/us/beary/netlens/core/data/repository/HistoryRepository.kt`
+- **ACTION**: Create `core/data/src/main/kotlin/com.ventoux.netlens/core/data/repository/HistoryRepository.kt`
 - **IMPLEMENT**:
 
 ```kotlin
-package us.beary.netlens.core.data.repository
+package com.ventoux.netlens.core.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import us.beary.netlens.core.data.dao.*
-import us.beary.netlens.core.data.model.*
+import com.ventoux.netlens.core.data.dao.*
+import com.ventoux.netlens.core.data.model.*
 import javax.inject.Inject
 
 data class CombinedHistoryResults(
@@ -907,7 +907,7 @@ fun stopPing() {
 ```
 
 - **MIRROR**: FLOW_COMPLETION_SAVE_POINT
-- **IMPORTS**: Add `us.beary.netlens.core.data.dao.PingHistoryDao`, `us.beary.netlens.core.data.model.PingHistoryEntry`
+- **IMPORTS**: Add `com.ventoux.netlens.core.data.dao.PingHistoryDao`, `com.ventoux.netlens.core.data.model.PingHistoryEntry`
 - **GOTCHA**: `saveToHistory` launches its own coroutine via `viewModelScope.launch` so it doesn't block the completion flow. Check that `_state.value` has the updated summary BEFORE calling save — the `.update {}` in `onCompletion` runs synchronously on `MutableStateFlow`, so the value is available immediately after.
 - **VALIDATE**: Run ping, navigate away, check DB or re-check after relaunch.
 
@@ -955,7 +955,7 @@ Call inside `.onCompletion` in `startScan()`, AFTER the state update:
 Do NOT call in `cancelScan()` — per spec, cancelled scans are not saved.
 
 - **MIRROR**: FLOW_COMPLETION_SAVE_POINT
-- **IMPORTS**: `us.beary.netlens.core.data.dao.LanScanHistoryDao`, `us.beary.netlens.core.data.model.LanScanHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
+- **IMPORTS**: `com.ventoux.netlens.core.data.dao.LanScanHistoryDao`, `com.ventoux.netlens.core.data.model.LanScanHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
 - **GOTCHA**: `devicesJson` stores a simplified list (just IPs) to avoid serializing the full `LanDevice` model which isn't `@Serializable`. Alternatively, serialize a list of `Map<String, String?>` with ip/mac/vendor/hostname. Keep it simple — just the IP list as `Json.encodeToString(state.devices.map { it.ip })`.
 - **VALIDATE**: Run scan to completion, verify entry in history.
 
@@ -985,7 +985,7 @@ private fun saveToHistory(state: PortScanUiState, startTime: Long) {
 Add `val startTime = System.currentTimeMillis()` at the start of `scan()`, and call `saveToHistory(_state.value, startTime)` after `_state.update { it.copy(isScanning = false) }` (line 52) — only in the success path, NOT in the catch block.
 
 - **MIRROR**: RESULT_CALLBACK_SAVE_POINT (try/catch pattern variant)
-- **IMPORTS**: `us.beary.netlens.core.data.dao.PortScanHistoryDao`, `us.beary.netlens.core.data.model.PortScanHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
+- **IMPORTS**: `com.ventoux.netlens.core.data.dao.PortScanHistoryDao`, `com.ventoux.netlens.core.data.model.PortScanHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
 - **GOTCHA**: Track `startTime` as a local variable in `scan()` to compute duration. The cancelled path (via `cancelScan()`) never reaches the success `_state.update` line, so cancels won't save.
 - **VALIDATE**: Run port scan to completion, verify entry in history.
 
@@ -1012,7 +1012,7 @@ Add `val startTime = System.currentTimeMillis()` at the start of `scan()`, and c
 ```
 
 - **MIRROR**: RESULT_CALLBACK_SAVE_POINT
-- **IMPORTS**: `us.beary.netlens.core.data.dao.DnsHistoryDao`, `us.beary.netlens.core.data.model.DnsHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
+- **IMPORTS**: `com.ventoux.netlens.core.data.dao.DnsHistoryDao`, `com.ventoux.netlens.core.data.model.DnsHistoryEntry`, `kotlinx.serialization.json.Json`, `kotlinx.serialization.encodeToString`
 - **GOTCHA**: `domain` is a local val already captured at line 41 of the current ViewModel. `results` is the parameter from `onSuccess`. Serialize results as simple strings to avoid needing `DnsResult` to be `@Serializable`.
 - **VALIDATE**: Run DNS lookup, verify entry.
 
@@ -1048,7 +1048,7 @@ saveToHistory(trimmed, whoisResult.getOrNull(), rdnsResult)
 ```
 
 - **MIRROR**: Direct state assignment pattern from WhoisViewModel
-- **IMPORTS**: `us.beary.netlens.core.data.dao.WhoisHistoryDao`, `us.beary.netlens.core.data.model.WhoisHistoryEntry`
+- **IMPORTS**: `com.ventoux.netlens.core.data.dao.WhoisHistoryDao`, `com.ventoux.netlens.core.data.model.WhoisHistoryEntry`
 - **GOTCHA**: Don't save on `Error` state — only on `Success`. `trimmed` is the local val from line 38.
 - **VALIDATE**: Run WHOIS lookup, verify entry.
 
@@ -1086,7 +1086,7 @@ Add save inside `refresh()`:
 ```
 
 - **MIRROR**: RESULT_CALLBACK_SAVE_POINT
-- **IMPORTS**: `us.beary.netlens.core.data.dao.IpInfoHistoryDao`, `us.beary.netlens.core.data.model.IpInfoHistoryEntry`
+- **IMPORTS**: `com.ventoux.netlens.core.data.dao.IpInfoHistoryDao`, `com.ventoux.netlens.core.data.model.IpInfoHistoryEntry`
 - **GOTCHA**: `IpApiResponse.proxy` maps to `isVpn`. `IpApiResponse.query` is the IP address.
 - **VALIDATE**: Open IP Info screen (auto-fetches on init), verify entry saved.
 
@@ -1104,7 +1104,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.history"
+    namespace = "com.ventoux.netlens.feature.history"
 }
 
 dependencies {
@@ -1135,9 +1135,9 @@ dependencies {
 - **ACTION**: Create model classes for the history screen.
 - **IMPLEMENT**:
 
-**feature/history/src/main/kotlin/us/beary/netlens/feature/history/model/ToolFilter.kt**:
+**feature/history/src/main/kotlin/com.ventoux.netlens/feature/history/model/ToolFilter.kt**:
 ```kotlin
-package us.beary.netlens.feature.history.model
+package com.ventoux.netlens.feature.history.model
 
 enum class ToolFilter(val label: String) {
     All("All"),
@@ -1150,9 +1150,9 @@ enum class ToolFilter(val label: String) {
 }
 ```
 
-**feature/history/src/main/kotlin/us/beary/netlens/feature/history/model/HistoryUiState.kt**:
+**feature/history/src/main/kotlin/com.ventoux.netlens/feature/history/model/HistoryUiState.kt**:
 ```kotlin
-package us.beary.netlens.feature.history.model
+package com.ventoux.netlens.feature.history.model
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -1185,10 +1185,10 @@ data class HistoryItem(
 - **ACTION**: Create the ViewModel that loads, searches, and filters history.
 - **IMPLEMENT**:
 
-**feature/history/src/main/kotlin/us/beary/netlens/feature/history/HistoryViewModel.kt**:
+**feature/history/src/main/kotlin/com.ventoux.netlens/feature/history/HistoryViewModel.kt**:
 
 ```kotlin
-package us.beary.netlens.feature.history
+package com.ventoux.netlens.feature.history
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -1197,9 +1197,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import us.beary.netlens.core.data.repository.CombinedHistoryResults
-import us.beary.netlens.core.data.repository.HistoryRepository
-import us.beary.netlens.feature.history.model.*
+import com.ventoux.netlens.core.data.repository.CombinedHistoryResults
+import com.ventoux.netlens.core.data.repository.HistoryRepository
+import com.ventoux.netlens.feature.history.model.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -1344,7 +1344,7 @@ class HistoryViewModel @Inject constructor(
 - **ACTION**: Create the unified history screen UI.
 - **IMPLEMENT**:
 
-**feature/history/src/main/kotlin/us/beary/netlens/feature/history/HistoryScreen.kt**:
+**feature/history/src/main/kotlin/com.ventoux.netlens/feature/history/HistoryScreen.kt**:
 
 Key structure:
 ```kotlin
@@ -1469,7 +1469,7 @@ Note: `Icons.Default.History` is already used by `NetLog`. Use `Icons.Default.Ma
 
 **NetLensNavHost.kt** — add:
 ```kotlin
-import us.beary.netlens.feature.history.HistoryScreen
+import com.ventoux.netlens.feature.history.HistoryScreen
 // ...
 composable(ToolDestination.History.route) { HistoryScreen(onBack = navController::popBackStack) }
 ```
@@ -1494,7 +1494,7 @@ composable(ToolDestination.Ping.route) {
 ```
 
 - **MIRROR**: TOOL_DESTINATION_ENTRY, NAVHOST_ROUTE, SCREEN_SCAFFOLD actions
-- **IMPORTS**: `Icons.Default.ManageHistory`, `us.beary.netlens.feature.history.HistoryScreen`
+- **IMPORTS**: `Icons.Default.ManageHistory`, `com.ventoux.netlens.feature.history.HistoryScreen`
 - **GOTCHA**: The `ManageHistory` icon requires `compose.material.icons.extended` — check if `compose.material.icons` already includes it. If not, use `Icons.Default.History` with a different tint or use `Icons.Default.Schedule`. Alternatively, check what icons are available in the non-extended set. **Safest**: use `Icons.Default.History` and differentiate by label, since NetLog uses it but they're in different categories.
 - **VALIDATE**: Home screen shows History tool. Tapping opens HistoryScreen. Tool screens show history icon in top bar.
 
@@ -1505,7 +1505,7 @@ composable(ToolDestination.Ping.route) {
 - **ACTION**: Create test file with fakes for DAOs.
 - **IMPLEMENT**:
 
-**feature/history/src/test/kotlin/us/beary/netlens/feature/history/HistoryViewModelTest.kt**:
+**feature/history/src/test/kotlin/com.ventoux.netlens/feature/history/HistoryViewModelTest.kt**:
 
 ```kotlin
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -1642,7 +1642,7 @@ EXPECT: No regressions
 ```bash
 # Room schema export happens automatically during build
 # Check core/data/schemas/ for version 6 JSON schema
-ls core/data/schemas/us.beary.netlens.core.data.NetLensDatabase/6.json
+ls core/data/schemas/com.ventoux.netlens.core.data.NetLensDatabase/6.json
 ```
 EXPECT: Schema file exists and contains all 6 new tables
 

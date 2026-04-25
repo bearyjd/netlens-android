@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.traceroute"
+    namespace = "com.ventoux.netlens.feature.traceroute"
 }
 
 dependencies {

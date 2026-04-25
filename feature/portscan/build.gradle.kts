@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.portscan"
+    namespace = "com.ventoux.netlens.feature.portscan"
 }
 
 dependencies {

@@ -23,37 +23,37 @@ As a user, I want to scan my local network to discover connected devices with th
 // SOURCE: feature/lanscan/build.gradle.kts — already depends on :core:network, :core:data, :core:oui
 
 ### ROOM_ENTITY
-// SOURCE: core/data/src/main/kotlin/us/beary/netlens/core/data/NetLensDatabase.kt
+// SOURCE: core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt
 - Add entity to @Database annotation, bump version, add abstract DAO getter
 
 ### OUI_LOOKUP
-// SOURCE: core/oui/src/main/kotlin/us/beary/netlens/core/oui/OuiLookup.kt
+// SOURCE: core/oui/src/main/kotlin/com.ventoux.netlens/core/oui/OuiLookup.kt
 - Inject OuiLookup, call lookup(mac) to get vendor string
 
 ### CALLBACKFLOW
-// SOURCE: core/network/src/main/kotlin/us/beary/netlens/core/network/ConnectivityManagerNetworkMonitor.kt
+// SOURCE: core/network/src/main/kotlin/com.ventoux.netlens/core/network/ConnectivityManagerNetworkMonitor.kt
 - callbackFlow + awaitClose pattern for streaming results
 
 ## Files to Change
 
 | File | Action | Description |
 |------|--------|-------------|
-| `core/network/src/main/kotlin/us/beary/netlens/core/network/SubnetUtils.kt` | CREATE | Utility to derive gateway IP, subnet mask, IP range from LinkProperties/ConnectivityManager |
-| `core/network/src/main/kotlin/us/beary/netlens/core/network/ArpReader.kt` | CREATE | Parse /proc/net/arp into Map<String(ip), String(mac)> |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/entity/LanDeviceEntity.kt` | CREATE | @Entity with ip (PK), mac, vendor, hostname, isReachable, lastSeenAt |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/dao/LanDeviceDao.kt` | CREATE | @Dao with insertAll, getAll (Flow), deleteAll |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/NetLensDatabase.kt` | UPDATE | Add LanDeviceEntity to entities, add abstract lanDeviceDao(), bump version to 2 |
-| `core/data/src/main/kotlin/us/beary/netlens/core/data/di/DataModule.kt` | UPDATE | Add @Provides for LanDeviceDao |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/model/LanDevice.kt` | CREATE | Domain data class: ip, mac, vendor, hostname, isReachable |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/model/LanScanUiState.kt` | CREATE | data class: devices list, isScanning, progress (0f-1f), error |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/engine/LanScanner.kt` | CREATE | Interface with `fun scan(): Flow<List<LanDevice>>` |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/engine/LanScannerImpl.kt` | CREATE | Semaphore(50), iterate IP range, InetAddress.isReachable(200), read ARP after, OUI lookup, emit progressive results |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/data/LanScanRepository.kt` | CREATE | Interface: scan() Flow, getLastScanResults() Flow |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/data/LanScanRepositoryImpl.kt` | CREATE | Coordinates LanScanner + LanDeviceDao, persists results |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/di/LanScanModule.kt` | CREATE | @Module binding scanner + repository |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/LanScanViewModel.kt` | CREATE | @HiltViewModel, StateFlow<LanScanUiState>, startScan(), cancelScan() |
-| `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/LanScanScreen.kt` | CREATE | LazyColumn of device cards, FAB to start scan, LinearProgressIndicator, device count |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for LanScan route with LanScanScreen() |
+| `core/network/src/main/kotlin/com.ventoux.netlens/core/network/SubnetUtils.kt` | CREATE | Utility to derive gateway IP, subnet mask, IP range from LinkProperties/ConnectivityManager |
+| `core/network/src/main/kotlin/com.ventoux.netlens/core/network/ArpReader.kt` | CREATE | Parse /proc/net/arp into Map<String(ip), String(mac)> |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/LanDeviceEntity.kt` | CREATE | @Entity with ip (PK), mac, vendor, hostname, isReachable, lastSeenAt |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/LanDeviceDao.kt` | CREATE | @Dao with insertAll, getAll (Flow), deleteAll |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add LanDeviceEntity to entities, add abstract lanDeviceDao(), bump version to 2 |
+| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt` | UPDATE | Add @Provides for LanDeviceDao |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/model/LanDevice.kt` | CREATE | Domain data class: ip, mac, vendor, hostname, isReachable |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/model/LanScanUiState.kt` | CREATE | data class: devices list, isScanning, progress (0f-1f), error |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/engine/LanScanner.kt` | CREATE | Interface with `fun scan(): Flow<List<LanDevice>>` |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/engine/LanScannerImpl.kt` | CREATE | Semaphore(50), iterate IP range, InetAddress.isReachable(200), read ARP after, OUI lookup, emit progressive results |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/data/LanScanRepository.kt` | CREATE | Interface: scan() Flow, getLastScanResults() Flow |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/data/LanScanRepositoryImpl.kt` | CREATE | Coordinates LanScanner + LanDeviceDao, persists results |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/di/LanScanModule.kt` | CREATE | @Module binding scanner + repository |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/LanScanViewModel.kt` | CREATE | @HiltViewModel, StateFlow<LanScanUiState>, startScan(), cancelScan() |
+| `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/LanScanScreen.kt` | CREATE | LazyColumn of device cards, FAB to start scan, LinearProgressIndicator, device count |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for LanScan route with LanScanScreen() |
 
 ## Step-by-Step Tasks
 

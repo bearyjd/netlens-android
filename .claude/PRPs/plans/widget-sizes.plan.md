@@ -182,7 +182,7 @@ class NetLensWidgetReceiver : GlanceAppWidgetReceiver() {
 ```xml
 <!-- SOURCE: app/src/main/AndroidManifest.xml:34-43 -->
 <receiver
-    android:name="us.beary.netlens.widget.NetLensWidgetReceiver"
+    android:name="com.ventoux.netlens.widget.NetLensWidgetReceiver"
     android:exported="true">
     <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -333,10 +333,10 @@ widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.get
 - **VALIDATE**: No unresolved string references
 
 ### Task 5: Create WideWidgetReceiver
-- **ACTION**: Create `widget/src/main/kotlin/us/beary/netlens/widget/WideWidgetReceiver.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com.ventoux.netlens/widget/WideWidgetReceiver.kt`
 - **IMPLEMENT**:
   ```kotlin
-  package us.beary.netlens.widget
+  package com.ventoux.netlens.widget
 
   import androidx.glance.appwidget.GlanceAppWidget
   import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -351,10 +351,10 @@ widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.get
 - **VALIDATE**: Compiles
 
 ### Task 6: Create BannerWidgetReceiver
-- **ACTION**: Create `widget/src/main/kotlin/us/beary/netlens/widget/BannerWidgetReceiver.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com.ventoux.netlens/widget/BannerWidgetReceiver.kt`
 - **IMPLEMENT**:
   ```kotlin
-  package us.beary.netlens.widget
+  package com.ventoux.netlens.widget
 
   import androidx.glance.appwidget.GlanceAppWidget
   import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -373,7 +373,7 @@ widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.get
 - **IMPLEMENT**:
   ```xml
   <receiver
-      android:name="us.beary.netlens.widget.WideWidgetReceiver"
+      android:name="com.ventoux.netlens.widget.WideWidgetReceiver"
       android:exported="true">
       <intent-filter>
           <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -384,7 +384,7 @@ widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.get
   </receiver>
 
   <receiver
-      android:name="us.beary.netlens.widget.BannerWidgetReceiver"
+      android:name="com.ventoux.netlens.widget.BannerWidgetReceiver"
       android:exported="true">
       <intent-filter>
           <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

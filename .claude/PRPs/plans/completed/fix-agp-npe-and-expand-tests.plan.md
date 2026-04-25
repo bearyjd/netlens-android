@@ -90,12 +90,12 @@ Test dependencies (junit5, coroutines-test) are already added by the convention 
 
 | File | Action | Justification |
 |---|---|---|
-| `feature/ping/src/test/kotlin/us/beary/netlens/feature/ping/engine/PingOutputParserTest.kt` | CREATE | Test regex parsing of ping reply lines and summary |
-| `feature/ping/src/test/kotlin/us/beary/netlens/feature/ping/engine/PingerImplTest.kt` | CREATE | Test HOST_PATTERN validation |
-| `feature/traceroute/src/test/kotlin/us/beary/netlens/feature/traceroute/engine/TracerImplTest.kt` | CREATE | Test hop output parsing and host validation |
-| `feature/portscan/src/test/kotlin/us/beary/netlens/feature/portscan/engine/PortScannerImplTest.kt` | CREATE | Test input validation (ports range, count, host) |
-| `feature/dns/src/test/kotlin/us/beary/netlens/feature/dns/engine/DnsResolverImplTest.kt` | CREATE | Test domain validation edge cases |
-| `feature/lanscan/src/test/kotlin/us/beary/netlens/feature/lanscan/engine/ArpTableReaderTest.kt` | CREATE | Test ARP table line parsing |
+| `feature/ping/src/test/kotlin/com.ventoux.netlens/feature/ping/engine/PingOutputParserTest.kt` | CREATE | Test regex parsing of ping reply lines and summary |
+| `feature/ping/src/test/kotlin/com.ventoux.netlens/feature/ping/engine/PingerImplTest.kt` | CREATE | Test HOST_PATTERN validation |
+| `feature/traceroute/src/test/kotlin/com.ventoux.netlens/feature/traceroute/engine/TracerImplTest.kt` | CREATE | Test hop output parsing and host validation |
+| `feature/portscan/src/test/kotlin/com.ventoux.netlens/feature/portscan/engine/PortScannerImplTest.kt` | CREATE | Test input validation (ports range, count, host) |
+| `feature/dns/src/test/kotlin/com.ventoux.netlens/feature/dns/engine/DnsResolverImplTest.kt` | CREATE | Test domain validation edge cases |
+| `feature/lanscan/src/test/kotlin/com.ventoux.netlens/feature/lanscan/engine/ArpTableReaderTest.kt` | CREATE | Test ARP table line parsing |
 
 ## NOT Building
 - ViewModel tests (require Hilt test infra and Turbine wiring — separate effort)
@@ -123,7 +123,7 @@ Test dependencies (junit5, coroutines-test) are already added by the convention 
 - **ACTION**: Create test file for PingOutputParser regex parsing
 - **IMPLEMENT**: Test `parseReplyLine()` and `parseSummary()` with representative ping output
 - **MIRROR**: TEST_STYLE (JUnit 5, backtick names, direct assertions)
-- **IMPORTS**: `org.junit.jupiter.api.Assertions.*`, `org.junit.jupiter.api.Test`, `us.beary.netlens.feature.ping.engine.PingOutputParser`, model classes
+- **IMPORTS**: `org.junit.jupiter.api.Assertions.*`, `org.junit.jupiter.api.Test`, `com.ventoux.netlens.feature.ping.engine.PingOutputParser`, model classes
 - **TEST CASES**:
   - `parseReplyLine` with standard reply: `"64 bytes from 8.8.8.8: icmp_seq=1 ttl=118 time=12.3 ms"` → PingResult(seq=1, latencyMs=12.3, ttl=118, ip="8.8.8.8")
   - `parseReplyLine` with timeout: `"From 192.168.1.1 icmp_seq=2 Destination Host Unreachable"` → PingResult(seq=2, isTimeout=true)

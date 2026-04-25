@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.netlog"
+    namespace = "com.ventoux.netlens.feature.netlog"
 }
 
 dependencies {

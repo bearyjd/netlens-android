@@ -26,23 +26,23 @@ As a user, I want to inspect TLS certificates for any host, so that I can verify
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/tls/build.gradle.kts` | CREATE | netlens.android.feature plugin, namespace us.beary.netlens.feature.tls, dep on :core:network |
+| `feature/tls/build.gradle.kts` | CREATE | netlens.android.feature plugin, namespace com.ventoux.netlens.feature.tls, dep on :core:network |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:tls")` |
 | `app/build.gradle.kts` | UPDATE | Add `implementation(project(":feature:tls"))` |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/model/TlsCertInfo.kt` | CREATE | data class: subject, issuer, sans (List<String>), notBefore, notAfter, serialNumber, signatureAlgorithm, isExpired, daysUntilExpiry |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/model/TlsInspectUiState.kt` | CREATE | data class: host, port, certChain (List<TlsCertInfo>), isLoading, error |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/engine/TlsInspector.kt` | CREATE | Interface: suspend fun inspect(host: String, port: Int): Result<List<TlsCertInfo>> |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/engine/TlsInspectorImpl.kt` | CREATE | SSLSocketFactory.getDefault().createSocket(host, port) → SSLSocket.startHandshake() → session.peerCertificates. Cast to X509Certificate. Extract: subjectDN, issuerDN, subjectAlternativeNames, notBefore, notAfter, serialNumber, sigAlgName. Compute daysUntilExpiry. Run on Dispatchers.IO. |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/di/TlsModule.kt` | CREATE | @Module @Binds TlsInspector |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/TlsInspectorViewModel.kt` | CREATE | @HiltViewModel, inspect(host, port), state with cert chain |
-| `feature/tls/src/main/kotlin/us/beary/netlens/feature/tls/TlsInspectorScreen.kt` | CREATE | Host:port TextField, Inspect button, cert chain list (expandable cards per cert), expiry warning banner (red <30 days, yellow <90 days) |
-| `app/src/main/kotlin/us/beary/netlens/navigation/TopLevelDestination.kt` | UPDATE | Add TlsInspect entry (or keep as secondary nav — see PR-13) |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for TLS |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/model/TlsCertInfo.kt` | CREATE | data class: subject, issuer, sans (List<String>), notBefore, notAfter, serialNumber, signatureAlgorithm, isExpired, daysUntilExpiry |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/model/TlsInspectUiState.kt` | CREATE | data class: host, port, certChain (List<TlsCertInfo>), isLoading, error |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/engine/TlsInspector.kt` | CREATE | Interface: suspend fun inspect(host: String, port: Int): Result<List<TlsCertInfo>> |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/engine/TlsInspectorImpl.kt` | CREATE | SSLSocketFactory.getDefault().createSocket(host, port) → SSLSocket.startHandshake() → session.peerCertificates. Cast to X509Certificate. Extract: subjectDN, issuerDN, subjectAlternativeNames, notBefore, notAfter, serialNumber, sigAlgName. Compute daysUntilExpiry. Run on Dispatchers.IO. |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/di/TlsModule.kt` | CREATE | @Module @Binds TlsInspector |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/TlsInspectorViewModel.kt` | CREATE | @HiltViewModel, inspect(host, port), state with cert chain |
+| `feature/tls/src/main/kotlin/com.ventoux.netlens/feature/tls/TlsInspectorScreen.kt` | CREATE | Host:port TextField, Inspect button, cert chain list (expandable cards per cert), expiry warning banner (red <30 days, yellow <90 days) |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/TopLevelDestination.kt` | UPDATE | Add TlsInspect entry (or keep as secondary nav — see PR-13) |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for TLS |
 
 ## Step-by-Step Tasks
 
 ### Task 1: Create feature module
-- **ACTION**: Create `feature/tls/build.gradle.kts` with `netlens.android.feature` plugin, namespace `us.beary.netlens.feature.tls`, dependency on `:core:network`. Update `settings.gradle.kts` to include `:feature:tls`. Update `app/build.gradle.kts` to add implementation dependency.
+- **ACTION**: Create `feature/tls/build.gradle.kts` with `netlens.android.feature` plugin, namespace `com.ventoux.netlens.feature.tls`, dependency on `:core:network`. Update `settings.gradle.kts` to include `:feature:tls`. Update `app/build.gradle.kts` to add implementation dependency.
 - **VALIDATE**: `./gradlew :feature:tls:compileDebugKotlin`
 
 ### Task 2: Create TlsCertInfo model

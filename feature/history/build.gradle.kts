@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.history"
+    namespace = "com.ventoux.netlens.feature.history"
 }
 
 dependencies {

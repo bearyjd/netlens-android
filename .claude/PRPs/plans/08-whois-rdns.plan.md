@@ -29,19 +29,19 @@ As a user, I want to look up WHOIS information and reverse DNS for any IP or dom
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/whois/build.gradle.kts` | CREATE | netlens.android.feature, namespace us.beary.netlens.feature.whois, dep :core:network |
+| `feature/whois/build.gradle.kts` | CREATE | netlens.android.feature, namespace com.ventoux.netlens.feature.whois, dep :core:network |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:whois")` |
 | `app/build.gradle.kts` | UPDATE | Add implementation project dep |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/model/WhoisResult.kt` | CREATE | data class: query, registrar, creationDate, expirationDate, nameServers, rawText |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/model/ReverseDnsResult.kt` | CREATE | data class: ip, hostname |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/model/WhoisUiState.kt` | CREATE | data class: query, whoisResult, reverseDns, isLoading, activeTab (WHOIS/RDNS), error |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/engine/WhoisClient.kt` | CREATE | Interface: suspend fun query(domain: String): Result<WhoisResult> |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/engine/WhoisClientImpl.kt` | CREATE | Raw TCP Socket to whois.iana.org:43. Send "domain\r\n". Read response. Parse "refer:" field for referral server. Follow up to 3 referrals. Parse key fields from final response. Run on Dispatchers.IO. |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/engine/ReverseDnsLookup.kt` | CREATE | Interface + impl: InetAddress.getByName(ip).canonicalHostName (returns hostname or IP if no PTR). Alternative: DnsResolver PTR query. |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/di/WhoisModule.kt` | CREATE | @Module binding clients |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/WhoisViewModel.kt` | CREATE | @HiltViewModel, lookup(query), toggle WHOIS/RDNS tab |
-| `feature/whois/src/main/kotlin/us/beary/netlens/feature/whois/WhoisScreen.kt` | CREATE | Query TextField, tab row (WHOIS | Reverse DNS), WHOIS tab shows parsed fields + raw text (expandable), RDNS tab shows hostname |
-| `app/src/main/kotlin/us/beary/netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route "whois?query={query}" with optional argument |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/model/WhoisResult.kt` | CREATE | data class: query, registrar, creationDate, expirationDate, nameServers, rawText |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/model/ReverseDnsResult.kt` | CREATE | data class: ip, hostname |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/model/WhoisUiState.kt` | CREATE | data class: query, whoisResult, reverseDns, isLoading, activeTab (WHOIS/RDNS), error |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/engine/WhoisClient.kt` | CREATE | Interface: suspend fun query(domain: String): Result<WhoisResult> |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/engine/WhoisClientImpl.kt` | CREATE | Raw TCP Socket to whois.iana.org:43. Send "domain\r\n". Read response. Parse "refer:" field for referral server. Follow up to 3 referrals. Parse key fields from final response. Run on Dispatchers.IO. |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/engine/ReverseDnsLookup.kt` | CREATE | Interface + impl: InetAddress.getByName(ip).canonicalHostName (returns hostname or IP if no PTR). Alternative: DnsResolver PTR query. |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/di/WhoisModule.kt` | CREATE | @Module binding clients |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/WhoisViewModel.kt` | CREATE | @HiltViewModel, lookup(query), toggle WHOIS/RDNS tab |
+| `feature/whois/src/main/kotlin/com.ventoux.netlens/feature/whois/WhoisScreen.kt` | CREATE | Query TextField, tab row (WHOIS | Reverse DNS), WHOIS tab shows parsed fields + raw text (expandable), RDNS tab shows hostname |
+| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route "whois?query={query}" with optional argument |
 
 ## Step-by-Step Tasks
 

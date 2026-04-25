@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NetLens is an Android network diagnostics toolkit (package `us.beary.netlens`). It provides 13 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, Wake-on-LAN, IP info, endpoint monitor, and network log — each in its own feature module.
+NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 13 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, Wake-on-LAN, IP info, endpoint monitor, and network log — each in its own feature module.
 
 ## Build Commands
 
@@ -45,7 +45,7 @@ Feature modules apply `netlens.android.feature` which bundles: `netlens.android.
 
 Each feature follows this structure:
 ```
-feature/<name>/src/main/kotlin/us/beary/netlens/feature/<name>/
+feature/<name>/src/main/kotlin/com.ventoux.netlens/feature/<name>/
 ├── <Name>Screen.kt          # Composable UI
 ├── <Name>ViewModel.kt       # @HiltViewModel with MutableStateFlow
 ├── di/<Name>Module.kt       # @Module/@InstallIn Hilt bindings

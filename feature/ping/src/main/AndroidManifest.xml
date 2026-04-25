@@ -7,7 +7,7 @@
 
     <application>
         <service
-            android:name="us.beary.netlens.feature.ping.service.ContinuousPingService"
+            android:name="com.ventoux.netlens.feature.ping.service.ContinuousPingService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property

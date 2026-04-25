@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.wol"
+    namespace = "com.ventoux.netlens.feature.wol"
 }
 
 dependencies {

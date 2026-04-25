@@ -352,10 +352,10 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
 
 ### Task 1: Create PingMode Enum
 
-- **ACTION**: Create `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/model/PingMode.kt`
+- **ACTION**: Create `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/model/PingMode.kt`
 - **IMPLEMENT**:
 ```kotlin
-package us.beary.netlens.feature.ping.model
+package com.ventoux.netlens.feature.ping.model
 
 enum class PingMode {
     FIXED,
@@ -372,7 +372,7 @@ enum class PingMode {
 ### Task 2: Extend PingUiState
 
 - **ACTION**: Add continuous mode fields to `PingUiState`
-- **IMPLEMENT**: Update `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/model/PingUiState.kt`:
+- **IMPLEMENT**: Update `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/model/PingUiState.kt`:
 ```kotlin
 data class PingUiState(
     val host: String = "",
@@ -387,7 +387,7 @@ data class PingUiState(
 )
 ```
 - **MIRROR**: Existing data class pattern — all fields have defaults
-- **IMPORTS**: `us.beary.netlens.feature.ping.model.PingMode`
+- **IMPORTS**: `com.ventoux.netlens.feature.ping.model.PingMode`
 - **GOTCHA**: `totalSent` / `totalReceived` are separate from `results.size` because the rolling buffer drops old entries but the counters keep accumulating. `elapsedMs` is driven by a ticker coroutine in the ViewModel.
 - **VALIDATE**: Compiles. Existing tests still pass (new fields have defaults).
 
@@ -396,7 +396,7 @@ data class PingUiState(
 ### Task 3: Extend Pinger Interface
 
 - **ACTION**: Add `pingContinuous` method to the `Pinger` interface
-- **IMPLEMENT**: Update `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/engine/Pinger.kt`:
+- **IMPLEMENT**: Update `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/engine/Pinger.kt`:
 ```kotlin
 interface Pinger {
     fun ping(host: String, count: Int = 4): Flow<PingResult>
@@ -603,7 +603,7 @@ fun stopPing() {
 ```
 
 - **MIRROR**: VIEWMODEL_STATE_FLOW, VIEWMODEL_COMPLETION
-- **IMPORTS**: Add `us.beary.netlens.feature.ping.model.PingMode`, `kotlinx.coroutines.delay`
+- **IMPORTS**: Add `com.ventoux.netlens.feature.ping.model.PingMode`, `kotlinx.coroutines.delay`
 - **GOTCHA**: `computeSummary` (existing) uses `current.results` which in continuous mode is the rolling buffer, not all results. For the final summary on stop, use `totalSent`/`totalReceived` from state for transmitted/received counts, but min/avg/max from the buffer. The `computeLiveSummary` function uses the same buffer but takes explicit totalSent/totalReceived. Don't allow mode change while `isPinging == true`. The `saveToHistory` call must check `totalSent > 0` to avoid saving empty continuous sessions — add a guard in the existing `saveToHistory` method.
 - **VALIDATE**: Build succeeds. Fixed mode behavior unchanged.
 
@@ -612,10 +612,10 @@ fun stopPing() {
 ### Task 6: Create PingNotificationManager
 
 - **ACTION**: Create notification channel and builder utility
-- **IMPLEMENT**: Create `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/service/PingNotificationManager.kt`:
+- **IMPLEMENT**: Create `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/service/PingNotificationManager.kt`:
 
 ```kotlin
-package us.beary.netlens.feature.ping.service
+package com.ventoux.netlens.feature.ping.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -624,14 +624,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import us.beary.netlens.feature.ping.R
+import com.ventoux.netlens.feature.ping.R
 
 class PingNotificationManager(private val context: Context) {
 
     companion object {
         const val CHANNEL_ID = "continuous_ping"
         const val NOTIFICATION_ID = 42
-        const val ACTION_STOP = "us.beary.netlens.ACTION_STOP_PING"
+        const val ACTION_STOP = "com.ventoux.netlens.ACTION_STOP_PING"
     }
 
     fun createChannel() {
@@ -693,10 +693,10 @@ Also create a simple notification icon drawable. Since the project uses vector d
 ### Task 7: Create ContinuousPingService
 
 - **ACTION**: Create a foreground service that runs continuous ping in the background
-- **IMPLEMENT**: Create `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/service/ContinuousPingService.kt`:
+- **IMPLEMENT**: Create `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/service/ContinuousPingService.kt`:
 
 ```kotlin
-package us.beary.netlens.feature.ping.service
+package com.ventoux.netlens.feature.ping.service
 
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -718,8 +718,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import us.beary.netlens.feature.ping.engine.Pinger
-import us.beary.netlens.feature.ping.model.PingResult
+import com.ventoux.netlens.feature.ping.engine.Pinger
+import com.ventoux.netlens.feature.ping.model.PingResult
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -858,7 +858,7 @@ Add permissions (before `<application>`):
 Add service declaration (inside `<application>`, after the receiver):
 ```xml
 <service
-    android:name="us.beary.netlens.feature.ping.service.ContinuousPingService"
+    android:name="com.ventoux.netlens.feature.ping.service.ContinuousPingService"
     android:exported="false"
     android:foregroundServiceType="specialUse">
     <property
@@ -882,7 +882,7 @@ Add service declaration (inside `<application>`, after the receiver):
 
     <application>
         <service
-            android:name="us.beary.netlens.feature.ping.service.ContinuousPingService"
+            android:name="com.ventoux.netlens.feature.ping.service.ContinuousPingService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -1051,7 +1051,7 @@ plugins {
 }
 
 android {
-    namespace = "us.beary.netlens.feature.ping"
+    namespace = "com.ventoux.netlens.feature.ping"
 }
 
 dependencies {
@@ -1127,7 +1127,7 @@ pingHistoryDao.insert(
 ### Task 13: Update FakePinger for Tests
 
 - **ACTION**: Add `pingContinuous` to `FakePinger`
-- **IMPLEMENT**: Update `feature/ping/src/test/kotlin/us/beary/netlens/feature/ping/engine/FakePinger.kt`:
+- **IMPLEMENT**: Update `feature/ping/src/test/kotlin/com.ventoux.netlens/feature/ping/engine/FakePinger.kt`:
 ```kotlin
 class FakePinger : Pinger {
     var results: List<PingResult> = emptyList()
@@ -1344,7 +1344,7 @@ EXPECT: No regressions
 
 ### Database Validation
 ```bash
-ls core/data/schemas/us.beary.netlens.core.data.NetLensDatabase/7.json
+ls core/data/schemas/com.ventoux.netlens.core.data.NetLensDatabase/7.json
 ```
 EXPECT: Schema file exists with `mode` column in `history_ping`
 

@@ -66,7 +66,7 @@ class MonitorViewModel @Inject constructor(
 - **VALIDATE**: `./gradlew :core:network:testDebugUnitTest` (runs, even if 0 tests)
 
 ### Task 4: Write SsrfGuard unit tests
-- **ACTION**: Create core/network/src/test/kotlin/us/beary/netlens/core/network/SsrfGuardTest.kt
+- **ACTION**: Create core/network/src/test/kotlin/com.ventoux.netlens/core/network/SsrfGuardTest.kt
 - **TESTS**: localhost, 127.x, 10.x, 192.168.x, 172.16.x, public IP, unresolvable host, IPv6 loopback, unique-local
 - **VALIDATE**: `./gradlew :core:network:testDebugUnitTest`
 

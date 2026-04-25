@@ -37,18 +37,18 @@ Dark-only theme with inconsistent empty/loading/error states → Full light+dark
 
 | Priority | File | Lines | Why |
 |---|---|---|---|
-| P0 | `app/src/main/kotlin/us/beary/netlens/ui/theme/Theme.kt` | all | Current theme setup |
-| P0 | `app/src/main/kotlin/us/beary/netlens/ui/theme/Color.kt` | all | Current color palette |
-| P1 | `feature/ipinfo/src/main/kotlin/us/beary/netlens/feature/ipinfo/IpInfoScreen.kt` | 96-119 | Loading/error/success pattern |
-| P1 | `feature/lanscan/src/main/kotlin/us/beary/netlens/feature/lanscan/LanScanScreen.kt` | 150-200 | List with empty state gap |
-| P2 | `feature/ping/src/main/kotlin/us/beary/netlens/feature/ping/PingScreen.kt` | all | Screen without explicit empty state |
+| P0 | `app/src/main/kotlin/com.ventoux.netlens/ui/theme/Theme.kt` | all | Current theme setup |
+| P0 | `app/src/main/kotlin/com.ventoux.netlens/ui/theme/Color.kt` | all | Current color palette |
+| P1 | `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/IpInfoScreen.kt` | 96-119 | Loading/error/success pattern |
+| P1 | `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/LanScanScreen.kt` | 150-200 | List with empty state gap |
+| P2 | `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/PingScreen.kt` | all | Screen without explicit empty state |
 
 ---
 
 ## Patterns to Mirror
 
 ### THEME_SETUP
-// SOURCE: app/src/main/kotlin/us/beary/netlens/ui/theme/Theme.kt:24-38
+// SOURCE: app/src/main/kotlin/com.ventoux.netlens/ui/theme/Theme.kt:24-38
 ```kotlin
 @Composable
 fun NetLensTheme(
@@ -65,7 +65,7 @@ fun NetLensTheme(
 ```
 
 ### ERROR_STATE
-// SOURCE: feature/ipinfo/src/main/kotlin/us/beary/netlens/feature/ipinfo/IpInfoScreen.kt:121-149
+// SOURCE: feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/IpInfoScreen.kt:121-149
 ```kotlin
 @Composable
 private fun ErrorContent(message: String, onRetry: () -> Unit) {
