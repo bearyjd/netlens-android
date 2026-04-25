@@ -37,3 +37,24 @@
 | 3 | R1-14 | AutoAdvanceSelector options list rebuilt on every recomposition | FIXED — extracted to top-level `AUTO_ADVANCE_OPTIONS` val |
 | 4 | R2-1 | Stale carousel index after page removal | FIXED — `applyToWidget()` now calls `resetCarouselAndRefreshWidgets()` which resets index to 0 |
 | 5 | R1-8 | DisconnectedContent circle has no accessibility label | NOT FIXABLE — Glance 1.1 lacks `semantics` modifier |
+
+## Plan 4: feature/widget-sizes
+
+### Round 1 Findings
+
+| # | Severity | Finding | Status |
+|---|----------|---------|--------|
+| 1 | HIGH | `resetCarouselAndRefreshWidgets` writes to different DataStore than Glance reads | FALSE POSITIVE — singleton DataStore ignores `fileKey`, same instance used by both paths |
+| 2 | HIGH | `SmallWidgetContent`/`MediumWidgetContent` public, new composables private | FIXED — made all four `private` |
+| 3 | HIGH | Unused `val context = LocalContext.current` in `WideWidgetContent` | FIXED — removed |
+| 4 | HIGH | New receivers lack `onEnabled`/`onDisabled` lifecycle hooks | FIXED — extracted shared helpers (`enqueueWidgetRefresh`, `schedulePeriodicWidgetRefresh`, `cancelPeriodicWidgetRefresh`) to `WidgetRefresh.kt`, all receivers use them |
+| 5 | MEDIUM | `provideGlance` snapshot-and-refresh contract | NOTED — documented, existing by-design behavior |
+| 6 | MEDIUM | Banner `Row` overflow with long content | FIXED — added `GlanceModifier.defaultWeight()` to SSID text for proportional space sharing |
+| 7 | MEDIUM | Non-exhaustive `when` in preview (`else` branch) | FIXED — explicit `WidgetSize.SMALL, WidgetSize.MEDIUM` branches |
+| 8 | MEDIUM | SizeCard thumbnail 8dp tall for BANNER (invisible) | FIXED — `maxOf(40f / aspectRatio, 16f).dp` ensures minimum 16dp |
+| 9 | MEDIUM | Unnecessary string template wrapping `"${stringResource(...)}"` | FIXED — plain `stringResource(...)` calls |
+| 10 | MEDIUM | `DotSeparator` hardcoded 11.sp font size | FIXED — accepts `textSizeSp` parameter |
+| 11 | LOW | New XMLs have `targetCellWidth/Height` but old ones don't | NOTED — consistency improvement for future PR |
+| 12 | LOW | "No connection" string misleading for empty pages | NOTED — pre-existing from Plan 3 |
+| 13 | LOW | `SizeCard` missing semantic role for accessibility | NOTED — Compose accessibility improvement for future PR |
+| 14 | LOW | NetLensWidget.kt growing (615 lines) | NOTED — under 800 limit, extraction deferred |
