@@ -37,7 +37,7 @@ import us.beary.netlens.core.data.model.WolTarget
         WhoisHistoryEntry::class,
         IpInfoHistoryEntry::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
