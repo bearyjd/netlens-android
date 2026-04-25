@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import us.beary.netlens.feature.whois.engine.DomainResolver
+import us.beary.netlens.feature.whois.engine.DomainResolverImpl
 import us.beary.netlens.feature.whois.engine.RdnsResolver
 import us.beary.netlens.feature.whois.engine.RdnsResolverImpl
 import us.beary.netlens.feature.whois.engine.WhoisClient
@@ -25,4 +27,10 @@ abstract class WhoisModule {
     abstract fun bindRdnsResolver(
         impl: RdnsResolverImpl,
     ): RdnsResolver
+
+    @Binds
+    @Singleton
+    abstract fun bindDomainResolver(
+        impl: DomainResolverImpl,
+    ): DomainResolver
 }
