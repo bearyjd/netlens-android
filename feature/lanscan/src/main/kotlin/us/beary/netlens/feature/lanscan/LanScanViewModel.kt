@@ -24,6 +24,7 @@ import us.beary.netlens.feature.lanscan.engine.SubnetScanner
 import us.beary.netlens.feature.lanscan.model.DiscoveryMethod
 import us.beary.netlens.feature.lanscan.model.LanDevice
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
+import us.beary.netlens.feature.lanscan.model.ScanRangeMode
 import javax.inject.Inject
 
 enum class SortOrder { IP, LATENCY }
@@ -52,35 +53,50 @@ class LanScanViewModel @Inject constructor(
         }
     }
 
+    fun onRangeModeChanged(mode: ScanRangeMode) {
+        _uiState.update { it.copy(rangeMode = mode, rangeError = null, error = null) }
+    }
+
+    fun onCustomRangeChanged(range: String) {
+        _uiState.update { it.copy(customRange = range, rangeError = null) }
+    }
+
     fun startScan() {
         if (scanJob?.isActive == true) return
 
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val linkProperties = connectivityManager.getLinkProperties(
-            connectivityManager.activeNetwork,
-        )
-
-        if (linkProperties == null) {
-            _uiState.update { it.copy(error = "No active network connection") }
-            return
+        val (subnet, prefixLength, subnetInfo) = when (_uiState.value.rangeMode) {
+            ScanRangeMode.CUSTOM -> {
+                val parsed = parseCidr(_uiState.value.customRange)
+                if (parsed == null) {
+                    _uiState.update {
+                        it.copy(rangeError = context.getString(R.string.lanscan_error_invalid_cidr))
+                    }
+                    return
+                }
+                Triple(parsed.first, parsed.second, "${parsed.first}/${parsed.second}")
+            }
+            ScanRangeMode.AUTO -> {
+                val connectivityManager =
+                    context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val linkProperties = connectivityManager.getLinkProperties(
+                    connectivityManager.activeNetwork,
+                )
+                if (linkProperties == null) {
+                    _uiState.update { it.copy(error = "No active network connection") }
+                    return
+                }
+                val linkAddress = linkProperties.linkAddresses.firstOrNull { it.isIpv4() }
+                if (linkAddress == null) {
+                    _uiState.update { it.copy(error = "No IPv4 address found") }
+                    return
+                }
+                val ip = linkAddress.address.hostAddress ?: run {
+                    _uiState.update { it.copy(error = "Could not determine IP address") }
+                    return
+                }
+                Triple(ip, linkAddress.prefixLength, "$ip/${linkAddress.prefixLength}")
+            }
         }
-
-        val linkAddress = linkProperties.linkAddresses
-            .firstOrNull { it.isIpv4() }
-
-        if (linkAddress == null) {
-            _uiState.update { it.copy(error = "No IPv4 address found") }
-            return
-        }
-
-        val subnet = linkAddress.address.hostAddress ?: run {
-            _uiState.update { it.copy(error = "Could not determine IP address") }
-            return
-        }
-        val prefixLength = linkAddress.prefixLength
-        val subnetInfo = "$subnet/$prefixLength"
         val expectedHosts = ((1 shl (32 - prefixLength)) - 2).coerceIn(1, 1024).toFloat()
 
         _uiState.update {
@@ -90,6 +106,7 @@ class LanScanViewModel @Inject constructor(
                 subnetInfo = subnetInfo,
                 progress = 0f,
                 error = null,
+                rangeError = null,
                 deviceCount = 0,
             )
         }
@@ -163,6 +180,21 @@ class LanScanViewModel @Inject constructor(
         scanJob?.cancel()
         scanJob = null
         _uiState.update { it.copy(isScanning = false) }
+    }
+
+    companion object {
+        internal fun parseCidr(cidr: String): Pair<String, Int>? {
+            val trimmed = cidr.trim()
+            val parts = trimmed.split("/")
+            if (parts.size != 2) return null
+            val ip = parts[0]
+            val prefix = parts[1].toIntOrNull() ?: return null
+            if (prefix < 16 || prefix > 30) return null
+            val octets = ip.split(".")
+            if (octets.size != 4) return null
+            if (octets.any { o -> o.toIntOrNull()?.let { it in 0..255 } != true }) return null
+            return ip to prefix
+        }
     }
 
 }
