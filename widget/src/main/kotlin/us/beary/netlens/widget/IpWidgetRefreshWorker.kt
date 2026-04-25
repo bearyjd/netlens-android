@@ -26,7 +26,7 @@ class IpWidgetRefreshWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val client = HttpClient(CIO) {
+        return HttpClient(CIO) {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true })
             }
@@ -34,9 +34,7 @@ class IpWidgetRefreshWorker(
                 connectTimeoutMillis = TIMEOUT_MS
                 requestTimeoutMillis = TIMEOUT_MS
             }
-        }
-
-        return try {
+        }.use { client -> try {
             val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = cm.activeNetwork
             val caps = network?.let { cm.getNetworkCapabilities(it) }
@@ -90,9 +88,7 @@ class IpWidgetRefreshWorker(
             Result.success()
         } catch (_: Exception) {
             Result.retry()
-        } finally {
-            client.close()
-        }
+        } }
     }
 
     private fun getLocalIpAddress(): String? {
