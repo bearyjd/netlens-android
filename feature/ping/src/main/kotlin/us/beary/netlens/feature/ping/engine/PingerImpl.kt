@@ -4,9 +4,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.beary.netlens.feature.ping.model.PingResult
+import java.io.IOException
 import javax.inject.Inject
 
 class PingerImpl @Inject constructor() : Pinger {
@@ -22,34 +23,37 @@ class PingerImpl @Inject constructor() : Pinger {
         return host
     }
 
-    override fun ping(host: String, count: Int): Flow<PingResult> = callbackFlow {
+    override fun ping(host: String, count: Int): Flow<PingResult> {
         val sanitized = validateHost(host)
+        return runPingProcess(listOf("ping", "-c", count.toString(), sanitized))
+    }
+
+    override fun pingContinuous(host: String): Flow<PingResult> {
+        val sanitized = validateHost(host)
+        return runPingProcess(listOf("ping", "-i", "1", sanitized))
+    }
+
+    private fun runPingProcess(args: List<String>): Flow<PingResult> = callbackFlow {
         val process = withContext(Dispatchers.IO) {
-            ProcessBuilder("ping", "-c", count.toString(), sanitized)
+            ProcessBuilder(args)
                 .redirectErrorStream(true)
                 .start()
         }
 
-        try {
-            withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
+            try {
                 process.inputStream.bufferedReader().useLines { lines ->
                     for (line in lines) {
-                        if (!isActive) break
                         val result = PingOutputParser.parseReplyLine(line)
                         if (result != null) {
-                            trySend(result)
+                            send(result)
                         }
                     }
                 }
+                channel.close()
+            } catch (_: IOException) {
+                channel.close()
             }
-            channel.close()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            channel.close()
-            throw e
-        } catch (e: Exception) {
-            channel.close(e)
-        } finally {
-            process.destroy()
         }
 
         awaitClose {

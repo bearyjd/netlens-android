@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="navigate_back">Back</string>
+    <string name="ping_title">Ping</string>
     <string name="ping_label_host">Host</string>
     <string name="ping_placeholder_host">e.g. 8.8.8.8</string>
     <string name="ping_cd_copy_results">Copy results</string>
@@ -15,4 +16,12 @@
     <string name="ping_stat_max">Max</string>
     <string name="ping_stat_jitter">Jitter</string>
     <string name="ping_result_timeout">timeout</string>
+    <string name="ping_mode_fixed">Fixed</string>
+    <string name="ping_mode_continuous">Continuous</string>
+    <string name="ping_continuous_elapsed">Running for %1$s</string>
+    <string name="ping_notification_channel_name">Continuous Ping</string>
+    <string name="ping_notification_channel_desc">Shows status while ping is running in the background</string>
+    <string name="ping_notification_title">Pinging %1$s</string>
+    <string name="ping_notification_text">%1$d sent, %2$s%% loss</string>
+    <string name="ping_notification_stop">Stop</string>
 </resources>
