@@ -31,6 +31,7 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
         domain: String,
         types: Set<DnsRecordType>,
     ): Result<List<DnsResult>> = try {
+        require(domain.isNotBlank()) { "Domain must not be blank" }
         val results = withContext(Dispatchers.IO) {
             types.map { type ->
                 async { resolveType(domain, type) }
