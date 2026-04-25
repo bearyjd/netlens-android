@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
@@ -28,11 +29,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -48,12 +51,15 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.beary.netlens.feature.lanscan.model.DiscoveryMethod
 import us.beary.netlens.feature.lanscan.model.LanDevice
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
+import us.beary.netlens.feature.lanscan.model.ScanRangeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +77,8 @@ fun LanScanScreen(
         onStartScan = viewModel::startScan,
         onCancelScan = viewModel::cancelScan,
         onSortOrderChange = viewModel::setSortOrder,
+        onRangeModeChanged = viewModel::onRangeModeChanged,
+        onCustomRangeChanged = viewModel::onCustomRangeChanged,
     )
 }
 
@@ -83,6 +91,8 @@ private fun LanScanContent(
     onStartScan: () -> Unit,
     onCancelScan: () -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
+    onRangeModeChanged: (ScanRangeMode) -> Unit,
+    onCustomRangeChanged: (String) -> Unit,
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
@@ -135,7 +145,13 @@ private fun LanScanContent(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = if (uiState.isScanning) onCancelScan else onStartScan,
+                onClick = {
+                    if (uiState.isScanning) {
+                        onCancelScan()
+                    } else if (uiState.rangeMode != ScanRangeMode.CUSTOM || uiState.customRange.isNotBlank()) {
+                        onStartScan()
+                    }
+                },
             ) {
                 Icon(
                     imageVector = if (uiState.isScanning) {
@@ -153,6 +169,48 @@ private fun LanScanContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = uiState.rangeMode == ScanRangeMode.AUTO,
+                    onClick = { onRangeModeChanged(ScanRangeMode.AUTO) },
+                    label = { Text(stringResource(R.string.lanscan_mode_auto)) },
+                    enabled = !uiState.isScanning,
+                )
+                FilterChip(
+                    selected = uiState.rangeMode == ScanRangeMode.CUSTOM,
+                    onClick = { onRangeModeChanged(ScanRangeMode.CUSTOM) },
+                    label = { Text(stringResource(R.string.lanscan_mode_custom)) },
+                    enabled = !uiState.isScanning,
+                )
+            }
+
+            AnimatedVisibility(visible = uiState.rangeMode == ScanRangeMode.CUSTOM) {
+                OutlinedTextField(
+                    value = uiState.customRange,
+                    onValueChange = onCustomRangeChanged,
+                    label = { Text(stringResource(R.string.lanscan_label_custom_range)) },
+                    placeholder = { Text(stringResource(R.string.lanscan_placeholder_cidr)) },
+                    isError = uiState.rangeError != null,
+                    supportingText = uiState.rangeError?.let { error ->
+                        { Text(error) }
+                    },
+                    singleLine = true,
+                    enabled = !uiState.isScanning,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                )
+            }
+
             AnimatedVisibility(visible = uiState.isScanning) {
                 LinearProgressIndicator(
                     progress = { uiState.progress },
