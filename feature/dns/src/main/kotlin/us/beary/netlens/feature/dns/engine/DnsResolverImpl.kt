@@ -1,5 +1,6 @@
 package us.beary.netlens.feature.dns.engine
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -7,13 +8,18 @@ import kotlinx.coroutines.withContext
 import org.xbill.DNS.ARecord
 import org.xbill.DNS.AAAARecord
 import org.xbill.DNS.CNAMERecord
-import org.xbill.DNS.Lookup
+import org.xbill.DNS.DClass
 import org.xbill.DNS.MXRecord
-import org.xbill.DNS.SimpleResolver
+import org.xbill.DNS.Message
 import org.xbill.DNS.NSRecord
+import org.xbill.DNS.Name
 import org.xbill.DNS.PTRRecord
+import org.xbill.DNS.Rcode
+import org.xbill.DNS.Record
 import org.xbill.DNS.SOARecord
 import org.xbill.DNS.SRVRecord
+import org.xbill.DNS.Section
+import org.xbill.DNS.SimpleResolver
 import org.xbill.DNS.TXTRecord
 import us.beary.netlens.feature.dns.model.DnsRecordType
 import us.beary.netlens.feature.dns.model.DnsResult
@@ -24,32 +30,38 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
     override suspend fun lookup(
         domain: String,
         types: Set<DnsRecordType>,
-    ): Result<List<DnsResult>> = withContext(Dispatchers.IO) {
-        runCatching {
+    ): Result<List<DnsResult>> = try {
+        val results = withContext(Dispatchers.IO) {
             types.map { type ->
                 async { resolveType(domain, type) }
             }.awaitAll().flatten()
         }
+        Result.success(results)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     private fun resolveType(domain: String, type: DnsRecordType): List<DnsResult> {
-        val resolver = SimpleResolver().apply {
+        val resolver = SimpleResolver(DEFAULT_DNS_SERVER).apply {
             setTimeout(java.time.Duration.ofSeconds(TIMEOUT_SECONDS))
         }
-        val lookup = Lookup(domain, type.dnsType)
-        lookup.setResolver(resolver)
-        val records = lookup.run()
-        if (records == null) {
-            val nonErrorResults = setOf(Lookup.SUCCESSFUL, Lookup.HOST_NOT_FOUND, Lookup.TYPE_NOT_FOUND)
-            if (lookup.result !in nonErrorResults) {
-                throw java.io.IOException(lookup.errorString)
-            }
-            return emptyList()
+        val name = Name.fromString(if (domain.endsWith(".")) domain else "$domain.")
+        val query = Message.newQuery(Record.newRecord(name, type.dnsType, DClass.IN))
+        val response = resolver.send(query)
+
+        val rcode = response.header.rcode
+        if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN) {
+            throw java.io.IOException("DNS query failed: ${Rcode.string(rcode)}")
         }
-        return records.mapNotNull { record -> mapRecord(record, type) }
+
+        return response.getSection(Section.ANSWER)
+            .mapNotNull { record -> mapRecord(record, type) }
     }
 
     companion object {
+        private const val DEFAULT_DNS_SERVER = "8.8.8.8"
         private const val TIMEOUT_SECONDS = 10L
     }
 
