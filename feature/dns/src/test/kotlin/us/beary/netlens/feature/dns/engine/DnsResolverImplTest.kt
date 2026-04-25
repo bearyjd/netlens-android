@@ -3,7 +3,6 @@ package us.beary.netlens.feature.dns.engine
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import us.beary.netlens.feature.dns.model.DnsRecordType
 
 class DnsResolverImplTest {
@@ -11,10 +10,9 @@ class DnsResolverImplTest {
     private val resolver = DnsResolverImpl()
 
     @Test
-    fun `empty domain throws exception`() = runTest {
-        assertThrows<Exception> {
-            resolver.lookup("", setOf(DnsRecordType.A))
-        }
+    fun `empty domain returns failure`() = runTest {
+        val result = resolver.lookup("", setOf(DnsRecordType.A))
+        assertTrue(result.isFailure)
     }
 
     @Test
