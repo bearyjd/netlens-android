@@ -27,3 +27,13 @@
 | 1 | HIGH | Carousel index not clamped after page removal — stale DataStore index | MITIGATED — `coerceIn` at render time guards against this; full cross-store reset deferred |
 | 2 | HIGH | `CarouselAction` uses hardcoded DataStore key and `updateAll` instead of per-widget `update` | FIXED — uses `updateAppWidgetState(context, definition, glanceId)` and `update(context, glanceId)` |
 | 3 | MEDIUM | `SettingsCard`/`ColorPickerRow`/`SliderRow` `titleRes`/`labelRes` lacks `@StringRes` | FIXED — added `@StringRes` annotations |
+
+### MEDIUM Findings Fixed (post-review)
+
+| # | Source | Finding | Status |
+|---|--------|---------|--------|
+| 1 | R1-4/R2-3 | Hardcoded strings in Glance composables not translatable | FIXED — added strings to widget strings.xml, use `LocalContext.current.getString()` |
+| 2 | R1-11 | SliderRow label hardcoded 100dp width clips long translations | FIXED — changed to `Modifier.widthIn(min = 80.dp, max = 120.dp)` |
+| 3 | R1-14 | AutoAdvanceSelector options list rebuilt on every recomposition | FIXED — extracted to top-level `AUTO_ADVANCE_OPTIONS` val |
+| 4 | R2-1 | Stale carousel index after page removal | FIXED — `applyToWidget()` now calls `resetCarouselAndRefreshWidgets()` which resets index to 0 |
+| 5 | R1-8 | DisconnectedContent circle has no accessibility label | NOT FIXABLE — Glance 1.1 lacks `semantics` modifier |

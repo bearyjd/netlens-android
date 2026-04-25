@@ -13,7 +13,7 @@ import us.beary.netlens.widget.model.WidgetPage
 import us.beary.netlens.widget.model.WidgetPreferences
 import us.beary.netlens.widget.model.WidgetSize
 import us.beary.netlens.widget.model.WidgetTextSize
-import us.beary.netlens.widget.refreshAllWidgets
+import us.beary.netlens.widget.resetCarouselAndRefreshWidgets
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,7 +45,7 @@ class WidgetSettingsViewModel @Inject constructor(
 
     fun applyToWidget() {
         viewModelScope.launch {
-            refreshAllWidgets(context)
+            resetCarouselAndRefreshWidgets(context)
         }
     }
 

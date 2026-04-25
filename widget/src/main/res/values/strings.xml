@@ -2,4 +2,10 @@
 <resources>
     <string name="widget_small_description">Compact network info (2×1)</string>
     <string name="widget_medium_description">Full network info with navigation (2×2)</string>
+
+    <string name="widget_no_connection">No connection</string>
+    <string name="widget_not_connected">Not connected</string>
+    <string name="widget_vpn_label">vpn</string>
+    <string name="widget_gateway_label">Gateway</string>
+    <string name="widget_dns_label">DNS</string>
 </resources>
