@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import us.beary.netlens.feature.dns.model.DnsError
 import us.beary.netlens.feature.dns.model.DnsLookupUiState
 import us.beary.netlens.feature.dns.model.DnsRecordType
 import us.beary.netlens.feature.dns.model.DnsResult
@@ -65,7 +66,7 @@ fun DnsLookupScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -183,7 +184,12 @@ private fun DnsLookupContent(
         state.error?.let { error ->
             item {
                 Text(
-                    text = error,
+                    text = when (error) {
+                        is DnsError.EmptyDomain -> stringResource(R.string.dns_error_empty_domain)
+                        is DnsError.NoTypes -> stringResource(R.string.dns_error_no_types)
+                        is DnsError.LookupFailed -> error.message?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.dns_error_lookup_failed)
+                    },
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -191,18 +197,21 @@ private fun DnsLookupContent(
         }
 
         val grouped = state.results.groupBy { it.type }
+        var resultIndex = 0
         grouped.forEach { (type, records) ->
             item {
                 Text(
-                    text = "${type.displayName} Records",
+                    text = stringResource(R.string.dns_records_header, type.displayName),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            items(records, key = { "${it.type}:${it.name}:${it.value}" }) { result ->
-                DnsResultCard(result = result)
+            val startIndex = resultIndex
+            items(records.size, key = { i -> "dns:${startIndex + i}" }) { i ->
+                DnsResultCard(result = records[i])
             }
+            resultIndex += records.size
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -235,7 +244,7 @@ private fun DnsResultCard(result: DnsResult) {
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "TTL ${result.ttl}",
+                    text = stringResource(R.string.dns_ttl_label, result.ttl),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
