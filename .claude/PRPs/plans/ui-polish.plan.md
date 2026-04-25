@@ -168,3 +168,16 @@ EXPECT: BUILD SUCCESSFUL, zero warnings from our code
 |---|---|---|---|
 | Shared components in app module creates dependency issue | Medium | Medium | Move to core:ui if feature modules need direct access |
 | Light theme colors look bad with existing card styles | Low | Medium | Test with dynamic color first, curate fallback carefully |
+
+## Deferred Review Findings (from Plans 3 & 4)
+
+These LOW/MEDIUM items were deferred from widget review rounds and should be addressed in this polish pass:
+
+| # | Source | Finding | Action |
+|---|--------|---------|--------|
+| 1 | P4-11 | New widget XMLs have `targetCellWidth/Height` but `widget_small.xml`/`widget_medium.xml` don't | Add `targetCellWidth`/`targetCellHeight` to old XMLs for consistency |
+| 2 | P4-13 | `SizeCard` uses bare `.clickable` without `Role.RadioButton` semantic | Use `Modifier.selectable(selected, onClick, role = Role.RadioButton)` |
+| 3 | P4-14 | `NetLensWidget.kt` at 615 lines and growing | Extract to `WidgetContent.kt` (size composables) and `WidgetComponents.kt` (shared primitives) |
+| 4 | P4-12 | "No connection" shown when pages list is empty (means no pages selected, not disconnected) | Add distinct string like "No pages selected" |
+| 5 | P3-R1-8 | `DisconnectedContent` circle has no accessibility label | Blocked on Glance 1.1 lacking `semantics` modifier — revisit if Glance updates |
+| 6 | P3-R1-13 | Preview always highlights page 0 | Minor — preview is a static mock, not live state |
