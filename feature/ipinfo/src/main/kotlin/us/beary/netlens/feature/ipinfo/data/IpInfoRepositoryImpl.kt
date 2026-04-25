@@ -24,6 +24,6 @@ class IpInfoRepositoryImpl @Inject constructor(
 
     private companion object {
         const val IP_API_URL =
-            "http://ip-api.com/json/?fields=query,isp,org,as,country,regionName,city,lat,lon,proxy,hosting"
+            "https://ip-api.com/json/?fields=query,isp,org,as,country,regionName,city,lat,lon,proxy,hosting"
     }
 }
