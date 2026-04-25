@@ -3,6 +3,7 @@ package us.beary.netlens.feature.dns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,13 +64,18 @@ class DnsLookupViewModel @Inject constructor(
             dnsResolver.lookup(domain, current.selectedTypes)
                 .onSuccess { results ->
                     _state.update { it.copy(isLoading = false, results = results) }
-                    dnsHistoryDao.insert(
-                        DnsHistoryEntry(
-                            query = domain,
-                            recordType = current.selectedTypes.joinToString(",") { it.name },
-                            resultsJson = Json.encodeToString(results.map { "${it.type.name}: ${it.value}" }),
-                        ),
-                    )
+                    try {
+                        dnsHistoryDao.insert(
+                            DnsHistoryEntry(
+                                query = domain,
+                                recordType = current.selectedTypes.joinToString(",") { it.name },
+                                resultsJson = Json.encodeToString(results.map { "${it.type.name}: ${it.value}" }),
+                            ),
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
                 .onFailure { throwable ->
                     _state.update {
