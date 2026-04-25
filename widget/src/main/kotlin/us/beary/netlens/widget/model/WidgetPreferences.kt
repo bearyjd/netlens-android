@@ -28,6 +28,8 @@ enum class WidgetTextSize(val sp: Int) {
 enum class WidgetSize {
     SMALL,
     MEDIUM,
+    WIDE,
+    BANNER,
 }
 
 enum class WidgetPage {
