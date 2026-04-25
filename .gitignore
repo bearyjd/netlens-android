@@ -7,7 +7,6 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 *.apk
 *.aab
 *.ap_
@@ -18,3 +17,5 @@ gen/
 out/
 .omc/
 .kotlin/
+*.jks
+*.keystore
