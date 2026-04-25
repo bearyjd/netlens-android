@@ -3,6 +3,8 @@ package us.beary.netlens.feature.lanscan
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,11 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import us.beary.netlens.feature.lanscan.model.DiscoveryMethod
 import us.beary.netlens.feature.lanscan.model.LanDevice
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
 
@@ -92,7 +94,7 @@ private fun LanScanContent(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -114,16 +116,6 @@ private fun LanScanContent(
                                 sortMenuExpanded = false
                             },
                             trailingIcon = if (sortOrder == SortOrder.IP) {
-                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.lanscan_sort_by_vendor)) },
-                            onClick = {
-                                onSortOrderChange(SortOrder.VENDOR)
-                                sortMenuExpanded = false
-                            },
-                            trailingIcon = if (sortOrder == SortOrder.VENDOR) {
                                 { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             } else null,
                         )
@@ -177,14 +169,20 @@ private fun LanScanContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Subnet: ${uiState.subnetInfo}",
+                        text = stringResource(R.string.lanscan_subnet_label, uiState.subnetInfo),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     SuggestionChip(
                         onClick = {},
                         label = {
-                            Text("${uiState.devices.size} devices")
+                            Text(
+                                text = if (uiState.isScanning) {
+                                    stringResource(R.string.lanscan_found_devices_scanning, uiState.deviceCount)
+                                } else {
+                                    stringResource(R.string.lanscan_device_count, uiState.devices.size)
+                                },
+                            )
                         },
                     )
                 }
@@ -215,6 +213,7 @@ private fun LanScanContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceCard(device: LanDevice) {
     val clipboardManager = LocalClipboardManager.current
@@ -225,108 +224,120 @@ private fun DeviceCard(device: LanDevice) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = if (device.isReachable) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = device.ip,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                device.mac?.let { mac ->
-                    Text(
-                        text = mac,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                device.hostname?.let { hostname ->
-                    Text(
-                        text = hostname,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                device.osGuess?.let { os ->
-                    Text(
-                        text = os,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-            }
-
-            device.deviceType?.let { type ->
-                Spacer(modifier = Modifier.width(8.dp))
-                SuggestionChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = type,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                        )
-                    },
-                )
-            }
-
-            device.vendor?.let { vendor ->
-                Spacer(modifier = Modifier.width(8.dp))
-                SuggestionChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = vendor,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                        )
-                    },
-                )
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            IconButton(
-                onClick = { clipboardManager.setText(AnnotatedString(device.ip)) },
-                modifier = Modifier.size(36.dp),
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringResource(R.string.lanscan_cd_copy_ip),
-                    modifier = Modifier.size(16.dp),
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = if (device.isReachable) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
-            }
 
-            if (device.mac != null) {
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = device.ip,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+
+                    device.hostname?.let { hostname ->
+                        Text(
+                            text = hostname,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(R.string.lanscan_mac_unavailable),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
+
+                    device.osGuess?.let { os ->
+                        Text(
+                            text = os,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
+
+                device.deviceType?.let { type ->
+                    Spacer(modifier = Modifier.width(8.dp))
+                    SuggestionChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                text = type,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                            )
+                        },
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                SuggestionChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            text = when (device.discoveryMethod) {
+                                DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
+                                DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
+                                DiscoveryMethod.BOTH -> stringResource(R.string.lanscan_discovery_both)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    },
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
                 IconButton(
-                    onClick = { clipboardManager.setText(AnnotatedString(device.mac)) },
+                    onClick = { clipboardManager.setText(AnnotatedString(device.ip)) },
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = stringResource(R.string.lanscan_cd_copy_mac),
+                        contentDescription = stringResource(R.string.lanscan_cd_copy_ip),
                         modifier = Modifier.size(16.dp),
                     )
+                }
+            }
+
+            if (device.services.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    device.services.forEach { service ->
+                        val displayName = service
+                            .trim('.')
+                            .removePrefix("_")
+                            .removeSuffix("._tcp")
+                            .removeSuffix("._udp")
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }

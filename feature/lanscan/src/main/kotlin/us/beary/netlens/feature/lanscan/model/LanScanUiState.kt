@@ -6,4 +6,5 @@ data class LanScanUiState(
     val subnetInfo: String = "",
     val progress: Float = 0f,
     val error: String? = null,
+    val deviceCount: Int = 0,
 )
