@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.beary.netlens.core.data.dao.WhoisHistoryDao
+import us.beary.netlens.core.data.model.WhoisHistoryEntry
 import us.beary.netlens.feature.whois.engine.DomainResolver
 import us.beary.netlens.feature.whois.engine.RdnsResolver
 import us.beary.netlens.feature.whois.engine.WhoisClient
@@ -22,6 +24,7 @@ class WhoisViewModel @Inject constructor(
     private val whoisClient: WhoisClient,
     private val rdnsResolver: RdnsResolver,
     private val domainResolver: DomainResolver,
+    private val whoisHistoryDao: WhoisHistoryDao,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -48,6 +51,7 @@ class WhoisViewModel @Inject constructor(
                 if (looksLikeIp(trimmed)) {
                     val rdns = rdnsResolver.resolve(trimmed)
                     _state.value = WhoisUiState.Success(whois = null, rdns = rdns)
+                    saveToHistory(trimmed, null, rdns)
                 } else {
                     val whoisDeferred = async {
                         try {
@@ -72,6 +76,7 @@ class WhoisViewModel @Inject constructor(
                             whois = whoisResult.getOrNull(),
                             rdns = rdnsResult,
                         )
+                        saveToHistory(trimmed, whoisResult.getOrNull(), rdnsResult)
                     }
                 }
             } catch (e: CancellationException) {
@@ -79,6 +84,19 @@ class WhoisViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.value = WhoisUiState.Error(e.message ?: "Lookup failed")
             }
+        }
+    }
+
+    private fun saveToHistory(query: String, whois: WhoisResult?, rdns: RdnsResult?) {
+        val response = whois?.rawResponse ?: rdns?.hostnames?.joinToString("\n") ?: return
+        if (response.isBlank()) return
+        viewModelScope.launch {
+            whoisHistoryDao.insert(
+                WhoisHistoryEntry(
+                    query = query,
+                    rawResponse = response,
+                ),
+            )
         }
     }
 
