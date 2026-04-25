@@ -14,6 +14,10 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import us.beary.netlens.core.data.dao.DnsHistoryDao
+import us.beary.netlens.core.data.model.DnsHistoryEntry
 import us.beary.netlens.feature.dns.engine.FakeDnsResolver
 import us.beary.netlens.feature.dns.model.DnsError
 import us.beary.netlens.feature.dns.model.DnsLookupUiState
@@ -26,11 +30,20 @@ class DnsLookupViewModelTest {
     private lateinit var fakeDnsResolver: FakeDnsResolver
     private lateinit var viewModel: DnsLookupViewModel
 
+    private val fakeDnsHistoryDao = object : DnsHistoryDao {
+        override fun getRecent(limit: Int): Flow<List<DnsHistoryEntry>> = flowOf(emptyList())
+        override fun search(searchQuery: String, limit: Int): Flow<List<DnsHistoryEntry>> = flowOf(emptyList())
+        override suspend fun insert(entry: DnsHistoryEntry) {}
+        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteOlderThan(before: Long) {}
+        override suspend fun deleteAll() {}
+    }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeDnsResolver = FakeDnsResolver()
-        viewModel = DnsLookupViewModel(fakeDnsResolver)
+        viewModel = DnsLookupViewModel(fakeDnsResolver, fakeDnsHistoryDao)
     }
 
     @AfterEach

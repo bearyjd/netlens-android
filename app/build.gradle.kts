@@ -34,6 +34,7 @@ dependencies {
     implementation(project(":feature:mdns"))
     implementation(project(":feature:netlog"))
     implementation(project(":feature:monitor"))
+    implementation(project(":feature:history"))
     implementation(project(":feature:widgetsettings"))
 
     // Widget

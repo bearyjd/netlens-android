@@ -14,6 +14,10 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import us.beary.netlens.core.data.dao.WhoisHistoryDao
+import us.beary.netlens.core.data.model.WhoisHistoryEntry
 import us.beary.netlens.feature.whois.engine.FakeDomainResolver
 import us.beary.netlens.feature.whois.engine.FakeRdnsResolver
 import us.beary.netlens.feature.whois.engine.FakeWhoisClient
@@ -29,13 +33,22 @@ class WhoisViewModelTest {
     private lateinit var fakeDomainResolver: FakeDomainResolver
     private lateinit var viewModel: WhoisViewModel
 
+    private val fakeWhoisHistoryDao = object : WhoisHistoryDao {
+        override fun getRecent(limit: Int): Flow<List<WhoisHistoryEntry>> = flowOf(emptyList())
+        override fun search(searchQuery: String, limit: Int): Flow<List<WhoisHistoryEntry>> = flowOf(emptyList())
+        override suspend fun insert(entry: WhoisHistoryEntry) {}
+        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteOlderThan(before: Long) {}
+        override suspend fun deleteAll() {}
+    }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeWhoisClient = FakeWhoisClient()
         fakeRdnsResolver = FakeRdnsResolver()
         fakeDomainResolver = FakeDomainResolver()
-        viewModel = WhoisViewModel(fakeWhoisClient, fakeRdnsResolver, fakeDomainResolver)
+        viewModel = WhoisViewModel(fakeWhoisClient, fakeRdnsResolver, fakeDomainResolver, fakeWhoisHistoryDao)
     }
 
     @AfterEach

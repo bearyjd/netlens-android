@@ -7,10 +7,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import us.beary.netlens.core.data.dao.PingHistoryDao
+import us.beary.netlens.core.data.model.PingHistoryEntry
 import us.beary.netlens.feature.ping.engine.Pinger
 import us.beary.netlens.feature.ping.model.PingSummary
 import us.beary.netlens.feature.ping.model.PingUiState
@@ -19,6 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PingViewModel @Inject constructor(
     private val pinger: Pinger,
+    private val pingHistoryDao: PingHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PingUiState())
@@ -58,6 +63,9 @@ class PingViewModel @Inject constructor(
                             summary = computeSummary(current),
                         )
                     }
+                    withContext(NonCancellable) {
+                        saveToHistory()
+                    }
                 }
                 .collect { result ->
                     _state.update { current ->
@@ -69,12 +77,22 @@ class PingViewModel @Inject constructor(
 
     fun stopPing() {
         pingJob?.cancel()
-        _state.update { current ->
-            current.copy(
-                isPinging = false,
-                summary = computeSummary(current),
-            )
-        }
+    }
+
+    private suspend fun saveToHistory() {
+        val state = _state.value
+        val summary = state.summary ?: return
+        if (summary.transmitted == 0) return
+        pingHistoryDao.insert(
+            PingHistoryEntry(
+                host = state.host,
+                sentCount = summary.transmitted,
+                receivedCount = summary.received,
+                minMs = summary.minMs,
+                avgMs = summary.avgMs,
+                maxMs = summary.maxMs,
+            ),
+        )
     }
 
     private fun computeSummary(current: PingUiState): PingSummary? {

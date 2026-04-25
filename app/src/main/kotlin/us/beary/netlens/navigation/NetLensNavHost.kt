@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import us.beary.netlens.feature.dns.DnsLookupScreen
+import us.beary.netlens.feature.history.HistoryScreen
 import us.beary.netlens.feature.httptester.HttpTesterScreen
 import us.beary.netlens.feature.ipinfo.IpInfoScreen
 import us.beary.netlens.feature.lanscan.LanScanScreen
@@ -53,6 +54,7 @@ fun NetLensNavHost(
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.History.route) { HistoryScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.WidgetSettings.route) { WidgetSettingsScreen(onBack = navController::popBackStack) }
     }
 }
