@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import us.beary.netlens.feature.dns.engine.FakeDnsResolver
+import us.beary.netlens.feature.dns.model.DnsError
 import us.beary.netlens.feature.dns.model.DnsLookupUiState
 import us.beary.netlens.feature.dns.model.DnsRecordType
 import us.beary.netlens.feature.dns.model.DnsResult
@@ -86,7 +87,7 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // initial
             viewModel.lookup()
-            assertEquals("Please enter a domain", awaitItem().error)
+            assertEquals(DnsError.EmptyDomain, awaitItem().error)
         }
     }
 
@@ -100,7 +101,7 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current state
             viewModel.lookup()
-            assertEquals("Please select at least one record type", awaitItem().error)
+            assertEquals(DnsError.NoTypes, awaitItem().error)
         }
     }
 
@@ -115,7 +116,8 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current state
             viewModel.lookup()
-            // With UnconfinedTestDispatcher, loading → result happens synchronously
+            val loadingState = awaitItem()
+            assertTrue(loadingState.isLoading)
             val finalState = awaitItem()
             assertFalse(finalState.isLoading)
             assertEquals(expectedResults, finalState.results)
@@ -131,9 +133,10 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current state
             viewModel.lookup()
+            awaitItem() // loading state
             val finalState = awaitItem()
             assertFalse(finalState.isLoading)
-            assertEquals("Network error", finalState.error)
+            assertEquals(DnsError.LookupFailed("Network error"), finalState.error)
             assertEquals(emptyList<DnsResult>(), finalState.results)
         }
     }
@@ -146,8 +149,9 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current state
             viewModel.lookup()
+            awaitItem() // loading state
             val finalState = awaitItem()
-            assertEquals("DNS lookup failed", finalState.error)
+            assertEquals(DnsError.LookupFailed(null), finalState.error)
         }
     }
 
@@ -165,6 +169,7 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current error state
             viewModel.lookup()
+            awaitItem() // loading state
             val finalState = awaitItem()
             assertNull(finalState.error)
             assertEquals(successResults, finalState.results)
@@ -182,8 +187,10 @@ class DnsLookupViewModelTest {
         viewModel.state.test {
             awaitItem() // current state
             viewModel.lookup()
+            awaitItem() // loading state
             val finalState = awaitItem()
             assertEquals(expectedResults, finalState.results)
+            assertEquals("example.com", fakeDnsResolver.lastDomain)
         }
     }
 }
