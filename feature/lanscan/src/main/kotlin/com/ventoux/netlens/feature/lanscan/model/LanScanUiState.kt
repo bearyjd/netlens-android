@@ -10,4 +10,5 @@ data class LanScanUiState(
     val rangeMode: ScanRangeMode = ScanRangeMode.AUTO,
     val customRange: String = "",
     val rangeError: String? = null,
+    val selectedDevice: LanDevice? = null,
 )
