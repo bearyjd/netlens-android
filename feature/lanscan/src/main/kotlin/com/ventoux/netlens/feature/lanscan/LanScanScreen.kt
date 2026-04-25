@@ -71,6 +71,7 @@ import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventoux.netlens.feature.portscan.model.PortResult
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -603,7 +604,7 @@ private fun HostDetailSheet(
             }
 
             val sorted = state.portResults.sortedWith(
-                compareByDescending<com.ventoux.netlens.feature.portscan.model.PortResult> { it.isOpen }
+                compareByDescending<PortResult> { it.isOpen }
                     .thenBy { it.port },
             )
             items(sorted, key = { it.port }) { result ->
