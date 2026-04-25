@@ -22,9 +22,12 @@ import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinter
 import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScanner
 import com.ventoux.netlens.feature.lanscan.engine.SubnetScanner
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
+import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventoux.netlens.feature.portscan.engine.PortScanner
+import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 import javax.inject.Inject
 
 enum class SortOrder { IP, LATENCY }
@@ -34,6 +37,7 @@ class LanScanViewModel @Inject constructor(
     private val subnetScanner: SubnetScanner,
     private val mdnsScanner: LanMdnsScanner,
     private val fingerprinter: DeviceFingerprinter,
+    private val portScanner: PortScanner,
     @ApplicationContext private val context: Context,
     private val lanScanHistoryDao: LanScanHistoryDao,
 ) : ViewModel() {
@@ -41,10 +45,14 @@ class LanScanViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LanScanUiState())
     val uiState: StateFlow<LanScanUiState> = _uiState.asStateFlow()
 
+    private val _hostDetail = MutableStateFlow<HostDetailState?>(null)
+    val hostDetail: StateFlow<HostDetailState?> = _hostDetail.asStateFlow()
+
     private val _sortOrder = MutableStateFlow(SortOrder.IP)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
 
     private var scanJob: Job? = null
+    private var hostScanJob: Job? = null
 
     fun setSortOrder(order: SortOrder) {
         _sortOrder.value = order
@@ -180,6 +188,65 @@ class LanScanViewModel @Inject constructor(
         scanJob?.cancel()
         scanJob = null
         _uiState.update { it.copy(isScanning = false) }
+    }
+
+    fun selectDevice(device: LanDevice) {
+        _hostDetail.value = HostDetailState(device = device)
+        _uiState.update { it.copy(selectedDevice = device) }
+    }
+
+    fun dismissDetail() {
+        hostScanJob?.cancel()
+        hostScanJob = null
+        _hostDetail.value = null
+        _uiState.update { it.copy(selectedDevice = null) }
+    }
+
+    fun scanHostPorts(ports: List<Int> = WellKnownPorts.COMMON_PORTS.keys.sorted()) {
+        val detail = _hostDetail.value ?: return
+        hostScanJob?.cancel()
+        hostScanJob = viewModelScope.launch {
+            _hostDetail.update {
+                it?.copy(isScanning = true, progress = 0f, portResults = emptyList(), error = null)
+            }
+            try {
+                var scanned = 0
+                val total = ports.size
+                portScanner.scan(detail.device.ip, ports).collect { result ->
+                    scanned++
+                    _hostDetail.update { state ->
+                        val updated = state?.portResults.orEmpty() + result
+                        state?.copy(
+                            portResults = updated,
+                            progress = scanned.toFloat() / total,
+                            openCount = updated.count { it.isOpen },
+                        )
+                    }
+                }
+                val openPorts = _hostDetail.value
+                    ?.portResults?.filter { it.isOpen }?.map { it.port }.orEmpty()
+                val fp = fingerprinter.fingerprintWithPorts(detail.device, openPorts)
+                _hostDetail.update {
+                    it?.copy(
+                        isScanning = false,
+                        progress = 1f,
+                        enrichedType = fp.deviceType,
+                        enrichedOs = fp.osGuess,
+                        fingerprintEvidence = fp.evidence,
+                    )
+                }
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _hostDetail.update { it?.copy(isScanning = false, error = e.message) }
+            }
+        }
+    }
+
+    fun cancelHostScan() {
+        hostScanJob?.cancel()
+        hostScanJob = null
+        _hostDetail.update { it?.copy(isScanning = false) }
     }
 
     companion object {

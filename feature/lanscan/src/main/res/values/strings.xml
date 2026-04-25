@@ -9,7 +9,7 @@
     <string name="lanscan_cd_stop_scan">Stop scan</string>
     <string name="lanscan_cd_start_scan">Start scan</string>
     <string name="lanscan_cd_copy_ip">Copy IP</string>
-    <string name="lanscan_mac_unavailable">MAC: — (Not available)</string>
+    <string name="lanscan_mac_unavailable">MAC: unavailable (Android restricts ARP access)</string>
     <string name="lanscan_discovery_ping">PING</string>
     <string name="lanscan_discovery_mdns">mDNS</string>
     <string name="lanscan_discovery_both">PING+mDNS</string>
@@ -21,4 +21,17 @@
     <string name="lanscan_label_custom_range">IP Range (CIDR)</string>
     <string name="lanscan_placeholder_cidr">192.168.1.0/24</string>
     <string name="lanscan_error_invalid_cidr">Invalid CIDR — use format like 192.168.1.0/24 (prefix /16–/30)</string>
+    <string name="lanscan_host_detail_title">Host Details</string>
+    <string name="lanscan_latency_ms">Latency: %1$d ms</string>
+    <string name="lanscan_port_scan_section">Port Scan</string>
+    <string name="lanscan_scan_ports">Scan Ports</string>
+    <string name="lanscan_cancel_port_scan">Cancel</string>
+    <string name="lanscan_fingerprint_section">Fingerprint</string>
+    <string name="lanscan_profile_label">Profile: %1$s</string>
+    <string name="lanscan_os_label">OS: %1$s</string>
+    <string name="lanscan_evidence_label">Evidence</string>
+    <string name="lanscan_open_count">%1$d open</string>
+    <string name="lanscan_scanned_count">%1$d scanned</string>
+    <string name="lanscan_chip_common">Common</string>
+    <string name="lanscan_chip_all">All (1–1024)</string>
 </resources>
