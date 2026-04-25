@@ -16,7 +16,17 @@
 
     <string name="widget_settings_size_small">2×1</string>
     <string name="widget_settings_size_medium">2×2</string>
+    <string name="widget_settings_size_wide">4×2</string>
+    <string name="widget_settings_size_banner">5×1</string>
+    <string name="widget_settings_size_small_subtitle">Compact</string>
+    <string name="widget_settings_size_medium_subtitle">Full</string>
+    <string name="widget_settings_size_wide_subtitle">Wide</string>
+    <string name="widget_settings_size_banner_subtitle">Banner</string>
     <string name="widget_settings_size_resize_hint">Resize the widget on your home screen after changing this</string>
+    <string name="widget_settings_preview_gateway">GW 192.168.1.1</string>
+    <string name="widget_settings_preview_gateway_full">192.168.1.1</string>
+    <string name="widget_settings_preview_dns">1.1.1.1, 1.0.0.1</string>
+    <string name="widget_settings_preview_ssid_name">Home-WiFi</string>
 
     <string name="widget_settings_text_small">Small</string>
     <string name="widget_settings_text_medium">Medium</string>
