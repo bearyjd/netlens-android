@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import us.beary.netlens.feature.lanscan.engine.LanMdnsScanner
+import us.beary.netlens.feature.lanscan.engine.LanMdnsScannerImpl
 import us.beary.netlens.feature.lanscan.engine.SubnetScanner
 import us.beary.netlens.feature.lanscan.engine.SubnetScannerImpl
 import javax.inject.Singleton
@@ -17,4 +19,10 @@ abstract class LanScanModule {
     abstract fun bindSubnetScanner(
         impl: SubnetScannerImpl,
     ): SubnetScanner
+
+    @Binds
+    @Singleton
+    abstract fun bindLanMdnsScanner(
+        impl: LanMdnsScannerImpl,
+    ): LanMdnsScanner
 }
