@@ -18,6 +18,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -44,6 +45,7 @@ import com.ventoux.netlens.widget.model.WidgetColor
 import com.ventoux.netlens.widget.model.WidgetPage
 import com.ventoux.netlens.widget.model.WidgetPreferences
 import com.ventoux.netlens.widget.model.WidgetSize
+import com.ventoux.netlens.widget.model.WidgetTextSize
 import com.ventoux.netlens.widget.util.Deeplink
 import com.ventoux.netlens.widget.util.toFlagEmoji
 
@@ -106,11 +108,24 @@ private fun WidgetRoot(
             textSizeSp = textSizeSp,
             modifier = baseModifier,
         )
+        WidgetSize.WIDE -> WideWidgetContent(
+            state = state,
+            textColor = textColor,
+            accentColor = accentColor,
+            textSizeSp = textSizeSp,
+            modifier = baseModifier,
+        )
+        WidgetSize.BANNER -> BannerWidgetContent(
+            state = state,
+            textColor = textColor,
+            accentColor = accentColor,
+            modifier = baseModifier,
+        )
     }
 }
 
 @Composable
-fun SmallWidgetContent(
+private fun SmallWidgetContent(
     state: IpWidgetState,
     prefs: WidgetPreferences,
     pageIndex: Int,
@@ -169,7 +184,7 @@ fun SmallWidgetContent(
 }
 
 @Composable
-fun MediumWidgetContent(
+private fun MediumWidgetContent(
     state: IpWidgetState,
     prefs: WidgetPreferences,
     pageIndex: Int,
@@ -220,6 +235,150 @@ fun MediumWidgetContent(
             )
         }
     }
+}
+
+@Composable
+private fun WideWidgetContent(
+    state: IpWidgetState,
+    textColor: Color,
+    accentColor: Color,
+    textSizeSp: androidx.compose.ui.unit.TextUnit,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    Column(
+        modifier = modifier
+            .clickable(actionRunCallback<OpenAppAction>())
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!state.isConnected) {
+            DisconnectedContent(textColor = textColor, textSizeSp = textSizeSp)
+        } else {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = GlanceModifier.defaultWeight()) {
+                    Column(verticalAlignment = Alignment.CenterVertically) {
+                        ConnectionContent(
+                            state = state,
+                            textColor = textColor,
+                            textSizeSp = textSizeSp,
+                            accentColor = accentColor,
+                            showNavArrows = false,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = GlanceModifier
+                        .width(1.dp)
+                        .height(48.dp)
+                        .background(ColorProvider(textColor.copy(alpha = 0.2f))),
+                ) {}
+
+                Box(modifier = GlanceModifier.defaultWeight()) {
+                    Column(
+                        modifier = GlanceModifier.padding(start = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        NetworkContent(
+                            state = state,
+                            textColor = textColor,
+                            textSizeSp = textSizeSp,
+                            accentColor = accentColor,
+                            showNavArrows = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BannerWidgetContent(
+    state: IpWidgetState,
+    textColor: Color,
+    accentColor: Color,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    val context = LocalContext.current
+    val textSizeSp = WidgetTextSize.SMALL.sp.sp
+
+    Row(
+        modifier = modifier
+            .clickable(actionRunCallback<OpenAppAction>())
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!state.isConnected) {
+            DisconnectedContent(textColor = textColor, textSizeSp = textSizeSp)
+        } else {
+            if (state.countryCode.isNotEmpty()) {
+                Text(
+                    text = state.countryCode.toFlagEmoji(),
+                    style = TextStyle(fontSize = (textSizeSp.value + FLAG_EMOJI_SIZE_OFFSET).sp),
+                )
+                Spacer(modifier = GlanceModifier.width(4.dp))
+            }
+
+            val vpnDot = if (state.isVpn) "●" else "○"
+            Text(
+                text = "${vpnDot}${context.getString(R.string.widget_vpn_label)}",
+                style = TextStyle(
+                    color = ColorProvider(if (state.isVpn) accentColor else textColor.copy(alpha = 0.5f)),
+                    fontSize = (textSizeSp.value + LABEL_SIZE_OFFSET).sp,
+                ),
+            )
+
+            Spacer(modifier = GlanceModifier.width(6.dp))
+
+            Text(
+                text = state.publicIp.ifEmpty { "—" },
+                style = TextStyle(
+                    color = ColorProvider(textColor),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = textSizeSp,
+                ),
+                maxLines = 1,
+            )
+
+            DotSeparator(textColor, textSizeSp)
+
+            Text(
+                text = state.ssid ?: "—",
+                style = TextStyle(
+                    color = ColorProvider(textColor.copy(alpha = 0.7f)),
+                    fontSize = textSizeSp,
+                ),
+                modifier = GlanceModifier.defaultWeight(),
+                maxLines = 1,
+            )
+
+            DotSeparator(textColor, textSizeSp)
+
+            Text(
+                text = "${context.getString(R.string.widget_gateway_label)} ${state.gateway ?: "—"}",
+                style = TextStyle(
+                    color = ColorProvider(textColor.copy(alpha = 0.7f)),
+                    fontSize = textSizeSp,
+                ),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DotSeparator(textColor: Color, textSizeSp: androidx.compose.ui.unit.TextUnit) {
+    Text(
+        text = " · ",
+        style = TextStyle(
+            color = ColorProvider(textColor.copy(alpha = 0.4f)),
+            fontSize = textSizeSp,
+        ),
+    )
 }
 
 @Composable
