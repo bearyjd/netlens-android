@@ -51,7 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -100,11 +100,11 @@ private fun MonitorContent(
     state.error?.let { errorMessage ->
         AlertDialog(
             onDismissRequest = onDismissError,
-            title = { Text("Error") },
+            title = { Text(stringResource(R.string.monitor_error_title)) },
             text = { Text(errorMessage) },
             confirmButton = {
                 TextButton(onClick = onDismissError) {
-                    Text("OK")
+                    Text(stringResource(R.string.monitor_error_ok))
                 }
             },
         )
@@ -124,12 +124,12 @@ private fun MonitorContent(
             modifier = modifier,
             topBar = {
                 TopAppBar(
-                    title = { Text("Endpoint Monitor") },
+                    title = { Text(stringResource(R.string.monitor_title)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = stringResource(R.string.navigate_back),
                             )
                         }
                     },
@@ -137,7 +137,7 @@ private fun MonitorContent(
             },
             floatingActionButton = {
                 FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add endpoint")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.monitor_cd_add))
                 }
             },
         ) { padding ->
@@ -149,7 +149,7 @@ private fun MonitorContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No endpoints monitored yet.\nTap + to add one.",
+                        text = stringResource(R.string.monitor_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -217,7 +217,7 @@ private fun SwipeToDeleteEndpointCard(
             ) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.monitor_cd_delete),
                     tint = MaterialTheme.colorScheme.onError,
                 )
             }
@@ -287,7 +287,7 @@ private fun EndpointCard(
             IconButton(onClick = onCheckNow) {
                 Icon(
                     Icons.Default.Refresh,
-                    contentDescription = "Check now",
+                    contentDescription = stringResource(R.string.monitor_cd_check_now),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -305,22 +305,22 @@ private fun AddEndpointDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Endpoint") },
+        title = { Text(stringResource(R.string.monitor_dialog_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Label") },
-                    placeholder = { Text("e.g. My API") },
+                    label = { Text(stringResource(R.string.monitor_dialog_label)) },
+                    placeholder = { Text(stringResource(R.string.monitor_dialog_label_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL") },
-                    placeholder = { Text("https://example.com") },
+                    label = { Text(stringResource(R.string.monitor_dialog_url)) },
+                    placeholder = { Text(stringResource(R.string.monitor_dialog_url_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -331,12 +331,12 @@ private fun AddEndpointDialog(
                 onClick = { onConfirm(label, url) },
                 enabled = label.isNotBlank() && url.isNotBlank(),
             ) {
-                Text("Add")
+                Text(stringResource(R.string.monitor_dialog_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.monitor_dialog_cancel))
             }
         },
     )
@@ -361,7 +361,7 @@ private fun EndpointDetailView(
             modifier = Modifier.fillMaxWidth(),
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -382,7 +382,7 @@ private fun EndpointDetailView(
                 IconButton(onClick = onCheckNow) {
                     Icon(
                         Icons.Default.Refresh,
-                        contentDescription = "Check now",
+                        contentDescription = stringResource(R.string.monitor_cd_check_now),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -402,14 +402,14 @@ private fun EndpointDetailView(
         }
 
         Text(
-            text = "Check History",
+            text = stringResource(R.string.monitor_detail_check_history),
             style = MaterialTheme.typography.titleSmall,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         if (checks.isEmpty()) {
             Text(
-                text = "No checks yet. Tap refresh to check now.",
+                text = stringResource(R.string.monitor_detail_no_checks),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -467,7 +467,7 @@ private fun CheckRow(
     modifier: Modifier = Modifier,
 ) {
     val statusColor by animateColorAsState(
-        targetValue = if (check.isSuccess) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
+        targetValue = if (check.isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
         label = "statusColor",
     )
 
@@ -487,7 +487,7 @@ private fun CheckRow(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (check.statusCode > 0) "${check.statusCode}" else "ERR",
+                text = if (check.statusCode > 0) "${check.statusCode}" else stringResource(R.string.monitor_status_error),
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 color = statusColor,
             )

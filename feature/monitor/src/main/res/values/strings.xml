@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="navigate_back">Back</string>
+    <string name="monitor_title">Endpoint Monitor</string>
+    <string name="monitor_cd_add">Add endpoint</string>
+    <string name="monitor_cd_check_now">Check now</string>
+    <string name="monitor_cd_delete">Delete</string>
+    <string name="monitor_empty">No endpoints monitored yet.\nTap + to add one.</string>
+    <string name="monitor_error_title">Error</string>
+    <string name="monitor_error_ok">OK</string>
+    <string name="monitor_dialog_add_title">Add Endpoint</string>
+    <string name="monitor_dialog_label">Label</string>
+    <string name="monitor_dialog_label_hint">e.g. My API</string>
+    <string name="monitor_dialog_url">URL</string>
+    <string name="monitor_dialog_url_hint">https://example.com</string>
+    <string name="monitor_dialog_add">Add</string>
+    <string name="monitor_dialog_cancel">Cancel</string>
+    <string name="monitor_detail_check_history">Check History</string>
+    <string name="monitor_detail_no_checks">No checks yet. Tap refresh to check now.</string>
+    <string name="monitor_status_error">ERR</string>
 </resources>
