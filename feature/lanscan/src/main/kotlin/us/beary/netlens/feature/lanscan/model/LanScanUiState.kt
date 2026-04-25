@@ -7,4 +7,7 @@ data class LanScanUiState(
     val progress: Float = 0f,
     val error: String? = null,
     val deviceCount: Int = 0,
+    val rangeMode: ScanRangeMode = ScanRangeMode.AUTO,
+    val customRange: String = "",
+    val rangeError: String? = null,
 )

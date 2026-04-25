@@ -16,4 +16,9 @@
     <string name="lanscan_subnet_label">Subnet: %1$s</string>
     <string name="lanscan_found_devices_scanning">Found %1$d devices…</string>
     <string name="lanscan_device_count">%1$d devices</string>
+    <string name="lanscan_mode_auto">Auto-detect</string>
+    <string name="lanscan_mode_custom">Custom range</string>
+    <string name="lanscan_label_custom_range">IP Range (CIDR)</string>
+    <string name="lanscan_placeholder_cidr">192.168.1.0/24</string>
+    <string name="lanscan_error_invalid_cidr">Invalid CIDR — use format like 192.168.1.0/24 (prefix /16–/30)</string>
 </resources>
