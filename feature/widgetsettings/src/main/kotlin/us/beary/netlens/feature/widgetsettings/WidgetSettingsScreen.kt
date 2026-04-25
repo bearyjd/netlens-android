@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -53,6 +54,13 @@ import us.beary.netlens.widget.model.WidgetPage
 import us.beary.netlens.widget.model.WidgetPreferences
 import us.beary.netlens.widget.model.WidgetSize
 import us.beary.netlens.widget.model.WidgetTextSize
+
+private val AUTO_ADVANCE_OPTIONS = listOf(
+    0 to R.string.widget_settings_auto_off,
+    5 to R.string.widget_settings_auto_5s,
+    10 to R.string.widget_settings_auto_10s,
+    30 to R.string.widget_settings_auto_30s,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -369,7 +377,7 @@ private fun SliderRow(
         Text(
             stringResource(labelRes),
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.width(100.dp),
+            modifier = Modifier.widthIn(min = 80.dp, max = 120.dp),
         )
         Slider(
             value = value,
@@ -434,20 +442,14 @@ private fun AutoAdvanceSelector(
         style = MaterialTheme.typography.bodyMedium,
     )
     Spacer(modifier = Modifier.height(4.dp))
-    val options = listOf(
-        0 to R.string.widget_settings_auto_off,
-        5 to R.string.widget_settings_auto_5s,
-        10 to R.string.widget_settings_auto_10s,
-        30 to R.string.widget_settings_auto_30s,
-    )
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, (seconds, labelRes) ->
+        AUTO_ADVANCE_OPTIONS.forEachIndexed { index, (seconds, labelRes) ->
             SegmentedButton(
                 selected = selected == seconds,
                 onClick = { onSelect(seconds) },
                 shape = SegmentedButtonDefaults.itemShape(
                     index = index,
-                    count = options.size,
+                    count = AUTO_ADVANCE_OPTIONS.size,
                 ),
             ) {
                 Text(stringResource(labelRes))
