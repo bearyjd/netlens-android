@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Magnifying glass ring (centered at 50,50 within 72dp safe zone) -->
+    <path
+        android:pathData="M50,36 A16,16 0,1,1 50,68 A16,16 0,1,1 50,36Z"
+        android:strokeWidth="3.5"
+        android:strokeColor="#009688"
+        android:fillColor="#00000000" />
+
+    <!-- Magnifying glass handle -->
+    <path
+        android:pathData="M61.3,63.3 L72,74"
+        android:strokeWidth="4"
+        android:strokeColor="#009688"
+        android:strokeLineCap="round" />
+
+    <!-- Signal arc outer -->
+    <path
+        android:pathData="M50,44 A8,8 0,0,1 58,52"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00BCD4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Signal arc middle -->
+    <path
+        android:pathData="M50,48 A4,4 0,0,1 54,52"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00BCD4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Signal dot center -->
+    <path
+        android:pathData="M50,52 A1.5,1.5 0,1,1 50,52.01"
+        android:fillColor="#00BCD4" />
+
+    <!-- Network node top-left -->
+    <path
+        android:pathData="M40,44 A2,2 0,1,1 40,44.01"
+        android:fillColor="#009688" />
+
+    <!-- Network node bottom -->
+    <path
+        android:pathData="M50,62 A2,2 0,1,1 50,62.01"
+        android:fillColor="#009688" />
+
+    <!-- Connection line to top-left node -->
+    <path
+        android:pathData="M42,45 L48,51"
+        android:strokeWidth="1.5"
+        android:strokeColor="#009688"
+        android:strokeLineCap="round" />
+
+    <!-- Connection line to bottom node -->
+    <path
+        android:pathData="M50,54 L50,60"
+        android:strokeWidth="1.5"
+        android:strokeColor="#009688"
+        android:strokeLineCap="round" />
+
+</vector>

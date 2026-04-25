@@ -1,0 +1,1 @@
+Initial release of NetLens with 13 network diagnostic tools: ping, traceroute, DNS lookup, LAN scan, port scanner, WHOIS, TLS inspector, HTTP tester, mDNS browser, Wake-on-LAN, IP info, endpoint monitor, and network log. Includes scan history, home screen widget, and Material 3 light/dark theme support.
