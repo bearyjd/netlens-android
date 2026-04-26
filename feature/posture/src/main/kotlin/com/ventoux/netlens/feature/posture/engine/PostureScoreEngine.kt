@@ -13,8 +13,8 @@ object PostureScoreEngine {
         isConnected: Boolean,
         deviceCount: Int?,
         isVpnActive: Boolean,
-    ): PostureScore {
-        if (!isConnected) return PostureScore.UNSCANNED
+    ): PostureScore? {
+        if (!isConnected) return null
 
         val factors = buildList {
             add(evaluateEncryption(encryptionType))
@@ -23,7 +23,7 @@ object PostureScoreEngine {
         }
 
         val activeFactors = factors.filter { it.severity != Severity.Unavailable }
-        if (activeFactors.isEmpty()) return PostureScore.UNSCANNED
+        if (activeFactors.isEmpty()) return null
 
         val totalWeight = activeFactors.sumOf { it.factor.weight.toDouble() }
         val weightedSum = activeFactors.sumOf { it.score * it.factor.weight.toDouble() }
@@ -41,16 +41,28 @@ object PostureScoreEngine {
     }
 
     internal fun evaluateEncryption(type: String?): FactorResult {
-        val normalized = type?.uppercase()?.trim() ?: ""
+        if (type == null) {
+            return FactorResult(
+                factor = PostureFactor.Encryption,
+                score = 0,
+                label = "N/A",
+                detail = "Not connected to Wi-Fi — encryption does not apply",
+                severity = Severity.Unavailable,
+            )
+        }
+        val normalized = type.uppercase().trim()
         val (score, severity, detail) = when {
             normalized.contains("WPA3") -> Triple(100, Severity.Good, "WPA3 is the strongest available encryption")
+            normalized.contains("OWE") || normalized.contains("ENHANCED_OPEN") ->
+                Triple(80, Severity.Good, "Enhanced Open (OWE) encrypts traffic without requiring a password")
             normalized.contains("WPA2") -> Triple(70, Severity.Moderate, "WPA2 is adequate but WPA3 is recommended")
             normalized.contains("WPA") -> Triple(50, Severity.Moderate, "WPA is outdated — upgrade to WPA2 or WPA3")
             normalized.contains("WEP") -> Triple(20, Severity.Critical, "WEP is broken and trivially crackable — switch immediately")
-            normalized.isEmpty() -> Triple(0, Severity.Critical, "No encryption detected — network traffic is visible to anyone nearby")
+            normalized.isEmpty() || normalized == "OPEN" ->
+                Triple(0, Severity.Critical, "No encryption detected — network traffic is visible to anyone nearby")
             else -> Triple(40, Severity.Moderate, "Unknown encryption type: $type")
         }
-        val label = if (normalized.isEmpty()) "Open / None" else type ?: "Unknown"
+        val label = if (normalized.isEmpty() || normalized == "OPEN") "Open / None" else type
         return FactorResult(
             factor = PostureFactor.Encryption,
             score = score,

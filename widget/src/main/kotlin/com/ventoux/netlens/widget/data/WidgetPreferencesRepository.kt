@@ -48,6 +48,17 @@ object WidgetPreferencesRepository {
         }
     }
 
+    private val WIDGET_SIZE_MIGRATION = mapOf(
+        "SMALL" to WidgetSize.COMPACT,
+        "MEDIUM" to WidgetSize.STANDARD,
+        "WIDE" to WidgetSize.STANDARD,
+        "BANNER" to WidgetSize.DASHBOARD,
+    )
+
+    internal fun migrateWidgetSize(stored: String): WidgetSize? =
+        runCatching { WidgetSize.valueOf(stored) }.getOrNull()
+            ?: WIDGET_SIZE_MIGRATION[stored]
+
     private fun Preferences.toWidgetPreferences(): WidgetPreferences {
         val defaults = WidgetPreferences()
         return WidgetPreferences(
@@ -56,7 +67,7 @@ object WidgetPreferencesRepository {
             accentColor = this[ACCENT_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: defaults.accentColor,
             textSize = this[TEXT_SIZE]?.let { runCatching { WidgetTextSize.valueOf(it) }.getOrNull() } ?: defaults.textSize,
             cornerRadius = this[CORNER_RADIUS] ?: defaults.cornerRadius,
-            widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.getOrNull() } ?: defaults.widgetSize,
+            widgetSize = this[WIDGET_SIZE]?.let { migrateWidgetSize(it) } ?: defaults.widgetSize,
         )
     }
 }

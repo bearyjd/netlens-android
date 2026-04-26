@@ -2,6 +2,7 @@ package com.ventoux.netlens.feature.posture.engine
 
 import com.ventoux.netlens.feature.posture.model.Severity
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -65,16 +66,48 @@ class PostureScoreEngineTest {
         }
 
         @Test
-        fun `null or empty scores 0 with Critical severity`() {
-            assertEquals(0, PostureScoreEngine.evaluateEncryption(null).score)
-            assertEquals(0, PostureScoreEngine.evaluateEncryption("").score)
-            assertEquals(Severity.Critical, PostureScoreEngine.evaluateEncryption(null).severity)
+        fun `OWE scores 80 with Good severity`() {
+            val result = PostureScoreEngine.evaluateEncryption("OWE")
+            assertEquals(80, result.score)
+            assertEquals(Severity.Good, result.severity)
+        }
+
+        @Test
+        fun `ENHANCED_OPEN scores 80 with Good severity`() {
+            val result = PostureScoreEngine.evaluateEncryption("ENHANCED_OPEN")
+            assertEquals(80, result.score)
+            assertEquals(Severity.Good, result.severity)
+        }
+
+        @Test
+        fun `null encryption is Unavailable for non-WiFi`() {
+            val result = PostureScoreEngine.evaluateEncryption(null)
+            assertEquals(0, result.score)
+            assertEquals(Severity.Unavailable, result.severity)
+        }
+
+        @Test
+        fun `empty encryption scores 0 with Critical severity for open WiFi`() {
+            val result = PostureScoreEngine.evaluateEncryption("")
+            assertEquals(0, result.score)
+            assertEquals(Severity.Critical, result.severity)
+        }
+
+        @Test
+        fun `Open string scores 0 with Critical severity`() {
+            val result = PostureScoreEngine.evaluateEncryption("Open")
+            assertEquals(0, result.score)
+            assertEquals(Severity.Critical, result.severity)
+            assertEquals("Open / None", result.label)
         }
 
         @Test
         fun `case insensitive matching`() {
             assertEquals(100, PostureScoreEngine.evaluateEncryption("wpa3").score)
             assertEquals(70, PostureScoreEngine.evaluateEncryption("wpa2-psk").score)
+            assertEquals(80, PostureScoreEngine.evaluateEncryption("owe").score)
+            assertEquals(0, PostureScoreEngine.evaluateEncryption("open").score)
+            assertEquals(0, PostureScoreEngine.evaluateEncryption("OPEN").score)
         }
     }
 
@@ -130,15 +163,14 @@ class PostureScoreEngineTest {
     @Nested
     inner class FullComputation {
         @Test
-        fun `disconnected returns unscanned`() {
+        fun `disconnected returns null`() {
             val result = PostureScoreEngine.compute(
                 encryptionType = "WPA3",
                 isConnected = false,
                 deviceCount = 3,
                 isVpnActive = true,
             )
-            assertEquals("", result.grade)
-            assertTrue(result.factors.isEmpty())
+            assertNull(result)
         }
 
         @Test
@@ -149,8 +181,8 @@ class PostureScoreEngineTest {
                 deviceCount = 3,
                 isVpnActive = true,
             )
-            assertEquals("A", result.grade)
-            assertEquals(3, result.factors.size)
+            assertEquals("A", result?.grade)
+            assertEquals(3, result?.factors?.size)
         }
 
         @Test
@@ -161,7 +193,7 @@ class PostureScoreEngineTest {
                 deviceCount = 20,
                 isVpnActive = false,
             )
-            assertTrue(result.grade in listOf("C", "D"))
+            assertTrue(result?.grade in listOf("C", "D"))
         }
 
         @Test
@@ -172,7 +204,7 @@ class PostureScoreEngineTest {
                 deviceCount = 50,
                 isVpnActive = false,
             )
-            assertEquals("F", result.grade)
+            assertEquals("F", result?.grade)
         }
 
         @Test
@@ -183,8 +215,8 @@ class PostureScoreEngineTest {
                 deviceCount = null,
                 isVpnActive = true,
             )
-            assertEquals(2, result.factors.size)
-            assertEquals("A", result.grade)
+            assertEquals(2, result?.factors?.size)
+            assertEquals("A", result?.grade)
         }
 
         @Test
@@ -195,7 +227,19 @@ class PostureScoreEngineTest {
                 deviceCount = 1,
                 isVpnActive = true,
             )
-            assertTrue(result.numericScore in 0..100)
+            assertTrue(result?.numericScore in 0..100)
+        }
+
+        @Test
+        fun `null encryption on cellular excludes encryption factor`() {
+            val result = PostureScoreEngine.compute(
+                encryptionType = null,
+                isConnected = true,
+                deviceCount = 3,
+                isVpnActive = true,
+            )
+            val encFactor = result?.factors?.first { it.factor.displayName == "Wi-Fi Encryption" }
+            assertEquals(Severity.Unavailable, encFactor?.severity)
         }
     }
 }

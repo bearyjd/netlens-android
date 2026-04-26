@@ -81,7 +81,8 @@ fun HomeScreen(
             }
 
             ToolCategory.entries.forEach { category ->
-                val tools = ToolDestination.byCategory[category] ?: return@forEach
+                val tools = (ToolDestination.byCategory[category] ?: return@forEach)
+                    .filter { it != ToolDestination.Posture }
 
                 item(key = category.name) {
                     Text(
@@ -124,6 +125,7 @@ private fun PostureHeroCard(
         ) {
             val (grade, color) = when (state) {
                 is PostureUiState.Scored -> state.score.grade to state.score.color
+                is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
                 PostureUiState.Disconnected -> "—" to Color(0xFF9E9E9E)
                 PostureUiState.Loading -> "…" to Color(0xFF9E9E9E)
             }
@@ -153,6 +155,7 @@ private fun PostureHeroCard(
                         state.score.numericScore,
                         state.score.factors.size,
                     )
+                    is PostureUiState.Error -> stringResource(R.string.posture_hero_error)
                     PostureUiState.Disconnected -> stringResource(R.string.posture_hero_disconnected)
                     PostureUiState.Loading -> stringResource(R.string.posture_hero_loading)
                 }

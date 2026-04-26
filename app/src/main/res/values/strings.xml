@@ -6,4 +6,5 @@
     <string name="posture_hero_disconnected">No network connection</string>
     <string name="posture_hero_loading">Evaluating…</string>
     <string name="posture_hero_score_subtitle">%1$d/100 — %2$d factors evaluated</string>
+    <string name="posture_hero_error">Tap to retry</string>
 </resources>

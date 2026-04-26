@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="posture_title">Security Posture</string>
+    <string name="posture_cd_back">Back</string>
+    <string name="posture_cd_refresh">Refresh</string>
+    <string name="posture_loading">Evaluating network security…</string>
+    <string name="posture_disconnected_title">No network connection</string>
+    <string name="posture_disconnected_body">Connect to a network to see your security posture score.</string>
+    <string name="posture_error_title">Something went wrong</string>
+    <string name="posture_score_format">%1$d/100</string>
+    <string name="posture_grade_a">Excellent — your network is well secured</string>
+    <string name="posture_grade_b">Good — minor improvements possible</string>
+    <string name="posture_grade_c">Fair — some security gaps to address</string>
+    <string name="posture_grade_d">Poor — significant vulnerabilities detected</string>
+    <string name="posture_grade_f">Critical — immediate action recommended</string>
+    <string name="posture_grade_unknown">Not yet evaluated</string>
 </resources>

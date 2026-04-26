@@ -7,16 +7,7 @@ data class PostureScore(
     val numericScore: Int,
     val color: Color,
     val factors: List<FactorResult>,
-) {
-    companion object {
-        val UNSCANNED = PostureScore(
-            grade = "",
-            numericScore = -1,
-            color = Color(0xFF9E9E9E),
-            factors = emptyList(),
-        )
-    }
-}
+)
 
 data class FactorResult(
     val factor: PostureFactor,

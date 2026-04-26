@@ -33,16 +33,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.feature.posture.model.FactorResult
 import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
@@ -55,21 +56,21 @@ fun PostureScreen(
     modifier: Modifier = Modifier,
     viewModel: PostureViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Security Posture") },
+                title = { Text(stringResource(R.string.posture_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.posture_cd_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.posture_cd_refresh))
                     }
                 },
             )
@@ -88,17 +89,38 @@ fun PostureScreen(
                     Spacer(modifier = Modifier.height(64.dp))
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Evaluating network security…")
+                    Text(stringResource(R.string.posture_loading))
                 }
                 PostureUiState.Disconnected -> {
                     Spacer(modifier = Modifier.height(64.dp))
                     Text(
-                        text = "No network connection",
+                        text = stringResource(R.string.posture_disconnected_title),
                         style = MaterialTheme.typography.headlineSmall,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Connect to a network to see your security posture score.",
+                        text = stringResource(R.string.posture_disconnected_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                is PostureUiState.Error -> {
+                    Spacer(modifier = Modifier.height(64.dp))
+                    Icon(
+                        imageVector = Icons.Default.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.posture_error_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = s.message,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -137,7 +159,7 @@ private fun ScoreHero(score: PostureScore) {
     }
     Spacer(modifier = Modifier.height(12.dp))
     Text(
-        text = "${score.numericScore}/100",
+        text = stringResource(R.string.posture_score_format, score.numericScore),
         style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -197,13 +219,14 @@ private fun FactorCard(factor: FactorResult) {
     }
 }
 
+@Composable
 private fun gradeDescription(grade: String): String = when (grade) {
-    "A" -> "Excellent — your network is well secured"
-    "B" -> "Good — minor improvements possible"
-    "C" -> "Fair — some security gaps to address"
-    "D" -> "Poor — significant vulnerabilities detected"
-    "F" -> "Critical — immediate action recommended"
-    else -> "Not yet evaluated"
+    "A" -> stringResource(R.string.posture_grade_a)
+    "B" -> stringResource(R.string.posture_grade_b)
+    "C" -> stringResource(R.string.posture_grade_c)
+    "D" -> stringResource(R.string.posture_grade_d)
+    "F" -> stringResource(R.string.posture_grade_f)
+    else -> stringResource(R.string.posture_grade_unknown)
 }
 
 private fun severityIcon(severity: Severity) = when (severity) {

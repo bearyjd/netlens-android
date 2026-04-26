@@ -6,7 +6,6 @@ import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.network.NetworkMonitor
 import com.ventoux.netlens.feature.posture.engine.PostureScoreEngine
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
-import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +15,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import javax.inject.Inject
@@ -30,13 +30,21 @@ class PostureViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<PostureUiState>(PostureUiState.Loading)
     val uiState: StateFlow<PostureUiState> = _uiState.asStateFlow()
 
+    private var refreshJob: Job? = null
+
     init {
         observeNetwork()
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            recalculate()
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val online = networkMonitor.isOnline.first()
+            if (!online) {
+                _uiState.value = PostureUiState.Disconnected
+            } else {
+                recalculate()
+            }
         }
     }
 
@@ -47,6 +55,7 @@ class PostureViewModel @Inject constructor(
                 networkMonitor.isVpnActive,
             ) { online, vpn -> online to vpn }
                 .collectLatest { (online, vpn) ->
+                    refreshJob?.cancel()
                     if (!online) {
                         _uiState.value = PostureUiState.Disconnected
                     } else {
@@ -74,11 +83,17 @@ class PostureViewModel @Inject constructor(
                 isVpnActive = vpn,
             )
 
-            _uiState.value = PostureUiState.Scored(score)
+            _uiState.value = if (score != null) {
+                PostureUiState.Scored(score)
+            } else {
+                PostureUiState.Error("Unable to evaluate network security")
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            _uiState.value = PostureUiState.Scored(PostureScore.UNSCANNED)
+            _uiState.value = PostureUiState.Error(
+                "Unable to evaluate network security. Try again later.",
+            )
         }
     }
 }

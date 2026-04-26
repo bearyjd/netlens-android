@@ -5,7 +5,6 @@ import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
 import com.ventoux.netlens.core.network.NetworkMonitor
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
-import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -94,15 +93,56 @@ class PostureViewModelTest {
     }
 
     @Test
-    fun `error in recalculate falls back to UNSCANNED`() = runTest {
+    fun `refresh recalculates score`() = runTest {
+        networkMonitor.online.value = true
+        networkMonitor.vpn.value = true
+        encryptionProvider.encryptionType = "WPA2"
+        lanScanDao.entries.add(
+            LanScanHistoryEntry(
+                ssid = "Test",
+                subnet = "192.168.1.0/24",
+                deviceCount = 3,
+                devicesJson = "[]",
+            ),
+        )
+        val vm = createViewModel()
+        vm.uiState.test {
+            assertEquals(PostureUiState.Loading, awaitItem())
+            val initial = awaitItem()
+            assertTrue(initial is PostureUiState.Scored)
+            encryptionProvider.encryptionType = "WPA3"
+            vm.refresh()
+            val refreshed = awaitItem()
+            assertTrue(refreshed is PostureUiState.Scored)
+            assertEquals("A", (refreshed as PostureUiState.Scored).score.grade)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `refresh while offline emits Disconnected`() = runTest {
+        networkMonitor.online.value = true
+        val vm = createViewModel()
+        vm.uiState.test {
+            assertEquals(PostureUiState.Loading, awaitItem())
+            awaitItem() // initial scored
+            networkMonitor.online.value = false
+            assertEquals(PostureUiState.Disconnected, awaitItem())
+            vm.refresh()
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `error in recalculate emits Error state`() = runTest {
         networkMonitor.online.value = true
         encryptionProvider.shouldThrow = true
         val vm = createViewModel()
         vm.uiState.test {
             assertEquals(PostureUiState.Loading, awaitItem())
-            val scored = awaitItem()
-            assertTrue(scored is PostureUiState.Scored)
-            assertEquals(PostureScore.UNSCANNED, (scored as PostureUiState.Scored).score)
+            val error = awaitItem()
+            assertTrue(error is PostureUiState.Error)
             cancelAndIgnoreRemainingEvents()
         }
     }
