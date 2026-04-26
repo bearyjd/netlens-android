@@ -18,7 +18,7 @@ private val PATH_TO_ROUTE = mapOf(
     "netlog" to ToolDestination.NetLog.route,
     "widgetsettings" to ToolDestination.WidgetSettings.route,
     // Widget deep links for screens that don't exist yet — fall back to home
-    "posture" to "home",
+    "posture" to ToolDestination.Posture.route,
     "wifiaudit" to "home",
     "speedtest" to "home",
     "latency" to ToolDestination.Ping.route,
