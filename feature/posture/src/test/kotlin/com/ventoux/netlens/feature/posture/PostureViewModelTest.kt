@@ -135,6 +135,23 @@ class PostureViewModelTest {
     }
 
     @Test
+    fun `online with no scan history excludes device count factor`() = runTest {
+        networkMonitor.online.value = true
+        networkMonitor.vpn.value = true
+        encryptionProvider.encryptionType = "WPA3"
+        val vm = createViewModel()
+        vm.uiState.test {
+            assertEquals(PostureUiState.Loading, awaitItem())
+            val scored = awaitItem()
+            assertTrue(scored is PostureUiState.Scored)
+            val score = (scored as PostureUiState.Scored).score
+            assertEquals(2, score.factors.size)
+            assertEquals("A", score.grade)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `error in recalculate emits Error state`() = runTest {
         networkMonitor.online.value = true
         encryptionProvider.shouldThrow = true

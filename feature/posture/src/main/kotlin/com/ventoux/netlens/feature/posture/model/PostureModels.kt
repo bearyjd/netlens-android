@@ -1,11 +1,8 @@
 package com.ventoux.netlens.feature.posture.model
 
-import androidx.compose.ui.graphics.Color
-
 data class PostureScore(
     val grade: String,
     val numericScore: Int,
-    val color: Color,
     val factors: List<FactorResult>,
 )
 

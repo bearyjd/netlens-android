@@ -39,7 +39,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.R
 import com.ventoux.netlens.feature.posture.PostureViewModel
+import com.ventoux.netlens.feature.posture.gradeColor
 import com.ventoux.netlens.feature.posture.model.PostureUiState
+import com.ventoux.netlens.feature.posture.model.Severity
 import com.ventoux.netlens.navigation.ToolCategory
 import com.ventoux.netlens.navigation.ToolDestination
 
@@ -124,7 +126,7 @@ private fun PostureHeroCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val (grade, color) = when (state) {
-                is PostureUiState.Scored -> state.score.grade to state.score.color
+                is PostureUiState.Scored -> state.score.grade to gradeColor(state.score.grade)
                 is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
                 PostureUiState.Disconnected -> "—" to Color(0xFF9E9E9E)
                 PostureUiState.Loading -> "…" to Color(0xFF9E9E9E)
@@ -150,11 +152,15 @@ private fun PostureHeroCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 val subtitle = when (state) {
-                    is PostureUiState.Scored -> stringResource(
-                        R.string.posture_hero_score_subtitle,
-                        state.score.numericScore,
-                        state.score.factors.size,
-                    )
+                    is PostureUiState.Scored -> {
+                        val scored = state.score.factors.count { it.severity != Severity.Unavailable }
+                        stringResource(
+                            R.string.posture_hero_score_subtitle,
+                            state.score.numericScore,
+                            scored,
+                            state.score.factors.size,
+                        )
+                    }
                     is PostureUiState.Error -> stringResource(R.string.posture_hero_error)
                     PostureUiState.Disconnected -> stringResource(R.string.posture_hero_disconnected)
                     PostureUiState.Loading -> stringResource(R.string.posture_hero_loading)

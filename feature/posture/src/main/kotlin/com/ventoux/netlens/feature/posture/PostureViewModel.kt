@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import android.util.Log
 import kotlin.coroutines.cancellation.CancellationException
 import javax.inject.Inject
 
@@ -90,7 +91,8 @@ class PostureViewModel @Inject constructor(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("PostureViewModel", "Score calculation failed", e)
             _uiState.value = PostureUiState.Error(
                 "Unable to evaluate network security. Try again later.",
             )

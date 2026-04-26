@@ -49,6 +49,15 @@ import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import com.ventoux.netlens.feature.posture.model.Severity
 
+fun gradeColor(grade: String): Color = when (grade) {
+    "A" -> Color(0xFF4CAF50)
+    "B" -> Color(0xFF8BC34A)
+    "C" -> Color(0xFFFFC107)
+    "D" -> Color(0xFFFF9800)
+    "F" -> Color(0xFFF44336)
+    else -> Color(0xFF9E9E9E)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostureScreen(
@@ -141,11 +150,12 @@ fun PostureScreen(
 
 @Composable
 private fun ScoreHero(score: PostureScore) {
+    val color = gradeColor(score.grade)
     Box(
         modifier = Modifier
             .size(140.dp)
             .background(
-                color = score.color.copy(alpha = 0.12f),
+                color = color.copy(alpha = 0.12f),
                 shape = CircleShape,
             ),
         contentAlignment = Alignment.Center,
@@ -154,7 +164,7 @@ private fun ScoreHero(score: PostureScore) {
             text = score.grade,
             fontSize = 64.sp,
             fontWeight = FontWeight.Bold,
-            color = score.color,
+            color = color,
         )
     }
     Spacer(modifier = Modifier.height(12.dp))

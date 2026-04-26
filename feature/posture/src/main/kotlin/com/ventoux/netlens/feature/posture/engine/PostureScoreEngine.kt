@@ -1,6 +1,5 @@
 package com.ventoux.netlens.feature.posture.engine
 
-import androidx.compose.ui.graphics.Color
 import com.ventoux.netlens.feature.posture.model.FactorResult
 import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.posture.model.PostureScore
@@ -30,12 +29,10 @@ object PostureScoreEngine {
         val numericScore = (weightedSum / totalWeight).toInt().coerceIn(0, 100)
 
         val grade = gradeFor(numericScore)
-        val color = colorFor(grade)
 
         return PostureScore(
             grade = grade,
             numericScore = numericScore,
-            color = color,
             factors = factors,
         )
     }
@@ -116,12 +113,4 @@ object PostureScoreEngine {
         else -> "F"
     }
 
-    internal fun colorFor(grade: String): Color = when (grade) {
-        "A" -> Color(0xFF4CAF50)
-        "B" -> Color(0xFF8BC34A)
-        "C" -> Color(0xFFFFC107)
-        "D" -> Color(0xFFFF9800)
-        "F" -> Color(0xFFF44336)
-        else -> Color(0xFF9E9E9E)
-    }
 }
