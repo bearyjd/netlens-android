@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.whois
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,8 +51,12 @@ import com.ventoux.netlens.feature.whois.model.WhoisUiState
 @Composable
 fun WhoisScreen(
     onBack: () -> Unit = {},
+    initialQuery: String? = null,
     viewModel: WhoisViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialQuery) {
+        if (initialQuery != null) viewModel.onQueryChanged(initialQuery)
+    }
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
 

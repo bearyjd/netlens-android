@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.history
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +62,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
+    onNavigateToTool: (route: String, query: String) -> Unit = { _, _ -> },
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -173,7 +175,10 @@ fun HistoryScreen(
                     EmptyState()
                 }
                 else -> {
-                    HistoryList(items = state.items)
+                    HistoryList(
+                        items = state.items,
+                        onItemClick = { item -> onNavigateToTool(item.toolRoute, item.primaryLabel) },
+                    )
                 }
             }
         }
@@ -202,7 +207,7 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun HistoryList(items: List<HistoryItem>) {
+private fun HistoryList(items: List<HistoryItem>, onItemClick: (HistoryItem) -> Unit) {
     val grouped = remember(items) { groupByDate(items) }
 
     LazyColumn(
@@ -222,17 +227,18 @@ private fun HistoryList(items: List<HistoryItem>) {
                 items = groupItems,
                 key = { "${it.toolFilter.name}_${it.id}" },
             ) { item ->
-                HistoryItemRow(item)
+                HistoryItemRow(item, onClick = { onItemClick(item) })
             }
         }
     }
 }
 
 @Composable
-private fun HistoryItemRow(item: HistoryItem) {
+private fun HistoryItemRow(item: HistoryItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

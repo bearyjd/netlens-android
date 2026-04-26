@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.dns
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -53,8 +54,12 @@ import com.ventoux.netlens.feature.dns.model.DnsResult
 @Composable
 fun DnsLookupScreen(
     onBack: () -> Unit = {},
+    initialDomain: String? = null,
     viewModel: DnsLookupViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialDomain) {
+        if (initialDomain != null) viewModel.onDomainChanged(initialDomain)
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
 

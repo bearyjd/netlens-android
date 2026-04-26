@@ -15,4 +15,5 @@ data class HistoryItem(
     val secondarySummary: String,
     val timestamp: Long,
     val toolFilter: ToolFilter,
+    val toolRoute: String,
 )
