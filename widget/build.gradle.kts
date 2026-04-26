@@ -9,6 +9,10 @@ android {
     namespace = "com.ventoux.netlens.widget"
 }
 
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
+
 dependencies {
     implementation(project(":core:network"))
     implementation(libs.glance.appwidget)
@@ -21,4 +25,7 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.core.ktx)
+
+    testImplementation(libs.junit5.api)
+    testRuntimeOnly(libs.junit5.engine)
 }
