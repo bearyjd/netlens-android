@@ -6,9 +6,7 @@ data class WidgetPreferences(
     val accentColor: WidgetColor = WidgetColor.GREEN,
     val textSize: WidgetTextSize = WidgetTextSize.MEDIUM,
     val cornerRadius: Int = 16,
-    val widgetSize: WidgetSize = WidgetSize.SMALL,
-    val pages: List<WidgetPage> = listOf(WidgetPage.CONNECTION, WidgetPage.NETWORK),
-    val autoAdvanceSeconds: Int = 0,
+    val widgetSize: WidgetSize = WidgetSize.COMPACT,
 )
 
 enum class WidgetColor(val argb: Long) {
@@ -26,13 +24,7 @@ enum class WidgetTextSize(val sp: Int) {
 }
 
 enum class WidgetSize {
-    SMALL,
-    MEDIUM,
-    WIDE,
-    BANNER,
-}
-
-enum class WidgetPage {
-    CONNECTION,
-    NETWORK,
+    COMPACT,
+    STANDARD,
+    DASHBOARD,
 }
