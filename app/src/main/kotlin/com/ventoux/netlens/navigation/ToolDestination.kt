@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ManageHistory
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -33,6 +34,13 @@ enum class ToolDestination(
     val description: String,
     val category: ToolCategory,
 ) {
+    Posture(
+        route = "posture",
+        icon = Icons.Default.Shield,
+        label = "Security Posture",
+        description = "Network security score",
+        category = ToolCategory.NetworkInfo,
+    ),
     IpInfo(
         route = "ipinfo",
         icon = Icons.Default.Language,

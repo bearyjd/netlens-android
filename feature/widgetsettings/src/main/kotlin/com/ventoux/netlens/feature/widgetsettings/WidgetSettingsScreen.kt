@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -50,17 +49,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.widget.model.WidgetColor
-import com.ventoux.netlens.widget.model.WidgetPage
 import com.ventoux.netlens.widget.model.WidgetPreferences
 import com.ventoux.netlens.widget.model.WidgetSize
 import com.ventoux.netlens.widget.model.WidgetTextSize
-
-private val AUTO_ADVANCE_OPTIONS = listOf(
-    0 to R.string.widget_settings_auto_off,
-    5 to R.string.widget_settings_auto_5s,
-    10 to R.string.widget_settings_auto_10s,
-    30 to R.string.widget_settings_auto_30s,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,16 +101,6 @@ fun WidgetSettingsScreen(
                 onSizeChanged = viewModel::setWidgetSize,
             )
 
-            val showCarousel = prefs.widgetSize == WidgetSize.SMALL || prefs.widgetSize == WidgetSize.MEDIUM
-            if (showCarousel) {
-                CarouselSection(
-                    pages = prefs.pages,
-                    autoAdvanceSeconds = prefs.autoAdvanceSeconds,
-                    onTogglePage = viewModel::togglePage,
-                    onAutoAdvanceChanged = viewModel::setAutoAdvance,
-                )
-            }
-
             Button(
                 onClick = { viewModel.applyToWidget() },
                 modifier = Modifier.fillMaxWidth(),
@@ -136,11 +117,7 @@ private fun WidgetPreview(prefs: WidgetPreferences) {
     val bgColor = Color(prefs.backgroundColor.argb).copy(alpha = prefs.backgroundAlpha)
     val textColor = if (prefs.backgroundColor == WidgetColor.WHITE) Color.Black else Color.White
     val accentColor = Color(prefs.accentColor.argb)
-    val textSizeSp = if (prefs.widgetSize == WidgetSize.BANNER) {
-        WidgetTextSize.SMALL.sp.sp
-    } else {
-        prefs.textSize.sp.sp
-    }
+    val textSizeSp = prefs.textSize.sp.sp
 
     Box(
         modifier = Modifier
@@ -151,57 +128,15 @@ private fun WidgetPreview(prefs: WidgetPreferences) {
             .padding(12.dp),
     ) {
         when (prefs.widgetSize) {
-            WidgetSize.SMALL, WidgetSize.MEDIUM -> DefaultPreviewContent(prefs, textColor, accentColor, textSizeSp)
-            WidgetSize.WIDE -> WidePreviewContent(textColor, accentColor, textSizeSp)
-            WidgetSize.BANNER -> BannerPreviewContent(textColor, accentColor, textSizeSp)
+            WidgetSize.COMPACT -> CompactPreviewContent(textColor, accentColor, textSizeSp)
+            WidgetSize.STANDARD -> StandardPreviewContent(textColor, accentColor, textSizeSp)
+            WidgetSize.DASHBOARD -> DashboardPreviewContent(textColor, accentColor, textSizeSp)
         }
     }
 }
 
 @Composable
-private fun DefaultPreviewContent(
-    prefs: WidgetPreferences,
-    textColor: Color,
-    accentColor: Color,
-    textSizeSp: androidx.compose.ui.unit.TextUnit,
-) {
-    if (prefs.pages.isEmpty()) {
-        Text(
-            stringResource(R.string.widget_settings_preview_no_connection),
-            color = textColor.copy(alpha = 0.6f),
-            fontSize = textSizeSp,
-        )
-    } else {
-        Column {
-            ConnectionPreviewRow(textColor, accentColor, textSizeSp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                stringResource(R.string.widget_settings_preview_ssid),
-                color = textColor.copy(alpha = 0.7f),
-                fontSize = (textSizeSp.value - 2).sp,
-            )
-            if (prefs.pages.size > 1) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    prefs.pages.forEachIndexed { i, _ ->
-                        Text(
-                            if (i == 0) "●" else "○",
-                            color = if (i == 0) accentColor else textColor.copy(alpha = 0.3f),
-                            fontSize = 8.sp,
-                        )
-                        if (i < prefs.pages.lastIndex) Spacer(modifier = Modifier.width(4.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WidePreviewContent(
+private fun CompactPreviewContent(
     textColor: Color,
     accentColor: Color,
     textSizeSp: androidx.compose.ui.unit.TextUnit,
@@ -209,99 +144,112 @@ private fun WidePreviewContent(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            ConnectionPreviewRow(textColor, accentColor, textSizeSp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                stringResource(R.string.widget_settings_preview_ssid),
-                color = textColor.copy(alpha = 0.7f),
-                fontSize = (textSizeSp.value - 2).sp,
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🛡", fontSize = (textSizeSp.value + 4).sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("A", color = accentColor, fontWeight = FontWeight.Bold, fontSize = (textSizeSp.value + 2).sp)
         }
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(36.dp)
-                .background(textColor.copy(alpha = 0.2f)),
-        )
-        Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
-            Text(
-                stringResource(R.string.widget_settings_preview_gateway_full),
-                color = textColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = textSizeSp,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                stringResource(R.string.widget_settings_preview_dns),
-                color = textColor.copy(alpha = 0.7f),
-                fontSize = (textSizeSp.value - 2).sp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun BannerPreviewContent(
-    textColor: Color,
-    accentColor: Color,
-    textSizeSp: androidx.compose.ui.unit.TextUnit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("🇺🇸", fontSize = (textSizeSp.value + 4).sp)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            "●${stringResource(R.string.widget_settings_preview_vpn)}",
-            color = accentColor,
-            fontSize = (textSizeSp.value - 2).sp,
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            stringResource(R.string.widget_settings_preview_ip),
-            color = textColor,
-            fontWeight = FontWeight.Bold,
-            fontSize = textSizeSp,
-        )
-        Text(" · ", color = textColor.copy(alpha = 0.4f), fontSize = textSizeSp)
         Text(
             stringResource(R.string.widget_settings_preview_ssid_name),
             color = textColor.copy(alpha = 0.7f),
             fontSize = textSizeSp,
         )
-        Text(" · ", color = textColor.copy(alpha = 0.4f), fontSize = textSizeSp)
         Text(
-            stringResource(R.string.widget_settings_preview_gateway),
-            color = textColor.copy(alpha = 0.7f),
-            fontSize = textSizeSp,
+            stringResource(R.string.widget_settings_preview_all_clear),
+            color = accentColor,
+            fontSize = (textSizeSp.value - 2).sp,
         )
     }
 }
 
 @Composable
-private fun ConnectionPreviewRow(
+private fun StandardPreviewContent(
     textColor: Color,
     accentColor: Color,
     textSizeSp: androidx.compose.ui.unit.TextUnit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("🇺🇸", fontSize = (textSizeSp.value + 4).sp)
-        Spacer(modifier = Modifier.width(6.dp))
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🛡", fontSize = (textSizeSp.value + 6).sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("A", color = accentColor, fontWeight = FontWeight.Bold, fontSize = (textSizeSp.value + 4).sp)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    stringResource(R.string.widget_settings_preview_ssid_name),
+                    color = textColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = textSizeSp,
+                )
+                Text("WPA3 ✓", color = accentColor, fontSize = (textSizeSp.value - 2).sp)
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🇺🇸", fontSize = (textSizeSp.value + 2).sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.widget_settings_preview_ip),
+                color = textColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = textSizeSp,
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("12 ms", color = textColor.copy(alpha = 0.7f), fontSize = (textSizeSp.value - 2).sp)
+            Text("8 devices", color = textColor.copy(alpha = 0.7f), fontSize = (textSizeSp.value - 2).sp)
+        }
+    }
+}
+
+@Composable
+private fun DashboardPreviewContent(
+    textColor: Color,
+    accentColor: Color,
+    textSizeSp: androidx.compose.ui.unit.TextUnit,
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("NetLens", color = textColor, fontWeight = FontWeight.Bold, fontSize = textSizeSp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("🛡", fontSize = (textSizeSp.value + 4).sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("A", color = accentColor, fontWeight = FontWeight.Bold, fontSize = (textSizeSp.value + 4).sp)
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "●${stringResource(R.string.widget_settings_preview_vpn)}",
-            color = accentColor,
-            fontSize = (textSizeSp.value - 2).sp,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            stringResource(R.string.widget_settings_preview_ip),
+            "${stringResource(R.string.widget_settings_preview_ssid_name)} · WPA3 ✓",
             color = textColor,
-            fontWeight = FontWeight.Bold,
             fontSize = textSizeSp,
         )
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🇺🇸", fontSize = (textSizeSp.value + 2).sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.widget_settings_preview_ip),
+                color = textColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = textSizeSp,
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text("⚡ Fast · 94 Mbps", color = accentColor, fontSize = textSizeSp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text("✓ No threats detected", color = accentColor.copy(alpha = 0.7f), fontSize = (textSizeSp.value - 2).sp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("12 ms", color = textColor.copy(alpha = 0.7f), fontSize = (textSizeSp.value - 2).sp)
+            Text("8 devices", color = textColor.copy(alpha = 0.7f), fontSize = (textSizeSp.value - 2).sp)
+        }
     }
 }
 
@@ -338,9 +286,7 @@ private fun AppearanceSection(
             onSelect = onAccentColorChanged,
         )
 
-        if (prefs.widgetSize != WidgetSize.BANNER) {
-            TextSizeSelector(selected = prefs.textSize, onSelect = onTextSizeChanged)
-        }
+        TextSizeSelector(selected = prefs.textSize, onSelect = onTextSizeChanged)
 
         SliderRow(
             labelRes = R.string.widget_settings_label_corner_radius,
@@ -364,43 +310,30 @@ private fun LayoutSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 SizeCard(
-                    labelRes = R.string.widget_settings_size_small,
-                    subtitleRes = R.string.widget_settings_size_small_subtitle,
+                    label = stringResource(R.string.widget_settings_size_compact),
+                    subtitle = stringResource(R.string.widget_settings_size_compact_dimensions),
                     aspectRatio = 2f,
-                    selected = selectedSize == WidgetSize.SMALL,
-                    onSelect = { onSizeChanged(WidgetSize.SMALL) },
+                    selected = selectedSize == WidgetSize.COMPACT,
+                    onSelect = { onSizeChanged(WidgetSize.COMPACT) },
                     modifier = Modifier.weight(1f),
                 )
                 SizeCard(
-                    labelRes = R.string.widget_settings_size_medium,
-                    subtitleRes = R.string.widget_settings_size_medium_subtitle,
+                    label = stringResource(R.string.widget_settings_size_standard),
+                    subtitle = stringResource(R.string.widget_settings_size_standard_dimensions),
                     aspectRatio = 1f,
-                    selected = selectedSize == WidgetSize.MEDIUM,
-                    onSelect = { onSizeChanged(WidgetSize.MEDIUM) },
+                    selected = selectedSize == WidgetSize.STANDARD,
+                    onSelect = { onSizeChanged(WidgetSize.STANDARD) },
                     modifier = Modifier.weight(1f),
                 )
             }
-            Row(
+            SizeCard(
+                label = stringResource(R.string.widget_settings_size_dashboard),
+                subtitle = stringResource(R.string.widget_settings_size_dashboard_dimensions),
+                aspectRatio = 2f,
+                selected = selectedSize == WidgetSize.DASHBOARD,
+                onSelect = { onSizeChanged(WidgetSize.DASHBOARD) },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SizeCard(
-                    labelRes = R.string.widget_settings_size_wide,
-                    subtitleRes = R.string.widget_settings_size_wide_subtitle,
-                    aspectRatio = 2f,
-                    selected = selectedSize == WidgetSize.WIDE,
-                    onSelect = { onSizeChanged(WidgetSize.WIDE) },
-                    modifier = Modifier.weight(1f),
-                )
-                SizeCard(
-                    labelRes = R.string.widget_settings_size_banner,
-                    subtitleRes = R.string.widget_settings_size_banner_subtitle,
-                    aspectRatio = 5f,
-                    selected = selectedSize == WidgetSize.BANNER,
-                    onSelect = { onSizeChanged(WidgetSize.BANNER) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            )
         }
         Text(
             text = stringResource(R.string.widget_settings_size_resize_hint),
@@ -413,8 +346,8 @@ private fun LayoutSection(
 
 @Composable
 private fun SizeCard(
-    @StringRes labelRes: Int,
-    @StringRes subtitleRes: Int,
+    label: String,
+    subtitle: String,
     aspectRatio: Float,
     selected: Boolean,
     onSelect: () -> Unit,
@@ -445,46 +378,8 @@ private fun SizeCard(
                 ),
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(stringResource(labelRes), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(stringResource(subtitleRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun CarouselSection(
-    pages: List<WidgetPage>,
-    autoAdvanceSeconds: Int,
-    onTogglePage: (WidgetPage) -> Unit,
-    onAutoAdvanceChanged: (Int) -> Unit,
-) {
-    SettingsCard(titleRes = R.string.widget_settings_section_carousel) {
-        WidgetPage.entries.forEach { page ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onTogglePage(page) }
-                    .padding(vertical = 4.dp),
-            ) {
-                Checkbox(
-                    checked = pages.contains(page),
-                    onCheckedChange = { onTogglePage(page) },
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    when (page) {
-                        WidgetPage.CONNECTION -> stringResource(R.string.widget_settings_page_connection)
-                        WidgetPage.NETWORK -> stringResource(R.string.widget_settings_page_network)
-                    },
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        AutoAdvanceSelector(
-            selected = autoAdvanceSeconds,
-            onSelect = onAutoAdvanceChanged,
-        )
+        Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -605,31 +500,4 @@ private fun TextSizeSelector(
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AutoAdvanceSelector(
-    selected: Int,
-    onSelect: (Int) -> Unit,
-) {
-    Text(
-        stringResource(R.string.widget_settings_label_auto_advance),
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    Spacer(modifier = Modifier.height(4.dp))
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        AUTO_ADVANCE_OPTIONS.forEachIndexed { index, (seconds, labelRes) ->
-            SegmentedButton(
-                selected = selected == seconds,
-                onClick = { onSelect(seconds) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = AUTO_ADVANCE_OPTIONS.size,
-                ),
-            ) {
-                Text(stringResource(labelRes))
-            }
-        }
-    }
 }

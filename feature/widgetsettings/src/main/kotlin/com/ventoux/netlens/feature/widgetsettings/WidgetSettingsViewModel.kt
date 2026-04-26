@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.ventoux.netlens.widget.data.WidgetPreferencesRepository
 import com.ventoux.netlens.widget.model.WidgetColor
-import com.ventoux.netlens.widget.model.WidgetPage
 import com.ventoux.netlens.widget.model.WidgetPreferences
 import com.ventoux.netlens.widget.model.WidgetSize
 import com.ventoux.netlens.widget.model.WidgetTextSize
@@ -32,16 +31,6 @@ class WidgetSettingsViewModel @Inject constructor(
     fun setTextSize(size: WidgetTextSize) = update { it.copy(textSize = size) }
     fun setCornerRadius(radius: Int) = update { it.copy(cornerRadius = radius) }
     fun setWidgetSize(size: WidgetSize) = update { it.copy(widgetSize = size) }
-    fun setAutoAdvance(seconds: Int) = update { it.copy(autoAdvanceSeconds = seconds) }
-
-    fun togglePage(page: WidgetPage) = update { current ->
-        val pages = if (page in current.pages) {
-            if (current.pages.size > 1) current.pages - page else current.pages
-        } else {
-            current.pages + page
-        }
-        current.copy(pages = pages)
-    }
 
     fun applyToWidget() {
         viewModelScope.launch {

@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import com.ventoux.netlens.widget.model.WidgetColor
-import com.ventoux.netlens.widget.model.WidgetPage
 import com.ventoux.netlens.widget.model.WidgetPreferences
 import com.ventoux.netlens.widget.model.WidgetSize
 import com.ventoux.netlens.widget.model.WidgetTextSize
@@ -29,8 +28,6 @@ object WidgetPreferencesRepository {
     private val TEXT_SIZE = stringPreferencesKey("text_size")
     private val CORNER_RADIUS = intPreferencesKey("corner_radius")
     private val WIDGET_SIZE = stringPreferencesKey("widget_size")
-    private val PAGES = stringPreferencesKey("pages")
-    private val AUTO_ADVANCE = intPreferencesKey("auto_advance_seconds")
 
     fun observe(context: Context): Flow<WidgetPreferences> =
         context.widgetPrefsStore.data.map { it.toWidgetPreferences() }
@@ -48,10 +45,19 @@ object WidgetPreferencesRepository {
             prefs[TEXT_SIZE] = updated.textSize.name
             prefs[CORNER_RADIUS] = updated.cornerRadius
             prefs[WIDGET_SIZE] = updated.widgetSize.name
-            prefs[PAGES] = updated.pages.joinToString(",") { it.name }
-            prefs[AUTO_ADVANCE] = updated.autoAdvanceSeconds
         }
     }
+
+    private val WIDGET_SIZE_MIGRATION = mapOf(
+        "SMALL" to WidgetSize.COMPACT,
+        "MEDIUM" to WidgetSize.STANDARD,
+        "WIDE" to WidgetSize.STANDARD,
+        "BANNER" to WidgetSize.DASHBOARD,
+    )
+
+    internal fun migrateWidgetSize(stored: String): WidgetSize? =
+        runCatching { WidgetSize.valueOf(stored) }.getOrNull()
+            ?: WIDGET_SIZE_MIGRATION[stored]
 
     private fun Preferences.toWidgetPreferences(): WidgetPreferences {
         val defaults = WidgetPreferences()
@@ -61,10 +67,7 @@ object WidgetPreferencesRepository {
             accentColor = this[ACCENT_COLOR]?.let { runCatching { WidgetColor.valueOf(it) }.getOrNull() } ?: defaults.accentColor,
             textSize = this[TEXT_SIZE]?.let { runCatching { WidgetTextSize.valueOf(it) }.getOrNull() } ?: defaults.textSize,
             cornerRadius = this[CORNER_RADIUS] ?: defaults.cornerRadius,
-            widgetSize = this[WIDGET_SIZE]?.let { runCatching { WidgetSize.valueOf(it) }.getOrNull() } ?: defaults.widgetSize,
-            pages = this[PAGES]?.split(",")?.mapNotNull { runCatching { WidgetPage.valueOf(it) }.getOrNull() }
-                ?.ifEmpty { null } ?: defaults.pages,
-            autoAdvanceSeconds = this[AUTO_ADVANCE] ?: defaults.autoAdvanceSeconds,
+            widgetSize = this[WIDGET_SIZE]?.let { migrateWidgetSize(it) } ?: defaults.widgetSize,
         )
     }
 }
