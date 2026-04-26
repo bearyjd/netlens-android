@@ -13,7 +13,7 @@ import com.ventoux.netlens.widget.model.WidgetPage
 import com.ventoux.netlens.widget.model.WidgetPreferences
 import com.ventoux.netlens.widget.model.WidgetSize
 import com.ventoux.netlens.widget.model.WidgetTextSize
-import com.ventoux.netlens.widget.resetCarouselAndRefreshWidgets
+import com.ventoux.netlens.widget.refreshAllWidgets
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,7 +45,7 @@ class WidgetSettingsViewModel @Inject constructor(
 
     fun applyToWidget() {
         viewModelScope.launch {
-            resetCarouselAndRefreshWidgets(context)
+            refreshAllWidgets(context)
         }
     }
 

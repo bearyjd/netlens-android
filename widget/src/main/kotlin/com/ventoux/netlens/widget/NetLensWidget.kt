@@ -482,7 +482,7 @@ private fun ConnectionContent(
             modifier = GlanceModifier.clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(
-                        DeeplinkUriKey to (state.localIp?.let { Deeplink.lanScanForDevice(it) } ?: Deeplink.LAN_SCAN),
+                        DeeplinkUriKey to (state.localIp?.let { Deeplink.lanScanForDevice(it) } ?: Deeplink.DEVICES),
                     ),
                 ),
             ),
