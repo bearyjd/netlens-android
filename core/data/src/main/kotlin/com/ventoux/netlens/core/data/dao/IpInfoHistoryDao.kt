@@ -14,6 +14,9 @@ interface IpInfoHistoryDao {
     @Query("SELECT * FROM history_ipinfo WHERE ip LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<IpInfoHistoryEntry>>
 
+    @Query("SELECT * FROM history_ipinfo WHERE id = :id")
+    suspend fun getById(id: Long): IpInfoHistoryEntry?
+
     @Insert
     suspend fun insert(entry: IpInfoHistoryEntry)
 

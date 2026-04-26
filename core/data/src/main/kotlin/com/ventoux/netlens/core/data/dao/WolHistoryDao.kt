@@ -14,6 +14,9 @@ interface WolHistoryDao {
     @Query("SELECT * FROM history_wol WHERE mac LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<WolHistoryEntry>>
 
+    @Query("SELECT * FROM history_wol WHERE id = :id")
+    suspend fun getById(id: Long): WolHistoryEntry?
+
     @Insert
     suspend fun insert(entry: WolHistoryEntry)
 
