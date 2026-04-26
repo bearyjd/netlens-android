@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.lanscan
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,8 +76,12 @@ import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
 @Composable
 fun LanScanScreen(
     onBack: () -> Unit = {},
+    initialCidr: String? = null,
     viewModel: LanScanViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialCidr) {
+        if (initialCidr != null) viewModel.startScanWithCidr(initialCidr)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val hostDetail by viewModel.hostDetail.collectAsStateWithLifecycle()
@@ -416,9 +421,9 @@ private fun HistoryTabContent(
 @Composable
 private fun HistoryCard(entry: LanScanHistoryUiModel, onClick: (() -> Unit)?) {
     Card(
-        onClick = { onClick?.invoke() },
-        enabled = onClick != null,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),

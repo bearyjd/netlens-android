@@ -69,9 +69,13 @@ import com.ventoux.netlens.feature.ping.model.PingUiState
 @Composable
 fun PingScreen(
     onBack: () -> Unit = {},
+    initialHost: String? = null,
     modifier: Modifier = Modifier,
     viewModel: PingViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialHost) {
+        if (initialHost != null) viewModel.onHostChange(initialHost)
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
 

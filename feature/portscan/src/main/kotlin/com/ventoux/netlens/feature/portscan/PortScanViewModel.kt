@@ -28,6 +28,10 @@ class PortScanViewModel @Inject constructor(
 
     private var scanJob: Job? = null
 
+    fun onHostChanged(host: String) {
+        _state.update { it.copy(host = host) }
+    }
+
     fun scan(host: String, ports: List<Int>) {
         scanJob?.cancel()
         _state.update {
