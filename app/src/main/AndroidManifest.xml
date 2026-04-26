@@ -35,39 +35,6 @@
         </activity>
 
         <receiver
-            android:name="com.ventoux.netlens.widget.NetLensWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/netlens_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name="com.ventoux.netlens.widget.WideWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_wide" />
-        </receiver>
-
-        <receiver
-            android:name="com.ventoux.netlens.widget.BannerWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_banner" />
-        </receiver>
-
-        <receiver
             android:name="com.ventoux.netlens.widget.CompactWidgetReceiver"
             android:exported="true">
             <intent-filter>

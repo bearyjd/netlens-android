@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NetLens</string>
+
+    <string name="posture_hero_title">Security Posture</string>
+    <string name="posture_hero_disconnected">No network connection</string>
+    <string name="posture_hero_loading">Evaluating…</string>
+    <string name="posture_hero_score_subtitle">%1$d/100 — %2$d of %3$d factors scored</string>
+    <string name="posture_hero_error">Tap to retry</string>
 </resources>

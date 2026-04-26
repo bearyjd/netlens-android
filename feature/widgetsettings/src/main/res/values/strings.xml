@@ -5,47 +5,31 @@
 
     <string name="widget_settings_section_appearance">Appearance</string>
     <string name="widget_settings_section_layout">Layout</string>
-    <string name="widget_settings_section_carousel">Carousel</string>
 
     <string name="widget_settings_label_background">Background</string>
     <string name="widget_settings_label_opacity">Opacity</string>
     <string name="widget_settings_label_accent">Accent</string>
     <string name="widget_settings_label_text_size">Text size</string>
     <string name="widget_settings_label_corner_radius">Corner radius</string>
-    <string name="widget_settings_label_auto_advance">Auto-advance</string>
 
-    <string name="widget_settings_size_small">2×1</string>
-    <string name="widget_settings_size_medium">2×2</string>
-    <string name="widget_settings_size_wide">4×2</string>
-    <string name="widget_settings_size_banner">5×1</string>
-    <string name="widget_settings_size_small_subtitle">Compact</string>
-    <string name="widget_settings_size_medium_subtitle">Full</string>
-    <string name="widget_settings_size_wide_subtitle">Wide</string>
-    <string name="widget_settings_size_banner_subtitle">Banner</string>
     <string name="widget_settings_size_resize_hint">Resize the widget on your home screen after changing this</string>
-    <string name="widget_settings_preview_gateway">GW 192.168.1.1</string>
-    <string name="widget_settings_preview_gateway_full">192.168.1.1</string>
-    <string name="widget_settings_preview_dns">1.1.1.1, 1.0.0.1</string>
-    <string name="widget_settings_preview_ssid_name">Home-WiFi</string>
 
     <string name="widget_settings_text_small">Small</string>
     <string name="widget_settings_text_medium">Medium</string>
     <string name="widget_settings_text_large">Large</string>
 
-    <string name="widget_settings_page_connection">Connection</string>
-    <string name="widget_settings_page_network">Network</string>
-
-    <string name="widget_settings_auto_off">Off</string>
-    <string name="widget_settings_auto_5s">5s</string>
-    <string name="widget_settings_auto_10s">10s</string>
-    <string name="widget_settings_auto_30s">30s</string>
-
     <string name="widget_settings_button_apply">Apply to Widget</string>
 
-    <string name="widget_settings_preview_vpn">vpn</string>
+    <string name="widget_settings_size_compact">Compact</string>
+    <string name="widget_settings_size_standard">Standard</string>
+    <string name="widget_settings_size_dashboard">Dashboard</string>
+    <string name="widget_settings_size_compact_dimensions">2×1</string>
+    <string name="widget_settings_size_standard_dimensions">2×2</string>
+    <string name="widget_settings_size_dashboard_dimensions">4×2</string>
+
     <string name="widget_settings_preview_ip">1.2.3.4</string>
-    <string name="widget_settings_preview_ssid">Home-WiFi · 192.168.1.45</string>
-    <string name="widget_settings_preview_no_connection">No connection</string>
+    <string name="widget_settings_preview_ssid_name">Home-WiFi</string>
+    <string name="widget_settings_preview_all_clear">All clear</string>
 
     <string name="widget_settings_format_percent">%1$d%%</string>
     <string name="widget_settings_format_dp">%1$ddp</string>

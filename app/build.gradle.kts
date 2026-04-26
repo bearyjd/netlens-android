@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":feature:monitor"))
     implementation(project(":feature:history"))
     implementation(project(":feature:widgetsettings"))
+    implementation(project(":feature:posture"))
 
     // Widget
     implementation(project(":widget"))

@@ -10,7 +10,7 @@ import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.getAppWidgetState
-import com.ventoux.netlens.widget.IpWidgetStateDefinition
+import com.ventoux.netlens.widget.WidgetStateDefinition
 import com.ventoux.netlens.widget.util.Deeplink
 
 val DeeplinkUriKey = ActionParameters.Key<String>("deeplink_uri")
@@ -41,24 +41,12 @@ class CopyAndToastAction : ActionCallback {
 
 class CopyPublicIpAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val prefs = getAppWidgetState(context, IpWidgetStateDefinition, glanceId)
-        val ip = prefs[IpWidgetStateDefinition.IP_KEY].orEmpty()
+        val prefs = getAppWidgetState(context, WidgetStateDefinition, glanceId)
+        val ip = prefs[WidgetStateDefinition.PUBLIC_IP].orEmpty()
         if (ip.isNotEmpty()) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("Public IP", ip))
             Toast.makeText(context, "IP copied", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-class CopyGatewayAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val prefs = getAppWidgetState(context, IpWidgetStateDefinition, glanceId)
-        val gw = prefs[IpWidgetStateDefinition.GATEWAY_KEY].orEmpty()
-        if (gw.isNotEmpty()) {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Gateway", gw))
-            Toast.makeText(context, "Gateway copied", Toast.LENGTH_SHORT).show()
         }
     }
 }
