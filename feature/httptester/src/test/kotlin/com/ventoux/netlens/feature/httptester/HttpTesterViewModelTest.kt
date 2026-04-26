@@ -146,6 +146,7 @@ class HttpTesterViewModelTest {
 private class FakeHttpTesterHistoryDao : HttpTesterHistoryDao {
     override fun getRecent(limit: Int): Flow<List<HttpTesterHistoryEntry>> = flowOf(emptyList())
     override fun search(query: String, limit: Int): Flow<List<HttpTesterHistoryEntry>> = flowOf(emptyList())
+    override suspend fun getById(id: Long): HttpTesterHistoryEntry? = null
     override suspend fun insert(entry: HttpTesterHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}
