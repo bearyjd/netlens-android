@@ -10,4 +10,8 @@
     <string name="widget_vpn_label">vpn</string>
     <string name="widget_gateway_label">Gateway</string>
     <string name="widget_dns_label">DNS</string>
+
+    <string name="widget_compact_description">Security score, network name, and status at a glance (2×1)</string>
+    <string name="widget_standard_description">Score, IP info, latency, and device count (2×2)</string>
+    <string name="widget_dashboard_description">Full dashboard with score, speed, alerts, and network detail (4×2)</string>
 </resources>

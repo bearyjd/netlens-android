@@ -5,9 +5,9 @@ import android.net.ConnectivityManager
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
-class NetLensWidgetReceiver : GlanceAppWidgetReceiver() {
+class StandardWidgetReceiver : GlanceAppWidgetReceiver() {
 
-    override val glanceAppWidget: GlanceAppWidget = NetLensWidget()
+    override val glanceAppWidget: GlanceAppWidget = StandardWidget()
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)

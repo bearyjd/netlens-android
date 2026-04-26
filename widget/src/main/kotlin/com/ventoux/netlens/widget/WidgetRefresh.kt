@@ -1,42 +1,51 @@
 package com.ventoux.netlens.widget
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.glance.appwidget.updateAll
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
 
 suspend fun refreshAllWidgets(context: Context) {
-    NetLensWidget().updateAll(context)
+    CompactWidget().updateAll(context)
+    StandardWidget().updateAll(context)
+    DashboardWidget().updateAll(context)
 }
-
-suspend fun resetCarouselAndRefreshWidgets(context: Context) {
-    val dataStore = IpWidgetStateDefinition.getDataStore(context, "")
-    dataStore.edit { prefs ->
-        prefs[IpWidgetStateDefinition.CAROUSEL_PAGE_KEY] = 0
-    }
-    NetLensWidget().updateAll(context)
-}
-
-private const val PERIODIC_WORK_NAME = "netlens_widget_periodic_refresh"
 
 fun enqueueWidgetRefresh(context: Context) {
-    val workRequest = OneTimeWorkRequestBuilder<IpWidgetRefreshWorker>().build()
+    val workRequest = OneTimeWorkRequestBuilder<WidgetRefreshWorker>().build()
     WorkManager.getInstance(context).enqueue(workRequest)
 }
 
-fun schedulePeriodicWidgetRefresh(context: Context) {
-    val periodicWork = PeriodicWorkRequestBuilder<IpWidgetRefreshWorker>(15, TimeUnit.MINUTES).build()
-    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-        PERIODIC_WORK_NAME,
-        ExistingPeriodicWorkPolicy.KEEP,
-        periodicWork,
+fun registerWidgetNetworkCallback(
+    context: Context,
+    current: ConnectivityManager.NetworkCallback?,
+): ConnectivityManager.NetworkCallback {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    current?.let {
+        try { cm.unregisterNetworkCallback(it) } catch (_: IllegalArgumentException) { }
+    }
+    val cb = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = enqueueWidgetRefresh(context)
+        override fun onLost(network: Network) = enqueueWidgetRefresh(context)
+    }
+    cm.registerNetworkCallback(
+        NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build(),
+        cb,
     )
+    return cb
 }
 
-fun cancelPeriodicWidgetRefresh(context: Context) {
-    WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK_NAME)
+fun unregisterWidgetNetworkCallback(
+    context: Context,
+    callback: ConnectivityManager.NetworkCallback?,
+) {
+    val cb = callback ?: return
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    try { cm.unregisterNetworkCallback(cb) } catch (_: IllegalArgumentException) { }
 }
