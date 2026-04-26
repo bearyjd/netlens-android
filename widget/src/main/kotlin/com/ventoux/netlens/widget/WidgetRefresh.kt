@@ -6,6 +6,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.glance.appwidget.updateAll
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 
@@ -16,8 +19,18 @@ suspend fun refreshAllWidgets(context: Context) {
 }
 
 fun enqueueWidgetRefresh(context: Context) {
-    val workRequest = OneTimeWorkRequestBuilder<WidgetRefreshWorker>().build()
-    WorkManager.getInstance(context).enqueue(workRequest)
+    val workRequest = OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
+        .setConstraints(
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build(),
+        )
+        .build()
+    WorkManager.getInstance(context).enqueueUniqueWork(
+        "widget_refresh",
+        ExistingWorkPolicy.REPLACE,
+        workRequest,
+    )
 }
 
 fun registerWidgetNetworkCallback(

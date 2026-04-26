@@ -5,7 +5,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class WidgetIpResponse(
-    val ip: String = "",
-    @SerialName("country_code") val countryCode: String = "",
-    val org: String = "",
+    val query: String = "",
+    val country: String = "",
+    val countryCode: String = "",
+    val isp: String = "",
+    @SerialName("as") val asName: String = "",
 )
