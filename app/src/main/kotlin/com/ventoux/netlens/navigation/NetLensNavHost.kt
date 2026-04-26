@@ -83,9 +83,25 @@ fun NetLensNavHost(
                 initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
             )
         }
-        composable(ToolDestination.Traceroute.route) { TracerouteScreen(onBack = navController::popBackStack) }
+        composable(
+            route = "${ToolDestination.Traceroute.route}?query={query}",
+            arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
+            TracerouteScreen(
+                onBack = navController::popBackStack,
+                initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
+            )
+        }
         composable(ToolDestination.Wol.route) { WolScreen(onBack = navController::popBackStack) }
-        composable(ToolDestination.Tls.route) { TlsScreen(onBack = navController::popBackStack) }
+        composable(
+            route = "${ToolDestination.Tls.route}?query={query}",
+            arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
+            TlsScreen(
+                onBack = navController::popBackStack,
+                initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
+            )
+        }
         composable(
             route = "${ToolDestination.Whois.route}?query={query}",
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
@@ -95,7 +111,15 @@ fun NetLensNavHost(
                 initialQuery = entry.arguments?.getString("query")?.ifEmpty { null },
             )
         }
-        composable(ToolDestination.HttpTester.route) { HttpTesterScreen(onBack = navController::popBackStack) }
+        composable(
+            route = "${ToolDestination.HttpTester.route}?query={query}",
+            arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
+            HttpTesterScreen(
+                onBack = navController::popBackStack,
+                initialUrl = entry.arguments?.getString("query")?.ifEmpty { null },
+            )
+        }
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }

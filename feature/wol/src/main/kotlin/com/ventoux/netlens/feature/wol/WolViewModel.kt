@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ventoux.netlens.core.data.dao.WolHistoryDao
 import com.ventoux.netlens.core.data.dao.WolTargetDao
+import com.ventoux.netlens.core.data.model.WolHistoryEntry
 import com.ventoux.netlens.core.data.model.WolTarget
 import com.ventoux.netlens.feature.wol.engine.WolSender
 import com.ventoux.netlens.feature.wol.model.WolUiState
@@ -21,6 +23,7 @@ import javax.inject.Inject
 class WolViewModel @Inject constructor(
     private val wolSender: WolSender,
     private val wolTargetDao: WolTargetDao,
+    private val wolHistoryDao: WolHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WolUiState())
@@ -48,6 +51,7 @@ class WolViewModel @Inject constructor(
         viewModelScope.launch {
             wolSender.sendMagicPacket(macAddress, broadcastIp, port)
                 .onSuccess {
+                    saveToHistory(macAddress, broadcastIp)
                     _state.update { it.copy(lastSentStatus = "Magic packet sent to $macAddress") }
                     delay(SNACKBAR_DURATION_MS)
                     _state.update { it.copy(lastSentStatus = null) }
@@ -144,6 +148,19 @@ class WolViewModel @Inject constructor(
 
     fun clearStatus() {
         _state.update { it.copy(lastSentStatus = null) }
+    }
+
+    private suspend fun saveToHistory(macAddress: String, broadcastIp: String) {
+        val label = _state.value.savedTargets
+            .firstOrNull { it.macAddress.equals(macAddress, ignoreCase = true) }
+            ?.label
+        wolHistoryDao.insert(
+            WolHistoryEntry(
+                mac = macAddress,
+                label = label,
+                broadcastIp = broadcastIp,
+            ),
+        )
     }
 
     private fun formatMac(input: String): String {

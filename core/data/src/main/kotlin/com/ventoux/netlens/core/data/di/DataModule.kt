@@ -19,6 +19,11 @@ import com.ventoux.netlens.core.data.dao.PingHistoryDao
 import com.ventoux.netlens.core.data.dao.PortScanHistoryDao
 import com.ventoux.netlens.core.data.dao.WhoisHistoryDao
 import com.ventoux.netlens.core.data.dao.WolTargetDao
+import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
+import com.ventoux.netlens.core.data.dao.TlsHistoryDao
+import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
+import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.dao.WolHistoryDao
 import javax.inject.Singleton
 
 @Module
@@ -36,6 +41,25 @@ object DataModule {
     private val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE history_ping ADD COLUMN mode TEXT NOT NULL DEFAULT 'FIXED'")
+        }
+    }
+
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_traceroute` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `host` TEXT NOT NULL, `hopCount` INTEGER NOT NULL, `hopsJson` TEXT NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_traceroute_timestamp` ON `history_traceroute` (`timestamp`)")
+
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_tls` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `host` TEXT NOT NULL, `port` INTEGER NOT NULL, `issuer` TEXT NOT NULL, `subject` TEXT NOT NULL, `expiresAt` TEXT NOT NULL, `protocol` TEXT NOT NULL, `isValid` INTEGER NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_tls_timestamp` ON `history_tls` (`timestamp`)")
+
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_http` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `url` TEXT NOT NULL, `method` TEXT NOT NULL, `statusCode` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `responseSize` INTEGER NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_http_timestamp` ON `history_http` (`timestamp`)")
+
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_mdns` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `serviceCount` INTEGER NOT NULL, `servicesJson` TEXT NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_mdns_timestamp` ON `history_mdns` (`timestamp`)")
+
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_wol` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `mac` TEXT NOT NULL, `label` TEXT, `broadcastIp` TEXT NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_wol_timestamp` ON `history_wol` (`timestamp`)")
         }
     }
 
@@ -69,7 +93,7 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
@@ -108,4 +132,24 @@ object DataModule {
     @Provides
     fun provideIpInfoHistoryDao(database: NetLensDatabase): IpInfoHistoryDao =
         database.ipInfoHistoryDao()
+
+    @Provides
+    fun provideTracerouteHistoryDao(database: NetLensDatabase): TracerouteHistoryDao =
+        database.tracerouteHistoryDao()
+
+    @Provides
+    fun provideTlsHistoryDao(database: NetLensDatabase): TlsHistoryDao =
+        database.tlsHistoryDao()
+
+    @Provides
+    fun provideHttpTesterHistoryDao(database: NetLensDatabase): HttpTesterHistoryDao =
+        database.httpTesterHistoryDao()
+
+    @Provides
+    fun provideMdnsHistoryDao(database: NetLensDatabase): MdnsHistoryDao =
+        database.mdnsHistoryDao()
+
+    @Provides
+    fun provideWolHistoryDao(database: NetLensDatabase): WolHistoryDao =
+        database.wolHistoryDao()
 }

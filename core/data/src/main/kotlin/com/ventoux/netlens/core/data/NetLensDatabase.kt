@@ -22,6 +22,16 @@ import com.ventoux.netlens.core.data.model.PortScanHistoryEntry
 import com.ventoux.netlens.core.data.model.SavedHost
 import com.ventoux.netlens.core.data.model.WhoisHistoryEntry
 import com.ventoux.netlens.core.data.model.WolTarget
+import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
+import com.ventoux.netlens.core.data.dao.TlsHistoryDao
+import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
+import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.dao.WolHistoryDao
+import com.ventoux.netlens.core.data.model.TracerouteHistoryEntry
+import com.ventoux.netlens.core.data.model.TlsHistoryEntry
+import com.ventoux.netlens.core.data.model.HttpTesterHistoryEntry
+import com.ventoux.netlens.core.data.model.MdnsHistoryEntry
+import com.ventoux.netlens.core.data.model.WolHistoryEntry
 
 @Database(
     entities = [
@@ -36,8 +46,13 @@ import com.ventoux.netlens.core.data.model.WolTarget
         DnsHistoryEntry::class,
         WhoisHistoryEntry::class,
         IpInfoHistoryEntry::class,
+        TracerouteHistoryEntry::class,
+        TlsHistoryEntry::class,
+        HttpTesterHistoryEntry::class,
+        MdnsHistoryEntry::class,
+        WolHistoryEntry::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
@@ -50,4 +65,9 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun dnsHistoryDao(): DnsHistoryDao
     abstract fun whoisHistoryDao(): WhoisHistoryDao
     abstract fun ipInfoHistoryDao(): IpInfoHistoryDao
+    abstract fun tracerouteHistoryDao(): TracerouteHistoryDao
+    abstract fun tlsHistoryDao(): TlsHistoryDao
+    abstract fun httpTesterHistoryDao(): HttpTesterHistoryDao
+    abstract fun mdnsHistoryDao(): MdnsHistoryDao
+    abstract fun wolHistoryDao(): WolHistoryDao
 }

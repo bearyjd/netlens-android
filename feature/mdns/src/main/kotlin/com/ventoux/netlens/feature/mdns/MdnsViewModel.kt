@@ -10,13 +10,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.model.MdnsHistoryEntry
 import com.ventoux.netlens.feature.mdns.engine.MdnsScanner
 import com.ventoux.netlens.feature.mdns.model.MdnsUiState
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 @HiltViewModel
 class MdnsViewModel @Inject constructor(
     private val mdnsScanner: MdnsScanner,
+    private val mdnsHistoryDao: MdnsHistoryDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MdnsUiState())
@@ -66,6 +71,28 @@ class MdnsViewModel @Inject constructor(
         scanJob?.cancel()
         scanJob = null
         _uiState.update { it.copy(isScanning = false) }
+        viewModelScope.launch { saveToHistory() }
+    }
+
+    private suspend fun saveToHistory() {
+        val services = _uiState.value.services
+        if (services.isEmpty()) return
+        val servicesJson = Json.encodeToString(
+            services.map { svc ->
+                mapOf(
+                    "name" to svc.serviceName,
+                    "type" to svc.serviceType,
+                    "host" to (svc.host ?: ""),
+                    "port" to svc.port.toString(),
+                )
+            },
+        )
+        mdnsHistoryDao.insert(
+            MdnsHistoryEntry(
+                serviceCount = services.size,
+                servicesJson = servicesJson,
+            ),
+        )
     }
 
     companion object {

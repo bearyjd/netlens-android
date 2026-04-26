@@ -8,14 +8,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
+import com.ventoux.netlens.core.data.model.HttpTesterHistoryEntry
 import com.ventoux.netlens.feature.httptester.engine.HttpRequester
 import com.ventoux.netlens.feature.httptester.model.HttpRequestConfig
+import com.ventoux.netlens.feature.httptester.model.HttpResponseResult
 import com.ventoux.netlens.feature.httptester.model.HttpTesterUiState
 import javax.inject.Inject
 
 @HiltViewModel
 class HttpTesterViewModel @Inject constructor(
     private val httpRequester: HttpRequester,
+    private val httpTesterHistoryDao: HttpTesterHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HttpTesterUiState>(HttpTesterUiState.Idle)
@@ -28,6 +32,7 @@ class HttpTesterViewModel @Inject constructor(
             try {
                 val result = httpRequester.execute(config)
                 _state.value = HttpTesterUiState.Success(result)
+                saveToHistory(config, result)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IllegalArgumentException) {
@@ -38,5 +43,17 @@ class HttpTesterViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private suspend fun saveToHistory(config: HttpRequestConfig, result: HttpResponseResult) {
+        httpTesterHistoryDao.insert(
+            HttpTesterHistoryEntry(
+                url = config.url,
+                method = config.method.name,
+                statusCode = result.statusCode,
+                durationMs = result.latencyMs,
+                responseSize = result.contentLength ?: result.body.length.toLong(),
+            ),
+        )
     }
 }
