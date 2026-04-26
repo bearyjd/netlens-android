@@ -14,9 +14,13 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.model.MdnsHistoryEntry
 import com.ventoux.netlens.feature.mdns.engine.FakeMdnsScanner
 import com.ventoux.netlens.feature.mdns.model.MdnsService
 import com.ventoux.netlens.feature.mdns.model.MdnsUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MdnsViewModelTest {
@@ -28,7 +32,7 @@ class MdnsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeScanner = FakeMdnsScanner()
-        viewModel = MdnsViewModel(fakeScanner)
+        viewModel = MdnsViewModel(fakeScanner, FakeMdnsHistoryDao())
     }
 
     @AfterEach
@@ -148,7 +152,7 @@ class MdnsViewModelTest {
 
             override fun stopDiscovery() {}
         }
-        val errorViewModel = MdnsViewModel(errorScanner)
+        val errorViewModel = MdnsViewModel(errorScanner, FakeMdnsHistoryDao())
 
         errorViewModel.uiState.test {
             awaitItem() // initial state
@@ -173,4 +177,13 @@ class MdnsViewModelTest {
             expectNoEvents()
         }
     }
+}
+
+private class FakeMdnsHistoryDao : MdnsHistoryDao {
+    override fun getRecent(limit: Int): Flow<List<MdnsHistoryEntry>> = flowOf(emptyList())
+    override fun search(query: String, limit: Int): Flow<List<MdnsHistoryEntry>> = flowOf(emptyList())
+    override suspend fun insert(entry: MdnsHistoryEntry) {}
+    override suspend fun deleteById(id: Long) {}
+    override suspend fun deleteOlderThan(before: Long) {}
+    override suspend fun deleteAll() {}
 }

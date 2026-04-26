@@ -14,9 +14,13 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
+import com.ventoux.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventoux.netlens.feature.traceroute.engine.FakeTracer
 import com.ventoux.netlens.feature.traceroute.model.TracerouteHop
 import com.ventoux.netlens.feature.traceroute.model.TracerouteUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TracerouteViewModelTest {
@@ -28,7 +32,7 @@ class TracerouteViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeTracer = FakeTracer()
-        viewModel = TracerouteViewModel(fakeTracer)
+        viewModel = TracerouteViewModel(fakeTracer, FakeTracerouteHistoryDao())
     }
 
     @AfterEach
@@ -165,4 +169,13 @@ class TracerouteViewModelTest {
             assertFalse(finalState.hops[2].isTimeout)
         }
     }
+}
+
+private class FakeTracerouteHistoryDao : TracerouteHistoryDao {
+    override fun getRecent(limit: Int): Flow<List<TracerouteHistoryEntry>> = flowOf(emptyList())
+    override fun search(query: String, limit: Int): Flow<List<TracerouteHistoryEntry>> = flowOf(emptyList())
+    override suspend fun insert(entry: TracerouteHistoryEntry) {}
+    override suspend fun deleteById(id: Long) {}
+    override suspend fun deleteOlderThan(before: Long) {}
+    override suspend fun deleteAll() {}
 }

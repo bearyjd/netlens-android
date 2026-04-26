@@ -14,10 +14,14 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.WolHistoryDao
+import com.ventoux.netlens.core.data.model.WolHistoryEntry
 import com.ventoux.netlens.core.data.model.WolTarget
 import com.ventoux.netlens.feature.wol.dao.FakeWolTargetDao
 import com.ventoux.netlens.feature.wol.engine.FakeWolSender
 import com.ventoux.netlens.feature.wol.model.WolUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WolViewModelTest {
@@ -31,7 +35,7 @@ class WolViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         dao = FakeWolTargetDao()
         sender = FakeWolSender()
-        viewModel = WolViewModel(sender, dao)
+        viewModel = WolViewModel(sender, dao, FakeWolHistoryDao())
     }
 
     @AfterEach
@@ -286,4 +290,13 @@ class WolViewModelTest {
             cancelAndConsumeRemainingEvents()
         }
     }
+}
+
+private class FakeWolHistoryDao : WolHistoryDao {
+    override fun getRecent(limit: Int): Flow<List<WolHistoryEntry>> = flowOf(emptyList())
+    override fun search(query: String, limit: Int): Flow<List<WolHistoryEntry>> = flowOf(emptyList())
+    override suspend fun insert(entry: WolHistoryEntry) {}
+    override suspend fun deleteById(id: Long) {}
+    override suspend fun deleteOlderThan(before: Long) {}
+    override suspend fun deleteAll() {}
 }
