@@ -56,6 +56,7 @@ import com.ventoux.netlens.feature.httptester.model.HttpTesterUiState
 @Composable
 fun HttpTesterScreen(
     onBack: () -> Unit = {},
+    initialUrl: String? = null,
     modifier: Modifier = Modifier,
     viewModel: HttpTesterViewModel = hiltViewModel(),
 ) {
@@ -80,6 +81,7 @@ fun HttpTesterScreen(
         HttpTesterContent(
             state = state,
             onSendRequest = viewModel::sendRequest,
+            initialUrl = initialUrl,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -90,9 +92,10 @@ fun HttpTesterScreen(
 private fun HttpTesterContent(
     state: HttpTesterUiState,
     onSendRequest: (HttpRequestConfig) -> Unit,
+    initialUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    var url by rememberSaveable { mutableStateOf("") }
+    var url by rememberSaveable { mutableStateOf(initialUrl ?: "") }
     var selectedMethod by rememberSaveable { mutableStateOf(HttpMethod.GET) }
     var body by rememberSaveable { mutableStateOf("") }
     val headerKeys = remember { mutableStateListOf("") }

@@ -18,8 +18,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Http
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Power
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.NetworkPing
@@ -293,6 +298,11 @@ private fun toolFilterIcon(filter: ToolFilter): ImageVector = when (filter) {
     ToolFilter.Dns -> Icons.Default.Dns
     ToolFilter.Whois -> Icons.Default.Search
     ToolFilter.IpInfo -> Icons.Default.Language
+    ToolFilter.Traceroute -> Icons.AutoMirrored.Filled.AltRoute
+    ToolFilter.Tls -> Icons.Default.Lock
+    ToolFilter.HttpTester -> Icons.Default.Http
+    ToolFilter.Mdns -> Icons.Default.Wifi
+    ToolFilter.Wol -> Icons.Default.Power
 }
 
 private fun groupByDate(items: List<HistoryItem>): List<Pair<String, List<HistoryItem>>> {

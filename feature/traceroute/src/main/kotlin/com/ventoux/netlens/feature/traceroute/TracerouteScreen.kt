@@ -46,9 +46,13 @@ import com.ventoux.netlens.feature.traceroute.model.TracerouteUiState
 @Composable
 fun TracerouteScreen(
     onBack: () -> Unit = {},
+    initialHost: String? = null,
     modifier: Modifier = Modifier,
     viewModel: TracerouteViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialHost) {
+        if (initialHost != null) viewModel.onHostChange(initialHost)
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
 

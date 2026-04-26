@@ -11,11 +11,15 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
+import com.ventoux.netlens.core.data.model.HttpTesterHistoryEntry
 import com.ventoux.netlens.feature.httptester.engine.FakeHttpRequester
 import com.ventoux.netlens.feature.httptester.model.HttpMethod
 import com.ventoux.netlens.feature.httptester.model.HttpRequestConfig
 import com.ventoux.netlens.feature.httptester.model.HttpResponseResult
 import com.ventoux.netlens.feature.httptester.model.HttpTesterUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HttpTesterViewModelTest {
@@ -27,7 +31,7 @@ class HttpTesterViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeRequester = FakeHttpRequester()
-        viewModel = HttpTesterViewModel(fakeRequester)
+        viewModel = HttpTesterViewModel(fakeRequester, FakeHttpTesterHistoryDao())
     }
 
     @AfterEach
@@ -137,4 +141,13 @@ class HttpTesterViewModelTest {
             assertEquals(HttpTesterUiState.Success(postResponse), awaitItem())
         }
     }
+}
+
+private class FakeHttpTesterHistoryDao : HttpTesterHistoryDao {
+    override fun getRecent(limit: Int): Flow<List<HttpTesterHistoryEntry>> = flowOf(emptyList())
+    override fun search(query: String, limit: Int): Flow<List<HttpTesterHistoryEntry>> = flowOf(emptyList())
+    override suspend fun insert(entry: HttpTesterHistoryEntry) {}
+    override suspend fun deleteById(id: Long) {}
+    override suspend fun deleteOlderThan(before: Long) {}
+    override suspend fun deleteAll() {}
 }

@@ -51,11 +51,12 @@ import com.ventoux.netlens.feature.tls.model.TlsUiState
 @Composable
 fun TlsScreen(
     onBack: () -> Unit = {},
+    initialHost: String? = null,
     modifier: Modifier = Modifier,
     viewModel: TlsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var host by rememberSaveable { mutableStateOf("") }
+    var host by rememberSaveable { mutableStateOf(initialHost ?: "") }
     var portText by rememberSaveable { mutableStateOf("443") }
 
     Scaffold(
