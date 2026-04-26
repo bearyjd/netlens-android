@@ -24,4 +24,5 @@
     <string name="history_filter_http">HTTP</string>
     <string name="history_filter_mdns">mDNS</string>
     <string name="history_filter_wol">WoL</string>
+    <string name="history_detail_rerun">Re-run</string>
 </resources>

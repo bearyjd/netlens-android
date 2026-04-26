@@ -14,6 +14,9 @@ interface PingHistoryDao {
     @Query("SELECT * FROM history_ping WHERE host LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<PingHistoryEntry>>
 
+    @Query("SELECT * FROM history_ping WHERE id = :id")
+    suspend fun getById(id: Long): PingHistoryEntry?
+
     @Insert
     suspend fun insert(entry: PingHistoryEntry)
 

@@ -14,6 +14,9 @@ interface LanScanHistoryDao {
     @Query("SELECT * FROM history_lanscan WHERE subnet LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<LanScanHistoryEntry>>
 
+    @Query("SELECT * FROM history_lanscan WHERE id = :id")
+    suspend fun getById(id: Long): LanScanHistoryEntry?
+
     @Insert
     suspend fun insert(entry: LanScanHistoryEntry)
 

@@ -14,6 +14,9 @@ interface WhoisHistoryDao {
     @Query("SELECT * FROM history_whois WHERE `query` LIKE '%' || :searchQuery || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(searchQuery: String, limit: Int = 50): Flow<List<WhoisHistoryEntry>>
 
+    @Query("SELECT * FROM history_whois WHERE id = :id")
+    suspend fun getById(id: Long): WhoisHistoryEntry?
+
     @Insert
     suspend fun insert(entry: WhoisHistoryEntry)
 

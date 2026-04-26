@@ -14,6 +14,9 @@ interface TracerouteHistoryDao {
     @Query("SELECT * FROM history_traceroute WHERE host LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<TracerouteHistoryEntry>>
 
+    @Query("SELECT * FROM history_traceroute WHERE id = :id")
+    suspend fun getById(id: Long): TracerouteHistoryEntry?
+
     @Insert
     suspend fun insert(entry: TracerouteHistoryEntry)
 
