@@ -34,4 +34,15 @@
     <string name="lanscan_scanned_count">%1$d scanned</string>
     <string name="lanscan_chip_common">Common</string>
     <string name="lanscan_chip_all">All (1–1024)</string>
+    <string name="lanscan_tab_scan">Scan</string>
+    <string name="lanscan_tab_history">History</string>
+    <string name="lanscan_suggested_networks">Suggested networks</string>
+    <string name="lanscan_custom_chip">Custom…</string>
+    <string name="lanscan_history_empty">No scan history yet</string>
+    <string name="lanscan_history_devices">%1$d devices</string>
+    <string name="lanscan_history_clear">Clear History</string>
+    <string name="lanscan_time_just_now">Just now</string>
+    <string name="lanscan_time_minutes_ago">%1$d min ago</string>
+    <string name="lanscan_time_hours_ago">%1$dh ago</string>
+    <string name="lanscan_time_days_ago">%1$dd ago</string>
 </resources>

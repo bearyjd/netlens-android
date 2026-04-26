@@ -3,6 +3,7 @@ package com.ventoux.netlens.feature.lanscan
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -19,38 +20,34 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,20 +56,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
+import com.ventoux.netlens.feature.lanscan.model.LanScanTab
+import com.ventoux.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
-import com.ventoux.netlens.feature.portscan.model.PortResult
-import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +95,9 @@ fun LanScanScreen(
         onDismissDetail = viewModel::dismissDetail,
         onScanHostPorts = viewModel::scanHostPorts,
         onCancelHostScan = viewModel::cancelHostScan,
+        onTabSelected = viewModel::selectTab,
+        onScanWithCidr = viewModel::startScanWithCidr,
+        onClearHistory = viewModel::clearHistory,
     )
 }
 
@@ -117,8 +117,12 @@ private fun LanScanContent(
     onDismissDetail: () -> Unit,
     onScanHostPorts: (List<Int>) -> Unit,
     onCancelHostScan: () -> Unit,
+    onTabSelected: (LanScanTab) -> Unit,
+    onScanWithCidr: (String) -> Unit,
+    onClearHistory: () -> Unit,
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    val showCustomField = uiState.rangeMode == ScanRangeMode.CUSTOM
 
     if (hostDetail != null) {
         HostDetailSheet(
@@ -142,58 +146,62 @@ private fun LanScanContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { sortMenuExpanded = true }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = stringResource(R.string.lanscan_cd_sort),
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = sortMenuExpanded,
-                        onDismissRequest = { sortMenuExpanded = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.lanscan_sort_by_ip)) },
-                            onClick = {
-                                onSortOrderChange(SortOrder.IP)
-                                sortMenuExpanded = false
-                            },
-                            trailingIcon = if (sortOrder == SortOrder.IP) {
-                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.lanscan_sort_by_latency)) },
-                            onClick = {
-                                onSortOrderChange(SortOrder.LATENCY)
-                                sortMenuExpanded = false
-                            },
-                            trailingIcon = if (sortOrder == SortOrder.LATENCY) {
-                                { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                        )
+                    if (uiState.selectedTab == LanScanTab.SCAN) {
+                        IconButton(onClick = { sortMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = stringResource(R.string.lanscan_cd_sort),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.lanscan_sort_by_ip)) },
+                                onClick = {
+                                    onSortOrderChange(SortOrder.IP)
+                                    sortMenuExpanded = false
+                                },
+                                trailingIcon = if (sortOrder == SortOrder.IP) {
+                                    { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.lanscan_sort_by_latency)) },
+                                onClick = {
+                                    onSortOrderChange(SortOrder.LATENCY)
+                                    sortMenuExpanded = false
+                                },
+                                trailingIcon = if (sortOrder == SortOrder.LATENCY) {
+                                    { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                            )
+                        }
                     }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (uiState.isScanning) {
-                        onCancelScan()
-                    } else if (uiState.rangeMode != ScanRangeMode.CUSTOM || uiState.customRange.isNotBlank()) {
-                        onStartScan()
-                    }
-                },
-            ) {
-                Icon(
-                    imageVector = if (uiState.isScanning) {
-                        Icons.Default.Close
-                    } else {
-                        Icons.Default.Search
+            if (uiState.selectedTab == LanScanTab.SCAN) {
+                FloatingActionButton(
+                    onClick = {
+                        if (uiState.isScanning) {
+                            onCancelScan()
+                        } else if (uiState.rangeMode != ScanRangeMode.CUSTOM || uiState.customRange.isNotBlank()) {
+                            onStartScan()
+                        }
                     },
-                    contentDescription = if (uiState.isScanning) stringResource(R.string.lanscan_cd_stop_scan) else stringResource(R.string.lanscan_cd_start_scan),
-                )
+                ) {
+                    Icon(
+                        imageVector = if (uiState.isScanning) {
+                            Icons.Default.Close
+                        } else {
+                            Icons.Default.Search
+                        },
+                        contentDescription = if (uiState.isScanning) stringResource(R.string.lanscan_cd_stop_scan) else stringResource(R.string.lanscan_cd_start_scan),
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -202,105 +210,264 @@ private fun LanScanContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            TabRow(
+                selectedTabIndex = uiState.selectedTab.ordinal,
+            ) {
+                Tab(
+                    selected = uiState.selectedTab == LanScanTab.SCAN,
+                    onClick = { onTabSelected(LanScanTab.SCAN) },
+                    text = { Text(stringResource(R.string.lanscan_tab_scan)) },
+                )
+                Tab(
+                    selected = uiState.selectedTab == LanScanTab.HISTORY,
+                    onClick = { onTabSelected(LanScanTab.HISTORY) },
+                    text = { Text(stringResource(R.string.lanscan_tab_history)) },
+                )
+            }
+
+            when (uiState.selectedTab) {
+                LanScanTab.SCAN -> ScanTabContent(
+                    uiState = uiState,
+                    showCustomField = showCustomField,
+                    onRangeModeChanged = onRangeModeChanged,
+                    onCustomRangeChanged = onCustomRangeChanged,
+                    onScanWithCidr = onScanWithCidr,
+                    onStartScan = onStartScan,
+                    onDeviceClick = onDeviceClick,
+                )
+                LanScanTab.HISTORY -> HistoryTabContent(
+                    entries = uiState.historyEntries,
+                    onRescan = onScanWithCidr,
+                    onClearHistory = onClearHistory,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScanTabContent(
+    uiState: LanScanUiState,
+    showCustomField: Boolean,
+    onRangeModeChanged: (ScanRangeMode) -> Unit,
+    onCustomRangeChanged: (String) -> Unit,
+    onScanWithCidr: (String) -> Unit,
+    onStartScan: () -> Unit,
+    onDeviceClick: (LanDevice) -> Unit,
+) {
+    if (uiState.suggestedNetworks.isNotEmpty() || !uiState.isScanning) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text(
+                text = stringResource(R.string.lanscan_suggested_networks),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
-                    selected = uiState.rangeMode == ScanRangeMode.AUTO,
-                    onClick = { onRangeModeChanged(ScanRangeMode.AUTO) },
-                    label = { Text(stringResource(R.string.lanscan_mode_auto)) },
-                    enabled = !uiState.isScanning,
-                )
-                FilterChip(
-                    selected = uiState.rangeMode == ScanRangeMode.CUSTOM,
-                    onClick = { onRangeModeChanged(ScanRangeMode.CUSTOM) },
-                    label = { Text(stringResource(R.string.lanscan_mode_custom)) },
-                    enabled = !uiState.isScanning,
-                )
-            }
-
-            AnimatedVisibility(visible = uiState.rangeMode == ScanRangeMode.CUSTOM) {
-                OutlinedTextField(
-                    value = uiState.customRange,
-                    onValueChange = onCustomRangeChanged,
-                    label = { Text(stringResource(R.string.lanscan_label_custom_range)) },
-                    placeholder = { Text(stringResource(R.string.lanscan_placeholder_cidr)) },
-                    isError = uiState.rangeError != null,
-                    supportingText = uiState.rangeError?.let { error ->
-                        { Text(error) }
-                    },
-                    singleLine = true,
-                    enabled = !uiState.isScanning,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Done,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                )
-            }
-
-            AnimatedVisibility(visible = uiState.isScanning) {
-                LinearProgressIndicator(
-                    progress = { uiState.progress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            if (uiState.subnetInfo.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.lanscan_subnet_label, uiState.subnetInfo),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    SuggestionChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                text = if (uiState.isScanning) {
-                                    stringResource(R.string.lanscan_found_devices_scanning, uiState.deviceCount)
-                                } else {
-                                    stringResource(R.string.lanscan_device_count, uiState.devices.size)
-                                },
-                            )
-                        },
+                uiState.suggestedNetworks.forEach { network ->
+                    AssistChip(
+                        onClick = { onScanWithCidr(network.cidr) },
+                        label = { Text("${network.label} ${network.cidr}") },
+                        enabled = !uiState.isScanning,
                     )
                 }
-            }
-
-            uiState.error?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                AssistChip(
+                    onClick = { onRangeModeChanged(ScanRangeMode.CUSTOM) },
+                    label = { Text(stringResource(R.string.lanscan_custom_chip)) },
+                    enabled = !uiState.isScanning,
                 )
             }
+        }
+    }
 
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(
-                    items = uiState.devices,
-                    key = { it.ip },
-                ) { device ->
-                    DeviceCard(device = device, onClick = { onDeviceClick(device) })
+    AnimatedVisibility(visible = showCustomField) {
+        OutlinedTextField(
+            value = uiState.customRange,
+            onValueChange = onCustomRangeChanged,
+            label = { Text(stringResource(R.string.lanscan_label_custom_range)) },
+            placeholder = { Text(stringResource(R.string.lanscan_placeholder_cidr)) },
+            isError = uiState.rangeError != null,
+            supportingText = uiState.rangeError?.let { error ->
+                { Text(error) }
+            },
+            singleLine = true,
+            enabled = !uiState.isScanning,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Done,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        )
+    }
+
+    AnimatedVisibility(visible = uiState.isScanning) {
+        LinearProgressIndicator(
+            progress = { uiState.progress },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    if (uiState.subnetInfo.isNotEmpty()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.lanscan_subnet_label, uiState.subnetInfo),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        text = if (uiState.isScanning) {
+                            stringResource(R.string.lanscan_found_devices_scanning, uiState.deviceCount)
+                        } else {
+                            stringResource(R.string.lanscan_device_count, uiState.devices.size)
+                        },
+                    )
+                },
+            )
+        }
+    }
+
+    uiState.error?.let { error ->
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        items(
+            items = uiState.devices,
+            key = { it.ip },
+        ) { device ->
+            DeviceCard(device = device, onClick = { onDeviceClick(device) })
+        }
+    }
+}
+
+@Composable
+private fun HistoryTabContent(
+    entries: List<LanScanHistoryUiModel>,
+    onRescan: (String) -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    if (entries.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.lanscan_history_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(
+                items = entries,
+                key = { it.id },
+            ) { entry ->
+                val subnet = entry.subnet
+                HistoryCard(
+                    entry = entry,
+                    onClick = if (subnet != null) {
+                        { onRescan(subnet) }
+                    } else null,
+                )
+            }
+            item {
+                TextButton(
+                    onClick = onClearHistory,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.lanscan_history_clear))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryCard(entry: LanScanHistoryUiModel, onClick: (() -> Unit)?) {
+    Card(
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.subnet ?: "Unknown",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.lanscan_history_devices, entry.deviceCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = relativeTimeText(entry.timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun relativeTimeText(timestampMs: Long): String {
+    val now = remember(timestampMs) { System.currentTimeMillis() }
+    val diff = now - timestampMs
+    return when {
+        diff < 60_000 -> stringResource(R.string.lanscan_time_just_now)
+        diff < 3_600_000 -> stringResource(R.string.lanscan_time_minutes_ago, (diff / 60_000).toInt())
+        diff < 86_400_000 -> stringResource(R.string.lanscan_time_hours_ago, (diff / 3_600_000).toInt())
+        else -> stringResource(R.string.lanscan_time_days_ago, (diff / 86_400_000).toInt())
     }
 }
 
@@ -444,240 +611,3 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun HostDetailSheet(
-    state: HostDetailState,
-    onDismiss: () -> Unit,
-    onScanPorts: (List<Int>) -> Unit,
-    onCancelScan: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedPreset by remember { mutableIntStateOf(0) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 32.dp),
-        ) {
-            item {
-                Text(
-                    text = state.device.ip,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                state.device.hostname?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(top = 4.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.lanscan_latency_ms, state.device.latencyMs),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = when (state.device.discoveryMethod) {
-                            DiscoveryMethod.PING -> "PING"
-                            DiscoveryMethod.MDNS -> "mDNS"
-                            DiscoveryMethod.BOTH -> "PING+mDNS"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                val typeLabel = state.enrichedType ?: state.device.deviceType
-                val osLabel = state.enrichedOs ?: state.device.osGuess
-                if (typeLabel != null || osLabel != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        typeLabel?.let {
-                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                        }
-                        osLabel?.let {
-                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                        }
-                    }
-                }
-            }
-
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(
-                    text = stringResource(R.string.lanscan_port_scan_section),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp),
-                ) {
-                    FilterChip(
-                        selected = selectedPreset == 0,
-                        onClick = { selectedPreset = 0 },
-                        label = { Text(stringResource(R.string.lanscan_chip_common)) },
-                        enabled = !state.isScanning,
-                    )
-                    FilterChip(
-                        selected = selectedPreset == 1,
-                        onClick = { selectedPreset = 1 },
-                        label = { Text(stringResource(R.string.lanscan_chip_all)) },
-                        enabled = !state.isScanning,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp),
-                ) {
-                    if (state.isScanning) {
-                        OutlinedButton(
-                            onClick = onCancelScan,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                        ) {
-                            Text(stringResource(R.string.lanscan_cancel_port_scan))
-                        }
-                    } else {
-                        Button(onClick = {
-                            val ports = if (selectedPreset == 0) {
-                                WellKnownPorts.COMMON_PORTS.keys.sorted()
-                            } else {
-                                (1..1024).toList()
-                            }
-                            onScanPorts(ports)
-                        }) {
-                            Text(stringResource(R.string.lanscan_scan_ports))
-                        }
-                    }
-                }
-            }
-
-            if (state.isScanning || state.portResults.isNotEmpty()) {
-                item {
-                    LinearProgressIndicator(
-                        progress = { state.progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.lanscan_open_count, state.openCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = stringResource(R.string.lanscan_scanned_count, state.portResults.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            state.error?.let { error ->
-                item {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-
-            val sorted = state.portResults.sortedWith(
-                compareByDescending<PortResult> { it.isOpen }
-                    .thenBy { it.port },
-            )
-            items(sorted, key = { it.port }) { result ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
-                        contentDescription = null,
-                        tint = if (result.isOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = result.port.toString(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.width(52.dp),
-                    )
-                    Text(
-                        text = result.serviceName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (result.isOpen && result.latencyMs > 0) {
-                        Text(
-                            text = "${result.latencyMs}ms",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            if (state.fingerprintEvidence.isNotEmpty()) {
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    Text(
-                        text = stringResource(R.string.lanscan_fingerprint_section),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    state.enrichedType?.let {
-                        Text(
-                            text = stringResource(R.string.lanscan_profile_label, it),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    state.enrichedOs?.let {
-                        Text(
-                            text = stringResource(R.string.lanscan_os_label, it),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.lanscan_evidence_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                    state.fingerprintEvidence.forEach { ev ->
-                        Text(
-                            text = "• $ev",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}

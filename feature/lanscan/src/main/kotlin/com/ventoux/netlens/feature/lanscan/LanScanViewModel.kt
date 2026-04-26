@@ -3,15 +3,20 @@ package com.ventoux.netlens.feature.lanscan
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkAddress
+import android.net.NetworkCapabilities
+import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -24,10 +29,12 @@ import com.ventoux.netlens.feature.lanscan.engine.SubnetScanner
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
+import com.ventoux.netlens.feature.lanscan.model.LanScanHistoryUiModel
+import com.ventoux.netlens.feature.lanscan.model.LanScanTab
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventoux.netlens.feature.lanscan.model.SuggestedNetwork
 import com.ventoux.netlens.feature.portscan.engine.PortScanner
-import com.ventoux.netlens.feature.portscan.model.PortResult
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 import javax.inject.Inject
 
@@ -54,6 +61,79 @@ class LanScanViewModel @Inject constructor(
 
     private var scanJob: Job? = null
     private var hostScanJob: Job? = null
+
+    private val historyEntries = lanScanHistoryDao.getRecent()
+        .map { entries ->
+            entries.map { entry ->
+                LanScanHistoryUiModel(
+                    id = entry.id,
+                    timestamp = entry.timestamp,
+                    subnet = entry.subnet,
+                    deviceCount = entry.deviceCount,
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        refreshSuggestedNetworks()
+        viewModelScope.launch {
+            historyEntries.collect { entries ->
+                _uiState.update { it.copy(historyEntries = entries) }
+            }
+        }
+    }
+
+    fun refreshSuggestedNetworks() {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        @Suppress("MissingPermission")
+        val suggestions = cm.allNetworks.mapNotNull { network ->
+            val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
+            val lp = cm.getLinkProperties(network) ?: return@mapNotNull null
+            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@mapNotNull null
+            val linkAddr = lp.linkAddresses.firstOrNull { it.isIpv4() } ?: return@mapNotNull null
+            val ip = linkAddr.address.hostAddress ?: return@mapNotNull null
+            val prefix = linkAddr.prefixLength
+            val isVpn = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            val label = when {
+                isVpn -> "VPN"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+                else -> "Network"
+            }
+            val networkAddr = calculateNetworkAddress(ip, prefix)
+            SuggestedNetwork(
+                cidr = "$networkAddr/$prefix",
+                ip = ip,
+                prefixLength = prefix,
+                label = label,
+                isVpn = isVpn,
+            )
+        }.filter { parseCidr(it.cidr) != null }
+         .sortedBy { it.isVpn }
+        _uiState.update { it.copy(suggestedNetworks = suggestions) }
+    }
+
+    fun startScanWithCidr(cidr: String) {
+        if (parseCidr(cidr) == null) return
+        _uiState.update {
+            it.copy(
+                rangeMode = ScanRangeMode.CUSTOM,
+                customRange = cidr,
+                selectedTab = LanScanTab.SCAN,
+            )
+        }
+        startScan()
+    }
+
+    fun selectTab(tab: LanScanTab) {
+        _uiState.update { it.copy(selectedTab = tab) }
+        if (tab == LanScanTab.SCAN) refreshSuggestedNetworks()
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch { lanScanHistoryDao.deleteAll() }
+    }
 
     fun setSortOrder(order: SortOrder) {
         _sortOrder.value = order
@@ -161,7 +241,7 @@ class LanScanViewModel @Inject constructor(
 
             val mdnsJob = launch {
                 mdnsScanner.discover()
-                    .catch { /* mDNS failure is non-fatal */ }
+                    .catch { e -> Log.d("LanScan", "mDNS discovery failed: ${e.message}") }
                     .collect { device -> mergeDevice(device) }
             }
 
@@ -213,10 +293,8 @@ class LanScanViewModel @Inject constructor(
             try {
                 var scanned = 0
                 val total = ports.size
-                val allResults = mutableListOf<PortResult>()
                 portScanner.scan(detail.device.ip, ports).collect { result ->
                     scanned++
-                    allResults.add(result)
                     _hostDetail.update { state ->
                         val updated = state?.portResults.orEmpty() + result
                         state?.copy(
@@ -226,7 +304,10 @@ class LanScanViewModel @Inject constructor(
                         )
                     }
                 }
-                val openPorts = allResults.filter { it.isOpen }.map { it.port }
+                val openPorts = _hostDetail.value?.portResults
+                    ?.filter { it.isOpen }
+                    ?.map { it.port }
+                    .orEmpty()
                 val fp = fingerprinter.fingerprintWithPorts(detail.device, openPorts)
                 _hostDetail.update {
                     it?.copy(
@@ -279,4 +360,15 @@ private fun ipToLong(ip: String): Long {
 
 private fun LinkAddress.isIpv4(): Boolean {
     return address.address.size == 4
+}
+
+internal fun calculateNetworkAddress(ip: String, prefixLength: Int): String {
+    val parts = ip.split(".")
+    if (parts.size != 4) return ip
+    val ipInt = parts.fold(0L) { acc, part ->
+        (acc shl 8) or (part.toIntOrNull()?.toLong() ?: return ip)
+    }
+    val mask = if (prefixLength == 0) 0L else (0xFFFFFFFFL shl (32 - prefixLength)) and 0xFFFFFFFFL
+    val network = ipInt and mask
+    return "${(network shr 24) and 0xFF}.${(network shr 16) and 0xFF}.${(network shr 8) and 0xFF}.${network and 0xFF}"
 }
