@@ -11,13 +11,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
+import com.ventoux.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventoux.netlens.feature.traceroute.engine.Tracer
 import com.ventoux.netlens.feature.traceroute.model.TracerouteUiState
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 @HiltViewModel
 class TracerouteViewModel @Inject constructor(
     private val tracer: Tracer,
+    private val tracerouteHistoryDao: TracerouteHistoryDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TracerouteUiState())
@@ -51,6 +56,7 @@ class TracerouteViewModel @Inject constructor(
                 }
                 .onCompletion {
                     _state.update { it.copy(isTracing = false) }
+                    saveToHistory()
                 }
                 .collect { hop ->
                     _state.update { current ->
@@ -63,6 +69,27 @@ class TracerouteViewModel @Inject constructor(
     fun stopTrace() {
         traceJob?.cancel()
         _state.update { it.copy(isTracing = false) }
+    }
+
+    private suspend fun saveToHistory() {
+        val state = _state.value
+        if (state.hops.isEmpty()) return
+        val hopsJson = Json.encodeToString(
+            state.hops.map { hop ->
+                mapOf(
+                    "hop" to hop.hopNumber.toString(),
+                    "ip" to (hop.ip ?: "*"),
+                    "rtt" to hop.rttMs.firstOrNull()?.toString().orEmpty(),
+                )
+            },
+        )
+        tracerouteHistoryDao.insert(
+            TracerouteHistoryEntry(
+                host = state.host,
+                hopCount = state.hops.size,
+                hopsJson = hopsJson,
+            ),
+        )
     }
 
     fun buildCopyText(): String {

@@ -19,4 +19,9 @@
     <string name="history_filter_dns">DNS</string>
     <string name="history_filter_whois">WHOIS</string>
     <string name="history_filter_ipinfo">IP Info</string>
+    <string name="history_filter_traceroute">Traceroute</string>
+    <string name="history_filter_tls">TLS</string>
+    <string name="history_filter_http">HTTP</string>
+    <string name="history_filter_mdns">mDNS</string>
+    <string name="history_filter_wol">WoL</string>
 </resources>

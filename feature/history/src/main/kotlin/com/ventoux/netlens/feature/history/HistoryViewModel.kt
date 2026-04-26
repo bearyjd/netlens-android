@@ -163,6 +163,67 @@ class HistoryViewModel @Inject constructor(
             )
         }
 
+        results.traceroutes.mapTo(items) { entry ->
+            HistoryItem(
+                id = entry.id,
+                toolName = "Traceroute",
+                primaryLabel = entry.host,
+                secondarySummary = "${entry.hopCount} hops",
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.Traceroute,
+                toolRoute = "traceroute",
+            )
+        }
+
+        results.tlsInspections.mapTo(items) { entry ->
+            val validity = if (entry.isValid) "Valid" else "Expired"
+            HistoryItem(
+                id = entry.id,
+                toolName = "TLS",
+                primaryLabel = entry.host,
+                secondarySummary = "$validity · ${entry.issuer}",
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.Tls,
+                toolRoute = "tls",
+            )
+        }
+
+        results.httpTests.mapTo(items) { entry ->
+            HistoryItem(
+                id = entry.id,
+                toolName = "HTTP",
+                primaryLabel = entry.url,
+                secondarySummary = "${entry.method} ${entry.statusCode} · ${entry.durationMs}ms",
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.HttpTester,
+                toolRoute = "httptester",
+            )
+        }
+
+        results.mdnsScans.mapTo(items) { entry ->
+            HistoryItem(
+                id = entry.id,
+                toolName = "mDNS",
+                primaryLabel = "${entry.serviceCount} services",
+                secondarySummary = "mDNS discovery",
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.Mdns,
+                toolRoute = "mdns",
+            )
+        }
+
+        results.wolSends.mapTo(items) { entry ->
+            HistoryItem(
+                id = entry.id,
+                toolName = "WoL",
+                primaryLabel = entry.label ?: entry.mac,
+                secondarySummary = if (entry.label != null) entry.mac else entry.broadcastIp,
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.Wol,
+                toolRoute = "wol",
+            )
+        }
+
         return items.sortedByDescending { it.timestamp }.take(100)
     }
 }

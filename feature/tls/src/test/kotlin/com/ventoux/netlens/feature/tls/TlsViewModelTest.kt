@@ -11,10 +11,14 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.TlsHistoryDao
+import com.ventoux.netlens.core.data.model.TlsHistoryEntry
 import com.ventoux.netlens.feature.tls.engine.FakeTlsInspector
 import com.ventoux.netlens.feature.tls.model.TlsCertInfo
 import com.ventoux.netlens.feature.tls.model.TlsInspectResult
 import com.ventoux.netlens.feature.tls.model.TlsUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TlsViewModelTest {
@@ -26,7 +30,7 @@ class TlsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeInspector = FakeTlsInspector()
-        viewModel = TlsViewModel(fakeInspector)
+        viewModel = TlsViewModel(fakeInspector, FakeTlsHistoryDao())
     }
 
     @AfterEach
@@ -129,4 +133,13 @@ class TlsViewModelTest {
             assertEquals(TlsUiState.Success(expectedResult), awaitItem())
         }
     }
+}
+
+private class FakeTlsHistoryDao : TlsHistoryDao {
+    override fun getRecent(limit: Int): Flow<List<TlsHistoryEntry>> = flowOf(emptyList())
+    override fun search(query: String, limit: Int): Flow<List<TlsHistoryEntry>> = flowOf(emptyList())
+    override suspend fun insert(entry: TlsHistoryEntry) {}
+    override suspend fun deleteById(id: Long) {}
+    override suspend fun deleteOlderThan(before: Long) {}
+    override suspend fun deleteAll() {}
 }
