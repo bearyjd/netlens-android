@@ -2,7 +2,7 @@ package com.ventoux.netlens.widget
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -176,6 +176,6 @@ class WidgetScoringTest {
             isVpnActive = true,
         )
         assertTrue(score.issueCount >= 1)
-        assertNull(score.topIssueId?.takeIf { it == "vpn" })
+        assertNotEquals("vpn", score.topIssueId)
     }
 }

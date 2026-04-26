@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -25,7 +26,11 @@ fun enqueueWidgetRefresh(context: Context) {
                 .build(),
         )
         .build()
-    WorkManager.getInstance(context).enqueue(workRequest)
+    WorkManager.getInstance(context).enqueueUniqueWork(
+        "widget_refresh",
+        ExistingWorkPolicy.REPLACE,
+        workRequest,
+    )
 }
 
 fun registerWidgetNetworkCallback(

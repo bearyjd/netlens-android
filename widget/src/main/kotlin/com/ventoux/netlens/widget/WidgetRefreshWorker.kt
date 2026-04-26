@@ -14,12 +14,13 @@ import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.widget.model.WidgetIpResponse
 import com.ventoux.netlens.widget.util.toFlagEmoji
 import dagger.hilt.EntryPoint
-import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
@@ -27,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -50,14 +52,14 @@ class WidgetRefreshWorker(
 
             val ssid = try {
                 val wm = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                @Suppress("DEPRECATION")
+                @Suppress("DEPRECATION") // SSID requires location on API 31+; degrades to null
                 wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it != "<unknown ssid>" }
             } catch (_: Exception) {
                 null
             }
 
             val encryptionType = try {
-                detectEncryptionType(appContext)
+                detectEncryptionType(appContext, caps)
             } catch (_: Exception) {
                 null
             }
@@ -82,23 +84,14 @@ class WidgetRefreshWorker(
                 null
             }
 
-            var publicIp = ""
-            var countryFlag = ""
-            var countryName = ""
-            var countryCode = ""
-            var ispName = ""
-            var asnName = ""
-
-            if (isConnected) {
+            val ipData: WidgetIpResponse? = if (isConnected) {
                 try {
-                    val ipData = fetchIpInfo()
-                    publicIp = ipData.query
-                    countryName = ipData.country
-                    countryCode = ipData.countryCode
-                    countryFlag = ipData.countryCode.toFlagEmoji()
-                    ispName = ipData.isp
-                    asnName = ipData.asName
-                } catch (_: Exception) { }
+                    fetchIpInfo()
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
             }
 
             val latencyMs = if (isConnected) {
@@ -118,8 +111,10 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] = System.currentTimeMillis()
                 prefs[WidgetStateDefinition.IS_SCAN_RUNNING] = false
 
-                encryptionType?.let { prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = it }
-                prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(encryptionType)
+                encryptionType?.let {
+                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = it
+                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(it)
+                }
 
                 if (score != null) {
                     prefs[WidgetStateDefinition.SCORE_GRADE] = score.grade
@@ -129,13 +124,13 @@ class WidgetRefreshWorker(
                     score.topIssueId?.let { prefs[WidgetStateDefinition.TOP_ISSUE_ID] = it }
                 }
 
-                if (publicIp.isNotEmpty()) {
-                    prefs[WidgetStateDefinition.PUBLIC_IP] = publicIp
-                    prefs[WidgetStateDefinition.COUNTRY_FLAG] = countryFlag
-                    prefs[WidgetStateDefinition.COUNTRY_NAME] = countryName
-                    prefs[WidgetStateDefinition.COUNTRY_CODE] = countryCode
-                    prefs[WidgetStateDefinition.ISP_NAME] = ispName
-                    prefs[WidgetStateDefinition.ASN_NAME] = asnName
+                ipData?.takeIf { IP_PATTERN.matches(it.query) }?.let { ip ->
+                    prefs[WidgetStateDefinition.PUBLIC_IP] = ip.query
+                    prefs[WidgetStateDefinition.COUNTRY_FLAG] = ip.countryCode.toFlagEmoji()
+                    prefs[WidgetStateDefinition.COUNTRY_NAME] = ip.country
+                    prefs[WidgetStateDefinition.COUNTRY_CODE] = ip.countryCode
+                    prefs[WidgetStateDefinition.ISP_NAME] = ip.isp
+                    prefs[WidgetStateDefinition.ASN_NAME] = ip.asName
                 }
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
@@ -149,8 +144,10 @@ class WidgetRefreshWorker(
             Result.success()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (_: IOException) {
             Result.retry()
+        } catch (_: Exception) {
+            Result.failure()
         }
     }
 }
@@ -175,10 +172,11 @@ internal fun computeWidgetScore(
     val numeric = ((encScore * 50 + devScore * 30 + vpnScore * 20) / 100).coerceIn(0, 100)
     val grade = gradeFor(numeric)
 
-    val issues = mutableListOf<Pair<String, String>>()
-    if (encScore <= 20) issues.add("Weak or no encryption" to "encryption")
-    if (devScore <= 40) issues.add("Too many devices on network" to "device_count")
-    if (!isVpnActive) issues.add("VPN not active" to "vpn")
+    val issues = listOfNotNull(
+        ("Weak or no encryption" to "encryption").takeIf { encScore <= 20 },
+        ("Too many devices on network" to "device_count").takeIf { devScore <= 40 },
+        ("VPN not active" to "vpn").takeIf { !isVpnActive },
+    )
 
     val colorArgb = when (grade) {
         "A", "B" -> 0xFF4CAF50.toInt()
@@ -230,19 +228,22 @@ internal fun isEncryptionSecure(type: String?): Boolean {
     return upper.contains("WPA3") || upper.contains("WPA2") || upper.contains("OWE")
 }
 
-internal fun detectEncryptionType(context: Context): String? {
+internal fun detectEncryptionType(
+    context: Context,
+    caps: NetworkCapabilities? = null,
+): String? {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         ?: return null
-    val network = cm.activeNetwork ?: return null
-    val caps = cm.getNetworkCapabilities(network) ?: return null
-    if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
+    val activeCaps = caps ?: run {
+        val network = cm.activeNetwork ?: return null
+        cm.getNetworkCapabilities(network) ?: return null
+    }
+    if (!activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
 
-    val wm = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
-    @Suppress("DEPRECATION")
-    val info: WifiInfo = wm.connectionInfo ?: return null
-
+    // API 31+: TransportInfo carries security type without location permission
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        return when (info.currentSecurityType) {
+        val wifiInfo = activeCaps.transportInfo as? WifiInfo ?: return null
+        return when (wifiInfo.currentSecurityType) {
             WifiInfo.SECURITY_TYPE_OPEN -> "Open"
             WifiInfo.SECURITY_TYPE_WEP -> "WEP"
             WifiInfo.SECURITY_TYPE_PSK -> "WPA2"
@@ -256,9 +257,13 @@ internal fun detectEncryptionType(context: Context): String? {
         }
     }
 
-    @Suppress("DEPRECATION")
+    // Pre-API 31 fallback using deprecated WifiManager APIs
+    val wm = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
+    @Suppress("DEPRECATION") // Pre-S fallback; API 31+ uses TransportInfo above
+    val info: WifiInfo = wm.connectionInfo ?: return null
+    @Suppress("DEPRECATION") // Pre-S fallback; requires ACCESS_FINE_LOCATION
     val scanResults = wm.scanResults ?: return null
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION") // Pre-S fallback; BSSID comparison
     val connected = scanResults.find { it.BSSID == info.bssid } ?: return null
     return parseCapabilities(connected.capabilities)
 }
@@ -272,15 +277,20 @@ internal fun parseCapabilities(capabilities: String): String = when {
     else -> "Open"
 }
 
+private val IP_PATTERN = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
+
+private val httpClient = HttpClient(CIO) {
+    install(ContentNegotiation) {
+        json(Json { ignoreUnknownKeys = true })
+    }
+    install(HttpTimeout) {
+        connectTimeoutMillis = 5_000
+        requestTimeoutMillis = 8_000
+    }
+}
+
 private suspend fun fetchIpInfo(): WidgetIpResponse {
-    val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-    }
-    return client.use {
-        it.get("http://ip-api.com/json/?fields=query,country,countryCode,isp,as").body()
-    }
+    return httpClient.get("http://ip-api.com/json/?fields=query,country,countryCode,isp,as").body()
 }
 
 private suspend fun measureLatency(): Long = withContext(Dispatchers.IO) {
