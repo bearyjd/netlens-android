@@ -94,6 +94,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = "avg %.1fms, %d/%d recv".format(entry.avgMs, entry.receivedCount, entry.sentCount),
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.Ping,
+                toolRoute = "ping",
             )
         }
 
@@ -105,6 +106,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = "${entry.deviceCount} devices",
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.LanScan,
+                toolRoute = "lanscan",
             )
         }
 
@@ -121,6 +123,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = "$openCount open / ${entry.totalScanned} scanned",
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.PortScan,
+                toolRoute = "portscan",
             )
         }
 
@@ -132,6 +135,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = entry.recordType,
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.Dns,
+                toolRoute = "dns",
             )
         }
 
@@ -143,6 +147,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = "${entry.rawResponse.length} chars",
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.Whois,
+                toolRoute = "whois",
             )
         }
 
@@ -154,6 +159,7 @@ class HistoryViewModel @Inject constructor(
                 secondarySummary = listOfNotNull(entry.city, entry.countryCode).joinToString(", "),
                 timestamp = entry.timestamp,
                 toolFilter = ToolFilter.IpInfo,
+                toolRoute = "ipinfo",
             )
         }
 

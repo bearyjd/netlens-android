@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.portscan
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -64,8 +65,12 @@ private const val PRESET_CUSTOM = 2
 @Composable
 fun PortScanScreen(
     onBack: () -> Unit = {},
+    initialHost: String? = null,
     viewModel: PortScanViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialHost) {
+        if (initialHost != null) viewModel.onHostChanged(initialHost)
+    }
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
 
