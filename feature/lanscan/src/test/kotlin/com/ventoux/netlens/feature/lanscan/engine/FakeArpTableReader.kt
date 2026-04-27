@@ -1,0 +1,11 @@
+package com.ventoux.netlens.feature.lanscan.engine
+
+class FakeArpTableReader : ArpTableReader {
+    var table: Map<String, String> = emptyMap()
+
+    override suspend fun getMacForIp(ip: String): String? = table[ip]
+
+    override suspend fun getAll(): Map<String, String> = table
+
+    override fun invalidateCache() {}
+}

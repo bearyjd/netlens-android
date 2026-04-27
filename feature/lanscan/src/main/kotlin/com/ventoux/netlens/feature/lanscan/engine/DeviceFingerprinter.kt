@@ -1,16 +1,70 @@
 package com.ventoux.netlens.feature.lanscan.engine
 
+import com.ventoux.netlens.core.oui.OuiLookup
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 import javax.inject.Inject
 
-class DeviceFingerprinter @Inject constructor() {
+class DeviceFingerprinter @Inject constructor(
+    private val ouiLookup: OuiLookup,
+) {
 
-    fun fingerprint(device: LanDevice): LanDevice {
+    suspend fun fingerprint(device: LanDevice): LanDevice {
         val hostname = device.hostname?.lowercase() ?: ""
-        val deviceType = guessDeviceType(hostname)
-        val osGuess = guessOs(hostname)
-        return device.copy(deviceType = deviceType, osGuess = osGuess)
+        val serviceType = classifyFromServices(device.services)
+        val deviceType = serviceType.first ?: guessDeviceType(hostname)
+        val osGuess = serviceType.second ?: guessOs(hostname)
+        val vendor = if (device.macAddress != null) {
+            ouiLookup.lookup(device.macAddress)
+        } else {
+            null
+        }
+        return device.copy(deviceType = deviceType, osGuess = osGuess, vendor = vendor)
     }
+
+    fun classifyFromServices(services: List<String>): Pair<String?, String?> {
+        var type: String? = null
+        var os: String? = null
+        for (svc in services) {
+            val normalized = svc.trim('.').lowercase()
+            val mapping = SERVICE_TYPE_MAP[normalized]
+            if (mapping != null) {
+                if (type == null) type = mapping.first
+                if (os == null) os = mapping.second
+            }
+        }
+        return type to os
+    }
+
+    fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?> {
+        val upnpType = ssdpDevice.deviceType?.lowercase() ?: ""
+        val manufacturer = ssdpDevice.manufacturer?.lowercase() ?: ""
+        val friendlyName = ssdpDevice.friendlyName?.lowercase() ?: ""
+        val modelName = ssdpDevice.modelName?.lowercase() ?: ""
+
+        val deviceType = when {
+            upnpType.contains("mediarenderer") || upnpType.contains("tv") -> "Smart TV"
+            upnpType.contains("mediaserver") -> "Media Server"
+            upnpType.contains("printer") -> "Printer"
+            upnpType.contains("internetgateway") || upnpType.contains("wandevice") -> "Router"
+            friendlyName.contains("chromecast") || friendlyName.contains("google home") -> "Smart Speaker"
+            friendlyName.contains("tv") || modelName.contains("tv") -> "Smart TV"
+            friendlyName.contains("sonos") || friendlyName.contains("speaker") -> "Smart Speaker"
+            else -> null
+        }
+
+        val osGuess = when {
+            manufacturer.contains("apple") -> "macOS"
+            manufacturer.contains("microsoft") -> "Windows"
+            manufacturer.contains("google") -> "Android"
+            manufacturer.contains("samsung") && deviceType == "Smart TV" -> "Tizen"
+            manufacturer.contains("lg") && deviceType == "Smart TV" -> "webOS"
+            else -> null
+        }
+
+        return deviceType to osGuess
+    }
+
+    fun classifyFromNetBios(info: NetBiosInfo): String? = "Windows"
 
     private fun guessDeviceType(hostname: String): String? {
         if (hostname.contains("router") || hostname.contains("gateway")) return "Router"
@@ -64,6 +118,7 @@ class DeviceFingerprinter @Inject constructor() {
             evidence.add("mDNS: $clean")
         }
         device.hostname?.let { evidence.add("hostname: $it") }
+        device.vendor?.let { evidence.add("vendor: $it") }
 
         return PortFingerprint(type, os, evidence)
     }
@@ -77,5 +132,24 @@ class DeviceFingerprinter @Inject constructor() {
             hostname.contains("raspberry") || hostname.contains("pi-")
         ) return "Linux"
         return null
+    }
+
+    companion object {
+        private val SERVICE_TYPE_MAP: Map<String, Pair<String?, String?>> = mapOf(
+            "_airplay._tcp" to ("Smart TV" to "iOS"),
+            "_raop._tcp" to ("AirPlay Speaker" to null),
+            "_googlecast._tcp" to ("Chromecast" to "Android"),
+            "_spotify-connect._tcp" to ("Smart Speaker" to null),
+            "_homekit._tcp" to ("IoT" to null),
+            "_hap._tcp" to ("IoT" to null),
+            "_companion-link._tcp" to ("Phone" to "iOS"),
+            "_printer._tcp" to ("Printer" to null),
+            "_pdl-datastream._tcp" to ("Printer" to null),
+            "_ipp._tcp" to ("Printer" to null),
+            "_smb._tcp" to (null to null),
+            "_ssh._tcp" to (null to null),
+            "_http._tcp" to (null to null),
+            "_https._tcp" to (null to null),
+        )
     }
 }
