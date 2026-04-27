@@ -33,6 +33,7 @@ class DnsLookupViewModelTest {
     private val fakeDnsHistoryDao = object : DnsHistoryDao {
         override fun getRecent(limit: Int): Flow<List<DnsHistoryEntry>> = flowOf(emptyList())
         override fun search(searchQuery: String, limit: Int): Flow<List<DnsHistoryEntry>> = flowOf(emptyList())
+        override suspend fun getById(id: Long): DnsHistoryEntry? = null
         override suspend fun insert(entry: DnsHistoryEntry) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteOlderThan(before: Long) {}

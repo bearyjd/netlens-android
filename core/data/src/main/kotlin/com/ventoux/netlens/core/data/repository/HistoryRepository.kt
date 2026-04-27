@@ -24,6 +24,7 @@ import com.ventoux.netlens.core.data.model.TlsHistoryEntry
 import com.ventoux.netlens.core.data.model.HttpTesterHistoryEntry
 import com.ventoux.netlens.core.data.model.MdnsHistoryEntry
 import com.ventoux.netlens.core.data.model.WolHistoryEntry
+import com.ventoux.netlens.core.data.model.HistoryDetailData
 import androidx.room.withTransaction
 import com.ventoux.netlens.core.data.NetLensDatabase
 import javax.inject.Inject
@@ -148,6 +149,23 @@ class HistoryRepository @Inject constructor(
             httpTesterDao.deleteOlderThan(cutoff)
             mdnsDao.deleteOlderThan(cutoff)
             wolHistoryDao.deleteOlderThan(cutoff)
+        }
+    }
+
+    suspend fun getEntry(toolFilter: String, id: Long): HistoryDetailData? {
+        return when (toolFilter) {
+            "Ping" -> pingDao.getById(id)?.let { HistoryDetailData.Ping(it) }
+            "LanScan" -> lanScanDao.getById(id)?.let { HistoryDetailData.LanScan(it) }
+            "PortScan" -> portScanDao.getById(id)?.let { HistoryDetailData.PortScan(it) }
+            "Dns" -> dnsDao.getById(id)?.let { HistoryDetailData.Dns(it) }
+            "Whois" -> whoisDao.getById(id)?.let { HistoryDetailData.Whois(it) }
+            "IpInfo" -> ipInfoDao.getById(id)?.let { HistoryDetailData.IpInfo(it) }
+            "Traceroute" -> tracerouteDao.getById(id)?.let { HistoryDetailData.Traceroute(it) }
+            "Tls" -> tlsDao.getById(id)?.let { HistoryDetailData.Tls(it) }
+            "HttpTester" -> httpTesterDao.getById(id)?.let { HistoryDetailData.HttpTest(it) }
+            "Mdns" -> mdnsDao.getById(id)?.let { HistoryDetailData.Mdns(it) }
+            "Wol" -> wolHistoryDao.getById(id)?.let { HistoryDetailData.Wol(it) }
+            else -> null
         }
     }
 }

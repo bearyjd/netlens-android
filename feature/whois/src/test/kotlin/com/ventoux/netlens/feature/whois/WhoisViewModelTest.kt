@@ -36,6 +36,7 @@ class WhoisViewModelTest {
     private val fakeWhoisHistoryDao = object : WhoisHistoryDao {
         override fun getRecent(limit: Int): Flow<List<WhoisHistoryEntry>> = flowOf(emptyList())
         override fun search(searchQuery: String, limit: Int): Flow<List<WhoisHistoryEntry>> = flowOf(emptyList())
+        override suspend fun getById(id: Long): WhoisHistoryEntry? = null
         override suspend fun insert(entry: WhoisHistoryEntry) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteOlderThan(before: Long) {}

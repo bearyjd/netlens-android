@@ -14,6 +14,9 @@ interface PortScanHistoryDao {
     @Query("SELECT * FROM history_portscan WHERE host LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<PortScanHistoryEntry>>
 
+    @Query("SELECT * FROM history_portscan WHERE id = :id")
+    suspend fun getById(id: Long): PortScanHistoryEntry?
+
     @Insert
     suspend fun insert(entry: PortScanHistoryEntry)
 

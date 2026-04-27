@@ -14,6 +14,9 @@ interface HttpTesterHistoryDao {
     @Query("SELECT * FROM history_http WHERE url LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(query: String, limit: Int = 50): Flow<List<HttpTesterHistoryEntry>>
 
+    @Query("SELECT * FROM history_http WHERE id = :id")
+    suspend fun getById(id: Long): HttpTesterHistoryEntry?
+
     @Insert
     suspend fun insert(entry: HttpTesterHistoryEntry)
 
