@@ -14,14 +14,7 @@ import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class SsdpDevice(
-    val ip: String,
-    val friendlyName: String? = null,
-    val manufacturer: String? = null,
-    val modelName: String? = null,
-    val deviceType: String? = null,
-)
+import com.ventoux.netlens.feature.lanscan.model.SsdpDevice
 
 interface SsdpScanner {
     fun discover(timeoutMs: Long = 3000): Flow<SsdpDevice>

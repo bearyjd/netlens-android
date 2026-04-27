@@ -2,6 +2,8 @@ package com.ventoux.netlens.feature.lanscan.engine
 
 import com.ventoux.netlens.core.oui.OuiLookup
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
+import com.ventoux.netlens.feature.lanscan.model.NetBiosInfo
+import com.ventoux.netlens.feature.lanscan.model.SsdpDevice
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -80,7 +82,14 @@ class DeviceFingerprinterImpl @Inject constructor(
         return deviceType to osGuess
     }
 
-    override fun classifyFromNetBios(info: NetBiosInfo): String? = "Windows"
+    override fun classifyFromNetBios(info: NetBiosInfo): String? {
+        val name = info.name.uppercase()
+        return when {
+            name.startsWith("DESKTOP-") || name.startsWith("WIN-") -> "Windows"
+            info.workgroup?.uppercase() in listOf("WORKGROUP", "MSHOME") -> "Windows"
+            else -> null
+        }
+    }
 
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint {
         val evidence = mutableListOf<String>()
