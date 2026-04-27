@@ -146,6 +146,12 @@ class LanMdnsScannerImpl @Inject constructor(
             "_smb._tcp",
             "_airplay._tcp",
             "_ipp._tcp",
+            "_googlecast._tcp",
+            "_raop._tcp",
+            "_printer._tcp",
+            "_homekit._tcp",
+            "_companion-link._tcp",
+            "_spotify-connect._tcp",
         )
     }
 }

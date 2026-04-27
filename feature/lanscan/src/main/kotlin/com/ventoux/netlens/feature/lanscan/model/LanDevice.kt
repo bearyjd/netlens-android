@@ -9,4 +9,6 @@ data class LanDevice(
     val osGuess: String? = null,
     val discoveryMethod: DiscoveryMethod = DiscoveryMethod.PING,
     val services: List<String> = emptyList(),
+    val macAddress: String? = null,
+    val vendor: String? = null,
 )

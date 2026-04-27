@@ -12,7 +12,9 @@
     <string name="lanscan_mac_unavailable">MAC: unavailable (Android restricts ARP access)</string>
     <string name="lanscan_discovery_ping">PING</string>
     <string name="lanscan_discovery_mdns">mDNS</string>
-    <string name="lanscan_discovery_both">PING+mDNS</string>
+    <string name="lanscan_discovery_ssdp">SSDP</string>
+    <string name="lanscan_discovery_netbios">NetBIOS</string>
+    <string name="lanscan_discovery_both">Multi</string>
     <string name="lanscan_subnet_label">Subnet: %1$s</string>
     <string name="lanscan_found_devices_scanning">Found %1$d devices…</string>
     <string name="lanscan_device_count">%1$d devices</string>
@@ -45,4 +47,6 @@
     <string name="lanscan_time_minutes_ago">%1$d min ago</string>
     <string name="lanscan_time_hours_ago">%1$dh ago</string>
     <string name="lanscan_time_days_ago">%1$dd ago</string>
+    <string name="lanscan_vendor_label">Vendor: %1$s</string>
+    <string name="lanscan_mac_label">MAC: %1$s</string>
 </resources>
