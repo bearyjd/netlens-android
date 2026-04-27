@@ -182,6 +182,7 @@ class MdnsViewModelTest {
 private class FakeMdnsHistoryDao : MdnsHistoryDao {
     override fun getRecent(limit: Int): Flow<List<MdnsHistoryEntry>> = flowOf(emptyList())
     override fun search(query: String, limit: Int): Flow<List<MdnsHistoryEntry>> = flowOf(emptyList())
+    override suspend fun getById(id: Long): MdnsHistoryEntry? = null
     override suspend fun insert(entry: MdnsHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}

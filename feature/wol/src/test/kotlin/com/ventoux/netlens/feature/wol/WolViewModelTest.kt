@@ -295,6 +295,7 @@ class WolViewModelTest {
 private class FakeWolHistoryDao : WolHistoryDao {
     override fun getRecent(limit: Int): Flow<List<WolHistoryEntry>> = flowOf(emptyList())
     override fun search(query: String, limit: Int): Flow<List<WolHistoryEntry>> = flowOf(emptyList())
+    override suspend fun getById(id: Long): WolHistoryEntry? = null
     override suspend fun insert(entry: WolHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}

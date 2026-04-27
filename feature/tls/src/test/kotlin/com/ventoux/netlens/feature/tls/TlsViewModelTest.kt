@@ -138,6 +138,7 @@ class TlsViewModelTest {
 private class FakeTlsHistoryDao : TlsHistoryDao {
     override fun getRecent(limit: Int): Flow<List<TlsHistoryEntry>> = flowOf(emptyList())
     override fun search(query: String, limit: Int): Flow<List<TlsHistoryEntry>> = flowOf(emptyList())
+    override suspend fun getById(id: Long): TlsHistoryEntry? = null
     override suspend fun insert(entry: TlsHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}

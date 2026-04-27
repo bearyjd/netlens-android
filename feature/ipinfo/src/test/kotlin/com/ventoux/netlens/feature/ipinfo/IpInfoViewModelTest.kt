@@ -28,6 +28,7 @@ class IpInfoViewModelTest {
     private val fakeIpInfoHistoryDao = object : IpInfoHistoryDao {
         override fun getRecent(limit: Int): Flow<List<IpInfoHistoryEntry>> = flowOf(emptyList())
         override fun search(query: String, limit: Int): Flow<List<IpInfoHistoryEntry>> = flowOf(emptyList())
+        override suspend fun getById(id: Long): IpInfoHistoryEntry? = null
         override suspend fun insert(entry: IpInfoHistoryEntry) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteOlderThan(before: Long) {}
