@@ -174,6 +174,7 @@ class TracerouteViewModelTest {
 private class FakeTracerouteHistoryDao : TracerouteHistoryDao {
     override fun getRecent(limit: Int): Flow<List<TracerouteHistoryEntry>> = flowOf(emptyList())
     override fun search(query: String, limit: Int): Flow<List<TracerouteHistoryEntry>> = flowOf(emptyList())
+    override suspend fun getById(id: Long): TracerouteHistoryEntry? = null
     override suspend fun insert(entry: TracerouteHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}

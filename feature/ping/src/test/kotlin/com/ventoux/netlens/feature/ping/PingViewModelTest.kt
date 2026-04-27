@@ -39,6 +39,7 @@ class PingViewModelTest {
         val inserted = mutableListOf<PingHistoryEntry>()
         override fun getRecent(limit: Int): Flow<List<PingHistoryEntry>> = flowOf(emptyList())
         override fun search(query: String, limit: Int): Flow<List<PingHistoryEntry>> = flowOf(emptyList())
+        override suspend fun getById(id: Long): PingHistoryEntry? = null
         override suspend fun insert(entry: PingHistoryEntry) { inserted.add(entry) }
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteOlderThan(before: Long) {}

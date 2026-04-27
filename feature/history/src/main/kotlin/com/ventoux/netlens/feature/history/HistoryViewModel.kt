@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ventoux.netlens.core.data.repository.CombinedHistoryResults
 import com.ventoux.netlens.core.data.repository.HistoryRepository
+import com.ventoux.netlens.feature.history.model.HistoryDetailState
 import com.ventoux.netlens.feature.history.model.HistoryItem
 import com.ventoux.netlens.feature.history.model.HistoryUiState
 import com.ventoux.netlens.feature.history.model.ToolFilter
@@ -26,6 +27,9 @@ class HistoryViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(HistoryUiState())
     val state: StateFlow<HistoryUiState> = _state.asStateFlow()
+
+    private val _detailState = MutableStateFlow<HistoryDetailState?>(null)
+    val detailState: StateFlow<HistoryDetailState?> = _detailState.asStateFlow()
 
     private var loadJob: Job? = null
 
@@ -47,6 +51,22 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             historyRepository.clearAll()
         }
+    }
+
+    fun selectEntry(item: HistoryItem) {
+        _detailState.value = HistoryDetailState.Loading
+        viewModelScope.launch {
+            val data = historyRepository.getEntry(item.toolFilter.name, item.id)
+            _detailState.value = if (data != null) {
+                HistoryDetailState.Loaded(item, data)
+            } else {
+                HistoryDetailState.Error("Entry no longer exists")
+            }
+        }
+    }
+
+    fun dismissDetail() {
+        _detailState.value = null
     }
 
     private var allItems: List<HistoryItem> = emptyList()

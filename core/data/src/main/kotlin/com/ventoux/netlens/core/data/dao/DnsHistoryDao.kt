@@ -14,6 +14,9 @@ interface DnsHistoryDao {
     @Query("SELECT * FROM history_dns WHERE `query` LIKE '%' || :searchQuery || '%' ORDER BY timestamp DESC LIMIT :limit")
     fun search(searchQuery: String, limit: Int = 50): Flow<List<DnsHistoryEntry>>
 
+    @Query("SELECT * FROM history_dns WHERE id = :id")
+    suspend fun getById(id: Long): DnsHistoryEntry?
+
     @Insert
     suspend fun insert(entry: DnsHistoryEntry)
 

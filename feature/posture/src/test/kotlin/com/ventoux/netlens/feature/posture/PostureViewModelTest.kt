@@ -186,6 +186,7 @@ private class FakeLanScanHistoryDao : LanScanHistoryDao {
     override fun getRecent(limit: Int): Flow<List<LanScanHistoryEntry>> = flowOf(entries.toList())
     override fun search(query: String, limit: Int): Flow<List<LanScanHistoryEntry>> =
         flowOf(entries.filter { it.subnet?.contains(query) == true })
+    override suspend fun getById(id: Long): LanScanHistoryEntry? = entries.find { it.id == id }
     override suspend fun insert(entry: LanScanHistoryEntry) { entries.add(entry) }
     override suspend fun deleteById(id: Long) { entries.removeAll { it.id == id } }
     override suspend fun deleteOlderThan(before: Long) { entries.removeAll { it.timestamp < before } }

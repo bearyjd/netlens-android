@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.feature.history.model.HistoryDetailState
 import com.ventoux.netlens.feature.history.model.HistoryItem
 import com.ventoux.netlens.feature.history.model.ToolFilter
 import java.time.Instant
@@ -71,6 +72,7 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val detailState by viewModel.detailState.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
 
     if (showClearDialog) {
@@ -94,6 +96,23 @@ fun HistoryScreen(
                 }
             },
         )
+    }
+
+    when (val detail = detailState) {
+        is HistoryDetailState.Loaded -> {
+            HistoryDetailSheet(
+                item = detail.item,
+                data = detail.data,
+                onDismiss = viewModel::dismissDetail,
+                onRerun = {
+                    viewModel.dismissDetail()
+                    onNavigateToTool(detail.item.toolRoute, detail.item.primaryLabel)
+                },
+            )
+        }
+        is HistoryDetailState.Loading -> { /* Sheet opens fast enough */ }
+        is HistoryDetailState.Error -> { viewModel.dismissDetail() }
+        null -> { /* No detail selected */ }
     }
 
     Scaffold(
@@ -182,7 +201,7 @@ fun HistoryScreen(
                 else -> {
                     HistoryList(
                         items = state.items,
-                        onItemClick = { item -> onNavigateToTool(item.toolRoute, item.primaryLabel) },
+                        onItemClick = { item -> viewModel.selectEntry(item) },
                     )
                 }
             }

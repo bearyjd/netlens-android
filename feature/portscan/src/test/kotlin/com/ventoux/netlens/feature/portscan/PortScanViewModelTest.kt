@@ -33,6 +33,7 @@ class PortScanViewModelTest {
     private val fakePortScanHistoryDao = object : PortScanHistoryDao {
         override fun getRecent(limit: Int): kotlinx.coroutines.flow.Flow<List<PortScanHistoryEntry>> = kotlinx.coroutines.flow.flowOf(emptyList())
         override fun search(query: String, limit: Int): kotlinx.coroutines.flow.Flow<List<PortScanHistoryEntry>> = kotlinx.coroutines.flow.flowOf(emptyList())
+        override suspend fun getById(id: Long): PortScanHistoryEntry? = null
         override suspend fun insert(entry: PortScanHistoryEntry) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteOlderThan(before: Long) {}
