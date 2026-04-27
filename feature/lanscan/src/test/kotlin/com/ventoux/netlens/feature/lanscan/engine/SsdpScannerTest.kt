@@ -3,6 +3,7 @@ package com.ventoux.netlens.feature.lanscan.engine
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.feature.lanscan.model.SsdpDevice
 
 class SsdpScannerTest {
 
