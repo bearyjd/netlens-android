@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
+import com.ventoux.netlens.feature.lanscan.model.NetBiosInfo
+import com.ventoux.netlens.feature.lanscan.model.SsdpDevice
 
 class DeviceFingerprinterTest {
 
@@ -252,9 +254,21 @@ class DeviceFingerprinterTest {
     // --- NetBIOS classification ---
 
     @Test
-    fun `NetBIOS always classifies as Windows`() {
+    fun `NetBIOS with Windows hostname pattern classifies as Windows`() {
         val result = fp.classifyFromNetBios(NetBiosInfo(name = "DESKTOP-ABC"))
         assertEquals("Windows", result)
+    }
+
+    @Test
+    fun `NetBIOS with WORKGROUP classifies as Windows`() {
+        val result = fp.classifyFromNetBios(NetBiosInfo(name = "SERVER01", workgroup = "WORKGROUP"))
+        assertEquals("Windows", result)
+    }
+
+    @Test
+    fun `NetBIOS with unknown name returns null`() {
+        val result = fp.classifyFromNetBios(NetBiosInfo(name = "nas-server"))
+        assertNull(result)
     }
 
     // --- OUI vendor lookup ---

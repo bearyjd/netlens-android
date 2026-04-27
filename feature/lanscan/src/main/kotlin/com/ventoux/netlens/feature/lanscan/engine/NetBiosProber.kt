@@ -7,11 +7,7 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class NetBiosInfo(
-    val name: String,
-    val workgroup: String? = null,
-)
+import com.ventoux.netlens.feature.lanscan.model.NetBiosInfo
 
 interface NetBiosProber {
     suspend fun probe(ip: String): NetBiosInfo?
