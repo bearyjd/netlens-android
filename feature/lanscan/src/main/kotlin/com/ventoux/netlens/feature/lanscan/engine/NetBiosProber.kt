@@ -50,9 +50,9 @@ class NetBiosProberImpl @Inject constructor() : NetBiosProber {
             // Transaction ID
             packet[0] = 0x00
             packet[1] = 0x01
-            // Flags: standard query, recursion desired
+            // Flags: standard query
             packet[2] = 0x00
-            packet[3] = 0x10.toByte()
+            packet[3] = 0x00
             // Questions: 1
             packet[4] = 0x00
             packet[5] = 0x01

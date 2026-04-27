@@ -39,7 +39,7 @@ class ArpTableReaderImpl @Inject constructor() : ArpTableReader {
     private suspend fun readArpTable(): Map<String, String> = withContext(Dispatchers.IO) {
         val file = File("/proc/net/arp")
         if (!file.exists()) return@withContext emptyMap()
-        parseArpTable(file.readLines())
+        parseArpTable(file.readLines(Charsets.US_ASCII))
     }
 
     companion object {

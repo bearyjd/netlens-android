@@ -563,7 +563,7 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
                                 DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
                                 DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
                                 DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
-                                DiscoveryMethod.BOTH -> stringResource(R.string.lanscan_discovery_both)
+                                DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
                             },
                             style = MaterialTheme.typography.labelSmall,
                         )

@@ -3,12 +3,28 @@ package com.ventoux.netlens.feature.lanscan.engine
 import com.ventoux.netlens.core.oui.OuiLookup
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 import javax.inject.Inject
+import javax.inject.Singleton
 
-class DeviceFingerprinter @Inject constructor(
+data class PortFingerprint(
+    val deviceType: String?,
+    val osGuess: String?,
+    val evidence: List<String>,
+)
+
+interface DeviceFingerprinter {
+    suspend fun fingerprint(device: LanDevice): LanDevice
+    fun classifyFromServices(services: List<String>): Pair<String?, String?>
+    fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?>
+    fun classifyFromNetBios(info: NetBiosInfo): String?
+    fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint
+}
+
+@Singleton
+class DeviceFingerprinterImpl @Inject constructor(
     private val ouiLookup: OuiLookup,
-) {
+) : DeviceFingerprinter {
 
-    suspend fun fingerprint(device: LanDevice): LanDevice {
+    override suspend fun fingerprint(device: LanDevice): LanDevice {
         val hostname = device.hostname?.lowercase() ?: ""
         val serviceType = classifyFromServices(device.services)
         val deviceType = serviceType.first ?: guessDeviceType(hostname)
@@ -21,7 +37,7 @@ class DeviceFingerprinter @Inject constructor(
         return device.copy(deviceType = deviceType, osGuess = osGuess, vendor = vendor)
     }
 
-    fun classifyFromServices(services: List<String>): Pair<String?, String?> {
+    override fun classifyFromServices(services: List<String>): Pair<String?, String?> {
         var type: String? = null
         var os: String? = null
         for (svc in services) {
@@ -35,7 +51,7 @@ class DeviceFingerprinter @Inject constructor(
         return type to os
     }
 
-    fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?> {
+    override fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?> {
         val upnpType = ssdpDevice.deviceType?.lowercase() ?: ""
         val manufacturer = ssdpDevice.manufacturer?.lowercase() ?: ""
         val friendlyName = ssdpDevice.friendlyName?.lowercase() ?: ""
@@ -64,30 +80,9 @@ class DeviceFingerprinter @Inject constructor(
         return deviceType to osGuess
     }
 
-    fun classifyFromNetBios(info: NetBiosInfo): String? = "Windows"
+    override fun classifyFromNetBios(info: NetBiosInfo): String? = "Windows"
 
-    private fun guessDeviceType(hostname: String): String? {
-        if (hostname.contains("router") || hostname.contains("gateway")) return "Router"
-        if (hostname.contains("printer") || hostname.contains("prn")) return "Printer"
-        if (hostname.contains("appletv") || hostname.contains("apple-tv")) return "Smart TV"
-        if (hostname.contains("tv") || hostname.contains("tizen")) return "Smart TV"
-        if (hostname.contains("iphone")) return "Phone"
-        if (hostname.contains("ipad")) return "Tablet"
-        if (hostname.contains("macbook") || hostname.contains("mac-")) return "Computer"
-        if (hostname.contains("android") || hostname.contains("phone")) return "Phone"
-        if (hostname.contains("iot") || hostname.contains("smart")) return "IoT"
-        if (hostname.contains("xbox")) return "Game Console"
-        if (hostname.contains("desktop") || hostname.contains("laptop") || hostname.contains("pc-")) return "Computer"
-        return null
-    }
-
-    data class PortFingerprint(
-        val deviceType: String?,
-        val osGuess: String?,
-        val evidence: List<String>,
-    )
-
-    fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint {
+    override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint {
         val evidence = mutableListOf<String>()
         var type = device.deviceType
         var os = device.osGuess
@@ -121,6 +116,21 @@ class DeviceFingerprinter @Inject constructor(
         device.vendor?.let { evidence.add("vendor: $it") }
 
         return PortFingerprint(type, os, evidence)
+    }
+
+    private fun guessDeviceType(hostname: String): String? {
+        if (hostname.contains("router") || hostname.contains("gateway")) return "Router"
+        if (hostname.contains("printer") || hostname.contains("prn")) return "Printer"
+        if (hostname.contains("appletv") || hostname.contains("apple-tv")) return "Smart TV"
+        if (hostname.contains("tv") || hostname.contains("tizen")) return "Smart TV"
+        if (hostname.contains("iphone")) return "Phone"
+        if (hostname.contains("ipad")) return "Tablet"
+        if (hostname.contains("macbook") || hostname.contains("mac-")) return "Computer"
+        if (hostname.contains("android") || hostname.contains("phone")) return "Phone"
+        if (hostname.contains("iot") || hostname.contains("smart")) return "IoT"
+        if (hostname.contains("xbox")) return "Game Console"
+        if (hostname.contains("desktop") || hostname.contains("laptop") || hostname.contains("pc-")) return "Computer"
+        return null
     }
 
     private fun guessOs(hostname: String): String? {

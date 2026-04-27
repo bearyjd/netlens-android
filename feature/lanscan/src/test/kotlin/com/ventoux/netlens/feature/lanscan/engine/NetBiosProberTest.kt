@@ -30,6 +30,13 @@ class NetBiosProberTest {
     }
 
     @Test
+    fun `build query packet has zero flags for NBSTAT`() {
+        val packet = NetBiosProberImpl.buildNameQuery()
+        assertEquals(0x00.toByte(), packet[2])
+        assertEquals(0x00.toByte(), packet[3])
+    }
+
+    @Test
     fun `build query packet has one question`() {
         val packet = NetBiosProberImpl.buildNameQuery()
         assertEquals(0x00.toByte(), packet[4])

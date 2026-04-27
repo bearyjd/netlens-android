@@ -215,7 +215,7 @@ class LanScanViewModel @Inject constructor(
                     val merged = if (existing != null) {
                         existing.copy(
                             hostname = existing.hostname ?: fingerprinted.hostname,
-                            discoveryMethod = DiscoveryMethod.BOTH,
+                            discoveryMethod = DiscoveryMethod.MULTIPLE,
                             services = (existing.services + fingerprinted.services).distinct(),
                             deviceType = existing.deviceType ?: fingerprinted.deviceType,
                             osGuess = existing.osGuess ?: fingerprinted.osGuess,

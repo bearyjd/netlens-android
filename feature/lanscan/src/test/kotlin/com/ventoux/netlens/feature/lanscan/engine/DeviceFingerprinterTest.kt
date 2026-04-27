@@ -5,13 +5,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import com.ventoux.netlens.core.oui.OuiLookup
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
 
 class DeviceFingerprinterTest {
 
     private val fakeOui = FakeOuiLookup()
-    private val fp = DeviceFingerprinter(fakeOui)
+    private val fp = DeviceFingerprinterImpl(fakeOui)
 
     private fun device(hostname: String? = null, mac: String? = null) = LanDevice(
         ip = "192.168.1.100",
@@ -372,14 +371,5 @@ class DeviceFingerprinterTest {
         assertNull(result.deviceType)
         assertNull(result.osGuess)
         assertTrue(result.evidence.isEmpty())
-    }
-}
-
-private class FakeOuiLookup : OuiLookup {
-    val table = mutableMapOf<String, String>()
-
-    override suspend fun lookup(mac: String): String? {
-        val prefix = mac.take(8).uppercase().replace('-', ':')
-        return table[prefix]
     }
 }

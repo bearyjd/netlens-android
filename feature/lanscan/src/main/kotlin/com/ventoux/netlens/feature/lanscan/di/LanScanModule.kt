@@ -6,6 +6,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import com.ventoux.netlens.feature.lanscan.engine.ArpTableReader
 import com.ventoux.netlens.feature.lanscan.engine.ArpTableReaderImpl
+import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinter
+import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinterImpl
 import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScanner
 import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScannerImpl
 import com.ventoux.netlens.feature.lanscan.engine.NetBiosProber
@@ -49,4 +51,10 @@ abstract class LanScanModule {
     abstract fun bindArpTableReader(
         impl: ArpTableReaderImpl,
     ): ArpTableReader
+
+    @Binds
+    @Singleton
+    abstract fun bindDeviceFingerprinter(
+        impl: DeviceFingerprinterImpl,
+    ): DeviceFingerprinter
 }

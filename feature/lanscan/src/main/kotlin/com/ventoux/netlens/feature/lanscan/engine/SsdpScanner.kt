@@ -47,7 +47,6 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
         try {
             DatagramSocket().use { socket ->
                 socket.soTimeout = timeoutMs.toInt()
-                socket.broadcast = true
 
                 val message = M_SEARCH_MESSAGE.toByteArray()
                 val address = InetAddress.getByName(MULTICAST_ADDRESS)

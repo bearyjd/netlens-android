@@ -93,7 +93,7 @@ internal fun HostDetailSheet(
                             DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
                             DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
                             DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
-                            DiscoveryMethod.BOTH -> stringResource(R.string.lanscan_discovery_both)
+                            DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
