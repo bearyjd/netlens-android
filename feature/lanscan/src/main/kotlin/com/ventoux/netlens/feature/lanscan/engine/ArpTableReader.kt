@@ -18,7 +18,7 @@ interface ArpTableReader {
 class ArpTableReaderImpl @Inject constructor() : ArpTableReader {
 
     private val mutex = Mutex()
-    private var cache: Map<String, String>? = null
+    @Volatile private var cache: Map<String, String>? = null
 
     override suspend fun getMacForIp(ip: String): String? = getAll()[ip]
 

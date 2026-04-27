@@ -285,9 +285,8 @@ class LanScanViewModel @Inject constructor(
 
     private suspend fun enrichWithArpAndNetBios() {
         val arpTable = arpTableReader.getAll()
-        val devices = _uiState.value.devices
 
-        for (device in devices) {
+        for (device in _uiState.value.devices) {
             val mac = device.macAddress ?: arpTable[device.ip]
             if (mac != null && device.macAddress == null) {
                 val enriched = fingerprinter.fingerprint(device.copy(macAddress = mac))
@@ -302,10 +301,12 @@ class LanScanViewModel @Inject constructor(
                     )
                 }
             }
+        }
 
-            if (device.hostname == null && device.osGuess == null) {
-                val nbInfo = netBiosProber.probe(device.ip)
-                if (nbInfo != null) {
+        kotlinx.coroutines.coroutineScope {
+            _uiState.value.devices.filter { it.hostname == null && it.osGuess == null }.forEach { device ->
+                launch {
+                    val nbInfo = netBiosProber.probe(device.ip) ?: return@launch
                     val os = fingerprinter.classifyFromNetBios(nbInfo)
                     _uiState.update { state ->
                         state.copy(

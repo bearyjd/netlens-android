@@ -77,6 +77,7 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
 
     private fun fetchDeviceDescription(ip: String, locationUrl: String?): SsdpDevice? {
         if (locationUrl == null) return SsdpDevice(ip = ip)
+        if (!isSafeLocationUrl(locationUrl)) return SsdpDevice(ip = ip)
         return try {
             val connection = URL(locationUrl).openConnection() as HttpURLConnection
             connection.connectTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
@@ -93,6 +94,24 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
         private const val MULTICAST_ADDRESS = "239.255.255.250"
         private const val SSDP_PORT = 1900
         private const val DESCRIPTION_TIMEOUT_MS = 2000L
+
+        internal fun isSafeLocationUrl(url: String): Boolean {
+            val lower = url.lowercase()
+            if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
+            val host = try {
+                URL(url).host
+            } catch (_: Exception) {
+                return false
+            }
+            val addr = try {
+                InetAddress.getByName(host)
+            } catch (_: Exception) {
+                return false
+            }
+            if (addr.isLoopbackAddress) return false
+            if (addr.isLinkLocalAddress) return false
+            return true
+        }
 
         private val M_SEARCH_MESSAGE = buildString {
             append("M-SEARCH * HTTP/1.1\r\n")

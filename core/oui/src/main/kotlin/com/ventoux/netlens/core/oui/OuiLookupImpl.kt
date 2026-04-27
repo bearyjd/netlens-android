@@ -16,7 +16,7 @@ class OuiLookupImpl @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : OuiLookup {
     private val mutex = Mutex()
-    private var table: Map<String, String>? = null
+    @Volatile private var table: Map<String, String>? = null
 
     override suspend fun lookup(mac: String): String? {
         val prefix = mac.take(8).uppercase().replace('-', ':')
