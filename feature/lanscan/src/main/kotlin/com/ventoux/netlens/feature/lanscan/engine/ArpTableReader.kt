@@ -5,6 +5,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,7 +40,11 @@ class ArpTableReaderImpl @Inject constructor() : ArpTableReader {
     private suspend fun readArpTable(): Map<String, String> = withContext(Dispatchers.IO) {
         val file = File("/proc/net/arp")
         if (!file.exists()) return@withContext emptyMap()
-        parseArpTable(file.readLines(Charsets.US_ASCII))
+        try {
+            parseArpTable(file.readLines(Charsets.US_ASCII))
+        } catch (_: IOException) {
+            emptyMap()
+        }
     }
 
     companion object {
