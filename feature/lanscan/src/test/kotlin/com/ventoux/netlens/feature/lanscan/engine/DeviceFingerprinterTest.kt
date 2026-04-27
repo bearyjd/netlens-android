@@ -1,5 +1,6 @@
 package com.ventoux.netlens.feature.lanscan.engine
 
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -8,139 +9,273 @@ import com.ventoux.netlens.feature.lanscan.model.LanDevice
 
 class DeviceFingerprinterTest {
 
-    private val fp = DeviceFingerprinter()
+    private val fakeOui = FakeOuiLookup()
+    private val fp = DeviceFingerprinterImpl(fakeOui)
 
-    private fun device(hostname: String? = null) = LanDevice(
+    private fun device(hostname: String? = null, mac: String? = null) = LanDevice(
         ip = "192.168.1.100",
         hostname = hostname,
         isReachable = true,
         latencyMs = 0,
+        macAddress = mac,
     )
 
+    // --- hostname-based fingerprint tests ---
+
     @Test
-    fun `hostname with gateway classified as Router`() {
+    fun `hostname with gateway classified as Router`() = runTest {
         val result = fp.fingerprint(device(hostname = "my-gateway"))
         assertEquals("Router", result.deviceType)
     }
 
     @Test
-    fun `hostname with router classified as Router`() {
+    fun `hostname with router classified as Router`() = runTest {
         val result = fp.fingerprint(device(hostname = "router.asus.com"))
         assertEquals("Router", result.deviceType)
     }
 
     @Test
-    fun `hostname with printer classified as Printer`() {
+    fun `hostname with printer classified as Printer`() = runTest {
         val result = fp.fingerprint(device(hostname = "office-printer"))
         assertEquals("Printer", result.deviceType)
     }
 
     @Test
-    fun `hostname with tv classified as Smart TV`() {
+    fun `hostname with tv classified as Smart TV`() = runTest {
         val result = fp.fingerprint(device(hostname = "Samsung-TV"))
         assertEquals("Smart TV", result.deviceType)
     }
 
     @Test
-    fun `hostname with appletv classified as Smart TV`() {
+    fun `hostname with appletv classified as Smart TV`() = runTest {
         val result = fp.fingerprint(device(hostname = "appletv-living"))
         assertEquals("Smart TV", result.deviceType)
     }
 
     @Test
-    fun `iphone hostname classified as Phone`() {
+    fun `iphone hostname classified as Phone`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-iPhone"))
         assertEquals("Phone", result.deviceType)
     }
 
     @Test
-    fun `ipad hostname classified as Tablet`() {
+    fun `ipad hostname classified as Tablet`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-iPad"))
         assertEquals("Tablet", result.deviceType)
     }
 
     @Test
-    fun `macbook hostname classified as Computer`() {
+    fun `macbook hostname classified as Computer`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-MacBook-Pro"))
         assertEquals("Computer", result.deviceType)
     }
 
     @Test
-    fun `android hostname classified as Phone`() {
+    fun `android hostname classified as Phone`() = runTest {
         val result = fp.fingerprint(device(hostname = "android-abc123"))
         assertEquals("Phone", result.deviceType)
     }
 
     @Test
-    fun `iot hostname classified as IoT`() {
+    fun `iot hostname classified as IoT`() = runTest {
         val result = fp.fingerprint(device(hostname = "iot-sensor-01"))
         assertEquals("IoT", result.deviceType)
     }
 
     @Test
-    fun `xbox hostname classified as Game Console`() {
+    fun `xbox hostname classified as Game Console`() = runTest {
         val result = fp.fingerprint(device(hostname = "xbox-living-room"))
         assertEquals("Game Console", result.deviceType)
     }
 
     @Test
-    fun `desktop hostname classified as Computer`() {
+    fun `desktop hostname classified as Computer`() = runTest {
         val result = fp.fingerprint(device(hostname = "DESKTOP-ABC123"))
         assertEquals("Computer", result.deviceType)
     }
 
     @Test
-    fun `null hostname returns null deviceType`() {
+    fun `null hostname returns null deviceType`() = runTest {
         val result = fp.fingerprint(device())
         assertNull(result.deviceType)
     }
 
     @Test
-    fun `unknown hostname returns null deviceType`() {
+    fun `unknown hostname returns null deviceType`() = runTest {
         val result = fp.fingerprint(device(hostname = "generic-host"))
         assertNull(result.deviceType)
     }
 
+    // --- OS guessing ---
+
     @Test
-    fun `iphone hostname guesses iOS`() {
+    fun `iphone hostname guesses iOS`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-iPhone"))
         assertEquals("iOS", result.osGuess)
     }
 
     @Test
-    fun `ipad hostname guesses iOS`() {
+    fun `ipad hostname guesses iOS`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-iPad"))
         assertEquals("iOS", result.osGuess)
     }
 
     @Test
-    fun `macbook hostname guesses macOS`() {
+    fun `macbook hostname guesses macOS`() = runTest {
         val result = fp.fingerprint(device(hostname = "Johns-MacBook-Pro"))
         assertEquals("macOS", result.osGuess)
     }
 
     @Test
-    fun `android hostname guesses Android`() {
+    fun `android hostname guesses Android`() = runTest {
         val result = fp.fingerprint(device(hostname = "android-abc123"))
         assertEquals("Android", result.osGuess)
     }
 
     @Test
-    fun `windows hostname guesses Windows`() {
+    fun `windows hostname guesses Windows`() = runTest {
         val result = fp.fingerprint(device(hostname = "DESKTOP-ABC123"))
         assertEquals("Windows", result.osGuess)
     }
 
     @Test
-    fun `raspberry hostname guesses Linux`() {
+    fun `raspberry hostname guesses Linux`() = runTest {
         val result = fp.fingerprint(device(hostname = "raspberrypi-4"))
         assertEquals("Linux", result.osGuess)
     }
 
     @Test
-    fun `unknown hostname returns null osGuess`() {
+    fun `unknown hostname returns null osGuess`() = runTest {
         val result = fp.fingerprint(device(hostname = "generic-host"))
         assertNull(result.osGuess)
+    }
+
+    // --- mDNS service-type classification ---
+
+    @Test
+    fun `airplay service classified as Smart TV`() {
+        val (type, os) = fp.classifyFromServices(listOf("_airplay._tcp"))
+        assertEquals("Smart TV", type)
+        assertEquals("iOS", os)
+    }
+
+    @Test
+    fun `googlecast service classified as Chromecast`() {
+        val (type, _) = fp.classifyFromServices(listOf("_googlecast._tcp"))
+        assertEquals("Chromecast", type)
+    }
+
+    @Test
+    fun `raop service classified as AirPlay Speaker`() {
+        val (type, _) = fp.classifyFromServices(listOf("_raop._tcp"))
+        assertEquals("AirPlay Speaker", type)
+    }
+
+    @Test
+    fun `ipp service classified as Printer`() {
+        val (type, _) = fp.classifyFromServices(listOf("_ipp._tcp"))
+        assertEquals("Printer", type)
+    }
+
+    @Test
+    fun `homekit service classified as IoT`() {
+        val (type, _) = fp.classifyFromServices(listOf("_homekit._tcp"))
+        assertEquals("IoT", type)
+    }
+
+    @Test
+    fun `companion-link service classified as iOS Phone`() {
+        val (type, os) = fp.classifyFromServices(listOf("_companion-link._tcp"))
+        assertEquals("Phone", type)
+        assertEquals("iOS", os)
+    }
+
+    @Test
+    fun `service type takes priority over hostname`() = runTest {
+        val dev = device(hostname = "generic-host").copy(services = listOf("_googlecast._tcp"))
+        val result = fp.fingerprint(dev)
+        assertEquals("Chromecast", result.deviceType)
+    }
+
+    @Test
+    fun `unknown services return null`() {
+        val (type, os) = fp.classifyFromServices(listOf("_http._tcp"))
+        assertNull(type)
+        assertNull(os)
+    }
+
+    // --- SSDP classification ---
+
+    @Test
+    fun `SSDP MediaRenderer classified as Smart TV`() {
+        val ssdp = SsdpDevice(
+            ip = "192.168.1.100",
+            deviceType = "urn:schemas-upnp-org:device:MediaRenderer:1",
+        )
+        val (type, _) = fp.classifyFromSsdp(ssdp)
+        assertEquals("Smart TV", type)
+    }
+
+    @Test
+    fun `SSDP InternetGateway classified as Router`() {
+        val ssdp = SsdpDevice(
+            ip = "192.168.1.1",
+            deviceType = "urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+        )
+        val (type, _) = fp.classifyFromSsdp(ssdp)
+        assertEquals("Router", type)
+    }
+
+    @Test
+    fun `SSDP Samsung manufacturer with TV type guesses Tizen`() {
+        val ssdp = SsdpDevice(
+            ip = "192.168.1.100",
+            manufacturer = "Samsung Electronics",
+            deviceType = "urn:schemas-upnp-org:device:tv:1",
+        )
+        val (type, os) = fp.classifyFromSsdp(ssdp)
+        assertEquals("Smart TV", type)
+        assertEquals("Tizen", os)
+    }
+
+    @Test
+    fun `SSDP Chromecast in friendly name classified as Smart Speaker`() {
+        val ssdp = SsdpDevice(
+            ip = "192.168.1.50",
+            friendlyName = "Chromecast Audio",
+            manufacturer = "Google Inc.",
+        )
+        val (type, _) = fp.classifyFromSsdp(ssdp)
+        assertEquals("Smart Speaker", type)
+    }
+
+    // --- NetBIOS classification ---
+
+    @Test
+    fun `NetBIOS always classifies as Windows`() {
+        val result = fp.classifyFromNetBios(NetBiosInfo(name = "DESKTOP-ABC"))
+        assertEquals("Windows", result)
+    }
+
+    // --- OUI vendor lookup ---
+
+    @Test
+    fun `fingerprint with MAC sets vendor from OUI`() = runTest {
+        fakeOui.table["AA:BB:CC"] = "Apple Inc."
+        val result = fp.fingerprint(device(mac = "AA:BB:CC:DD:EE:FF"))
+        assertEquals("Apple Inc.", result.vendor)
+    }
+
+    @Test
+    fun `fingerprint without MAC has null vendor`() = runTest {
+        val result = fp.fingerprint(device())
+        assertNull(result.vendor)
+    }
+
+    @Test
+    fun `fingerprint with unknown MAC prefix has null vendor`() = runTest {
+        val result = fp.fingerprint(device(mac = "XX:YY:ZZ:11:22:33"))
+        assertNull(result.vendor)
     }
 
     // --- fingerprintWithPorts tests ---
@@ -221,6 +356,13 @@ class DeviceFingerprinterTest {
         val dev = device().copy(services = listOf("_http._tcp."))
         val result = fp.fingerprintWithPorts(dev, emptyList())
         assertTrue(result.evidence.any { "mDNS: http" in it })
+    }
+
+    @Test
+    fun `vendor added to evidence`() {
+        val dev = device().copy(vendor = "ASUS")
+        val result = fp.fingerprintWithPorts(dev, emptyList())
+        assertTrue(result.evidence.any { "vendor: ASUS" in it })
     }
 
     @Test

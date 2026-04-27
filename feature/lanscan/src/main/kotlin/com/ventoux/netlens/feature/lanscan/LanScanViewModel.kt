@@ -23,8 +23,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
+import com.ventoux.netlens.feature.lanscan.engine.ArpTableReader
 import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinter
 import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScanner
+import com.ventoux.netlens.feature.lanscan.engine.NetBiosProber
+import com.ventoux.netlens.feature.lanscan.engine.SsdpScanner
 import com.ventoux.netlens.feature.lanscan.engine.SubnetScanner
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
@@ -46,6 +49,9 @@ class LanScanViewModel @Inject constructor(
     private val mdnsScanner: LanMdnsScanner,
     private val fingerprinter: DeviceFingerprinter,
     private val portScanner: PortScanner,
+    private val ssdpScanner: SsdpScanner,
+    private val netBiosProber: NetBiosProber,
+    private val arpTableReader: ArpTableReader,
     @ApplicationContext private val context: Context,
     private val lanScanHistoryDao: LanScanHistoryDao,
 ) : ViewModel() {
@@ -188,6 +194,7 @@ class LanScanViewModel @Inject constructor(
         }
         val expectedHosts = ((1 shl (32 - prefixLength)) - 2).coerceIn(1, 1024).toFloat()
 
+        arpTableReader.invalidateCache()
         _uiState.update {
             it.copy(
                 devices = emptyList(),
@@ -201,18 +208,20 @@ class LanScanViewModel @Inject constructor(
         }
 
         scanJob = viewModelScope.launch {
-            fun mergeDevice(device: LanDevice) {
+            suspend fun mergeDevice(device: LanDevice) {
                 val fingerprinted = fingerprinter.fingerprint(device)
                 _uiState.update { state ->
                     val existing = state.devices.find { it.ip == fingerprinted.ip }
                     val merged = if (existing != null) {
                         existing.copy(
                             hostname = existing.hostname ?: fingerprinted.hostname,
-                            discoveryMethod = DiscoveryMethod.BOTH,
+                            discoveryMethod = DiscoveryMethod.MULTIPLE,
                             services = (existing.services + fingerprinted.services).distinct(),
                             deviceType = existing.deviceType ?: fingerprinted.deviceType,
                             osGuess = existing.osGuess ?: fingerprinted.osGuess,
                             latencyMs = maxOf(existing.latencyMs, fingerprinted.latencyMs),
+                            macAddress = existing.macAddress ?: fingerprinted.macAddress,
+                            vendor = existing.vendor ?: fingerprinted.vendor,
                         )
                     } else {
                         fingerprinted
@@ -245,10 +254,72 @@ class LanScanViewModel @Inject constructor(
                     .collect { device -> mergeDevice(device) }
             }
 
+            val ssdpJob = launch {
+                ssdpScanner.discover()
+                    .catch { e -> Log.d("LanScan", "SSDP discovery failed: ${e.message}") }
+                    .collect { ssdpDevice ->
+                        val (type, os) = fingerprinter.classifyFromSsdp(ssdpDevice)
+                        val device = LanDevice(
+                            ip = ssdpDevice.ip,
+                            hostname = ssdpDevice.friendlyName,
+                            isReachable = true,
+                            discoveryMethod = DiscoveryMethod.SSDP,
+                            deviceType = type,
+                            osGuess = os,
+                            vendor = ssdpDevice.manufacturer,
+                        )
+                        mergeDevice(device)
+                    }
+            }
+
             pingJob.join()
             mdnsJob.join()
+            ssdpJob.join()
+
+            enrichWithArpAndNetBios()
+
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
             saveToHistory()
+        }
+    }
+
+    private suspend fun enrichWithArpAndNetBios() {
+        val arpTable = arpTableReader.getAll()
+
+        for (device in _uiState.value.devices) {
+            val mac = device.macAddress ?: arpTable[device.ip]
+            if (mac != null && device.macAddress == null) {
+                val enriched = fingerprinter.fingerprint(device.copy(macAddress = mac))
+                _uiState.update { state ->
+                    state.copy(
+                        devices = state.devices.map {
+                            if (it.ip == enriched.ip) it.copy(
+                                macAddress = enriched.macAddress,
+                                vendor = it.vendor ?: enriched.vendor,
+                            ) else it
+                        },
+                    )
+                }
+            }
+        }
+
+        kotlinx.coroutines.coroutineScope {
+            _uiState.value.devices.filter { it.hostname == null && it.osGuess == null }.forEach { device ->
+                launch {
+                    val nbInfo = netBiosProber.probe(device.ip) ?: return@launch
+                    val os = fingerprinter.classifyFromNetBios(nbInfo)
+                    _uiState.update { state ->
+                        state.copy(
+                            devices = state.devices.map {
+                                if (it.ip == device.ip) it.copy(
+                                    hostname = it.hostname ?: nbInfo.name,
+                                    osGuess = it.osGuess ?: os,
+                                ) else it
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 

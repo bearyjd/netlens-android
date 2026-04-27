@@ -561,7 +561,9 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
                             text = when (device.discoveryMethod) {
                                 DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
                                 DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
-                                DiscoveryMethod.BOTH -> stringResource(R.string.lanscan_discovery_both)
+                                DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
+                                DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
+                                DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
                             },
                             style = MaterialTheme.typography.labelSmall,
                         )

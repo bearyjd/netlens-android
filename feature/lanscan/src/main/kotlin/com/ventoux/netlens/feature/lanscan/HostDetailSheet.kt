@@ -91,15 +91,27 @@ internal fun HostDetailSheet(
                         text = when (state.device.discoveryMethod) {
                             DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
                             DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
-                            DiscoveryMethod.BOTH -> stringResource(R.string.lanscan_discovery_both)
+                            DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
+                            DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
+                            DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                state.device.macAddress?.let { mac ->
+                    Text(
+                        text = mac,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
                 val typeLabel = state.enrichedType ?: state.device.deviceType
                 val osLabel = state.enrichedOs ?: state.device.osGuess
-                if (typeLabel != null || osLabel != null) {
+                val vendorLabel = state.device.vendor
+                if (typeLabel != null || osLabel != null || vendorLabel != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(top = 4.dp),
@@ -108,6 +120,9 @@ internal fun HostDetailSheet(
                             SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                         }
                         osLabel?.let {
+                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                        }
+                        vendorLabel?.let {
                             SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                         }
                     }
