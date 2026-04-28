@@ -1,10 +1,6 @@
 package us.beary.netlens.feature.lanscan
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.LinkAddress
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -15,6 +11,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import us.beary.netlens.core.network.NetworkInterfaceProvider
 import us.beary.netlens.feature.lanscan.engine.SubnetScanner
 import us.beary.netlens.feature.lanscan.model.LanScanUiState
 import javax.inject.Inject
@@ -22,7 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LanScanViewModel @Inject constructor(
     private val subnetScanner: SubnetScanner,
-    @ApplicationContext private val context: Context,
+    private val networkInterfaceProvider: NetworkInterfaceProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -33,31 +30,14 @@ class LanScanViewModel @Inject constructor(
     fun startScan() {
         if (_uiState.value.isScanning) return
 
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val linkProperties = connectivityManager.getLinkProperties(
-            connectivityManager.activeNetwork,
-        )
-
-        if (linkProperties == null) {
+        val iface = networkInterfaceProvider.getActiveNetworkInterface()
+        if (iface == null) {
             _uiState.update { it.copy(error = "No active network connection") }
             return
         }
 
-        val linkAddress = linkProperties.linkAddresses
-            .firstOrNull { it.isIpv4() }
-
-        if (linkAddress == null) {
-            _uiState.update { it.copy(error = "No IPv4 address found") }
-            return
-        }
-
-        val subnet = linkAddress.address.hostAddress ?: run {
-            _uiState.update { it.copy(error = "Could not determine IP address") }
-            return
-        }
-        val prefixLength = linkAddress.prefixLength
+        val subnet = iface.ip
+        val prefixLength = iface.prefixLength
         val subnetInfo = "$subnet/$prefixLength"
 
         _uiState.update {
@@ -101,8 +81,4 @@ class LanScanViewModel @Inject constructor(
     companion object {
         private const val MAX_EXPECTED_DEVICES = 254f
     }
-}
-
-private fun LinkAddress.isIpv4(): Boolean {
-    return address.address.size == 4
 }
