@@ -1,4 +1,4 @@
-package com.ventoux.netlens.feature.lanscan
+package com.ventoux.netlens.core.network
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
