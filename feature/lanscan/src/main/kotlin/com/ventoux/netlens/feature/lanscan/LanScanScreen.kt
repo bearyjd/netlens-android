@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -48,19 +47,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -476,10 +475,20 @@ private fun relativeTimeText(timestampMs: Long): String {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
-    val clipboardManager = LocalClipboardManager.current
+    val discoveryText = when (device.discoveryMethod) {
+        DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
+        DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
+        DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
+        DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
+        DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
+    }
+    val secondaryLine = buildString {
+        device.osGuess?.let { append(it) }
+        if (isNotEmpty()) append(" · ")
+        append(discoveryText)
+    }
 
     Card(
         modifier = Modifier
@@ -489,131 +498,139 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = if (device.isReachable) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = if (device.isReachable) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(20.dp),
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = device.ip,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
+                device.hostname?.let { hostname ->
                     Text(
-                        text = device.ip,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = hostname,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                }
 
-                    device.hostname?.let { hostname ->
-                        Text(
-                            text = hostname,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
+                device.macAddress?.let { mac ->
                     Text(
-                        text = stringResource(R.string.lanscan_mac_unavailable),
+                        text = stringResource(R.string.lanscan_mac_label, mac),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        maxLines = 1,
                     )
-
-                    device.osGuess?.let { os ->
-                        Text(
-                            text = os,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
-                    }
                 }
 
+                Text(
+                    text = secondaryLine,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    maxLines = 1,
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(horizontalAlignment = Alignment.End) {
                 device.deviceType?.let { type ->
-                    Spacer(modifier = Modifier.width(8.dp))
-                    SuggestionChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                text = type,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                            )
-                        },
+                    Text(
+                        text = type,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                SuggestionChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = when (device.discoveryMethod) {
-                                DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
-                                DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
-                                DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
-                                DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
-                                DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    },
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                IconButton(
-                    onClick = { clipboardManager.setText(AnnotatedString(device.ip)) },
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = stringResource(R.string.lanscan_cd_copy_ip),
-                        modifier = Modifier.size(16.dp),
+                device.services.take(3).forEach { service ->
+                    val displayName = service
+                        .trim('.')
+                        .removePrefix("_")
+                        .removeSuffix("._tcp")
+                        .removeSuffix("._udp")
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
 
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            if (device.services.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    device.services.forEach { service ->
-                        val displayName = service
-                            .trim('.')
-                            .removePrefix("_")
-                            .removeSuffix("._tcp")
-                            .removeSuffix("._udp")
-                        SuggestionChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                        )
-                    }
+                if (device.services.size > 3) {
+                    Text(
+                        text = "+${device.services.size - 3}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DeviceCardPreview() {
+    MaterialTheme {
+        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DeviceCard(
+                device = LanDevice(
+                    ip = "192.168.1.42",
+                    hostname = "onn.-Streaming-Device-10e164d58de7c09256650a369c4f9acf",
+                    isReachable = true,
+                    deviceType = "Chromecast",
+                    osGuess = "Android",
+                    discoveryMethod = DiscoveryMethod.MULTIPLE,
+                    services = listOf(
+                        "_googlecast._tcp.",
+                        "_spotify-connect._tcp.",
+                        "_airplay._tcp.",
+                        "_raop._tcp.",
+                    ),
+                ),
+                onClick = {},
+            )
+            DeviceCard(
+                device = LanDevice(
+                    ip = "192.168.1.1",
+                    isReachable = true,
+                    discoveryMethod = DiscoveryMethod.PING,
+                ),
+                onClick = {},
+            )
         }
     }
 }
