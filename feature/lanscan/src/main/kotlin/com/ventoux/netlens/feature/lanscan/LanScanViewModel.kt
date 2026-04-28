@@ -1,12 +1,7 @@
 package com.ventoux.netlens.feature.lanscan
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.LinkAddress
-import android.net.NetworkCapabilities
 import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -23,6 +18,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
+import com.ventoux.netlens.core.network.NetworkInterfaceProvider
+import com.ventoux.netlens.core.network.calculateNetworkAddress
 import com.ventoux.netlens.feature.lanscan.engine.ArpTableReader
 import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinter
 import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScanner
@@ -52,7 +49,7 @@ class LanScanViewModel @Inject constructor(
     private val ssdpScanner: SsdpScanner,
     private val netBiosProber: NetBiosProber,
     private val arpTableReader: ArpTableReader,
-    @ApplicationContext private val context: Context,
+    private val networkInterfaceProvider: NetworkInterfaceProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
 ) : ViewModel() {
 
@@ -91,32 +88,18 @@ class LanScanViewModel @Inject constructor(
     }
 
     fun refreshSuggestedNetworks() {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        @Suppress("MissingPermission")
-        val suggestions = cm.allNetworks.mapNotNull { network ->
-            val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
-            val lp = cm.getLinkProperties(network) ?: return@mapNotNull null
-            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@mapNotNull null
-            val linkAddr = lp.linkAddresses.firstOrNull { it.isIpv4() } ?: return@mapNotNull null
-            val ip = linkAddr.address.hostAddress ?: return@mapNotNull null
-            val prefix = linkAddr.prefixLength
-            val isVpn = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-            val label = when {
-                isVpn -> "VPN"
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-                else -> "Network"
-            }
-            val networkAddr = calculateNetworkAddress(ip, prefix)
+        val suggestions = networkInterfaceProvider.getNetworkInterfaces().mapNotNull { iface ->
+            val networkAddr = calculateNetworkAddress(iface.ip, iface.prefixLength)
+            val cidr = "$networkAddr/${iface.prefixLength}"
+            if (parseCidr(cidr) == null) return@mapNotNull null
             SuggestedNetwork(
-                cidr = "$networkAddr/$prefix",
-                ip = ip,
-                prefixLength = prefix,
-                label = label,
-                isVpn = isVpn,
+                cidr = cidr,
+                ip = iface.ip,
+                prefixLength = iface.prefixLength,
+                label = iface.label,
+                isVpn = iface.isVpn,
             )
-        }.filter { parseCidr(it.cidr) != null }
-         .sortedBy { it.isVpn }
+        }.sortedBy { it.isVpn }
         _uiState.update { it.copy(suggestedNetworks = suggestions) }
     }
 
@@ -163,33 +146,18 @@ class LanScanViewModel @Inject constructor(
             ScanRangeMode.CUSTOM -> {
                 val parsed = parseCidr(_uiState.value.customRange)
                 if (parsed == null) {
-                    _uiState.update {
-                        it.copy(rangeError = context.getString(R.string.lanscan_error_invalid_cidr))
-                    }
+                    _uiState.update { it.copy(rangeError = "Invalid CIDR notation") }
                     return
                 }
                 Triple(parsed.first, parsed.second, "${parsed.first}/${parsed.second}")
             }
             ScanRangeMode.AUTO -> {
-                val connectivityManager =
-                    context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                val linkProperties = connectivityManager.getLinkProperties(
-                    connectivityManager.activeNetwork,
-                )
-                if (linkProperties == null) {
+                val iface = networkInterfaceProvider.getActiveNetworkInterface()
+                if (iface == null) {
                     _uiState.update { it.copy(error = "No active network connection") }
                     return
                 }
-                val linkAddress = linkProperties.linkAddresses.firstOrNull { it.isIpv4() }
-                if (linkAddress == null) {
-                    _uiState.update { it.copy(error = "No IPv4 address found") }
-                    return
-                }
-                val ip = linkAddress.address.hostAddress ?: run {
-                    _uiState.update { it.copy(error = "Could not determine IP address") }
-                    return
-                }
-                Triple(ip, linkAddress.prefixLength, "$ip/${linkAddress.prefixLength}")
+                Triple(iface.ip, iface.prefixLength, "${iface.ip}/${iface.prefixLength}")
             }
         }
         val expectedHosts = ((1 shl (32 - prefixLength)) - 2).coerceIn(1, 1024).toFloat()
@@ -429,17 +397,3 @@ private fun ipToLong(ip: String): Long {
     return ip.split(".").fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
 }
 
-private fun LinkAddress.isIpv4(): Boolean {
-    return address.address.size == 4
-}
-
-internal fun calculateNetworkAddress(ip: String, prefixLength: Int): String {
-    val parts = ip.split(".")
-    if (parts.size != 4) return ip
-    val ipInt = parts.fold(0L) { acc, part ->
-        (acc shl 8) or (part.toIntOrNull()?.toLong() ?: return ip)
-    }
-    val mask = if (prefixLength == 0) 0L else (0xFFFFFFFFL shl (32 - prefixLength)) and 0xFFFFFFFFL
-    val network = ipInt and mask
-    return "${(network shr 24) and 0xFF}.${(network shr 16) and 0xFF}.${(network shr 8) and 0xFF}.${network and 0xFF}"
-}
