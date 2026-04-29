@@ -1,67 +1,87 @@
 package com.ventoux.netlens.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.R
 import com.ventoux.netlens.feature.posture.PostureViewModel
 import com.ventoux.netlens.feature.posture.gradeColor
 import com.ventoux.netlens.feature.posture.model.PostureUiState
-import com.ventoux.netlens.feature.posture.model.Severity
 import com.ventoux.netlens.navigation.ToolCategory
 import com.ventoux.netlens.navigation.ToolDestination
+import com.ventoux.netlens.ui.components.NetworkStatusCard
+import com.ventoux.netlens.ui.components.SectionHeader
+import com.ventoux.netlens.ui.components.ToolChip
+import com.ventoux.netlens.ui.components.ToolGridCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onToolClick: (ToolDestination) -> Unit,
     modifier: Modifier = Modifier,
+    homeViewModel: HomeViewModel = hiltViewModel(),
     postureViewModel: PostureViewModel = hiltViewModel(),
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val postureState by postureViewModel.uiState.collectAsStateWithLifecycle()
 
+    val handleToolClick: (ToolDestination) -> Unit = { tool ->
+        homeViewModel.recordToolUsage(tool.route)
+        onToolClick(tool)
+    }
+
+    val (postureGrade, postureColor) = when (val p = postureState) {
+        is PostureUiState.Scored -> p.score.grade to gradeColor(p.score.grade)
+        is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
+        PostureUiState.Disconnected -> "—" to Color(0xFF9E9E9E)
+        PostureUiState.Loading -> "…" to Color(0xFF9E9E9E)
+    }
+
+    val allGridTools = ToolDestination.entries.filter { it.isVisibleInGrid }
+    val isSearching = homeState.searchQuery.isNotBlank()
+    val filteredTools = if (isSearching) {
+        allGridTools.filter {
+            it.label.contains(homeState.searchQuery, ignoreCase = true) ||
+                it.description.contains(homeState.searchQuery, ignoreCase = true)
+        }
+    } else {
+        allGridTools
+    }
+    val favoriteTools = homeState.favoriteRoutes
+        .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    val recentTools = homeState.recentRoutes
+        .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+
     Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier,
         topBar = {
-            LargeTopAppBar(
-                title = { Text("NetLens") },
-                scrollBehavior = scrollBehavior,
-            )
+            TopAppBar(title = { Text("NetLens") })
         },
     ) { innerPadding ->
         LazyColumn(
@@ -74,145 +94,157 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item(key = "posture_hero") {
-                PostureHeroCard(
-                    state = postureState,
-                    onClick = { onToolClick(ToolDestination.Posture) },
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            ToolCategory.entries.forEach { category ->
-                val tools = (ToolDestination.byCategory[category] ?: return@forEach)
-                    .filter { it != ToolDestination.Posture }
-
-                item(key = category.name) {
-                    Text(
-                        text = category.label,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                    )
-                }
-
-                items(tools, key = { it.route }) { tool ->
-                    ToolCard(
-                        tool = tool,
-                        onClick = { onToolClick(tool) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PostureHeroCard(
-    state: PostureUiState,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val (grade, color) = when (state) {
-                is PostureUiState.Scored -> state.score.grade to gradeColor(state.score.grade)
-                is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
-                PostureUiState.Disconnected -> "—" to Color(0xFF9E9E9E)
-                PostureUiState.Loading -> "…" to Color(0xFF9E9E9E)
-            }
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(color.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = grade,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
+            item(key = "network_status") {
+                NetworkStatusCard(
+                    isConnected = homeState.isConnected,
+                    ssid = homeState.interfaceLabel,
+                    localIp = homeState.localIp,
+                    gatewayIp = homeState.gatewayIp,
+                    postureGrade = postureGrade,
+                    postureColor = postureColor,
+                    onClick = { handleToolClick(ToolDestination.Posture) },
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.posture_hero_title),
-                    style = MaterialTheme.typography.titleMedium,
+
+            item(key = "search") {
+                ToolSearchBar(
+                    query = homeState.searchQuery,
+                    onQueryChange = homeViewModel::onSearchQueryChanged,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                val subtitle = when (state) {
-                    is PostureUiState.Scored -> {
-                        val scored = state.score.factors.count { it.severity != Severity.Unavailable }
-                        stringResource(
-                            R.string.posture_hero_score_subtitle,
-                            state.score.numericScore,
-                            scored,
-                            state.score.factors.size,
+            }
+
+            if (!isSearching) {
+                if (favoriteTools.isNotEmpty()) {
+                    item(key = "favorites_header") {
+                        SectionHeader(
+                            title = stringResource(R.string.home_favorites),
+                            actionLabel = if (homeState.isEditingFavorites) "Done" else "Edit",
+                            onAction = {
+                                homeViewModel.setEditingFavorites(!homeState.isEditingFavorites)
+                            },
                         )
                     }
-                    is PostureUiState.Error -> stringResource(R.string.posture_hero_error)
-                    PostureUiState.Disconnected -> stringResource(R.string.posture_hero_disconnected)
-                    PostureUiState.Loading -> stringResource(R.string.posture_hero_loading)
+                    item(key = "favorites_row") {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(favoriteTools, key = { it.route }) { tool ->
+                                ToolChip(
+                                    icon = tool.icon,
+                                    label = tool.label,
+                                    onClick = { handleToolClick(tool) },
+                                )
+                            }
+                        }
+                    }
                 }
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+
+                if (recentTools.isNotEmpty()) {
+                    item(key = "recents_header") {
+                        SectionHeader(title = stringResource(R.string.home_recent))
+                    }
+                    item(key = "recents_row") {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(recentTools, key = { it.route }) { tool ->
+                                ToolChip(
+                                    icon = tool.icon,
+                                    label = tool.label,
+                                    onClick = { handleToolClick(tool) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                ToolCategory.entries.forEach { category ->
+                    val categoryTools = filteredTools.filter { it.category == category }
+                    if (categoryTools.isNotEmpty()) {
+                        item(key = "cat_${category.name}") {
+                            SectionHeader(title = category.label)
+                        }
+                        val pairs = categoryTools.chunked(2)
+                        items(
+                            count = pairs.size,
+                            key = { "grid_${category.name}_$it" },
+                        ) { index ->
+                            ToolGridRow(
+                                tools = pairs[index],
+                                onToolClick = handleToolClick,
+                            )
+                        }
+                    }
+                }
+            } else {
+                if (filteredTools.isEmpty()) {
+                    item(key = "no_results") {
+                        Text(
+                            text = stringResource(R.string.home_no_results),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 24.dp),
+                        )
+                    }
+                } else {
+                    val pairs = filteredTools.chunked(2)
+                    items(
+                        count = pairs.size,
+                        key = { "search_$it" },
+                    ) { index ->
+                        ToolGridRow(
+                            tools = pairs[index],
+                            onToolClick = handleToolClick,
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ToolCard(
-    tool: ToolDestination,
-    onClick: () -> Unit,
+private fun ToolSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        onClick = onClick,
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = tool.icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = tool.label,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = tool.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        placeholder = { Text(stringResource(R.string.home_search_placeholder)) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Default.Clear, contentDescription = null)
+                }
             }
+        },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+    )
+}
+
+@Composable
+private fun ToolGridRow(
+    tools: List<ToolDestination>,
+    onToolClick: (ToolDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        tools.forEach { tool ->
+            ToolGridCard(
+                icon = tool.icon,
+                label = tool.label,
+                description = tool.description,
+                onClick = { onToolClick(tool) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (tools.size == 1) {
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }

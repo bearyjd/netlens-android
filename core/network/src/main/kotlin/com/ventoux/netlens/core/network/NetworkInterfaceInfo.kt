@@ -6,4 +6,5 @@ data class NetworkInterfaceInfo(
     val interfaceName: String,
     val label: String,
     val isVpn: Boolean,
+    val gateway: String? = null,
 )
