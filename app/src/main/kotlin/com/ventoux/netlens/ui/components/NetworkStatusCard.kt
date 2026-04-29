@@ -20,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ventoux.netlens.R
 import com.ventoux.netlens.ui.theme.MonoFontFamily
 
 @Composable
@@ -70,16 +72,16 @@ fun NetworkStatusCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = ssid ?: "Connected",
+                            text = ssid ?: stringResource(R.string.status_connected),
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    StatusRow(label = "IP", value = localIp ?: "—")
-                    StatusRow(label = "GW", value = gatewayIp ?: "—")
+                    StatusRow(label = stringResource(R.string.status_ip_label), value = localIp ?: "—")
+                    StatusRow(label = stringResource(R.string.status_gw_label), value = gatewayIp ?: "—")
                 } else {
                     Text(
-                        text = "Disconnected",
+                        text = stringResource(R.string.status_disconnected),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

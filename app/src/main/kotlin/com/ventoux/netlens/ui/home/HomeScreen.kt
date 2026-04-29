@@ -23,8 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,16 +51,19 @@ fun HomeScreen(
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val postureState by postureViewModel.uiState.collectAsStateWithLifecycle()
 
-    val handleToolClick: (ToolDestination) -> Unit = { tool ->
-        homeViewModel.recordToolUsage(tool.route)
-        onToolClick(tool)
+    val handleToolClick = remember(homeViewModel, onToolClick) {
+        { tool: ToolDestination ->
+            homeViewModel.recordToolUsage(tool.route)
+            onToolClick(tool)
+        }
     }
 
+    val disabledColor = MaterialTheme.colorScheme.onSurfaceVariant
     val (postureGrade, postureColor) = when (val p = postureState) {
         is PostureUiState.Scored -> p.score.grade to gradeColor(p.score.grade)
         is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
-        PostureUiState.Disconnected -> "—" to Color(0xFF9E9E9E)
-        PostureUiState.Loading -> "…" to Color(0xFF9E9E9E)
+        PostureUiState.Disconnected -> "—" to disabledColor
+        PostureUiState.Loading -> "…" to disabledColor
     }
 
     val allGridTools = ToolDestination.entries.filter { it.isVisibleInGrid }
@@ -81,7 +84,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(title = { Text("NetLens") })
+            TopAppBar(title = { Text(stringResource(R.string.app_name)) })
         },
     ) { innerPadding ->
         LazyColumn(
@@ -119,7 +122,9 @@ fun HomeScreen(
                     item(key = "favorites_header") {
                         SectionHeader(
                             title = stringResource(R.string.home_favorites),
-                            actionLabel = if (homeState.isEditingFavorites) "Done" else "Edit",
+                            actionLabel = stringResource(
+                                if (homeState.isEditingFavorites) R.string.home_done else R.string.home_edit,
+                            ),
                             onAction = {
                                 homeViewModel.setEditingFavorites(!homeState.isEditingFavorites)
                             },

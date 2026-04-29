@@ -25,6 +25,11 @@ class UserPreferencesRepositoryTest {
     private val testScope = TestScope(UnconfinedTestDispatcher())
     private lateinit var repository: UserPreferencesRepository
 
+    @AfterEach
+    fun tearDown() {
+        testScope.cancel()
+    }
+
     @BeforeEach
     fun setUp() {
         val dataStore = PreferenceDataStoreFactory.create(

@@ -6,10 +6,12 @@ import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkInterfaceProvider
 import com.ventoux.netlens.core.network.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,7 +46,8 @@ class HomeViewModel @Inject constructor(
         state.copy(searchQuery = query)
     }.combine(_isEditingFavorites) { state, editing ->
         state.copy(isEditingFavorites = editing)
-    }.stateIn(
+    }.flowOn(Dispatchers.IO)
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState(),
