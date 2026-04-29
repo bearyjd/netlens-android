@@ -33,6 +33,7 @@ enum class ToolDestination(
     val label: String,
     val description: String,
     val category: ToolCategory,
+    val isVisibleInGrid: Boolean = true,
 ) {
     Posture(
         route = "posture",
@@ -40,6 +41,7 @@ enum class ToolDestination(
         label = "Security Posture",
         description = "Network security score",
         category = ToolCategory.NetworkInfo,
+        isVisibleInGrid = false,
     ),
     IpInfo(
         route = "ipinfo",
@@ -145,6 +147,7 @@ enum class ToolDestination(
         label = "Widget Settings",
         description = "Customize home screen widget",
         category = ToolCategory.Tools,
+        isVisibleInGrid = false,
     ),
     ;
 

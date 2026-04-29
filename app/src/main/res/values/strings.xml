@@ -7,4 +7,15 @@
     <string name="posture_hero_loading">Evaluating…</string>
     <string name="posture_hero_score_subtitle">%1$d/100 — %2$d of %3$d factors scored</string>
     <string name="posture_hero_error">Tap to retry</string>
+
+    <string name="home_favorites">Favorites</string>
+    <string name="home_recent">Recent</string>
+    <string name="home_search_placeholder">Search tools…</string>
+    <string name="home_no_results">No tools match your search</string>
+    <string name="home_edit">Edit</string>
+    <string name="home_done">Done</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_ip_label">IP</string>
+    <string name="status_gw_label">GW</string>
 </resources>
