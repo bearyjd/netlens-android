@@ -3,8 +3,10 @@ package com.ventoux.netlens.core.network
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkAddress
+import android.net.LinkProperties
 import android.net.NetworkCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.net.Inet4Address
 import javax.inject.Inject
 
 class ConnectivityManagerNetworkInterfaceProvider @Inject constructor(
@@ -29,6 +31,7 @@ class ConnectivityManagerNetworkInterfaceProvider @Inject constructor(
                 interfaceName = lp.interfaceName ?: "",
                 label = labelFor(caps, isVpn),
                 isVpn = isVpn,
+                gateway = gatewayFrom(lp),
             )
         }
 
@@ -46,9 +49,16 @@ class ConnectivityManagerNetworkInterfaceProvider @Inject constructor(
             interfaceName = lp.interfaceName ?: "",
             label = labelFor(caps, isVpn),
             isVpn = isVpn,
+            gateway = gatewayFrom(lp),
         )
     }
 }
+
+private fun gatewayFrom(lp: LinkProperties): String? =
+    lp.routes
+        .firstOrNull { it.gateway is Inet4Address && it.destination.prefixLength == 0 }
+        ?.gateway
+        ?.hostAddress
 
 private fun labelFor(caps: NetworkCapabilities, isVpn: Boolean): String = when {
     isVpn -> "VPN"
