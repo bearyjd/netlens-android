@@ -31,7 +31,7 @@ app ──┬── feature:* (13 modules)  ── core:network
 ```
 
 - **`app`** — single Activity (`MainActivity`), hosts `NetLensNavHost` which routes to all feature screens. Navigation uses string routes defined in the `ToolDestination` enum (`app/.../navigation/ToolDestination.kt`).
-- **`core:network`** — connectivity monitoring (`NetworkMonitor`), SSRF guard, coroutine utilities. No HTTP client library (features use Ktor or raw sockets directly).
+- **`core:network`** — connectivity monitoring (`NetworkMonitor`), SSRF guard, coroutine utilities, and result export (`export/ResultExporter`). No HTTP client library (features use Ktor or raw sockets directly).
 - **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`.
 - **`core:oui`** — MAC address vendor lookup from OUI database.
 - **`widget`** — Glance-based home screen widget.
@@ -54,6 +54,8 @@ feature/<name>/src/main/kotlin/com.ventoux.netlens/feature/<name>/
 ```
 
 **UI state pattern**: `MutableStateFlow<UiState>` exposed as `StateFlow`, updated via `.update { it.copy(...) }`. No MVI event sealed class — ViewModels expose individual action methods.
+
+**Result export pattern**: All 11 tool ViewModels (Ping, Traceroute, DNS, PortScan, WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS) expose `fun buildExportText(): String` which serialises current UI state to a plain-text string. Screens call `ResultExporter.shareAsText()` or `ResultExporter.copyToClipboard()` (both in `core:network/export/ResultExporter.kt`) from Share/Copy IconButtons in each screen's `TopAppBar`. Modules that did not previously depend on `core:network` or `compose.material.icons` had those dependencies added as part of this feature (ipcalc: both; whois, httptester, tls, mdns: `compose.material.icons`).
 
 ### Navigation
 
