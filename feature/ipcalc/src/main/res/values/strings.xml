@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigate_back">Back</string>
+    <string name="ipcalc_title">IP Calculator</string>
+    <string name="ipcalc_label_input">IP / CIDR</string>
+    <string name="ipcalc_placeholder_input">e.g. 192.168.1.0/24</string>
+    <string name="ipcalc_button_calculate">Calculate</string>
+    <string name="ipcalc_label_network">Network</string>
+    <string name="ipcalc_label_broadcast">Broadcast</string>
+    <string name="ipcalc_label_first_host">First Host</string>
+    <string name="ipcalc_label_last_host">Last Host</string>
+    <string name="ipcalc_label_total_hosts">Usable Hosts</string>
+    <string name="ipcalc_label_subnet_mask">Subnet Mask</string>
+    <string name="ipcalc_label_wildcard">Wildcard</string>
+    <string name="ipcalc_label_cidr">CIDR</string>
+    <string name="ipcalc_label_ip_class">Class</string>
+    <string name="ipcalc_label_bogon">Bogon</string>
+    <string name="ipcalc_bogon_yes">Yes (non-routable)</string>
+    <string name="ipcalc_bogon_no">No (routable)</string>
+    <string name="ipcalc_cd_copy_results">Copy results</string>
+    <string name="ipcalc_ipv6_unsupported">IPv6 is not supported yet — enter an IPv4 address or CIDR</string>
+</resources>
