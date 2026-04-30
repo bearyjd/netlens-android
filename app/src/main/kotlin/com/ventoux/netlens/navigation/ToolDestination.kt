@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -125,6 +126,13 @@ enum class ToolDestination(
         icon = Icons.Default.Monitor,
         label = "Endpoint Monitor",
         description = "Track uptime status",
+        category = ToolCategory.Tools,
+    ),
+    IpCalc(
+        route = "ipcalc",
+        icon = Icons.Default.Calculate,
+        label = "IP Calculator",
+        description = "Subnet & CIDR calculator",
         category = ToolCategory.Tools,
     ),
     NetLog(
