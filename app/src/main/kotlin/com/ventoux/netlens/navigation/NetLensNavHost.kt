@@ -21,6 +21,7 @@ import com.ventoux.netlens.feature.ping.PingScreen
 import com.ventoux.netlens.feature.traceroute.TracerouteScreen
 import com.ventoux.netlens.feature.portscan.PortScanScreen
 import com.ventoux.netlens.feature.tls.TlsScreen
+import com.ventoux.netlens.feature.ipcalc.IpCalcScreen
 import com.ventoux.netlens.feature.whois.WhoisScreen
 import com.ventoux.netlens.feature.widgetsettings.WidgetSettingsScreen
 import com.ventoux.netlens.feature.wol.WolScreen
@@ -129,6 +130,15 @@ fun NetLensNavHost(
             HttpTesterScreen(
                 onBack = navController::popBackStack,
                 initialUrl = entry.arguments?.getString("query")?.ifEmpty { null },
+            )
+        }
+        composable(
+            route = "${ToolDestination.IpCalc.route}?query={query}",
+            arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
+            IpCalcScreen(
+                onBack = navController::popBackStack,
+                initialInput = entry.arguments?.getString("query")?.ifEmpty { null },
             )
         }
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
