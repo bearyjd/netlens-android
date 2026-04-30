@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="navigate_back">Back</string>
+    <string name="tls_action_whois">WHOIS</string>
+    <string name="tls_action_http_test">HTTP Test</string>
 </resources>

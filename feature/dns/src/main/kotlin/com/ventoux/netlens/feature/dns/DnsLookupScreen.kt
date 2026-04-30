@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +57,7 @@ fun DnsLookupScreen(
     onBack: () -> Unit = {},
     initialDomain: String? = null,
     viewModel: DnsLookupViewModel = hiltViewModel(),
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
 ) {
     LaunchedEffect(initialDomain) {
         if (initialDomain != null) viewModel.onDomainChanged(initialDomain)
@@ -101,6 +103,7 @@ fun DnsLookupScreen(
             onDomainChanged = viewModel::onDomainChanged,
             onTypeToggled = viewModel::onTypeToggled,
             onLookup = viewModel::lookup,
+            onNavigateToTool = onNavigateToTool,
             modifier = Modifier.padding(padding),
         )
     }
@@ -113,6 +116,7 @@ private fun DnsLookupContent(
     onDomainChanged: (String) -> Unit,
     onTypeToggled: (DnsRecordType) -> Unit,
     onLookup: () -> Unit,
+    onNavigateToTool: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -214,7 +218,7 @@ private fun DnsLookupContent(
             }
             val startIndex = resultIndex
             items(records.size, key = { i -> "dns:${startIndex + i}" }) { i ->
-                DnsResultCard(result = records[i])
+                DnsResultCard(result = records[i], onNavigateToTool = onNavigateToTool)
             }
             resultIndex += records.size
         }
@@ -223,8 +227,9 @@ private fun DnsLookupContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DnsResultCard(result: DnsResult) {
+private fun DnsResultCard(result: DnsResult, onNavigateToTool: (String, String) -> Unit) {
     val clipboardManager = LocalClipboardManager.current
 
     ElevatedCard(
@@ -273,6 +278,29 @@ private fun DnsResultCard(result: DnsResult) {
                         Icons.Default.ContentCopy,
                         contentDescription = stringResource(R.string.dns_cd_copy),
                         modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            if (result.type == DnsRecordType.A || result.type == DnsRecordType.AAAA) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    AssistChip(
+                        onClick = { onNavigateToTool("ping", result.value) },
+                        label = { Text(stringResource(R.string.dns_action_ping)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("portscan", result.value) },
+                        label = { Text(stringResource(R.string.dns_action_port_scan)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("traceroute", result.value) },
+                        label = { Text(stringResource(R.string.dns_action_traceroute)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("whois", result.value) },
+                        label = { Text(stringResource(R.string.dns_action_whois)) },
                     )
                 }
             }

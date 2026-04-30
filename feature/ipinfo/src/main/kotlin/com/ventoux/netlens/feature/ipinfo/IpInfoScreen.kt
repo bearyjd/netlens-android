@@ -4,6 +4,8 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,6 +51,7 @@ import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
 @Composable
 fun IpInfoScreen(
     onBack: () -> Unit = {},
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     viewModel: IpInfoViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,7 +125,7 @@ fun IpInfoScreen(
                 }
 
                 is IpInfoUiState.Success -> {
-                    SuccessContent(data = state.data)
+                    SuccessContent(data = state.data, onNavigateToTool = onNavigateToTool)
                 }
             }
         }
@@ -158,8 +162,9 @@ private fun ErrorContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SuccessContent(data: IpApiResponse) {
+private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, String) -> Unit) {
     val clipboardManager = LocalClipboardManager.current
 
     Column(
@@ -206,6 +211,23 @@ private fun SuccessContent(data: IpApiResponse) {
                     )
                 }
             }
+        }
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AssistChip(
+                onClick = { onNavigateToTool("ping", data.query) },
+                label = { Text(stringResource(R.string.ipinfo_action_ping)) },
+            )
+            AssistChip(
+                onClick = { onNavigateToTool("traceroute", data.query) },
+                label = { Text(stringResource(R.string.ipinfo_action_traceroute)) },
+            )
+            AssistChip(
+                onClick = { onNavigateToTool("whois", data.query) },
+                label = { Text(stringResource(R.string.ipinfo_action_whois)) },
+            )
         }
 
         Card(
