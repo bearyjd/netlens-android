@@ -304,6 +304,20 @@ class LanScanViewModel @Inject constructor(
         )
     }
 
+    fun buildExportText(): String {
+        val current = _uiState.value
+        val sb = StringBuilder()
+        sb.appendLine("LAN Scan results (${current.subnetInfo}):")
+        sb.appendLine("Devices found: ${current.devices.size}")
+        current.devices.forEach { d ->
+            val host = d.hostname?.let { " ($it)" } ?: ""
+            val mac = d.macAddress?.let { "  MAC=$it" } ?: ""
+            val vendor = d.vendor?.let { "  Vendor=$it" } ?: ""
+            sb.appendLine("${d.ip}$host$mac$vendor  ${d.latencyMs}ms")
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun cancelScan() {
         scanJob?.cancel()
         scanJob = null

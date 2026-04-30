@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -41,6 +43,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,12 +59,19 @@ fun MdnsScreen(
     viewModel: MdnsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     MdnsContent(
         uiState = uiState,
         onStartScan = viewModel::startScan,
         onStopScan = viewModel::stopScan,
         onBack = onBack,
+        onCopyResults = {
+            ResultExporter.copyToClipboard(context, "mDNS Browser", viewModel.buildExportText())
+        },
+        onShareResults = {
+            ResultExporter.shareAsText(context, "mDNS Browser Results", viewModel.buildExportText())
+        },
     )
 }
 
@@ -71,6 +82,8 @@ private fun MdnsContent(
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
     onBack: () -> Unit,
+    onCopyResults: () -> Unit = {},
+    onShareResults: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -82,6 +95,16 @@ private fun MdnsContent(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
+                    }
+                },
+                actions = {
+                    if (uiState.services.isNotEmpty()) {
+                        IconButton(onClick = onCopyResults) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                        }
+                        IconButton(onClick = onShareResults) {
+                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                        }
                     }
                 },
             )

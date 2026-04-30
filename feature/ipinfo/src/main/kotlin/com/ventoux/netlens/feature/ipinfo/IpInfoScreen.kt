@@ -1,6 +1,5 @@
 package com.ventoux.netlens.feature.ipinfo
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +43,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.ipinfo.model.IpApiResponse
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
 
@@ -57,20 +57,6 @@ fun IpInfoScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val shareText = if (uiState is IpInfoUiState.Success) {
-        val data = (uiState as IpInfoUiState.Success).data
-        buildString {
-            appendLine("IP: ${data.query}")
-            appendLine("ISP: ${data.isp}")
-            appendLine("Organization: ${data.org}")
-            appendLine("AS: ${data.asNumber}")
-            appendLine("Country: ${data.country}")
-            appendLine("Region: ${data.regionName}")
-            appendLine("City: ${data.city}")
-            appendLine("Coordinates: ${data.lat}, ${data.lon}")
-        }
-    } else null
-
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(R.string.ipinfo_title)) },
@@ -83,20 +69,16 @@ fun IpInfoScreen(
                 }
             },
             actions = {
-                if (shareText != null) {
-                    IconButton(
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, null))
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.ipinfo_cd_share),
-                        )
+                if (uiState is IpInfoUiState.Success) {
+                    IconButton(onClick = {
+                        ResultExporter.copyToClipboard(context, "IP Info", viewModel.buildExportText())
+                    }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipinfo_cd_copy))
+                    }
+                    IconButton(onClick = {
+                        ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
                     }
                 }
             },

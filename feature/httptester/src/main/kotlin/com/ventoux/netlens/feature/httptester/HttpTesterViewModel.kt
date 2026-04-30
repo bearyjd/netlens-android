@@ -25,7 +25,28 @@ class HttpTesterViewModel @Inject constructor(
     private val _state = MutableStateFlow<HttpTesterUiState>(HttpTesterUiState.Idle)
     val state: StateFlow<HttpTesterUiState> = _state.asStateFlow()
 
+    private var lastConfig: HttpRequestConfig? = null
+
+    fun buildExportText(): String {
+        val sb = StringBuilder()
+        val cfg = lastConfig
+        val current = _state.value
+        sb.appendLine("HTTP ${cfg?.method?.name ?: "?"} ${cfg?.url ?: "?"}:")
+        if (current is HttpTesterUiState.Success) {
+            val r = current.response
+            sb.appendLine("Status: ${r.statusCode} ${r.statusDescription}")
+            sb.appendLine("Latency: ${r.latencyMs}ms")
+            r.contentLength?.let { sb.appendLine("Content-Length: $it") }
+            sb.appendLine("--- Headers ---")
+            r.headers.forEach { (k, v) -> sb.appendLine("$k: ${v.joinToString(", ")}") }
+            sb.appendLine("--- Body ---")
+            sb.appendLine(r.body.take(2000))
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun sendRequest(config: HttpRequestConfig) {
+        lastConfig = config
         _state.value = HttpTesterUiState.Loading
 
         viewModelScope.launch {

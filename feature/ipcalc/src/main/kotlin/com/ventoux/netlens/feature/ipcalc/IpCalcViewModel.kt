@@ -18,6 +18,25 @@ class IpCalcViewModel @Inject constructor(
     private val _state = MutableStateFlow(IpCalcUiState())
     val state: StateFlow<IpCalcUiState> = _state.asStateFlow()
 
+    fun buildExportText(): String {
+        val current = _state.value
+        val sb = StringBuilder()
+        sb.appendLine("IP Calculator for ${current.input}:")
+        current.result?.let { r ->
+            sb.appendLine("Network: ${r.networkAddress}")
+            sb.appendLine("Broadcast: ${r.broadcastAddress}")
+            sb.appendLine("First Host: ${r.firstHost}")
+            sb.appendLine("Last Host: ${r.lastHost}")
+            sb.appendLine("Total Hosts: ${r.totalHosts}")
+            sb.appendLine("Subnet Mask: ${r.subnetMask}")
+            sb.appendLine("Wildcard: ${r.wildcardMask}")
+            sb.appendLine("CIDR: ${r.cidrNotation}")
+            sb.appendLine("Class: ${r.ipClass}")
+            sb.appendLine("Bogon: ${r.isBogon}")
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun onInputChange(input: String) {
         _state.update { it.copy(input = input, error = null) }
     }

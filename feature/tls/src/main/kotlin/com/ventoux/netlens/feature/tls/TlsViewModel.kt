@@ -23,6 +23,26 @@ class TlsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<TlsUiState>(TlsUiState.Idle)
     val uiState: StateFlow<TlsUiState> = _uiState.asStateFlow()
 
+    fun buildExportText(): String {
+        val sb = StringBuilder()
+        val current = _uiState.value
+        if (current is TlsUiState.Success) {
+            val r = current.result
+            sb.appendLine("TLS Inspector for ${r.host}:${r.port}:")
+            sb.appendLine("Protocol: ${r.protocol}")
+            sb.appendLine("Cipher: ${r.cipherSuite}")
+            r.certificates.forEachIndexed { i, cert ->
+                sb.appendLine("--- Certificate ${i + 1} ---")
+                sb.appendLine("Subject: ${cert.subjectCN}")
+                sb.appendLine("Issuer: ${cert.issuerCN}")
+                sb.appendLine("Valid: ${cert.notBefore} to ${cert.notAfter}")
+                sb.appendLine("Expired: ${cert.isExpired} (${cert.daysUntilExpiry} days)")
+                sb.appendLine("Algorithm: ${cert.signatureAlgorithm}")
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun inspect(host: String, port: Int = 443) {
         viewModelScope.launch {
             _uiState.value = TlsUiState.Loading

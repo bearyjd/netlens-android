@@ -21,6 +21,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -43,6 +45,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,6 +65,7 @@ fun TlsScreen(
     viewModel: TlsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var host by rememberSaveable { mutableStateOf(initialHost ?: "") }
     var portText by rememberSaveable { mutableStateOf("443") }
 
@@ -75,6 +80,20 @@ fun TlsScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
+                    }
+                },
+                actions = {
+                    if (uiState is TlsUiState.Success) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "TLS Inspector", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                        }
                     }
                 },
             )
