@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AssistChip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -67,6 +68,7 @@ fun PortScanScreen(
     onBack: () -> Unit = {},
     initialHost: String? = null,
     viewModel: PortScanViewModel = hiltViewModel(),
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
 ) {
     LaunchedEffect(initialHost) {
         if (initialHost != null) viewModel.onHostChanged(initialHost)
@@ -110,6 +112,7 @@ fun PortScanScreen(
             state = uiState,
             onScan = { host, ports -> viewModel.scan(host, ports) },
             onCancel = viewModel::cancelScan,
+            onNavigateToTool = onNavigateToTool,
             modifier = Modifier.padding(padding),
         )
     }
@@ -121,6 +124,7 @@ private fun PortScanContent(
     state: PortScanUiState,
     onScan: (String, List<Int>) -> Unit,
     onCancel: () -> Unit,
+    onNavigateToTool: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var host by rememberSaveable { mutableStateOf("") }
@@ -224,7 +228,7 @@ private fun PortScanContent(
                 compareByDescending<PortResult> { it.isOpen }.thenBy { it.port },
             )
             items(sortedResults, key = { it.port }) { result ->
-                PortResultRow(result = result)
+                PortResultRow(result = result, host = host.trim(), onNavigateToTool = onNavigateToTool)
             }
         }
     }
@@ -249,54 +253,83 @@ private fun StatsRow(state: PortScanUiState) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PortResultRow(result: PortResult) {
+private fun PortResultRow(
+    result: PortResult,
+    host: String,
+    onNavigateToTool: (String, String) -> Unit,
+) {
     val iconColor by animateColorAsState(
         targetValue = if (result.isOpen) OpenPortColor else ClosedPortColor,
         label = "portIconColor",
     )
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
-            contentDescription = if (result.isOpen) stringResource(R.string.portscan_cd_open) else stringResource(R.string.portscan_cd_closed),
-            tint = iconColor,
-            modifier = Modifier.size(20.dp),
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = result.port.toString(),
-            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.width(56.dp),
-        )
-
-        Text(
-            text = result.serviceName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (result.isOpen) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.weight(1f),
-        )
-
-        if (result.isOpen && result.latencyMs > 0) {
-            Text(
-                text = "${result.latencyMs}ms",
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
+                contentDescription = if (result.isOpen) stringResource(R.string.portscan_cd_open) else stringResource(R.string.portscan_cd_closed),
+                tint = iconColor,
+                modifier = Modifier.size(20.dp),
             )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = result.port.toString(),
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                modifier = Modifier.width(56.dp),
+            )
+
+            Text(
+                text = result.serviceName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (result.isOpen) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.weight(1f),
+            )
+
+            if (result.isOpen && result.latencyMs > 0) {
+                Text(
+                    text = "${result.latencyMs}ms",
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (result.isOpen && result.port in HTTP_PORTS) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 32.dp, top = 2.dp),
+            ) {
+                val scheme = if (result.port in TLS_PORTS) "https" else "http"
+                val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
+                AssistChip(
+                    onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
+                    label = { Text(stringResource(R.string.portscan_action_http_test)) },
+                )
+                if (result.port in TLS_PORTS) {
+                    AssistChip(
+                        onClick = { onNavigateToTool("tls", host) },
+                        label = { Text(stringResource(R.string.portscan_action_tls_inspect)) },
+                    )
+                }
+            }
         }
     }
 }
+
+private val HTTP_PORTS = setOf(80, 443, 8080, 8443)
+private val TLS_PORTS = setOf(443, 8443)
 
 private fun portsForPreset(preset: Int): List<Int> = when (preset) {
     PRESET_COMMON -> WellKnownPorts.COMMON_PORTS.keys.sorted()
