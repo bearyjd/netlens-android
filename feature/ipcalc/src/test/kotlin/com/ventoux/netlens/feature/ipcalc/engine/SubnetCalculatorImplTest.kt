@@ -212,4 +212,17 @@ class SubnetCalculatorImplTest {
         val result = calculator.calculate("10.0.0.0/8")
         assertEquals("10.0.0.0", result.networkAddress)
     }
+
+    @Test
+    fun `multiple spaces between IP and mask accepted`() {
+        val result = calculator.calculate("192.168.1.0   255.255.255.0")
+        assertEquals("192.168.1.0/24", result.cidrNotation)
+    }
+
+    @Test
+    fun `three tokens in space format rejected`() {
+        assertThrows<IllegalArgumentException> {
+            calculator.calculate("192.168.1.0 255.255.255.0 extra")
+        }
+    }
 }

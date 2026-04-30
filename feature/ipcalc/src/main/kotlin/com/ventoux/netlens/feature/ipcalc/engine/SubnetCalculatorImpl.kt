@@ -44,7 +44,7 @@ class SubnetCalculatorImpl @Inject constructor() : SubnetCalculator {
             subnetMask = intToIp(mask),
             wildcardMask = intToIp(wildcard),
             cidrNotation = "${intToIp(network)}/$prefixLen",
-            ipClass = classifyIp(network),
+            ipClass = classifyIp(ipInt),
             isBogon = isBogon(network, prefixLen),
         )
     }
@@ -60,7 +60,7 @@ class SubnetCalculatorImpl @Inject constructor() : SubnetCalculator {
         }
 
         if (' ' in input) {
-            val parts = input.split(' ').filter { it.isNotEmpty() }
+            val parts = input.split("\\s+".toRegex())
             require(parts.size == 2) { "Expected 'IP MASK' format (e.g. 192.168.1.0 255.255.255.0)" }
             validateIp(parts[0])
             validateIp(parts[1])
@@ -87,10 +87,8 @@ class SubnetCalculatorImpl @Inject constructor() : SubnetCalculator {
         return octets.fold(0L) { acc, octet -> (acc shl 8) or octet.toLong() }
     }
 
-    private fun intToIp(value: Long): String {
-        val masked = value and 0xFFFFFFFFL
-        return "${(masked shr 24) and 0xFF}.${(masked shr 16) and 0xFF}.${(masked shr 8) and 0xFF}.${masked and 0xFF}"
-    }
+    private fun intToIp(value: Long): String =
+        "${(value shr 24) and 0xFF}.${(value shr 16) and 0xFF}.${(value shr 8) and 0xFF}.${value and 0xFF}"
 
     private fun maskToPrefix(mask: String): Int {
         val maskInt = ipToInt(mask)
