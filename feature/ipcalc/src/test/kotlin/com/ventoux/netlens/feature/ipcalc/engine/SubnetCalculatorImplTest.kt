@@ -193,4 +193,23 @@ class SubnetCalculatorImplTest {
         val result = calculator.calculate("100.64.0.0/10")
         assertTrue(result.isBogon)
     }
+
+    @Test
+    fun `supernet of bogon is not bogon`() {
+        val result = calculator.calculate("0.0.0.0/0")
+        assertFalse(result.isBogon)
+    }
+
+    @Test
+    fun `leading zero octet rejected`() {
+        assertThrows<IllegalArgumentException> {
+            calculator.calculate("192.168.01.1/24")
+        }
+    }
+
+    @Test
+    fun `zero octet accepted`() {
+        val result = calculator.calculate("10.0.0.0/8")
+        assertEquals("10.0.0.0", result.networkAddress)
+    }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -52,9 +53,11 @@ fun IpCalcScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val clipboardManager = LocalClipboardManager.current
 
-    if (initialInput != null && uiState.input.isEmpty() && uiState.result == null) {
-        viewModel.onInputChange(initialInput)
-        viewModel.calculate()
+    LaunchedEffect(initialInput) {
+        if (!initialInput.isNullOrEmpty()) {
+            viewModel.onInputChange(initialInput)
+            viewModel.calculate()
+        }
     }
 
     Scaffold(
@@ -76,7 +79,7 @@ fun IpCalcScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = stringResource(R.string.ipcalc_button_calculate),
+                                contentDescription = stringResource(R.string.ipcalc_cd_copy_results),
                             )
                         }
                     }

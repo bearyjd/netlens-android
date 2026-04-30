@@ -78,6 +78,7 @@ class SubnetCalculatorImpl @Inject constructor() : SubnetCalculator {
         octets.forEach { octet ->
             val value = octet.toIntOrNull()
             require(value != null && value in 0..255) { "Invalid octet: $octet" }
+            require(octet == "0" || !octet.startsWith('0')) { "Leading zeros not allowed: $octet" }
         }
     }
 
@@ -120,27 +121,28 @@ class SubnetCalculatorImpl @Inject constructor() : SubnetCalculator {
     }
 
     private fun isBogon(networkInt: Long, prefixLen: Int): Boolean {
-        fun matches(net: String, prefix: Int): Boolean {
-            val netInt = ipToInt(net)
-            val effectivePrefix = minOf(prefix, prefixLen)
-            if (effectivePrefix == 0) return true
-            val mask = (0xFFFFFFFFL shl (32 - effectivePrefix)) and 0xFFFFFFFFL
-            return (networkInt and mask) == (netInt and mask) && prefixLen >= prefix
+        // Returns true when the input network is a subnet of (or equal to) a bogon range.
+        // A supernet that merely overlaps bogon space (e.g. 0.0.0.0/0) is NOT flagged.
+        fun containedIn(bogonNet: String, bogonPrefix: Int): Boolean {
+            if (prefixLen < bogonPrefix) return false
+            val bogonInt = ipToInt(bogonNet)
+            val mask = (0xFFFFFFFFL shl (32 - bogonPrefix)) and 0xFFFFFFFFL
+            return (networkInt and mask) == (bogonInt and mask)
         }
 
-        return matches("0.0.0.0", 8) ||
-            matches("10.0.0.0", 8) ||
-            matches("100.64.0.0", 10) ||
-            matches("127.0.0.0", 8) ||
-            matches("169.254.0.0", 16) ||
-            matches("172.16.0.0", 12) ||
-            matches("192.0.0.0", 24) ||
-            matches("192.0.2.0", 24) ||
-            matches("192.168.0.0", 16) ||
-            matches("198.18.0.0", 15) ||
-            matches("198.51.100.0", 24) ||
-            matches("203.0.113.0", 24) ||
-            matches("224.0.0.0", 4) ||
-            matches("240.0.0.0", 4)
+        return containedIn("0.0.0.0", 8) ||
+            containedIn("10.0.0.0", 8) ||
+            containedIn("100.64.0.0", 10) ||
+            containedIn("127.0.0.0", 8) ||
+            containedIn("169.254.0.0", 16) ||
+            containedIn("172.16.0.0", 12) ||
+            containedIn("192.0.0.0", 24) ||
+            containedIn("192.0.2.0", 24) ||
+            containedIn("192.168.0.0", 16) ||
+            containedIn("198.18.0.0", 15) ||
+            containedIn("198.51.100.0", 24) ||
+            containedIn("203.0.113.0", 24) ||
+            containedIn("224.0.0.0", 4) ||
+            containedIn("240.0.0.0", 4)
     }
 }
