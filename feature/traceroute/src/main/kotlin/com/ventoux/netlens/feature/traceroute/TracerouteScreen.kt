@@ -2,6 +2,8 @@ package com.ventoux.netlens.feature.traceroute
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -47,6 +51,7 @@ import com.ventoux.netlens.feature.traceroute.model.TracerouteUiState
 fun TracerouteScreen(
     onBack: () -> Unit = {},
     initialHost: String? = null,
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: TracerouteViewModel = hiltViewModel(),
 ) {
@@ -80,6 +85,7 @@ fun TracerouteScreen(
             onCopyResults = {
                 clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
             },
+            onNavigateToTool = onNavigateToTool,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -92,6 +98,7 @@ private fun TracerouteContent(
     onStartTrace: (String) -> Unit,
     onStopTrace: () -> Unit,
     onCopyResults: () -> Unit,
+    onNavigateToTool: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -168,63 +175,82 @@ private fun TracerouteContent(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             items(state.hops, key = { it.hopNumber }) { hop ->
-                HopRow(hop = hop)
+                HopRow(hop = hop, onNavigateToTool = onNavigateToTool)
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HopRow(
     hop: TracerouteHop,
+    onNavigateToTool: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (hop.isTimeout) {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Column(modifier = modifier) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (hop.isTimeout) {
+                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            ),
         ) {
-            Text(
-                text = "%2d".format(hop.hopNumber),
-                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                modifier = Modifier.width(28.dp),
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            if (hop.isTimeout) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = "*  *  *",
+                    text = "%2d".format(hop.hopNumber),
                     style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.width(28.dp),
                 )
-            } else {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = hop.ip ?: "*",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    )
-                }
 
-                hop.rttMs.firstOrNull()?.let { rtt ->
+                Spacer(modifier = Modifier.width(12.dp))
+
+                if (hop.isTimeout) {
                     Text(
-                        text = "%.1f ms".format(rtt),
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        color = MaterialTheme.colorScheme.primary,
+                        text = "*  *  *",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f),
                     )
+                } else {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = hop.ip ?: "*",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        )
+                    }
+
+                    hop.rttMs.firstOrNull()?.let { rtt ->
+                        Text(
+                            text = "%.1f ms".format(rtt),
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
+            }
+        }
+        if (!hop.isTimeout && hop.ip != null) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 40.dp, top = 2.dp, bottom = 4.dp),
+            ) {
+                AssistChip(
+                    onClick = { onNavigateToTool("ping", hop.ip) },
+                    label = { Text(stringResource(R.string.traceroute_action_ping)) },
+                )
+                AssistChip(
+                    onClick = { onNavigateToTool("whois", hop.ip) },
+                    label = { Text(stringResource(R.string.traceroute_action_whois)) },
+                )
             }
         }
     }

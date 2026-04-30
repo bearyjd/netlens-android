@@ -31,6 +31,11 @@ fun NetLensNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    val navigateToTool: (String, String) -> Unit = { route, query ->
+        val encoded = Uri.encode(query)
+        navController.navigate("$route?query=$encoded") { launchSingleTop = true }
+    }
+
     NavHost(
         navController = navController,
         startDestination = "home",
@@ -46,7 +51,7 @@ fun NetLensNavHost(
             )
         }
         composable(ToolDestination.Posture.route) { PostureScreen(onBack = navController::popBackStack) }
-        composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack, onNavigateToTool = navigateToTool) }
         composable(
             route = "${ToolDestination.LanScan.route}?query={query}",
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
@@ -54,6 +59,7 @@ fun NetLensNavHost(
             LanScanScreen(
                 onBack = navController::popBackStack,
                 initialCidr = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(
@@ -63,6 +69,7 @@ fun NetLensNavHost(
             PortScanScreen(
                 onBack = navController::popBackStack,
                 initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(
@@ -72,6 +79,7 @@ fun NetLensNavHost(
             DnsLookupScreen(
                 onBack = navController::popBackStack,
                 initialDomain = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(
@@ -90,6 +98,7 @@ fun NetLensNavHost(
             TracerouteScreen(
                 onBack = navController::popBackStack,
                 initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(ToolDestination.Wol.route) { WolScreen(onBack = navController::popBackStack) }
@@ -100,6 +109,7 @@ fun NetLensNavHost(
             TlsScreen(
                 onBack = navController::popBackStack,
                 initialHost = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(
@@ -109,6 +119,7 @@ fun NetLensNavHost(
             WhoisScreen(
                 onBack = navController::popBackStack,
                 initialQuery = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(
@@ -126,10 +137,7 @@ fun NetLensNavHost(
         composable(ToolDestination.History.route) {
             HistoryScreen(
                 onBack = navController::popBackStack,
-                onNavigateToTool = { route, query ->
-                    val encoded = Uri.encode(query)
-                    navController.navigate("$route?query=$encoded") { launchSingleTop = true }
-                },
+                onNavigateToTool = navigateToTool,
             )
         }
         composable(ToolDestination.WidgetSettings.route) { WidgetSettingsScreen(onBack = navController::popBackStack) }

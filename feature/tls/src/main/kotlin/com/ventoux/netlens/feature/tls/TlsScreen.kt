@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +22,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,11 +51,12 @@ import com.ventoux.netlens.feature.tls.model.TlsCertInfo
 import com.ventoux.netlens.feature.tls.model.TlsInspectResult
 import com.ventoux.netlens.feature.tls.model.TlsUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TlsScreen(
     onBack: () -> Unit = {},
     initialHost: String? = null,
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: TlsViewModel = hiltViewModel(),
 ) {
@@ -143,6 +148,18 @@ fun TlsScreen(
 
             is TlsUiState.Success -> {
                 ResultContent(result = state.result)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AssistChip(
+                        onClick = { onNavigateToTool("whois", host.trim()) },
+                        label = { Text(stringResource(R.string.tls_action_whois)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("httptester", "https://${host.trim()}") },
+                        label = { Text(stringResource(R.string.tls_action_http_test)) },
+                    )
+                }
             }
         }
     }

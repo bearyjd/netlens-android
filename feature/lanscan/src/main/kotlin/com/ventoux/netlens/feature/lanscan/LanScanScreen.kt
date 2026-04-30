@@ -76,6 +76,7 @@ import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
 fun LanScanScreen(
     onBack: () -> Unit = {},
     initialCidr: String? = null,
+    onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     viewModel: LanScanViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(initialCidr) {
@@ -102,6 +103,7 @@ fun LanScanScreen(
         onTabSelected = viewModel::selectTab,
         onScanWithCidr = viewModel::startScanWithCidr,
         onClearHistory = viewModel::clearHistory,
+        onNavigateToTool = onNavigateToTool,
     )
 }
 
@@ -124,6 +126,7 @@ private fun LanScanContent(
     onTabSelected: (LanScanTab) -> Unit,
     onScanWithCidr: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onNavigateToTool: (String, String) -> Unit,
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
     val showCustomField = uiState.rangeMode == ScanRangeMode.CUSTOM
@@ -134,6 +137,7 @@ private fun LanScanContent(
             onDismiss = onDismissDetail,
             onScanPorts = onScanHostPorts,
             onCancelScan = onCancelHostScan,
+            onNavigateToTool = onNavigateToTool,
         )
     }
 

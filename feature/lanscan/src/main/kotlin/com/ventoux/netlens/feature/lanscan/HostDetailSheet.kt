@@ -2,6 +2,7 @@ package com.ventoux.netlens.feature.lanscan
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +52,7 @@ internal fun HostDetailSheet(
     onDismiss: () -> Unit,
     onScanPorts: (List<Int>) -> Unit,
     onCancelScan: () -> Unit,
+    onNavigateToTool: (String, String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedPreset by remember { mutableIntStateOf(0) }
@@ -126,6 +129,36 @@ internal fun HostDetailSheet(
                             SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                         }
                     }
+                }
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text(
+                    text = stringResource(R.string.lanscan_actions_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    AssistChip(
+                        onClick = { onNavigateToTool("ping", state.device.ip) },
+                        label = { Text(stringResource(R.string.lanscan_action_ping)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("portscan", state.device.ip) },
+                        label = { Text(stringResource(R.string.lanscan_action_port_scan)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("traceroute", state.device.ip) },
+                        label = { Text(stringResource(R.string.lanscan_action_traceroute)) },
+                    )
+                    AssistChip(
+                        onClick = { onNavigateToTool("whois", state.device.ip) },
+                        label = { Text(stringResource(R.string.lanscan_action_whois)) },
+                    )
                 }
             }
 
