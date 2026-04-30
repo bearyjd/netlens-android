@@ -14,4 +14,8 @@
     <string name="dns_error_lookup_failed">DNS lookup failed</string>
     <string name="dns_records_header">%1$s Records</string>
     <string name="dns_ttl_label">TTL %1$d</string>
+    <string name="dns_action_ping">Ping</string>
+    <string name="dns_action_port_scan">Port Scan</string>
+    <string name="dns_action_traceroute">Traceroute</string>
+    <string name="dns_action_whois">WHOIS</string>
 </resources>

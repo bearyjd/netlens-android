@@ -49,4 +49,9 @@
     <string name="lanscan_time_days_ago">%1$dd ago</string>
     <string name="lanscan_vendor_label">Vendor: %1$s</string>
     <string name="lanscan_mac_label">MAC: %1$s</string>
+    <string name="lanscan_actions_title">Quick Actions</string>
+    <string name="lanscan_action_ping">Ping</string>
+    <string name="lanscan_action_port_scan">Port Scan</string>
+    <string name="lanscan_action_traceroute">Traceroute</string>
+    <string name="lanscan_action_whois">WHOIS</string>
 </resources>

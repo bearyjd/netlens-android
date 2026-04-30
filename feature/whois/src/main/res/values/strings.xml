@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="navigate_back">Back</string>
+    <string name="whois_action_ping">Ping</string>
+    <string name="whois_action_dns">DNS Lookup</string>
+    <string name="whois_action_tls">TLS Inspect</string>
 </resources>

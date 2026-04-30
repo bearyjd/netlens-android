@@ -20,4 +20,7 @@
     <string name="ipinfo_value_yes">Yes</string>
     <string name="ipinfo_value_no">No</string>
     <string name="ipinfo_cd_copy_field">Copy %1$s</string>
+    <string name="ipinfo_action_ping">Ping</string>
+    <string name="ipinfo_action_traceroute">Traceroute</string>
+    <string name="ipinfo_action_whois">WHOIS</string>
 </resources>
