@@ -193,15 +193,15 @@ private fun WhoisContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         AssistChip(
-                            onClick = { onNavigateToTool("ping", query) },
+                            onClick = { onNavigateToTool("ping", query.trim()) },
                             label = { Text(stringResource(R.string.whois_action_ping)) },
                         )
                         AssistChip(
-                            onClick = { onNavigateToTool("dns", query) },
+                            onClick = { onNavigateToTool("dns", query.trim()) },
                             label = { Text(stringResource(R.string.whois_action_dns)) },
                         )
                         AssistChip(
-                            onClick = { onNavigateToTool("tls", query) },
+                            onClick = { onNavigateToTool("tls", query.trim()) },
                             label = { Text(stringResource(R.string.whois_action_tls)) },
                         )
                     }

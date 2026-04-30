@@ -306,18 +306,18 @@ private fun PortResultRow(
                 )
             }
         }
-        if (result.isOpen && result.port in setOf(80, 443, 8080, 8443)) {
+        if (result.isOpen && result.port in HTTP_PORTS) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(start = 32.dp, top = 2.dp),
             ) {
-                val scheme = if (result.port == 443 || result.port == 8443) "https" else "http"
+                val scheme = if (result.port in TLS_PORTS) "https" else "http"
                 val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
                 AssistChip(
                     onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
                     label = { Text(stringResource(R.string.portscan_action_http_test)) },
                 )
-                if (result.port == 443 || result.port == 8443) {
+                if (result.port in TLS_PORTS) {
                     AssistChip(
                         onClick = { onNavigateToTool("tls", host) },
                         label = { Text(stringResource(R.string.portscan_action_tls_inspect)) },
@@ -327,6 +327,9 @@ private fun PortResultRow(
         }
     }
 }
+
+private val HTTP_PORTS = setOf(80, 443, 8080, 8443)
+private val TLS_PORTS = setOf(443, 8443)
 
 private fun portsForPreset(preset: Int): List<Int> = when (preset) {
     PRESET_COMMON -> WellKnownPorts.COMMON_PORTS.keys.sorted()
