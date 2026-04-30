@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:data"))
+    implementation(libs.compose.material.icons)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)

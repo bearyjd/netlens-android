@@ -26,6 +26,23 @@ class IpInfoViewModel @Inject constructor(
         refresh()
     }
 
+    fun buildExportText(): String {
+        val sb = StringBuilder()
+        val current = _uiState.value
+        if (current is IpInfoUiState.Success) {
+            val d = current.data
+            sb.appendLine("IP Info for ${d.query}:")
+            sb.appendLine("ISP: ${d.isp}")
+            sb.appendLine("Org: ${d.org}")
+            sb.appendLine("AS: ${d.asNumber}")
+            sb.appendLine("Location: ${d.city}, ${d.regionName}, ${d.country}")
+            sb.appendLine("Coordinates: ${d.lat}, ${d.lon}")
+            sb.appendLine("Proxy/VPN: ${d.proxy}")
+            sb.appendLine("Hosting: ${d.hosting}")
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = IpInfoUiState.Loading

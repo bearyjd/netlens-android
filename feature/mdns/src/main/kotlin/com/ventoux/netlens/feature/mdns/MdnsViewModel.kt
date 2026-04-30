@@ -67,6 +67,21 @@ class MdnsViewModel @Inject constructor(
         }
     }
 
+    fun buildExportText(): String {
+        val current = _uiState.value
+        val sb = StringBuilder()
+        sb.appendLine("mDNS Browser:")
+        sb.appendLine("Services found: ${current.services.size}")
+        current.services.forEach { s ->
+            sb.appendLine("${s.serviceName} (${s.serviceType})")
+            s.host?.let { sb.appendLine("  Host: $it:${s.port}") }
+            if (s.attributes.isNotEmpty()) {
+                s.attributes.forEach { (k, v) -> sb.appendLine("  $k=$v") }
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun stopScan() {
         scanJob?.cancel()
         scanJob = null

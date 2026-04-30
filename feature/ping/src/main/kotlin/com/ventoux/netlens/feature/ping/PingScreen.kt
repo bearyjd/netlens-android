@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -51,15 +52,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.ping.model.PingMode
 import com.ventoux.netlens.feature.ping.model.PingResult
 import com.ventoux.netlens.feature.ping.model.PingSummary
@@ -77,7 +77,7 @@ fun PingScreen(
         if (initialHost != null) viewModel.onHostChange(initialHost)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier,
@@ -92,6 +92,20 @@ fun PingScreen(
                         )
                     }
                 },
+                actions = {
+                    if (state.results.isNotEmpty()) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "Ping", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ping_cd_copy_results))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "Ping Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ping_cd_share))
+                        }
+                    }
+                },
             )
         },
     ) { innerPadding ->
@@ -102,7 +116,7 @@ fun PingScreen(
             onStartPing = viewModel::startPing,
             onStopPing = viewModel::stopPing,
             onCopyResults = {
-                clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
+                ResultExporter.copyToClipboard(context, "Ping", viewModel.buildExportText())
             },
             modifier = Modifier.padding(innerPadding),
         )

@@ -3,6 +3,7 @@
     <string name="portscan_title">Port Scanner</string>
     <string name="navigate_back">Back</string>
     <string name="portscan_cd_copy_open_ports">Copy open ports</string>
+    <string name="portscan_cd_share">Share results</string>
     <string name="portscan_label_host">Host or IP address</string>
     <string name="portscan_chip_common">Common</string>
     <string name="portscan_chip_all">All (1-1024)</string>

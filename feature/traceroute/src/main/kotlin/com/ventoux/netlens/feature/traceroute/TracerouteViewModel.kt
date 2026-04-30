@@ -92,7 +92,7 @@ class TracerouteViewModel @Inject constructor(
         )
     }
 
-    fun buildCopyText(): String {
+    fun buildExportText(): String {
         val current = _state.value
         val sb = StringBuilder()
         sb.appendLine("Traceroute to ${current.host}:")

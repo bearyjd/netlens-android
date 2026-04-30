@@ -19,6 +19,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -42,6 +44,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,6 +65,7 @@ fun HttpTesterScreen(
     viewModel: HttpTesterViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier,
@@ -73,6 +78,20 @@ fun HttpTesterScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
+                    }
+                },
+                actions = {
+                    if (state is HttpTesterUiState.Success) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "HTTP Tester", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "HTTP Tester Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                        }
                     }
                 },
             )
