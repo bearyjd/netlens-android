@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -76,6 +77,8 @@ fun PortScanScreen(
     }
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -96,10 +99,12 @@ fun PortScanScreen(
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.portscan_cd_copy_open_ports))
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "Port Scan Results", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.portscan_cd_share))
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "Port Scan Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.portscan_cd_share))
+                            }
                         }
                     }
                 },

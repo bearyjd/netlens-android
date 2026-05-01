@@ -25,15 +25,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@39fdf500b386709a9a4a769f717dad447ac345b9 # v6
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleFossDebug
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testFossDebugUnitTest
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results
-          path: "**/build/test-results/testDebugUnitTest/"
+          path: "**/build/test-results/testFossDebugUnitTest/"
           retention-days: 14
