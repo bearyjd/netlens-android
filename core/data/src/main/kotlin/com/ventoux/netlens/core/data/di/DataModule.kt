@@ -23,6 +23,7 @@ import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
 import com.ventoux.netlens.core.data.dao.TlsHistoryDao
 import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventoux.netlens.core.data.dao.WolHistoryDao
 import javax.inject.Singleton
 
@@ -85,6 +86,13 @@ object DataModule {
         }
     }
 
+    private val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `history_speedtest` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `downloadMbps` REAL NOT NULL, `uploadMbps` REAL NOT NULL, `latencyMs` INTEGER NOT NULL, `serverName` TEXT NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_speedtest_timestamp` ON `history_speedtest` (`timestamp`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -93,7 +101,7 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
@@ -152,4 +160,8 @@ object DataModule {
     @Provides
     fun provideWolHistoryDao(database: NetLensDatabase): WolHistoryDao =
         database.wolHistoryDao()
+
+    @Provides
+    fun provideSpeedTestHistoryDao(database: NetLensDatabase): SpeedTestHistoryDao =
+        database.speedTestHistoryDao()
 }

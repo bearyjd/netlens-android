@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -77,6 +78,13 @@ enum class ToolDestination(
         icon = Icons.AutoMirrored.Filled.AltRoute,
         label = "Traceroute",
         description = "Trace network path",
+        category = ToolCategory.Connectivity,
+    ),
+    SpeedTest(
+        route = "speedtest",
+        icon = Icons.Default.Speed,
+        label = "Speed Test",
+        description = "Measure network speed",
         category = ToolCategory.Connectivity,
     ),
     LanScan(
