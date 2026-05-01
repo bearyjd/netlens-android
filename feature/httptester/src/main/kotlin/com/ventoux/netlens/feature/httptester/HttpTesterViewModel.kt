@@ -25,13 +25,34 @@ class HttpTesterViewModel @Inject constructor(
     private val _state = MutableStateFlow<HttpTesterUiState>(HttpTesterUiState.Idle)
     val state: StateFlow<HttpTesterUiState> = _state.asStateFlow()
 
+    fun buildExportText(): String {
+        val sb = StringBuilder()
+        val current = _state.value
+        if (current is HttpTesterUiState.Success) {
+            sb.appendLine("HTTP ${current.requestMethod} ${current.requestUrl}:")
+            val r = current.response
+            sb.appendLine("Status: ${r.statusCode} ${r.statusDescription}")
+            sb.appendLine("Latency: ${r.latencyMs}ms")
+            r.contentLength?.let { sb.appendLine("Content-Length: $it") }
+            sb.appendLine("--- Headers ---")
+            r.headers.forEach { (k, v) -> sb.appendLine("$k: ${v.joinToString(", ")}") }
+            sb.appendLine("--- Body ---")
+            sb.appendLine(r.body.take(2000))
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun sendRequest(config: HttpRequestConfig) {
         _state.value = HttpTesterUiState.Loading
 
         viewModelScope.launch {
             try {
                 val result = httpRequester.execute(config)
-                _state.value = HttpTesterUiState.Success(result)
+                _state.value = HttpTesterUiState.Success(
+                    response = result,
+                    requestMethod = config.method.name,
+                    requestUrl = config.url,
+                )
                 saveToHistory(config, result)
             } catch (e: CancellationException) {
                 throw e

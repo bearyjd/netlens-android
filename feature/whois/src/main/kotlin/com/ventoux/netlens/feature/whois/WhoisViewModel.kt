@@ -37,6 +37,29 @@ class WhoisViewModel @Inject constructor(
         _query.value = value
     }
 
+    fun buildExportText(): String {
+        val sb = StringBuilder()
+        sb.appendLine("WHOIS for ${_query.value}:")
+        val current = _state.value
+        if (current is WhoisUiState.Success) {
+            current.whois?.let { w ->
+                w.registrar?.let { sb.appendLine("Registrar: $it") }
+                w.createdDate?.let { sb.appendLine("Created: $it") }
+                w.expiryDate?.let { sb.appendLine("Expires: $it") }
+                if (w.nameServers.isNotEmpty()) {
+                    sb.appendLine("Name Servers: ${w.nameServers.joinToString(", ")}")
+                }
+                sb.appendLine("--- Raw ---")
+                sb.appendLine(w.rawResponse)
+            }
+            current.rdns?.let { r ->
+                sb.appendLine("Reverse DNS for ${r.ip}:")
+                r.hostnames.forEach { sb.appendLine("  $it") }
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun lookup(input: String = _query.value) {
         val trimmed = input.trim()
         if (trimmed.isBlank()) {

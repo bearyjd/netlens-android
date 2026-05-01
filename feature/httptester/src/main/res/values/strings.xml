@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="navigate_back">Back</string>
+    <string name="httptester_cd_copy_results">Copy results</string>
+    <string name="httptester_cd_share">Share results</string>
 </resources>

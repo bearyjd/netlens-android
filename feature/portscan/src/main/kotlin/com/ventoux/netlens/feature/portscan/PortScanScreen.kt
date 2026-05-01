@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,9 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -74,7 +75,7 @@ fun PortScanScreen(
         if (initialHost != null) viewModel.onHostChanged(initialHost)
     }
     val uiState by viewModel.state.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -89,19 +90,16 @@ fun PortScanScreen(
                     }
                 },
                 actions = {
-                    if (uiState.openCount > 0) {
-                        IconButton(
-                            onClick = {
-                                val openPorts = uiState.results
-                                    .filter { it.isOpen }
-                                    .sortedBy { it.port }
-                                    .joinToString("\n") { "${it.port} (${it.serviceName})" }
-                                clipboardManager.setText(
-                                    AnnotatedString("Open ports:\n$openPorts"),
-                                )
-                            },
-                        ) {
+                    if (uiState.results.isNotEmpty()) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "Port Scan", viewModel.buildExportText())
+                        }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.portscan_cd_copy_open_ports))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "Port Scan Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.portscan_cd_share))
                         }
                     }
                 },

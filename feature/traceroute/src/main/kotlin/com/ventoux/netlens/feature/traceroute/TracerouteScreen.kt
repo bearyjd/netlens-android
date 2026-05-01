@@ -36,8 +36,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,7 @@ fun TracerouteScreen(
         if (initialHost != null) viewModel.onHostChange(initialHost)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier,
@@ -74,6 +75,20 @@ fun TracerouteScreen(
                         )
                     }
                 },
+                actions = {
+                    if (state.hops.isNotEmpty()) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "Traceroute", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.traceroute_cd_copy_results))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "Traceroute Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.traceroute_cd_share))
+                        }
+                    }
+                },
             )
         },
     ) { innerPadding ->
@@ -83,7 +98,7 @@ fun TracerouteScreen(
             onStartTrace = viewModel::startTrace,
             onStopTrace = viewModel::stopTrace,
             onCopyResults = {
-                clipboardManager.setText(AnnotatedString(viewModel.buildCopyText()))
+                ResultExporter.copyToClipboard(context, "Traceroute", viewModel.buildExportText())
             },
             onNavigateToTool = onNavigateToTool,
             modifier = Modifier.padding(innerPadding),

@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,10 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,7 @@ fun IpCalcScreen(
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     LaunchedEffect(initialInput) {
         if (!initialInput.isNullOrEmpty()) {
@@ -75,12 +76,14 @@ fun IpCalcScreen(
                 actions = {
                     if (uiState.result != null) {
                         IconButton(onClick = {
-                            clipboardManager.setText(AnnotatedString(buildExportText(uiState.input, uiState.result)))
+                            ResultExporter.copyToClipboard(context, "IP Calculator", viewModel.buildExportText())
                         }) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = stringResource(R.string.ipcalc_cd_copy_results),
-                            )
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipcalc_cd_copy_results))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "IP Calculator Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipcalc_cd_share))
                         }
                     }
                 },
@@ -184,20 +187,3 @@ private fun ResultRow(label: String, value: String) {
     }
 }
 
-private fun buildExportText(input: String, info: SubnetInfo?): String {
-    if (info == null) return ""
-    return buildString {
-        appendLine("IP Calculator — $input")
-        appendLine("─".repeat(32))
-        appendLine("CIDR:        ${info.cidrNotation}")
-        appendLine("Network:     ${info.networkAddress}")
-        appendLine("Broadcast:   ${info.broadcastAddress}")
-        appendLine("First Host:  ${info.firstHost}")
-        appendLine("Last Host:   ${info.lastHost}")
-        appendLine("Hosts:       ${info.totalHosts}")
-        appendLine("Subnet Mask: ${info.subnetMask}")
-        appendLine("Wildcard:    ${info.wildcardMask}")
-        appendLine("Class:       ${info.ipClass}")
-        appendLine("Bogon:       ${if (info.isBogon) "Yes" else "No"}")
-    }
-}

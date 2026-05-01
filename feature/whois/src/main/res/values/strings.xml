@@ -4,4 +4,6 @@
     <string name="whois_action_ping">Ping</string>
     <string name="whois_action_dns">DNS Lookup</string>
     <string name="whois_action_tls">TLS Inspect</string>
+    <string name="whois_cd_copy_results">Copy results</string>
+    <string name="whois_cd_share">Share results</string>
 </resources>

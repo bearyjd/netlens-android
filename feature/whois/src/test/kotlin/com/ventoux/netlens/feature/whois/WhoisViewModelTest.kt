@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -230,6 +231,53 @@ class WhoisViewModelTest {
             assertNotNull(success.rdns)
             assertEquals("1.1.1.1", success.rdns!!.ip)
         }
+    }
+
+    @Test
+    fun `buildExportText formats domain whois and rdns`() = runTest {
+        val whoisResult = WhoisResult(
+            domain = "example.com",
+            registrar = "Test Registrar",
+            createdDate = "2020-01-01",
+            expiryDate = "2025-01-01",
+            nameServers = listOf("ns1.example.com", "ns2.example.com"),
+            rawResponse = "Domain: example.com\nRegistrar: Test Registrar",
+        )
+        fakeWhoisClient.result = whoisResult
+        fakeDomainResolver.ip = "93.184.216.34"
+        fakeRdnsResolver.result = RdnsResult(
+            ip = "93.184.216.34",
+            hostnames = listOf("example.com"),
+        )
+        viewModel.onQueryChanged("example.com")
+        viewModel.lookup()
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("WHOIS for example.com:"))
+        assertTrue(text.contains("Registrar: Test Registrar"))
+        assertTrue(text.contains("Created: 2020-01-01"))
+        assertTrue(text.contains("Expires: 2025-01-01"))
+        assertTrue(text.contains("Name Servers: ns1.example.com, ns2.example.com"))
+        assertTrue(text.contains("--- Raw ---"))
+        assertTrue(text.contains("Reverse DNS for 93.184.216.34:"))
+        assertTrue(text.contains("  example.com"))
+    }
+
+    @Test
+    fun `buildExportText with null whois and present rdns`() = runTest {
+        fakeRdnsResolver.result = RdnsResult(
+            ip = "8.8.8.8",
+            hostnames = listOf("dns.google"),
+        )
+        viewModel.onQueryChanged("8.8.8.8")
+        viewModel.lookup("8.8.8.8")
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("WHOIS for 8.8.8.8:"))
+        assertTrue(text.contains("Reverse DNS for 8.8.8.8:"))
+        assertTrue(text.contains("  dns.google"))
+        assertFalse(text.contains("Registrar"))
+        assertFalse(text.contains("--- Raw ---"))
     }
 
     @Test

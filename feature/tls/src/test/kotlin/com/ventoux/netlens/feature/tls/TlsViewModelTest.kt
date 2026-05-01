@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventoux.netlens.core.data.dao.TlsHistoryDao
@@ -132,6 +133,44 @@ class TlsViewModelTest {
             viewModel.inspect("example.com", port = 8443)
             assertEquals(TlsUiState.Success(expectedResult), awaitItem())
         }
+    }
+    @Test
+    fun `buildExportText formats certificate details`() = runTest {
+        val cert = TlsCertInfo(
+            subjectCN = "example.com",
+            issuerCN = "Let's Encrypt",
+            serialNumber = "ABC123",
+            notBefore = "2025-01-01",
+            notAfter = "2026-01-01",
+            signatureAlgorithm = "SHA256withRSA",
+            isExpired = false,
+            daysUntilExpiry = 365,
+        )
+        val result = TlsInspectResult(
+            host = "example.com",
+            port = 443,
+            protocol = "TLSv1.3",
+            cipherSuite = "TLS_AES_256_GCM_SHA384",
+            certificates = listOf(cert),
+        )
+        fakeInspector.result = result
+        viewModel.inspect("example.com")
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("TLS Inspector for example.com:443:"))
+        assertTrue(text.contains("Protocol: TLSv1.3"))
+        assertTrue(text.contains("Cipher: TLS_AES_256_GCM_SHA384"))
+        assertTrue(text.contains("--- Certificate 1 ---"))
+        assertTrue(text.contains("Subject: example.com"))
+        assertTrue(text.contains("Issuer: Let's Encrypt"))
+        assertTrue(text.contains("Valid: 2025-01-01 to 2026-01-01"))
+        assertTrue(text.contains("Algorithm: SHA256withRSA"))
+    }
+
+    @Test
+    fun `buildExportText returns empty when not Success`() = runTest {
+        val text = viewModel.buildExportText()
+        assertEquals("", text)
     }
 }
 
