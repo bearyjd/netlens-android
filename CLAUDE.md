@@ -23,7 +23,7 @@ CI currently tests only: `:core:network`, `:feature:lanscan`, `:feature:whois`, 
 ### Module Graph
 
 ```
-app ──┬── feature:* (13 modules)  ── core:network
+app ──┬── feature:* (15 modules)  ── core:network
       ├── core:network                core:data
       ├── core:data                   core:oui
       ├── core:oui

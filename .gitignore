@@ -20,3 +20,4 @@ out/
 .kotlin/
 *.jks
 *.keystore
+.claude/PRPs/
