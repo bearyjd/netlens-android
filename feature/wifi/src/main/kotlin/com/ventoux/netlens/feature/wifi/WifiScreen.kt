@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.wifi.model.ConnectedWifiInfo
 import com.ventoux.netlens.feature.wifi.model.WifiBand
@@ -69,6 +70,8 @@ fun WifiScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -110,15 +113,17 @@ fun WifiScreen(
                                 contentDescription = stringResource(R.string.wifi_cd_copy_results),
                             )
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(
-                                context, "WiFi Analyzer Results", viewModel.buildExportText(),
-                            )
-                        }) {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = stringResource(R.string.wifi_cd_share),
-                            )
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(
+                                    context, "WiFi Analyzer Results", viewModel.buildExportText(),
+                                )
+                            }) {
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = stringResource(R.string.wifi_cd_share),
+                                )
+                            }
                         }
                     }
                 },
@@ -153,6 +158,7 @@ fun WifiScreen(
                 state = state,
                 filteredNetworks = viewModel.filteredNetworks(),
                 onBandSelected = viewModel::onBandSelected,
+                isPro = isPro,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -203,6 +209,7 @@ private fun WifiContent(
     state: WifiUiState,
     filteredNetworks: List<WifiNetwork>,
     onBandSelected: (WifiBand) -> Unit,
+    isPro: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -237,11 +244,13 @@ private fun WifiContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            ChannelGraph(
-                networks = filteredNetworks,
-                connectedBssid = state.connectedInfo?.bssid,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+            if (isPro) {
+                ChannelGraph(
+                    networks = filteredNetworks,
+                    connectedBssid = state.connectedInfo?.bssid,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
 
         Row(

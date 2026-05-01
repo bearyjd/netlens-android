@@ -16,6 +16,12 @@ android {
         versionName = property("netlens.versionName").toString()
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("foss") { dimension = "distribution" }
+        create("gplay") { dimension = "distribution" }
+    }
+
     signingConfigs {
         create("release") {
             val props = rootProject.file("local.properties")
@@ -95,6 +101,10 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:data"))
     implementation(project(":core:oui"))
+    implementation(project(":core:billing"))
+
+    // Billing (gplay only)
+    "gplayImplementation"(libs.billing)
 
     // Test
     testImplementation(libs.junit5.api)

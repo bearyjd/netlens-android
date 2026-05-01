@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.ping.model.PingMode
 import com.ventoux.netlens.feature.ping.model.PingResult
@@ -78,6 +79,8 @@ fun PingScreen(
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier,
@@ -99,10 +102,12 @@ fun PingScreen(
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ping_cd_copy_results))
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "Ping Results", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ping_cd_share))
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "Ping Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ping_cd_share))
+                            }
                         }
                     }
                 },

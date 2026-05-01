@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,8 @@ fun TlsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
     var host by rememberSaveable { mutableStateOf(initialHost ?: "") }
     var portText by rememberSaveable { mutableStateOf("443") }
 
@@ -89,10 +92,12 @@ fun TlsScreen(
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.tls_cd_copy_results))
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.tls_cd_share))
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.tls_cd_share))
+                            }
                         }
                     }
                 },

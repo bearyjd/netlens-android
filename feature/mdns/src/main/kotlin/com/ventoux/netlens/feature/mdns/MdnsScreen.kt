@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.feature.mdns.model.MdnsService
 import com.ventoux.netlens.feature.mdns.model.MdnsUiState
 
@@ -61,6 +62,8 @@ fun MdnsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     MdnsContent(
         uiState = uiState,
@@ -70,8 +73,10 @@ fun MdnsScreen(
         onCopyResults = {
             ResultExporter.copyToClipboard(context, "mDNS Browser", viewModel.buildExportText())
         },
-        onShareResults = {
-            ResultExporter.shareAsText(context, "mDNS Browser Results", viewModel.buildExportText())
+        onShareResults = if (isPro) {
+            { ResultExporter.shareAsText(context, "mDNS Browser Results", viewModel.buildExportText()) }
+        } else {
+            null
         },
     )
 }
@@ -84,7 +89,7 @@ private fun MdnsContent(
     onStopScan: () -> Unit,
     onBack: () -> Unit,
     onCopyResults: () -> Unit = {},
-    onShareResults: () -> Unit = {},
+    onShareResults: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = {
@@ -103,8 +108,10 @@ private fun MdnsContent(
                         IconButton(onClick = onCopyResults) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.mdns_cd_copy_results))
                         }
-                        IconButton(onClick = onShareResults) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.mdns_cd_share))
+                        if (onShareResults != null) {
+                            IconButton(onClick = onShareResults) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.mdns_cd_share))
+                            }
                         }
                     }
                 },

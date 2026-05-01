@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
@@ -90,6 +91,8 @@ fun LanScanScreen(
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val hostDetail by viewModel.hostDetail.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     LanScanContent(
         onBack = onBack,
@@ -112,8 +115,10 @@ fun LanScanScreen(
         onCopyResults = {
             ResultExporter.copyToClipboard(context, "LAN Scan", viewModel.buildExportText())
         },
-        onShareResults = {
-            ResultExporter.shareAsText(context, "LAN Scan Results", viewModel.buildExportText())
+        onShareResults = if (isPro) {
+            { ResultExporter.shareAsText(context, "LAN Scan Results", viewModel.buildExportText()) }
+        } else {
+            null
         },
     )
 }
@@ -139,7 +144,7 @@ private fun LanScanContent(
     onClearHistory: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
     onCopyResults: () -> Unit = {},
-    onShareResults: () -> Unit = {},
+    onShareResults: (() -> Unit)? = null,
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
     val showCustomField = uiState.rangeMode == ScanRangeMode.CUSTOM
@@ -171,7 +176,7 @@ private fun LanScanContent(
                         IconButton(onClick = onCopyResults) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.lanscan_cd_copy_results))
                         }
-                        IconButton(onClick = onShareResults) {
+                        if (onShareResults != null) IconButton(onClick = onShareResults) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share))
                         }
                     }
