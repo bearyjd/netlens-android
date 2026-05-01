@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -67,6 +68,8 @@ fun DnsLookupScreen(
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -87,10 +90,12 @@ fun DnsLookupScreen(
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.dns_cd_copy_all))
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "DNS Lookup Results", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.dns_cd_share))
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "DNS Lookup Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.dns_cd_share))
+                            }
                         }
                     }
                 },

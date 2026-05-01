@@ -43,6 +43,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.ipinfo.model.IpApiResponse
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
@@ -56,6 +57,8 @@ fun IpInfoScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -75,10 +78,12 @@ fun IpInfoScreen(
                     }) {
                         Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipinfo_cd_copy))
                     }
-                    IconButton(onClick = {
-                        ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
+                    if (isPro) {
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
+                        }
                     }
                 }
             },
