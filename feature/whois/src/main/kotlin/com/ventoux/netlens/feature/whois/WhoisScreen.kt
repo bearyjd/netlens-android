@@ -87,12 +87,12 @@ fun WhoisScreen(
                         IconButton(onClick = {
                             ResultExporter.copyToClipboard(context, "WHOIS", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.whois_cd_copy_results))
                         }
                         IconButton(onClick = {
                             ResultExporter.shareAsText(context, "WHOIS Results", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.whois_cd_share))
                         }
                     }
                 },

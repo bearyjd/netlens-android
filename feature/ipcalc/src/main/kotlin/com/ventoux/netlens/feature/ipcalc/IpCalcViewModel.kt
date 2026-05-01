@@ -32,7 +32,7 @@ class IpCalcViewModel @Inject constructor(
             sb.appendLine("Wildcard: ${r.wildcardMask}")
             sb.appendLine("CIDR: ${r.cidrNotation}")
             sb.appendLine("Class: ${r.ipClass}")
-            sb.appendLine("Bogon: ${r.isBogon}")
+            sb.appendLine("Bogon: ${if (r.isBogon) "Yes" else "No"}")
         }
         return sb.toString().trimEnd()
     }

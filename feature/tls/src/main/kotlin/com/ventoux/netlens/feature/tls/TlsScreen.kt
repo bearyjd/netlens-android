@@ -87,12 +87,12 @@ fun TlsScreen(
                         IconButton(onClick = {
                             ResultExporter.copyToClipboard(context, "TLS Inspector", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.tls_cd_copy_results))
                         }
                         IconButton(onClick = {
                             ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.tls_cd_share))
                         }
                     }
                 },

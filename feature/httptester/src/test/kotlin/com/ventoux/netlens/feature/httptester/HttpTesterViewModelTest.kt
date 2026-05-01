@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
@@ -71,7 +72,10 @@ class HttpTesterViewModelTest {
             viewModel.sendRequest(testConfig)
             // Loading is set synchronously before the coroutine launch
             assertEquals(HttpTesterUiState.Loading, awaitItem())
-            assertEquals(HttpTesterUiState.Success(testResponse), awaitItem())
+            assertEquals(
+                HttpTesterUiState.Success(testResponse, "GET", "https://example.com"),
+                awaitItem(),
+            )
         }
     }
 
@@ -124,6 +128,25 @@ class HttpTesterViewModelTest {
     }
 
     @Test
+    fun `buildExportText formats response correctly`() = runTest {
+        fakeRequester.result = testResponse
+        viewModel.sendRequest(testConfig)
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("HTTP GET https://example.com"))
+        assertTrue(text.contains("Status: 200 OK"))
+        assertTrue(text.contains("Latency: 150ms"))
+        assertTrue(text.contains("Content-Type: text/html"))
+        assertTrue(text.contains("<html>Hello</html>"))
+    }
+
+    @Test
+    fun `buildExportText returns empty when not Success`() = runTest {
+        val text = viewModel.buildExportText()
+        assertEquals("", text)
+    }
+
+    @Test
     fun `sendRequest with POST method succeeds`() = runTest {
         val postConfig = HttpRequestConfig(
             url = "https://example.com/api",
@@ -138,7 +161,10 @@ class HttpTesterViewModelTest {
             assertEquals(HttpTesterUiState.Idle, awaitItem())
             viewModel.sendRequest(postConfig)
             assertEquals(HttpTesterUiState.Loading, awaitItem())
-            assertEquals(HttpTesterUiState.Success(postResponse), awaitItem())
+            assertEquals(
+                HttpTesterUiState.Success(postResponse, "POST", "https://example.com/api"),
+                awaitItem(),
+            )
         }
     }
 }

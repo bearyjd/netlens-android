@@ -80,12 +80,12 @@ fun TracerouteScreen(
                         IconButton(onClick = {
                             ResultExporter.copyToClipboard(context, "Traceroute", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.traceroute_cd_copy_results))
                         }
                         IconButton(onClick = {
                             ResultExporter.shareAsText(context, "Traceroute Results", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.traceroute_cd_share))
                         }
                     }
                 },

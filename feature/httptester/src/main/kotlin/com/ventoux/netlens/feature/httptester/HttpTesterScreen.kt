@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ventoux.netlens.core.network.export.ResultExporter
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,12 +86,12 @@ fun HttpTesterScreen(
                         IconButton(onClick = {
                             ResultExporter.copyToClipboard(context, "HTTP Tester", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.httptester_cd_copy_results))
                         }
                         IconButton(onClick = {
                             ResultExporter.shareAsText(context, "HTTP Tester Results", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.httptester_cd_share))
                         }
                     }
                 },
