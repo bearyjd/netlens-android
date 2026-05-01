@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -53,6 +54,8 @@ fun IpCalcScreen(
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    val proStatus = LocalProStatus.current
+    val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
     LaunchedEffect(initialInput) {
         if (!initialInput.isNullOrEmpty()) {
@@ -80,10 +83,12 @@ fun IpCalcScreen(
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipcalc_cd_copy_results))
                         }
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "IP Calculator Results", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipcalc_cd_share))
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "IP Calculator Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipcalc_cd_share))
+                            }
                         }
                     }
                 },

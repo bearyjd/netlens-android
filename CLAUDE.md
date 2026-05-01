@@ -9,12 +9,15 @@ NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`
 ## Build Commands
 
 ```bash
-./gradlew assembleDebug                    # Build debug APK
-./gradlew :feature:ping:testDebugUnitTest  # Run tests for one module
-./gradlew testDebugUnitTest                # Run all unit tests
+./gradlew assembleFossDebug                    # Build FOSS debug APK (no billing)
+./gradlew assembleGplayDebug                   # Build Google Play debug APK (with billing)
+./gradlew :feature:ping:testFossDebugUnitTest  # Run tests for one module
+./gradlew testFossDebugUnitTest                # Run all unit tests
 ```
 
-CI currently tests only: `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`.
+Two product flavors: `foss` (F-Droid / source builds, Pro always on) and `gplay` (Google Play, Pro via in-app purchase).
+
+CI builds `foss` flavor and currently tests only: `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`.
 
 **SDK targets**: compileSdk 35, minSdk 29, Java 17.
 
@@ -25,7 +28,8 @@ CI currently tests only: `:core:network`, `:feature:lanscan`, `:feature:whois`, 
 ```
 app ──┬── feature:* (15 modules)  ── core:network
       ├── core:network                core:data
-      ├── core:data                   core:oui
+      ├── core:data                   core:billing
+      ├── core:billing                core:oui
       ├── core:oui
       └── widget
 ```
@@ -33,13 +37,14 @@ app ──┬── feature:* (15 modules)  ── core:network
 - **`app`** — single Activity (`MainActivity`), hosts `NetLensNavHost` which routes to all feature screens. Navigation uses string routes defined in the `ToolDestination` enum (`app/.../navigation/ToolDestination.kt`).
 - **`core:network`** — connectivity monitoring (`NetworkMonitor`), SSRF guard, coroutine utilities, and result export (`export/ResultExporter`). No HTTP client library (features use Ktor or raw sockets directly).
 - **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`.
+- **`core:billing`** — `ProStatus` interface (`isPro: StateFlow<Boolean>`, `launchPurchase(activity)`) and `LocalProStatus` CompositionLocal. Flavor-specific implementations live in `app/src/foss/` (always Pro) and `app/src/gplay/` (Google Play Billing).
 - **`core:oui`** — MAC address vendor lookup from OUI database.
 - **`widget`** — Glance-based home screen widget.
-- **`feature:*`** — each feature is self-contained with its own screen, ViewModel, DI module, and engine/domain layer.
+- **`feature:*`** — each feature is self-contained with its own screen, ViewModel, DI module, and engine/domain layer. Share-export is gated behind `isPro` via `LocalProStatus`.
 
 ### Convention Plugins (`build-logic/`)
 
-Feature modules apply `netlens.android.feature` which bundles: `netlens.android.library` + `netlens.android.compose` + `netlens.hilt` + lifecycle/navigation dependencies. Core modules apply `netlens.android.library` + `netlens.hilt` individually.
+Feature modules apply `netlens.android.feature` which bundles: `netlens.android.library` + `netlens.android.compose` + `netlens.hilt` + lifecycle/navigation/billing dependencies. Core modules apply `netlens.android.library` + `netlens.hilt` individually.
 
 ### Feature Module Pattern
 
@@ -56,6 +61,11 @@ feature/<name>/src/main/kotlin/com.ventoux.netlens/feature/<name>/
 **UI state pattern**: `MutableStateFlow<UiState>` exposed as `StateFlow`, updated via `.update { it.copy(...) }`. No MVI event sealed class — ViewModels expose individual action methods.
 
 **Result export pattern**: All 13 tool ViewModels (Ping, Traceroute, DNS, PortScan, WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS, SpeedTest, WiFi) expose `fun buildExportText(): String` which serialises current UI state to a plain-text string. Screens call `ResultExporter.shareAsText()` or `ResultExporter.copyToClipboard()` (both in `core:network/export/ResultExporter.kt`) from Share/Copy IconButtons in each screen's `TopAppBar`. Modules that did not previously depend on `core:network` or `compose.material.icons` had those dependencies added as part of this feature (ipcalc: both; whois, httptester, tls, mdns: `compose.material.icons`).
+
+**Pro-gating patterns** (3 variants, choose based on screen architecture):
+1. **Direct `if (isPro)`** (11 screens: DNS, HTTP, IpCalc, IpInfo, Ping, PortScan, SpeedTest, TLS, Traceroute, WHOIS, WiFi share button) — read `LocalProStatus.current` in the screen composable, wrap share `IconButton` in `if (isPro) { ... }`.
+2. **Nullable lambda** (LanScan, mDNS) — for screens with a separate `Content` composable that receives callbacks: pass `onShareResults = null` when `!isPro`, make the parameter `(() -> Unit)?`, gate with `if (onShareResults != null)`.
+3. **Boolean parameter** (WiFi `ChannelGraph`) — when `isPro` gates non-action UI (not a button), pass it as a Boolean param to the inner composable.
 
 ### Navigation
 
