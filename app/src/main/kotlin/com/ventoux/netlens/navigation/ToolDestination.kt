@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ToolCategory(val label: String) {
@@ -99,6 +100,13 @@ enum class ToolDestination(
         icon = Icons.Default.Wifi,
         label = "mDNS Browser",
         description = "Find .local services",
+        category = ToolCategory.Discovery,
+    ),
+    WifiAnalyzer(
+        route = "wifi",
+        icon = Icons.Default.WifiFind,
+        label = "WiFi Analyzer",
+        description = "Scan & analyze WiFi",
         category = ToolCategory.Discovery,
     ),
     PortScan(

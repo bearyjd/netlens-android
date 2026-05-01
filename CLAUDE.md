@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 14 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, Wake-on-LAN, IP info, endpoint monitor, network log, and speed test — each in its own feature module.
+NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 15 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, endpoint monitor, network log, and speed test — each in its own feature module.
 
 ## Build Commands
 
@@ -55,7 +55,7 @@ feature/<name>/src/main/kotlin/com.ventoux.netlens/feature/<name>/
 
 **UI state pattern**: `MutableStateFlow<UiState>` exposed as `StateFlow`, updated via `.update { it.copy(...) }`. No MVI event sealed class — ViewModels expose individual action methods.
 
-**Result export pattern**: All 12 tool ViewModels (Ping, Traceroute, DNS, PortScan, WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS, SpeedTest) expose `fun buildExportText(): String` which serialises current UI state to a plain-text string. Screens call `ResultExporter.shareAsText()` or `ResultExporter.copyToClipboard()` (both in `core:network/export/ResultExporter.kt`) from Share/Copy IconButtons in each screen's `TopAppBar`. Modules that did not previously depend on `core:network` or `compose.material.icons` had those dependencies added as part of this feature (ipcalc: both; whois, httptester, tls, mdns: `compose.material.icons`).
+**Result export pattern**: All 13 tool ViewModels (Ping, Traceroute, DNS, PortScan, WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS, SpeedTest, WiFi) expose `fun buildExportText(): String` which serialises current UI state to a plain-text string. Screens call `ResultExporter.shareAsText()` or `ResultExporter.copyToClipboard()` (both in `core:network/export/ResultExporter.kt`) from Share/Copy IconButtons in each screen's `TopAppBar`. Modules that did not previously depend on `core:network` or `compose.material.icons` had those dependencies added as part of this feature (ipcalc: both; whois, httptester, tls, mdns: `compose.material.icons`).
 
 ### Navigation
 
