@@ -18,5 +18,6 @@
     <string name="ipcalc_bogon_yes">Yes (non-routable)</string>
     <string name="ipcalc_bogon_no">No (routable)</string>
     <string name="ipcalc_cd_copy_results">Copy results</string>
+    <string name="ipcalc_cd_share">Share results</string>
     <string name="ipcalc_ipv6_unsupported">IPv6 is not supported yet — enter an IPv4 address or CIDR</string>
 </resources>

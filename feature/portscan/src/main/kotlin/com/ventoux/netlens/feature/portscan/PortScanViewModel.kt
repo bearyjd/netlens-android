@@ -32,6 +32,18 @@ class PortScanViewModel @Inject constructor(
         _state.update { it.copy(host = host) }
     }
 
+    fun buildExportText(): String {
+        val current = _state.value
+        val sb = StringBuilder()
+        sb.appendLine("Port Scan results for ${current.host}:")
+        val open = current.results.filter { it.isOpen }
+        sb.appendLine("Open ports: ${open.size} / ${current.results.size} scanned")
+        open.forEach { r ->
+            sb.appendLine("  ${r.port}/${r.serviceName}  (${r.latencyMs}ms)")
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun scan(host: String, ports: List<Int>) {
         scanJob?.cancel()
         _state.update {

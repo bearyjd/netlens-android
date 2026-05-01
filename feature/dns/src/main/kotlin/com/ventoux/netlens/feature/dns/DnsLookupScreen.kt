@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -38,8 +39,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import com.ventoux.netlens.core.network.export.ResultExporter
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,7 +66,7 @@ fun DnsLookupScreen(
         if (initialDomain != null) viewModel.onDomainChanged(initialDomain)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -79,19 +82,15 @@ fun DnsLookupScreen(
                 },
                 actions = {
                     if (state.results.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                val text = state.results
-                                    .groupBy { it.type }
-                                    .entries
-                                    .joinToString("\n\n") { (type, records) ->
-                                        "${type.displayName} Records:\n" +
-                                            records.joinToString("\n") { it.value }
-                                    }
-                                clipboardManager.setText(AnnotatedString(text))
-                            },
-                        ) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "DNS Lookup", viewModel.buildExportText())
+                        }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.dns_cd_copy_all))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "DNS Lookup Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.dns_cd_share))
                         }
                     }
                 },

@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -54,6 +56,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -85,6 +89,7 @@ fun LanScanScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val hostDetail by viewModel.hostDetail.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LanScanContent(
         onBack = onBack,
@@ -104,6 +109,12 @@ fun LanScanScreen(
         onScanWithCidr = viewModel::startScanWithCidr,
         onClearHistory = viewModel::clearHistory,
         onNavigateToTool = onNavigateToTool,
+        onCopyResults = {
+            ResultExporter.copyToClipboard(context, "LAN Scan", viewModel.buildExportText())
+        },
+        onShareResults = {
+            ResultExporter.shareAsText(context, "LAN Scan Results", viewModel.buildExportText())
+        },
     )
 }
 
@@ -127,6 +138,8 @@ private fun LanScanContent(
     onScanWithCidr: (String) -> Unit,
     onClearHistory: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
+    onCopyResults: () -> Unit = {},
+    onShareResults: () -> Unit = {},
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
     val showCustomField = uiState.rangeMode == ScanRangeMode.CUSTOM
@@ -154,6 +167,14 @@ private fun LanScanContent(
                     }
                 },
                 actions = {
+                    if (uiState.selectedTab == LanScanTab.SCAN && uiState.devices.isNotEmpty()) {
+                        IconButton(onClick = onCopyResults) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.lanscan_cd_copy_results))
+                        }
+                        IconButton(onClick = onShareResults) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share))
+                        }
+                    }
                     if (uiState.selectedTab == LanScanTab.SCAN) {
                         IconButton(onClick = { sortMenuExpanded = true }) {
                             Icon(

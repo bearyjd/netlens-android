@@ -16,7 +16,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.AssistChip
@@ -39,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -47,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.whois.model.RdnsResult
 import com.ventoux.netlens.feature.whois.model.WhoisResult
 import com.ventoux.netlens.feature.whois.model.WhoisUiState
@@ -64,6 +68,7 @@ fun WhoisScreen(
     }
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -75,6 +80,20 @@ fun WhoisScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
+                    }
+                },
+                actions = {
+                    if (state is WhoisUiState.Success) {
+                        IconButton(onClick = {
+                            ResultExporter.copyToClipboard(context, "WHOIS", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.whois_cd_copy_results))
+                        }
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "WHOIS Results", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.whois_cd_share))
+                        }
                     }
                 },
             )

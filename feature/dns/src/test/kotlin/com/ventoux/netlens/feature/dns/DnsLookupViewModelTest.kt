@@ -191,6 +191,35 @@ class DnsLookupViewModelTest {
     }
 
     @Test
+    fun `buildExportText formats grouped results`() = runTest {
+        val results = listOf(
+            DnsResult(DnsRecordType.A, "example.com", "93.184.216.34", 3600),
+            DnsResult(DnsRecordType.AAAA, "example.com", "2606:2800:220:1::248", 3600),
+        )
+        fakeDnsResolver.result = Result.success(results)
+        viewModel.onDomainChanged("example.com")
+        viewModel.lookup()
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("DNS Lookup for example.com:"))
+        assertTrue(text.contains("--- A Records ---"))
+        assertTrue(text.contains("example.com  93.184.216.34  TTL=3600"))
+        assertTrue(text.contains("--- AAAA Records ---"))
+        assertTrue(text.contains("example.com  2606:2800:220:1::248  TTL=3600"))
+    }
+
+    @Test
+    fun `buildExportText with no results shows domain only`() = runTest {
+        fakeDnsResolver.result = Result.success(emptyList())
+        viewModel.onDomainChanged("empty.example.com")
+        viewModel.lookup()
+
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("DNS Lookup for empty.example.com:"))
+        assertFalse(text.contains("---"))
+    }
+
+    @Test
     fun `lookup trims domain whitespace`() = runTest {
         val expectedResults = listOf(
             DnsResult(DnsRecordType.A, "example.com", "93.184.216.34", 3600),

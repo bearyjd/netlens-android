@@ -54,4 +54,6 @@
     <string name="lanscan_action_port_scan">Port Scan</string>
     <string name="lanscan_action_traceroute">Traceroute</string>
     <string name="lanscan_action_whois">WHOIS</string>
+    <string name="lanscan_cd_copy_results">Copy results</string>
+    <string name="lanscan_cd_share">Share results</string>
 </resources>

@@ -46,6 +46,19 @@ class DnsLookupViewModel @Inject constructor(
         }
     }
 
+    fun buildExportText(): String {
+        val current = _state.value
+        val sb = StringBuilder()
+        sb.appendLine("DNS Lookup for ${current.domain}:")
+        current.results.groupBy { it.type }.forEach { (type, records) ->
+            sb.appendLine("--- ${type.name} Records ---")
+            records.forEach { r ->
+                sb.appendLine("${r.name}  ${r.value}  TTL=${r.ttl}")
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
     fun lookup() {
         val current = _state.value
         val domain = current.domain.trim()
