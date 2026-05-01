@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="billing_connecting">Connecting to Play Store, please try again shortly</string>
+</resources>

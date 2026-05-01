@@ -1,0 +1,33 @@
+Codemap Generation Report — 2026-05-01
+═══════════════════════════════════════
+
+Status: Initial generation (no prior codemaps existed)
+
+Files Generated:
+  docs/CODEMAPS/architecture.md  — module graph, DI, navigation, flavors
+  docs/CODEMAPS/features.md      — 19 feature modules, pro-gating patterns
+  docs/CODEMAPS/data.md          — Room DB v9, 17 entities, 15 DAOs
+  docs/CODEMAPS/dependencies.md  — libraries, build toolchain, CI
+
+Source Files Scanned:
+  .kt  files: 324
+  .xml files: 57
+  .kts files: 30
+  Total: 411
+
+Project Structure:
+  Modules: 24 (1 app + 4 core + 19 feature + 1 widget — note: some feature
+           modules like history, widgetsettings, posture are non-tool utility screens)
+  Convention plugins: 5 (in build-logic/)
+  Product flavors: 2 (foss, gplay)
+  Room DB version: 9
+  Room entities: 17
+
+Key Architectural Notes:
+  - Single Activity architecture with Compose Navigation
+  - All features follow Screen+ViewModel+DI+Engine pattern
+  - Pro billing via CompositionLocal (foss=always Pro, gplay=IAP)
+  - Cross-tool navigation via query parameter encoding
+  - 13 tool ViewModels expose buildExportText() for share/copy
+
+No Staleness Warnings (first generation).
