@@ -11,23 +11,26 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netatl
 
 ### Network Info
 - **IP Info** — Public IP address and geolocation lookup
-- **WHOIS** — Domain and IP ownership information
+- **WHOIS** — Domain and IP ownership information with reverse DNS
 
 ### Connectivity
 - **Ping** — Latency and reachability testing with continuous mode
 - **DNS Lookup** — Query A, AAAA, MX, TXT, and other DNS record types
 - **Traceroute** — Trace the network path to any host
+- **Speed Test** — Measure download/upload speed and latency
 
 ### Discovery
 - **LAN Scan** — Discover devices on your local network with MAC vendor lookup
 - **mDNS Browser** — Find Bonjour / .local services on the network
 - **Port Scanner** — Scan for open TCP ports on a target host
+- **WiFi Analyzer** — View nearby networks, signal strength, and channel usage graph
 
 ### Security & Web
 - **TLS Inspector** — Inspect SSL/TLS certificates and cipher suites
 - **HTTP Tester** — Send custom HTTP requests and inspect responses
 
 ### Tools
+- **IP Calculator** — Subnet calculator with CIDR notation, host ranges, and network class
 - **Wake-on-LAN** — Send magic packets to wake network devices
 - **Endpoint Monitor** — Track uptime and latency of HTTP endpoints
 - **Network Log** — View connection history and network events
@@ -78,7 +81,7 @@ Multi-module Gradle project with convention plugins:
 
 ```
 app                  — Single Activity, navigation host, theme
-feature/*            — 13 self-contained feature modules
+feature/*            — 15 self-contained feature modules
 core/network         — Connectivity monitoring, SSRF guard
 core/data            — Room database, DAOs, Hilt data module
 core/oui             — MAC address vendor lookup
