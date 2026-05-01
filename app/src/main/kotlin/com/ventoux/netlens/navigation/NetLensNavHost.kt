@@ -24,6 +24,7 @@ import com.ventoux.netlens.feature.tls.TlsScreen
 import com.ventoux.netlens.feature.ipcalc.IpCalcScreen
 import com.ventoux.netlens.feature.whois.WhoisScreen
 import com.ventoux.netlens.feature.widgetsettings.WidgetSettingsScreen
+import com.ventoux.netlens.feature.wifi.WifiScreen
 import com.ventoux.netlens.feature.wol.WolScreen
 import com.ventoux.netlens.ui.home.HomeScreen
 
@@ -142,6 +143,7 @@ fun NetLensNavHost(
             )
         }
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.WifiAnalyzer.route) { WifiScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.History.route) {

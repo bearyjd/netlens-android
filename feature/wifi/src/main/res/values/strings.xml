@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wifi_title">WiFi Analyzer</string>
+    <string name="wifi_navigate_back">Back</string>
+    <string name="wifi_cd_copy_results">Copy results</string>
+    <string name="wifi_cd_share">Share results</string>
+    <string name="wifi_scan_button">Scan</string>
+    <string name="wifi_permission_title">Location Permission Required</string>
+    <string name="wifi_permission_rationale">WiFi scanning requires location permission to discover nearby networks. This is an Android system requirement.</string>
+    <string name="wifi_permission_grant">Grant Permission</string>
+    <string name="wifi_connected_label">Connected</string>
+    <string name="wifi_speed_label">Speed</string>
+    <string name="wifi_frequency_label">Freq</string>
+    <string name="wifi_signal_label">Signal</string>
+    <string name="wifi_ip_label">IP</string>
+    <string name="wifi_channel_graph_title">Channel Map</string>
+    <string name="wifi_networks_title">Networks</string>
+    <string name="wifi_no_networks">No networks found</string>
+    <string name="wifi_no_networks_hint">Tap the scan button to discover WiFi networks</string>
+    <string name="wifi_last_scanned">Last scanned %1$s ago</string>
+    <string name="wifi_hidden_ssid">(hidden)</string>
+</resources>
