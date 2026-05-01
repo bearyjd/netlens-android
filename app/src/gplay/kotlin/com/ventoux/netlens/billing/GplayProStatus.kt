@@ -2,6 +2,8 @@ package com.ventoux.netlens.billing
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import com.android.billingclient.api.AcknowledgePurchaseParams
@@ -13,10 +15,12 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.ventoux.netlens.R
 import com.ventoux.netlens.core.billing.ProStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +33,7 @@ class GplayProStatus @Inject constructor(
     private val _isPro = MutableStateFlow(prefs.getBoolean(KEY_PRO_UNLOCKED, false))
     override val isPro: StateFlow<Boolean> = _isPro
 
-    private var reconnectAttempts = 0
+    private val reconnectAttempts = AtomicInteger(0)
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -41,16 +45,16 @@ class GplayProStatus @Inject constructor(
     }
 
     private fun connectAndQueryPurchases() {
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        if (reconnectAttempts.get() >= MAX_RECONNECT_ATTEMPTS) {
             Log.w(TAG, "Max reconnect attempts reached, giving up")
             return
         }
-        reconnectAttempts++
+        reconnectAttempts.incrementAndGet()
 
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    reconnectAttempts = 0
+                    reconnectAttempts.set(0)
                     queryExistingPurchases()
                 }
             }
@@ -80,12 +84,14 @@ class GplayProStatus @Inject constructor(
 
     override fun launchPurchase(activity: Activity) {
         if (!billingClient.isReady) {
-            Toast.makeText(
-                activity,
-                "Connecting to Play Store, please try again shortly",
-                Toast.LENGTH_SHORT,
-            ).show()
-            reconnectAttempts = 0
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.billing_connecting),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            reconnectAttempts.set(0)
             connectAndQueryPurchases()
             return
         }
@@ -159,6 +165,6 @@ class GplayProStatus @Inject constructor(
         private const val PREFS_NAME = "netlens_billing"
         private const val KEY_PRO_UNLOCKED = "pro_unlocked"
         private const val MAX_RECONNECT_ATTEMPTS = 3
-        const val PRODUCT_ID = "pro_unlock"
+        private const val PRODUCT_ID = "pro_unlock"
     }
 }
