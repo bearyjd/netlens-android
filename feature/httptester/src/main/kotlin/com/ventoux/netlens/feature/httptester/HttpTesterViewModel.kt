@@ -25,14 +25,11 @@ class HttpTesterViewModel @Inject constructor(
     private val _state = MutableStateFlow<HttpTesterUiState>(HttpTesterUiState.Idle)
     val state: StateFlow<HttpTesterUiState> = _state.asStateFlow()
 
-    private var lastConfig: HttpRequestConfig? = null
-
     fun buildExportText(): String {
         val sb = StringBuilder()
-        val cfg = lastConfig
         val current = _state.value
-        sb.appendLine("HTTP ${cfg?.method?.name ?: "?"} ${cfg?.url ?: "?"}:")
         if (current is HttpTesterUiState.Success) {
+            sb.appendLine("HTTP ${current.requestMethod} ${current.requestUrl}:")
             val r = current.response
             sb.appendLine("Status: ${r.statusCode} ${r.statusDescription}")
             sb.appendLine("Latency: ${r.latencyMs}ms")
@@ -46,13 +43,16 @@ class HttpTesterViewModel @Inject constructor(
     }
 
     fun sendRequest(config: HttpRequestConfig) {
-        lastConfig = config
         _state.value = HttpTesterUiState.Loading
 
         viewModelScope.launch {
             try {
                 val result = httpRequester.execute(config)
-                _state.value = HttpTesterUiState.Success(result)
+                _state.value = HttpTesterUiState.Success(
+                    response = result,
+                    requestMethod = config.method.name,
+                    requestUrl = config.url,
+                )
                 saveToHistory(config, result)
             } catch (e: CancellationException) {
                 throw e

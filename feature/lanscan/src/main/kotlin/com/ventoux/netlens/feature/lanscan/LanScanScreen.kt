@@ -169,10 +169,10 @@ private fun LanScanContent(
                 actions = {
                     if (uiState.selectedTab == LanScanTab.SCAN && uiState.devices.isNotEmpty()) {
                         IconButton(onClick = onCopyResults) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy results")
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.lanscan_cd_copy_results))
                         }
                         IconButton(onClick = onShareResults) {
-                            Icon(Icons.Default.Share, contentDescription = "Share results")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share))
                         }
                     }
                     if (uiState.selectedTab == LanScanTab.SCAN) {

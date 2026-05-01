@@ -17,7 +17,7 @@ object ResultExporter {
     }
 
     fun copyToClipboard(context: Context, label: String, content: String) {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
         clipboard.setPrimaryClip(ClipData.newPlainText(label, content))
     }
 }
