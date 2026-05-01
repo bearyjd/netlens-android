@@ -85,6 +85,7 @@ dependencies {
     implementation(project(":feature:widgetsettings"))
     implementation(project(":feature:posture"))
     implementation(project(":feature:ipcalc"))
+    implementation(project(":feature:speedtest"))
 
     // Widget
     implementation(project(":widget"))

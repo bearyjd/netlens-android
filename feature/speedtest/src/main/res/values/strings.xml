@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigate_back">Back</string>
+    <string name="speedtest_title">Speed Test</string>
+    <string name="speedtest_cd_copy_results">Copy results</string>
+    <string name="speedtest_cd_share">Share results</string>
+    <string name="speedtest_button_start">Start Test</string>
+    <string name="speedtest_button_cancel">Cancel</string>
+    <string name="speedtest_phase_latency">Measuring latency…</string>
+    <string name="speedtest_phase_download">Testing download…</string>
+    <string name="speedtest_phase_upload">Testing upload…</string>
+    <string name="speedtest_label_download">Download</string>
+    <string name="speedtest_label_upload">Upload</string>
+    <string name="speedtest_label_latency">Latency</string>
+    <string name="speedtest_unit_mbps">Mbps</string>
+    <string name="speedtest_unit_ms">ms</string>
+    <string name="speedtest_label_results">Results</string>
+    <string name="speedtest_label_history">History</string>
+    <string name="speedtest_history_empty">No speed tests yet</string>
+    <string name="speedtest_history_entry">↓ %.1f  ↑ %.1f Mbps  %d ms</string>
+</resources>

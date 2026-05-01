@@ -13,6 +13,7 @@ import com.ventoux.netlens.feature.history.HistoryScreen
 import com.ventoux.netlens.feature.httptester.HttpTesterScreen
 import com.ventoux.netlens.feature.ipinfo.IpInfoScreen
 import com.ventoux.netlens.feature.posture.PostureScreen
+import com.ventoux.netlens.feature.speedtest.SpeedTestScreen
 import com.ventoux.netlens.feature.lanscan.LanScanScreen
 import com.ventoux.netlens.feature.mdns.MdnsScreen
 import com.ventoux.netlens.feature.monitor.MonitorScreen
@@ -142,6 +143,7 @@ fun NetLensNavHost(
             )
         }
         composable(ToolDestination.Mdns.route) { MdnsScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.SpeedTest.route) { SpeedTestScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.History.route) {
