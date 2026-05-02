@@ -25,6 +25,7 @@ data class WidgetState(
 
     val latencyMs: Long = -1L,
     val deviceCount: Int = 0,
+    val vpnActive: Boolean = false,
 
     val lastScanTimestamp: Long = 0L,
     val isScanRunning: Boolean = false,
