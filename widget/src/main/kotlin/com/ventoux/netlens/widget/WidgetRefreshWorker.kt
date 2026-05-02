@@ -12,6 +12,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.widget.model.WidgetIpResponse
+import com.ventoux.netlens.widget.util.NetworkCollector
+import com.ventoux.netlens.widget.util.PingMeasurement
 import com.ventoux.netlens.widget.util.toFlagEmoji
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -104,6 +106,14 @@ class WidgetRefreshWorker(
                 -1L
             }
 
+            val collected = NetworkCollector.collect(appContext)
+
+            val pingResult = if (isConnected) {
+                PingMeasurement.measure()?.also { PingMeasurement.record(it) }
+            } else {
+                null
+            }
+
             val dataStore = WidgetStateDefinition.getDataStore(appContext, "")
             dataStore.edit { prefs ->
                 prefs[WidgetStateDefinition.IS_CONNECTED] = isConnected
@@ -136,6 +146,18 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
                 prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
                 prefs[WidgetStateDefinition.VPN_ACTIVE] = isVpnActive
+
+                prefs[WidgetStateDefinition.LOCAL_IP] = collected.localIp
+                prefs[WidgetStateDefinition.PING_MS] = pingResult ?: -1
+                prefs[WidgetStateDefinition.HAS_IPV6] = collected.hasIpv6
+                prefs[WidgetStateDefinition.VPN_INTERFACE_NAME] = collected.vpnInterfaceName
+                prefs[WidgetStateDefinition.RSSI] = collected.rssi
+                prefs[WidgetStateDefinition.RSSI_LEVEL] = collected.rssiLevel
+                prefs[WidgetStateDefinition.LINK_SPEED_MBPS] = collected.linkSpeedMbps
+                prefs[WidgetStateDefinition.CELL_GENERATION] = collected.cellGeneration
+                prefs[WidgetStateDefinition.IS_METERED] = collected.isMetered
+                prefs[WidgetStateDefinition.IS_CAPTIVE_PORTAL] = collected.isCaptivePortal
+                prefs[WidgetStateDefinition.HAS_PRIVATE_DNS] = collected.hasPrivateDns
             }
 
             CompactWidget().updateAll(appContext)
