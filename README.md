@@ -48,14 +48,17 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netatl
 ### Build
 
 ```bash
-# Debug APK
-./gradlew assembleDebug
+# FOSS debug APK (no billing, Pro always on)
+./gradlew assembleFossDebug
+
+# Google Play debug APK (with billing)
+./gradlew assembleGplayDebug
 
 # Run all unit tests
-./gradlew testDebugUnitTest
+./gradlew testFossDebugUnitTest
 
 # Run tests for a specific module
-./gradlew :feature:ping:testDebugUnitTest
+./gradlew :feature:ping:testFossDebugUnitTest
 ```
 
 ### Release Signing
@@ -81,7 +84,7 @@ Multi-module Gradle project with convention plugins:
 
 ```
 app                  — Single Activity, navigation host, theme
-feature/*            — 15 self-contained feature modules
+feature/*            — 19 self-contained feature modules
 core/network         — Connectivity monitoring, SSRF guard
 core/data            — Room database, DAOs, Hilt data module
 core/oui             — MAC address vendor lookup

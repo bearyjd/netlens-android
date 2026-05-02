@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 15 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, endpoint monitor, network log, and speed test — each in its own feature module.
+NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 16 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, IP/subnet calculator, endpoint monitor, network log, and speed test — each in its own feature module.
 
 ## Build Commands
 
@@ -26,7 +26,7 @@ CI builds `foss` flavor and currently tests only: `:core:network`, `:feature:lan
 ### Module Graph
 
 ```
-app ──┬── feature:* (15 modules)  ── core:network
+app ──┬── feature:* (19 modules)  ── core:network
       ├── core:network                core:data
       ├── core:data                   core:billing
       ├── core:billing                core:oui
@@ -37,7 +37,7 @@ app ──┬── feature:* (15 modules)  ── core:network
 - **`app`** — single Activity (`MainActivity`), hosts `NetLensNavHost` which routes to all feature screens. Navigation uses string routes defined in the `ToolDestination` enum (`app/.../navigation/ToolDestination.kt`).
 - **`core:network`** — connectivity monitoring (`NetworkMonitor`), SSRF guard, coroutine utilities, and result export (`export/ResultExporter`). No HTTP client library (features use Ktor or raw sockets directly).
 - **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`.
-- **`core:billing`** — `ProStatus` interface (`isPro: StateFlow<Boolean>`, `launchPurchase(activity)`) and `LocalProStatus` CompositionLocal. Flavor-specific implementations live in `app/src/foss/` (always Pro) and `app/src/gplay/` (Google Play Billing).
+- **`core:billing`** — `ProStatus` interface (`isPro: StateFlow<Boolean>`, `launchPurchase(activity)`) and `LocalProStatus` CompositionLocal (safe no-op default). Flavor-specific implementations: `app/src/foss/` has `FossProStatus` (always Pro), `app/src/gplay/` has `GplayProStatus` (Google Play Billing with `BillingClientWrapper` for testability, `EncryptedSharedPreferences` for purchase state, reconnect counter with max 3 attempts).
 - **`core:oui`** — MAC address vendor lookup from OUI database.
 - **`widget`** — Glance-based home screen widget.
 - **`feature:*`** — each feature is self-contained with its own screen, ViewModel, DI module, and engine/domain layer. Share-export is gated behind `isPro` via `LocalProStatus`.
@@ -75,6 +75,10 @@ Routes are string-based, defined as `ToolDestination` enum entries with `route`,
 
 Hilt throughout. `@HiltAndroidApp` on `NetLensApplication`, `@AndroidEntryPoint` on `MainActivity`, `@HiltViewModel` on ViewModels. Feature DI modules use `@InstallIn(ViewModelComponent::class)` or `SingletonComponent`.
 
+## Typography
+
+Inter (Regular, Medium, SemiBold, Bold) for all UI text. JetBrains Mono (Regular, Medium) for technical data (IPs, ports, MACs, TTLs). Defined in `app/.../ui/theme/Type.kt` as `InterFontFamily` and `MonoFontFamily`. Static TTF files in `app/src/main/res/font/`. `labelSmall` uses `MonoFontFamily` and is referenced across 19+ screens.
+
 ## Testing
 
 JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in `src/test/` per module. Prefer hand-written fakes over mocking frameworks.
@@ -91,6 +95,9 @@ JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in
 | DNS | dnsjava 3.6.2 |
 | Widget | Glance 1.1.1 |
 | Serialization | kotlinx.serialization 1.7.3 |
+| Billing | Google Play Billing 6.2.1 (gplay only) |
+| Security | AndroidX security-crypto 1.0.0 (gplay only) |
+| Typography | Inter, JetBrains Mono (bundled TTF) |
 
 ## Strings
 
