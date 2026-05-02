@@ -135,6 +135,7 @@ class WidgetRefreshWorker(
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
                 prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
+                prefs[WidgetStateDefinition.VPN_ACTIVE] = isVpnActive
             }
 
             CompactWidget().updateAll(appContext)
