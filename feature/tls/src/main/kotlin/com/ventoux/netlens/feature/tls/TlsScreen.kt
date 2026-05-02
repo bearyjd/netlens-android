@@ -76,12 +76,12 @@ fun TlsScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("TLS Inspector") },
+                title = { Text(stringResource(R.string.tls_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -114,36 +114,34 @@ fun TlsScreen(
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
-            label = { Text("Host") },
-            placeholder = { Text("e.g. example.com") },
+            label = { Text(stringResource(R.string.tls_label_hostname)) },
+            placeholder = { Text(stringResource(R.string.tls_hint_hostname)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedTextField(
-                value = portText,
-                onValueChange = { portText = it.filter { c -> c.isDigit() } },
-                label = { Text("Port") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.width(120.dp),
-            )
+        OutlinedTextField(
+            value = portText,
+            onValueChange = { portText = it.filter { c -> c.isDigit() } },
+            label = { Text(stringResource(R.string.tls_label_port)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-            Button(
-                onClick = {
-                    val port = portText.toIntOrNull() ?: 443
-                    viewModel.inspect(host.trim(), port)
-                },
-                enabled = host.isNotBlank() && uiState !is TlsUiState.Loading,
-            ) {
-                Text("Inspect")
-            }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = {
+                val port = portText.toIntOrNull() ?: 443
+                viewModel.inspect(host.trim(), port)
+            },
+            enabled = host.isNotBlank() && uiState !is TlsUiState.Loading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.tls_button_inspect))
         }
 
         Spacer(modifier = Modifier.height(16.dp))

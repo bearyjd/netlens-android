@@ -69,12 +69,12 @@ fun TracerouteScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Traceroute") },
+                title = { Text(stringResource(R.string.traceroute_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -141,8 +141,8 @@ private fun TracerouteContent(
             OutlinedTextField(
                 value = state.host,
                 onValueChange = onHostChange,
-                label = { Text("Host") },
-                placeholder = { Text("e.g. google.com") },
+                label = { Text(stringResource(R.string.traceroute_label_host)) },
+                placeholder = { Text(stringResource(R.string.traceroute_hint_host)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -150,7 +150,7 @@ private fun TracerouteContent(
                 IconButton(onClick = onCopyResults) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy results",
+                        contentDescription = stringResource(R.string.traceroute_cd_copy_inline),
                     )
                 }
             }
@@ -158,17 +158,24 @@ private fun TracerouteContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Button(
                 onClick = { onStartTrace(state.host) },
                 enabled = state.host.isNotBlank() && !state.isTracing,
+                modifier = Modifier.weight(1f),
             ) {
-                Text("Trace")
+                Text(stringResource(R.string.traceroute_button_trace))
             }
 
             if (state.isTracing) {
-                OutlinedButton(onClick = onStopTrace) {
-                    Text("Stop")
+                OutlinedButton(
+                    onClick = onStopTrace,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.traceroute_button_stop))
                 }
             }
         }
@@ -227,7 +234,7 @@ private fun HopRow(
             ) {
                 Text(
                     text = "%2d".format(hop.hopNumber),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     modifier = Modifier.width(28.dp),
                 )
 
@@ -236,7 +243,7 @@ private fun HopRow(
                 if (hop.isTimeout) {
                     Text(
                         text = "*  *  *",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                     )
@@ -244,14 +251,14 @@ private fun HopRow(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = hop.ip ?: "*",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                         )
                     }
 
                     hop.rttMs.firstOrNull()?.let { rtt ->
                         Text(
                             text = "%.1f ms".format(rtt),
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
