@@ -46,7 +46,6 @@ data class WidgetState(
     val routingMode: String = "",
     val isDnsLeaking: Boolean = false,
     val lastRefreshMs: Long = 0L,
-    val captivePortalUrl: String = "",
     val chipPingResult: String = "",
     val chipDnsResult: String = "",
 ) {
@@ -64,5 +63,6 @@ data class WidgetState(
 
     companion object {
         private const val STALE_THRESHOLD_MS = 5 * 60 * 1000L
+        const val STALE_ALERT_THRESHOLD_MS = 10 * 60 * 1000L
     }
 }

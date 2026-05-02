@@ -55,7 +55,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
         val elapsed = WidgetTheme.relativeTime(state.lastRefreshMs)
         if (elapsed.isNotEmpty()) {
             val stale = state.lastRefreshMs > 0L &&
-                System.currentTimeMillis() - state.lastRefreshMs > 10 * 60 * 1000L
+                System.currentTimeMillis() - state.lastRefreshMs > WidgetState.STALE_ALERT_THRESHOLD_MS
             Text(
                 text = "Scanned $elapsed",
                 modifier = GlanceModifier.clickable(actionRunCallback<TriggerScanAction>()),
