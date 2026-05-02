@@ -43,6 +43,18 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val LAST_SCAN_TIMESTAMP = longPreferencesKey("last_scan_timestamp")
     val IS_SCAN_RUNNING = booleanPreferencesKey("is_scan_running")
 
+    val LOCAL_IP = stringPreferencesKey("local_ip")
+    val PING_MS = intPreferencesKey("ping_ms")
+    val HAS_IPV6 = booleanPreferencesKey("has_ipv6")
+    val VPN_INTERFACE_NAME = stringPreferencesKey("vpn_interface_name")
+    val RSSI = intPreferencesKey("rssi")
+    val RSSI_LEVEL = intPreferencesKey("rssi_level")
+    val LINK_SPEED_MBPS = intPreferencesKey("link_speed_mbps")
+    val CELL_GENERATION = stringPreferencesKey("cell_generation")
+    val IS_METERED = booleanPreferencesKey("is_metered")
+    val IS_CAPTIVE_PORTAL = booleanPreferencesKey("is_captive_portal")
+    val HAS_PRIVATE_DNS = booleanPreferencesKey("has_private_dns")
+
     private const val DATA_STORE_NAME = "netlens_widget_state"
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
@@ -84,4 +96,15 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
     vpnActive = this[WidgetStateDefinition.VPN_ACTIVE] ?: false,
     lastScanTimestamp = this[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] ?: 0L,
     isScanRunning = this[WidgetStateDefinition.IS_SCAN_RUNNING] ?: false,
+    localIp = this[WidgetStateDefinition.LOCAL_IP].orEmpty(),
+    pingMs = this[WidgetStateDefinition.PING_MS] ?: -1,
+    hasIpv6 = this[WidgetStateDefinition.HAS_IPV6] ?: false,
+    vpnInterfaceName = this[WidgetStateDefinition.VPN_INTERFACE_NAME].orEmpty(),
+    rssi = this[WidgetStateDefinition.RSSI] ?: -1000,
+    rssiLevel = this[WidgetStateDefinition.RSSI_LEVEL] ?: -1,
+    linkSpeedMbps = this[WidgetStateDefinition.LINK_SPEED_MBPS] ?: -1,
+    cellGeneration = this[WidgetStateDefinition.CELL_GENERATION].orEmpty(),
+    isMetered = this[WidgetStateDefinition.IS_METERED] ?: false,
+    isCaptivePortal = this[WidgetStateDefinition.IS_CAPTIVE_PORTAL] ?: false,
+    hasPrivateDns = this[WidgetStateDefinition.HAS_PRIVATE_DNS] ?: false,
 )

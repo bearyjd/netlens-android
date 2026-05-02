@@ -13,10 +13,19 @@ object WidgetTheme {
     val TEXT_SECONDARY = Color.White.copy(alpha = 0.7f)
     val TEXT_MUTED = Color.White.copy(alpha = 0.45f)
 
+    val BACKGROUND_NAVY = Color(0xCC1A1A2E)
+
     val SCORE_GREEN = Color(0xFF4CAF50)
     val SCORE_AMBER = Color(0xFFFFC107)
     val SCORE_RED = Color(0xFFF44336)
     val SCORE_GRAY = Color(0xFF9E9E9E)
+
+    val VPN_GREEN = Color(0xFF4CAF50)
+    val VPN_GRAY = Color(0xFF757575)
+    val CAPTIVE_ORANGE = Color(0xFFFF9800)
+    val IPV6_TEAL = Color(0xFF00BCD4)
+    val METERED_GRAY = Color(0xFF9E9E9E)
+    val PRIVATE_DNS_BLUE = Color(0xFF2196F3)
 
     fun scoreColor(grade: String): Color = when (grade.uppercase()) {
         "A", "B" -> SCORE_GREEN
@@ -61,5 +70,18 @@ object WidgetTheme {
             minutes < 1440 -> "${minutes / 60}h"
             else -> "${minutes / 1440}d"
         }
+    }
+
+    fun pingColor(ms: Int): Color = when {
+        ms < 0 -> TEXT_MUTED
+        ms <= 50 -> SCORE_GREEN
+        ms <= 150 -> SCORE_AMBER
+        else -> SCORE_RED
+    }
+
+    fun rssiColor(level: Int): Color = when {
+        level >= 3 -> SCORE_GREEN
+        level == 2 -> SCORE_AMBER
+        else -> SCORE_RED
     }
 }

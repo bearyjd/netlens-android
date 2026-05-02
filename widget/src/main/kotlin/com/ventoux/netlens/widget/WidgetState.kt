@@ -29,6 +29,18 @@ data class WidgetState(
 
     val lastScanTimestamp: Long = 0L,
     val isScanRunning: Boolean = false,
+
+    val localIp: String = "",
+    val pingMs: Int = -1,
+    val hasIpv6: Boolean = false,
+    val vpnInterfaceName: String = "",
+    val rssi: Int = -1000,
+    val rssiLevel: Int = -1,
+    val linkSpeedMbps: Int = -1,
+    val cellGeneration: String = "",
+    val isMetered: Boolean = false,
+    val isCaptivePortal: Boolean = false,
+    val hasPrivateDns: Boolean = false,
 ) {
     fun isStale(now: Long = System.currentTimeMillis()): Boolean =
         lastScanTimestamp > 0L && now - lastScanTimestamp > STALE_THRESHOLD_MS
@@ -37,6 +49,9 @@ data class WidgetState(
     val hasSpeed: Boolean get() = speedMbps >= 0f
     val hasLatency: Boolean get() = latencyMs >= 0L
     val hasIssues: Boolean get() = issueCount > 0
+    val hasPing: Boolean get() = pingMs >= 0
+    val hasRssi: Boolean get() = rssiLevel >= 0
+    val hasLinkSpeed: Boolean get() = linkSpeedMbps > 0
 
     companion object {
         private const val STALE_THRESHOLD_MS = 5 * 60 * 1000L
