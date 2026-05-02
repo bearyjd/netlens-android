@@ -13,9 +13,11 @@ object PingMeasurement {
             try {
                 val proc = Runtime.getRuntime().exec(arrayOf("ping", "-c", "1", "-W", "2", host))
                 val output = proc.inputStream.bufferedReader().readText()
+                proc.errorStream.close()
                 proc.waitFor()
                 parsePingOutput(output)
-            } catch (_: Exception) { null }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { null }
         }
     }
 
@@ -24,15 +26,18 @@ object PingMeasurement {
         return match.groupValues[1].toFloatOrNull()?.toInt()
     }
 
+    @Synchronized
     fun record(ms: Int) {
         if (recentPings.size >= 3) recentPings.removeFirst()
         recentPings.addLast(ms)
     }
 
+    @Synchronized
     fun smoothed(): Int? {
         if (recentPings.isEmpty()) return null
         return recentPings.average().toInt()
     }
 
+    @Synchronized
     fun clear() { recentPings.clear() }
 }

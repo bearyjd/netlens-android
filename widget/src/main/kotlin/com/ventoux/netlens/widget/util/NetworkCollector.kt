@@ -112,6 +112,8 @@ object NetworkCollector {
                 isCaptivePortal = isCaptivePortal,
                 hasPrivateDns = hasPrivateDns,
             )
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (_: Exception) {
             CollectedNetworkData()
         }
