@@ -90,8 +90,9 @@ class GplayProStatus @Inject constructor(
                     Toast.LENGTH_SHORT,
                 ).show()
             }
-            reconnectAttempts.set(0)
-            connectAndQueryPurchases()
+            if (reconnectAttempts.get() == 0) {
+                connectAndQueryPurchases()
+            }
             return
         }
 
@@ -128,14 +129,18 @@ class GplayProStatus @Inject constructor(
         when (result.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 purchases?.forEach { purchase ->
-                    if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-                        updateProStatus(true)
-                        if (!purchase.isAcknowledged) acknowledge(purchase)
+                    when (purchase.purchaseState) {
+                        Purchase.PurchaseState.PURCHASED -> {
+                            updateProStatus(true)
+                            if (!purchase.isAcknowledged) acknowledge(purchase)
+                        }
+                        Purchase.PurchaseState.PENDING ->
+                            Log.i(TAG, "Purchase pending — waiting for completion")
+                        else -> {}
                     }
                 }
             }
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
-                updateProStatus(true)
                 queryExistingPurchases()
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {}
