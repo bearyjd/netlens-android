@@ -23,6 +23,7 @@ data class CollectedNetworkData(
     val isMetered: Boolean = false,
     val isCaptivePortal: Boolean = false,
     val hasPrivateDns: Boolean = false,
+    val dnsServers: List<String> = emptyList(),
 )
 
 object NetworkCollector {
@@ -99,6 +100,10 @@ object NetworkCollector {
                 false
             }
 
+            val dnsServers = linkProps?.dnsServers
+                ?.mapNotNull { it.hostAddress }
+                ?: emptyList()
+
             CollectedNetworkData(
                 localIp = localIp,
                 isVpn = isVpn,
@@ -111,6 +116,7 @@ object NetworkCollector {
                 isMetered = isMetered,
                 isCaptivePortal = isCaptivePortal,
                 hasPrivateDns = hasPrivateDns,
+                dnsServers = dnsServers,
             )
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e

@@ -55,6 +55,14 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val IS_CAPTIVE_PORTAL = booleanPreferencesKey("is_captive_portal")
     val HAS_PRIVATE_DNS = booleanPreferencesKey("has_private_dns")
 
+    val DNS_SERVERS = stringPreferencesKey("dns_servers")
+    val ROUTING_MODE = stringPreferencesKey("routing_mode")
+    val IS_DNS_LEAKING = booleanPreferencesKey("is_dns_leaking")
+    val LAST_REFRESH_MS = longPreferencesKey("last_refresh_ms")
+    val CAPTIVE_PORTAL_URL = stringPreferencesKey("captive_portal_url")
+    val CHIP_PING_RESULT = stringPreferencesKey("chip_ping_result")
+    val CHIP_DNS_RESULT = stringPreferencesKey("chip_dns_result")
+
     private const val DATA_STORE_NAME = "netlens_widget_state"
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
@@ -107,4 +115,11 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
     isMetered = this[WidgetStateDefinition.IS_METERED] ?: false,
     isCaptivePortal = this[WidgetStateDefinition.IS_CAPTIVE_PORTAL] ?: false,
     hasPrivateDns = this[WidgetStateDefinition.HAS_PRIVATE_DNS] ?: false,
+    dnsServers = this[WidgetStateDefinition.DNS_SERVERS].orEmpty(),
+    routingMode = this[WidgetStateDefinition.ROUTING_MODE].orEmpty(),
+    isDnsLeaking = this[WidgetStateDefinition.IS_DNS_LEAKING] ?: false,
+    lastRefreshMs = this[WidgetStateDefinition.LAST_REFRESH_MS] ?: 0L,
+    captivePortalUrl = this[WidgetStateDefinition.CAPTIVE_PORTAL_URL].orEmpty(),
+    chipPingResult = this[WidgetStateDefinition.CHIP_PING_RESULT].orEmpty(),
+    chipDnsResult = this[WidgetStateDefinition.CHIP_DNS_RESULT].orEmpty(),
 )
