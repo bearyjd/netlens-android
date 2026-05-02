@@ -79,6 +79,9 @@ ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref =
 # Billing
 billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
+# Security
+security-crypto = { group = "androidx.security", name = "security-crypto", version = "1.0.0" }
+
 # DNS
 dnsjava = { group = "dnsjava", name = "dnsjava", version.ref = "dnsjava" }
 

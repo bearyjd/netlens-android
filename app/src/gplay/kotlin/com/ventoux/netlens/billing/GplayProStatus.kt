@@ -1,7 +1,7 @@
 package com.ventoux.netlens.billing
 
 import android.app.Activity
-import android.content.Context
+import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -17,7 +17,6 @@ import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.ventoux.netlens.R
 import com.ventoux.netlens.core.billing.ProStatus
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,19 +25,16 @@ import javax.inject.Singleton
 
 @Singleton
 class GplayProStatus @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @BillingPrefs private val prefs: SharedPreferences,
+    billingClientFactory: BillingClientFactory,
 ) : ProStatus, PurchasesUpdatedListener {
 
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _isPro = MutableStateFlow(prefs.getBoolean(KEY_PRO_UNLOCKED, false))
     override val isPro: StateFlow<Boolean> = _isPro
 
     private val reconnectAttempts = AtomicInteger(0)
 
-    private val billingClient: BillingClient = BillingClient.newBuilder(context)
-        .setListener(this)
-        .enablePendingPurchases()
-        .build()
+    private val billingClient: BillingClientWrapper = billingClientFactory.create(this)
 
     init {
         connectAndQueryPurchases()
@@ -56,6 +52,9 @@ class GplayProStatus @Inject constructor(
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     reconnectAttempts.set(0)
                     queryExistingPurchases()
+                } else {
+                    Log.w(TAG, "Billing setup failed: ${result.debugMessage}")
+                    connectAndQueryPurchases()
                 }
             }
 
@@ -144,7 +143,7 @@ class GplayProStatus @Inject constructor(
         }
     }
 
-    private fun updateProStatus(pro: Boolean) {
+    internal fun updateProStatus(pro: Boolean) {
         _isPro.value = pro
         prefs.edit().putBoolean(KEY_PRO_UNLOCKED, pro).apply()
     }
@@ -162,9 +161,8 @@ class GplayProStatus @Inject constructor(
 
     companion object {
         private const val TAG = "GplayProStatus"
-        private const val PREFS_NAME = "netlens_billing"
-        private const val KEY_PRO_UNLOCKED = "pro_unlocked"
-        private const val MAX_RECONNECT_ATTEMPTS = 3
-        private const val PRODUCT_ID = "pro_unlock"
+        internal const val KEY_PRO_UNLOCKED = "pro_unlocked"
+        internal const val MAX_RECONNECT_ATTEMPTS = 3
+        internal const val PRODUCT_ID = "pro_unlock"
     }
 }
