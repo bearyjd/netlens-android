@@ -9,7 +9,6 @@ import androidx.glance.appwidget.updateAll
 import com.ventoux.netlens.widget.FourByTwoWidget
 import com.ventoux.netlens.widget.WidgetStateDefinition
 import com.ventoux.netlens.widget.util.PingMeasurement
-import kotlinx.coroutines.withTimeoutOrNull
 
 class RunPingAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
@@ -18,7 +17,7 @@ class RunPingAction : ActionCallback {
         FourByTwoWidget().updateAll(context)
 
         val result = try {
-            withTimeoutOrNull(5000L) { PingMeasurement.measure() }
+            PingMeasurement.measure()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (_: Exception) {

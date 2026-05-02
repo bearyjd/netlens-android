@@ -92,6 +92,18 @@ class DnsLeakDetectorTest {
     }
 
     @Test
+    fun `VPN active with 172 dot 20 private DNS is leaking`() {
+        assertTrue(
+            DnsLeakDetector.isLeaking(
+                dnsServers = listOf("172.20.0.1"),
+                isVpn = true,
+                vpnInterfaceName = "tun0",
+                gatewayIp = null,
+            ),
+        )
+    }
+
+    @Test
     fun `routing mode without VPN is DIRECT`() {
         assertEquals("DIRECT", DnsLeakDetector.detectRoutingMode(isVpn = false, hasVpnDefaultRoute = false))
     }
