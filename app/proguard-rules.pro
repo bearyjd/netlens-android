@@ -14,3 +14,7 @@
 # dnsjava
 -keep class org.xbill.DNS.** { *; }
 -dontwarn org.xbill.DNS.**
+
+# Google Play Billing
+-keep class com.android.billingclient.** { *; }
+-keep class com.ventoux.netlens.billing.** { *; }
