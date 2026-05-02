@@ -1,11 +1,14 @@
 package com.ventoux.netlens.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -236,7 +239,9 @@ private fun ToolGridRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         tools.forEach { tool ->
@@ -245,7 +250,9 @@ private fun ToolGridRow(
                 label = tool.label,
                 description = tool.description,
                 onClick = { onToolClick(tool) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
             )
         }
         if (tools.size == 1) {
