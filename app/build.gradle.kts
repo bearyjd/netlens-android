@@ -52,6 +52,10 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -105,10 +109,14 @@ dependencies {
 
     // Billing (gplay only)
     "gplayImplementation"(libs.billing)
+    "gplayImplementation"(libs.security.crypto)
 
     // Test
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation("org.json:json:20231013")
 
     // AndroidX / Compose
     implementation(libs.activity.compose)
