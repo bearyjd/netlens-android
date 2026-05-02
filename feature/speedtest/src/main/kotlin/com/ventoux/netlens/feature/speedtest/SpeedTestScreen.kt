@@ -141,18 +141,19 @@ private fun SpeedTestContent(
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                if (state.isRunning) {
-                    OutlinedButton(onClick = onCancelTest) {
-                        Text(stringResource(R.string.speedtest_button_cancel))
-                    }
-                } else {
-                    Button(onClick = onStartTest) {
-                        Text(stringResource(R.string.speedtest_button_start))
-                    }
+            if (state.isRunning) {
+                OutlinedButton(
+                    onClick = onCancelTest,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.speedtest_button_cancel))
+                }
+            } else {
+                Button(
+                    onClick = onStartTest,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.speedtest_button_start))
                 }
             }
         }

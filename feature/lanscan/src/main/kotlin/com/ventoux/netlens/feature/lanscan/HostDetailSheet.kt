@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
@@ -106,7 +105,7 @@ internal fun HostDetailSheet(
                     Text(
                         text = mac,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp),
                     )
@@ -271,7 +270,7 @@ internal fun HostDetailSheet(
                     Text(
                         text = result.port.toString(),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                         modifier = Modifier.width(52.dp),
                     )
                     Text(

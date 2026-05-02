@@ -20,7 +20,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ventoux.netlens.core.data.model.HistoryDetailData
@@ -159,7 +158,7 @@ private fun LanScanDetail(entry: com.ventoux.netlens.core.data.model.LanScanHist
                     .map { it.trim().removeSurrounding("\"") }
             }
             devices.forEach { ip ->
-                Text(ip, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                Text(ip, style = MaterialTheme.typography.bodySmall, fontFamily = MaterialTheme.typography.labelSmall.fontFamily)
             }
         }
     }
@@ -189,7 +188,7 @@ private fun PortScanDetail(entry: com.ventoux.netlens.core.data.model.PortScanHi
                 Text(
                     port.toString(),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 )
             }
         }
@@ -219,7 +218,7 @@ private fun DnsDetail(entry: com.ventoux.netlens.core.data.model.DnsHistoryEntry
                 Text(
                     record,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 )
             }
         }
@@ -239,7 +238,7 @@ private fun WhoisDetail(entry: com.ventoux.netlens.core.data.model.WhoisHistoryE
         Text(
             text = entry.rawResponse,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
         )
     }
 }
@@ -279,7 +278,7 @@ private fun TracerouteDetail(entry: com.ventoux.netlens.core.data.model.Tracerou
                 Text(
                     "${index + 1}. $hop",
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 )
             }
         }
@@ -331,7 +330,7 @@ private fun MdnsDetail(entry: com.ventoux.netlens.core.data.model.MdnsHistoryEnt
                 Text(
                     service,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 )
             }
         }
