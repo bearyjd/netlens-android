@@ -2,6 +2,7 @@ package com.ventoux.netlens.core.billing
 
 import android.app.Activity
 import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface ProStatus {
@@ -10,5 +11,8 @@ interface ProStatus {
 }
 
 val LocalProStatus = staticCompositionLocalOf<ProStatus> {
-    error("No ProStatus provided")
+    object : ProStatus {
+        override val isPro: StateFlow<Boolean> = MutableStateFlow(false)
+        override fun launchPurchase(activity: Activity) {}
+    }
 }
