@@ -52,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -277,7 +276,7 @@ private fun EndpointCard(
                 )
                 Text(
                     text = endpoint.url,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -370,7 +369,7 @@ private fun EndpointDetailView(
                 )
                 Text(
                     text = endpoint.url,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -488,14 +487,14 @@ private fun CheckRow(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = if (check.statusCode > 0) "${check.statusCode}" else stringResource(R.string.monitor_status_error),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                 color = statusColor,
             )
         }
 
         Text(
             text = "${check.latencyMs} ms",
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 

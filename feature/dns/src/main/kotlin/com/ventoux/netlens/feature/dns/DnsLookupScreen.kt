@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -176,7 +177,7 @@ private fun DnsLookupContent(
         }
 
         item {
-            androidx.compose.material3.FilledTonalButton(
+            Button(
                 onClick = onLookup,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isLoading,
@@ -270,7 +271,7 @@ private fun DnsResultCard(result: DnsResult, onNavigateToTool: (String, String) 
                 Text(
                     text = result.value,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                     ),
                     modifier = Modifier.weight(1f),
                 )

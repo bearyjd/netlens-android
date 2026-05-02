@@ -25,7 +25,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,12 +76,12 @@ fun WhoisScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("WHOIS") },
+                title = { Text(stringResource(R.string.whois_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -139,13 +139,13 @@ private fun WhoisContent(
                 value = query,
                 onValueChange = onQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Domain or IP") },
-                placeholder = { Text("example.com or 8.8.8.8") },
+                label = { Text(stringResource(R.string.whois_label_query)) },
+                placeholder = { Text(stringResource(R.string.whois_hint_query)) },
                 singleLine = true,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Lookup",
+                        contentDescription = stringResource(R.string.whois_cd_lookup),
                     )
                 },
                 keyboardOptions = KeyboardOptions(
@@ -159,7 +159,7 @@ private fun WhoisContent(
         }
 
         item {
-            FilledTonalButton(
+            Button(
                 onClick = onLookup,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
@@ -173,7 +173,7 @@ private fun WhoisContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Lookup")
+                Text(stringResource(R.string.whois_button_lookup))
             }
         }
 
@@ -262,7 +262,7 @@ private fun WhoisResultCard(whois: WhoisResult) {
                 Text(
                     text = whois.rawResponse,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                     ),
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -309,7 +309,7 @@ private fun WhoisField(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
             ),
             maxLines = if (value.contains("\n")) Int.MAX_VALUE else 1,
             overflow = TextOverflow.Ellipsis,

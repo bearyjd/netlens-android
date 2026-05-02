@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -286,7 +285,7 @@ private fun PortResultRow(
 
             Text(
                 text = result.port.toString(),
-                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                 modifier = Modifier.width(56.dp),
             )
 
@@ -304,7 +303,7 @@ private fun PortResultRow(
             if (result.isOpen && result.latencyMs > 0) {
                 Text(
                     text = "${result.latencyMs}ms",
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

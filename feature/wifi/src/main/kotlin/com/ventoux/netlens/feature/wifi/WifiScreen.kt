@@ -196,7 +196,10 @@ private fun PermissionRationale(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onRequestPermission) {
+            Button(
+                onClick = onRequestPermission,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(R.string.wifi_permission_grant))
             }
         }
@@ -375,7 +378,7 @@ private fun ConnectedInfoCard(
                 Text(
                     text = "${stringResource(R.string.wifi_ip_label)}: $ip",
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
@@ -471,7 +474,7 @@ private fun NetworkCard(
             Text(
                 text = "${network.level} dBm",
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 fontWeight = FontWeight.Bold,
                 color = signalColor(network.level),
             )

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -327,9 +328,9 @@ private fun ManualSendSection(
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            TextButton(
+            Button(
                 onClick = onSend,
-                modifier = Modifier.align(Alignment.End),
+                modifier = Modifier.fillMaxWidth(),
                 enabled = macInput.isNotBlank(),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)

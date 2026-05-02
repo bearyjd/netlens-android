@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -75,12 +76,12 @@ fun HttpTesterScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("HTTP Tester") },
+                title = { Text(stringResource(R.string.http_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -140,8 +141,8 @@ private fun HttpTesterContent(
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text("URL") },
-            placeholder = { Text("https://example.com/api") },
+            label = { Text(stringResource(R.string.http_label_url)) },
+            placeholder = { Text(stringResource(R.string.http_hint_url)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -169,7 +170,7 @@ private fun HttpTesterContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = "Headers",
+                text = stringResource(R.string.http_label_headers),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -183,7 +184,7 @@ private fun HttpTesterContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add header",
+                    contentDescription = stringResource(R.string.http_cd_add_header),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -221,8 +222,8 @@ private fun HttpTesterContent(
                 OutlinedTextField(
                     value = body,
                     onValueChange = { body = it },
-                    label = { Text("Body") },
-                    placeholder = { Text("{\"key\": \"value\"}") },
+                    label = { Text(stringResource(R.string.http_label_body)) },
+                    placeholder = { Text(stringResource(R.string.http_hint_body)) },
                     minLines = 3,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth(),
@@ -257,7 +258,7 @@ private fun HttpTesterContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text("Send Request")
+            Text(stringResource(R.string.http_button_send))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -308,7 +309,7 @@ private fun HeaderRow(
         OutlinedTextField(
             value = key,
             onValueChange = onKeyChange,
-            placeholder = { Text("Key") },
+            placeholder = { Text(stringResource(R.string.http_hint_header_key)) },
             singleLine = true,
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
@@ -316,7 +317,7 @@ private fun HeaderRow(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text("Value") },
+            placeholder = { Text(stringResource(R.string.http_hint_header_value)) },
             singleLine = true,
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
@@ -327,7 +328,7 @@ private fun HeaderRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Remove header",
+                contentDescription = stringResource(R.string.http_cd_remove_header),
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -381,12 +382,13 @@ private fun ResponseSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Response headers
-        Button(
+        OutlinedButton(
             onClick = onToggleHeaders,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = if (headersExpanded) "Hide Headers" else "Show Headers (${response.headers.size})",
+                text = if (headersExpanded) stringResource(R.string.http_button_hide_headers)
+                else stringResource(R.string.http_button_show_headers, response.headers.size),
             )
         }
 
@@ -404,7 +406,7 @@ private fun ResponseSection(
                         Text(
                             text = "$key: ${values.joinToString(", ")}",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                             ),
                             modifier = Modifier.padding(vertical = 1.dp),
                         )
@@ -418,7 +420,7 @@ private fun ResponseSection(
         // Content length
         response.contentLength?.let { length ->
             Text(
-                text = "Content-Length: $length bytes",
+                text = stringResource(R.string.http_label_content_length, length),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -433,9 +435,9 @@ private fun ResponseSection(
             ),
         ) {
             Text(
-                text = response.body.ifEmpty { "(empty body)" },
+                text = response.body.ifEmpty { stringResource(R.string.http_empty_body) },
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                 ),
                 modifier = Modifier
                     .padding(8.dp)

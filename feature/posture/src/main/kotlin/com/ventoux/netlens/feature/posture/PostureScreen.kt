@@ -49,13 +49,20 @@ import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import com.ventoux.netlens.feature.posture.model.Severity
 
+private val StatusGreen = Color(0xFF4CAF50)
+private val StatusLightGreen = Color(0xFF8BC34A)
+private val StatusAmber = Color(0xFFFFC107)
+private val StatusOrange = Color(0xFFFF9800)
+private val StatusRed = Color(0xFFF44336)
+private val StatusGray = Color(0xFF9E9E9E)
+
 fun gradeColor(grade: String): Color = when (grade) {
-    "A" -> Color(0xFF4CAF50)
-    "B" -> Color(0xFF8BC34A)
-    "C" -> Color(0xFFFFC107)
-    "D" -> Color(0xFFFF9800)
-    "F" -> Color(0xFFF44336)
-    else -> Color(0xFF9E9E9E)
+    "A" -> StatusGreen
+    "B" -> StatusLightGreen
+    "C" -> StatusAmber
+    "D" -> StatusOrange
+    "F" -> StatusRed
+    else -> StatusGray
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -248,9 +255,9 @@ private fun severityIcon(severity: Severity) = when (severity) {
 }
 
 private fun severityColor(severity: Severity) = when (severity) {
-    Severity.Good -> Color(0xFF4CAF50)
-    Severity.Moderate -> Color(0xFFFFC107)
-    Severity.Poor -> Color(0xFFFF9800)
-    Severity.Critical -> Color(0xFFF44336)
-    Severity.Unavailable -> Color(0xFF9E9E9E)
+    Severity.Good -> StatusGreen
+    Severity.Moderate -> StatusAmber
+    Severity.Poor -> StatusOrange
+    Severity.Critical -> StatusRed
+    Severity.Unavailable -> StatusGray
 }

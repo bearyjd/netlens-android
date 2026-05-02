@@ -3,4 +3,19 @@
     <string name="navigate_back">Back</string>
     <string name="httptester_cd_copy_results">Copy results</string>
     <string name="httptester_cd_share">Share results</string>
+    <string name="http_title">HTTP Tester</string>
+    <string name="http_label_url">URL</string>
+    <string name="http_button_send">Send Request</string>
+    <string name="http_button_hide_headers">Hide Headers</string>
+    <string name="http_button_show_headers">Show Headers (%1$d)</string>
+    <string name="http_hint_url">https://example.com/api</string>
+    <string name="http_label_headers">Headers</string>
+    <string name="http_cd_add_header">Add header</string>
+    <string name="http_label_body">Body</string>
+    <string name="http_hint_body">{\"key\": \"value\"}</string>
+    <string name="http_hint_header_key">Key</string>
+    <string name="http_hint_header_value">Value</string>
+    <string name="http_cd_remove_header">Remove header</string>
+    <string name="http_label_content_length">Content-Length: %1$d bytes</string>
+    <string name="http_empty_body">(empty body)</string>
 </resources>
