@@ -19,8 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -60,39 +61,43 @@ fun IpInfoScreen(
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(stringResource(R.string.ipinfo_title)) },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                    )
-                }
-            },
-            actions = {
-                if (uiState is IpInfoUiState.Success) {
-                    IconButton(onClick = {
-                        ResultExporter.copyToClipboard(context, "IP Info", viewModel.buildExportText())
-                    }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipinfo_cd_copy))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.ipinfo_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.navigate_back),
+                        )
                     }
-                    if (isPro) {
+                },
+                actions = {
+                    if (uiState is IpInfoUiState.Success) {
                         IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
+                            ResultExporter.copyToClipboard(context, "IP Info", viewModel.buildExportText())
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipinfo_cd_copy))
+                        }
+                        if (isPro) {
+                            IconButton(onClick = {
+                                ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
+                            }
                         }
                     }
-                }
-            },
-        )
-
+                },
+            )
+        },
+    ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = uiState is IpInfoUiState.Loading,
             onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
         ) {
             when (val state = uiState) {
                 is IpInfoUiState.Loading -> {

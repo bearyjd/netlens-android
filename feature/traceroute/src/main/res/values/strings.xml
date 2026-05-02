@@ -5,4 +5,10 @@
     <string name="traceroute_action_whois">WHOIS</string>
     <string name="traceroute_cd_copy_results">Copy results</string>
     <string name="traceroute_cd_share">Share results</string>
+    <string name="traceroute_title">Traceroute</string>
+    <string name="traceroute_hint_host">e.g. google.com</string>
+    <string name="traceroute_label_host">Host</string>
+    <string name="traceroute_button_trace">Trace</string>
+    <string name="traceroute_button_stop">Stop</string>
+    <string name="traceroute_cd_copy_inline">Copy results</string>
 </resources>

@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ventoux.netlens.core.network.export.ResultExporter
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -94,12 +93,12 @@ private fun MdnsContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("mDNS Browser") },
+                title = { Text(stringResource(R.string.mdns_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -253,7 +252,7 @@ private fun ServiceCard(service: MdnsService) {
                     Text(
                         text = "$host:${service.port}",
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -292,14 +291,14 @@ private fun ServiceCard(service: MdnsService) {
                             Text(
                                 text = "$key = ",
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = value,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

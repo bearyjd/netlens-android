@@ -212,7 +212,10 @@ private fun PingContent(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Button(
                 onClick = {
                     if (state.mode == PingMode.CONTINUOUS && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -227,6 +230,7 @@ private fun PingContent(
                     }
                 },
                 enabled = state.host.isNotBlank() && !state.isPinging,
+                modifier = Modifier.weight(1f),
             ) {
                 Text(stringResource(R.string.ping_button_start))
             }
@@ -234,6 +238,7 @@ private fun PingContent(
             if (state.isPinging && state.mode == PingMode.CONTINUOUS) {
                 Button(
                     onClick = onStopPing,
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                     ),
@@ -241,7 +246,10 @@ private fun PingContent(
                     Text(stringResource(R.string.ping_button_stop))
                 }
             } else if (state.isPinging) {
-                OutlinedButton(onClick = onStopPing) {
+                OutlinedButton(
+                    onClick = onStopPing,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Text(stringResource(R.string.ping_button_stop))
                 }
             }
@@ -474,12 +482,12 @@ private fun ResultRow(
     ) {
         Text(
             text = "seq=${result.sequenceNumber}",
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
         )
         if (result.isTimeout) {
             Text(
                 text = stringResource(R.string.ping_result_timeout),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                 color = MaterialTheme.colorScheme.error,
             )
         } else {
@@ -487,14 +495,14 @@ private fun ResultRow(
                 result.ttl?.let { ttl ->
                     Text(
                         text = "ttl=$ttl",
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Text(
                     text = "%.1f ms".format(result.latencyMs ?: 0f),
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     color = MaterialTheme.colorScheme.primary,
                 )
             }

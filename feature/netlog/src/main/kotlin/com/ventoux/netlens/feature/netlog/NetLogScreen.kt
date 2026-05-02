@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,12 +66,12 @@ fun NetLogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Network Change Log") },
+                title = { Text(stringResource(R.string.netlog_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -90,18 +91,17 @@ fun NetLogScreen(
                             } else {
                                 Icons.Default.PlayArrow
                             },
-                            contentDescription = if (uiState.isMonitoring) {
-                                "Stop monitoring"
-                            } else {
-                                "Start monitoring"
-                            },
+                            contentDescription = stringResource(
+                                if (uiState.isMonitoring) R.string.netlog_cd_stop_monitoring
+                                else R.string.netlog_cd_start_monitoring,
+                            ),
                         )
                     }
                     if (uiState.events.isNotEmpty()) {
                         IconButton(onClick = viewModel::showClearConfirmation) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Clear history",
+                                contentDescription = stringResource(R.string.netlog_cd_clear),
                             )
                         }
                     }
@@ -144,16 +144,16 @@ fun NetLogScreen(
     if (uiState.showClearConfirmation) {
         AlertDialog(
             onDismissRequest = viewModel::hideClearConfirmation,
-            title = { Text("Clear History") },
-            text = { Text("Delete all recorded network events?") },
+            title = { Text(stringResource(R.string.netlog_dialog_title)) },
+            text = { Text(stringResource(R.string.netlog_dialog_message)) },
             confirmButton = {
                 TextButton(onClick = viewModel::clearHistory) {
-                    Text("Clear")
+                    Text(stringResource(R.string.netlog_dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::hideClearConfirmation) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.netlog_dialog_cancel))
                 }
             },
         )
@@ -180,7 +180,7 @@ private fun MonitoringStatusBar(isMonitoring: Boolean) {
             .padding(vertical = 8.dp),
     ) {
         Text(
-            text = if (isMonitoring) "Monitoring active" else "Monitoring paused",
+            text = stringResource(if (isMonitoring) R.string.netlog_status_active else R.string.netlog_status_paused),
             style = MaterialTheme.typography.labelMedium,
             color = textColor,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -214,7 +214,7 @@ private fun NetworkEventCard(event: NetworkEvent) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = Icons.Default.Lock,
-                        contentDescription = "VPN active",
+                        contentDescription = stringResource(R.string.netlog_cd_vpn_active),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -260,17 +260,16 @@ private fun EmptyState(isMonitoring: Boolean, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "No network events recorded",
+            text = stringResource(R.string.netlog_empty_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (isMonitoring) {
-                "Waiting for network changes..."
-            } else {
-                "Tap the play button to start monitoring."
-            },
+            text = stringResource(
+                if (isMonitoring) R.string.netlog_empty_monitoring
+                else R.string.netlog_empty_paused,
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

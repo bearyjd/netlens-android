@@ -3,4 +3,5 @@
     <string name="navigate_back">Back</string>
     <string name="mdns_cd_copy_results">Copy results</string>
     <string name="mdns_cd_share">Share results</string>
+    <string name="mdns_title">mDNS Browser</string>
 </resources>
