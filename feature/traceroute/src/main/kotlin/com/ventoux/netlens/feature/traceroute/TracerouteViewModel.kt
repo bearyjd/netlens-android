@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
 import com.ventoux.netlens.core.data.model.TracerouteHistoryEntry
+import com.ventoux.netlens.feature.traceroute.engine.AnomalyDetector
+import com.ventoux.netlens.feature.traceroute.engine.HopGeolocator
 import com.ventoux.netlens.feature.traceroute.engine.Tracer
 import com.ventoux.netlens.feature.traceroute.model.TracerouteUiState
 import kotlinx.serialization.encodeToString
@@ -23,6 +25,7 @@ import javax.inject.Inject
 class TracerouteViewModel @Inject constructor(
     private val tracer: Tracer,
     private val tracerouteHistoryDao: TracerouteHistoryDao,
+    private val hopGeolocator: HopGeolocator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TracerouteUiState())
@@ -39,6 +42,7 @@ class TracerouteViewModel @Inject constructor(
         _state.update {
             it.copy(
                 isTracing = true,
+                isGeoLoading = false,
                 hops = emptyList(),
                 error = null,
             )
@@ -56,6 +60,7 @@ class TracerouteViewModel @Inject constructor(
                 }
                 .onCompletion {
                     _state.update { it.copy(isTracing = false) }
+                    enrichWithGeolocation()
                     saveToHistory()
                 }
                 .collect { hop ->
@@ -69,6 +74,32 @@ class TracerouteViewModel @Inject constructor(
     fun stopTrace() {
         traceJob?.cancel()
         _state.update { it.copy(isTracing = false) }
+    }
+
+    private suspend fun enrichWithGeolocation() {
+        val hops = _state.value.hops
+        if (hops.isEmpty()) return
+
+        _state.update { it.copy(isGeoLoading = true) }
+
+        try {
+            val ips = hops.map { it.ip }
+            val locations = hopGeolocator.lookupAll(ips)
+
+            val enrichedHops = hops.map { hop ->
+                val loc = hop.ip?.let { locations[it] }
+                hop.copy(location = loc)
+            }
+
+            val anomalies = AnomalyDetector.detect(enrichedHops)
+            val finalHops = enrichedHops.mapIndexed { index, hop ->
+                hop.copy(anomalies = anomalies[index])
+            }
+
+            _state.update { it.copy(hops = finalHops, isGeoLoading = false) }
+        } catch (_: Exception) {
+            _state.update { it.copy(isGeoLoading = false) }
+        }
     }
 
     private suspend fun saveToHistory() {
@@ -101,7 +132,17 @@ class TracerouteViewModel @Inject constructor(
                 sb.appendLine("${hop.hopNumber}  *")
             } else {
                 val rtt = hop.rttMs.firstOrNull()?.let { "%.1f ms".format(it) } ?: ""
-                sb.appendLine("${hop.hopNumber}  ${hop.ip ?: "*"}  $rtt")
+                val loc = hop.location?.let { l ->
+                    val parts = listOfNotNull(
+                        l.city.ifEmpty { null },
+                        l.country.ifEmpty { null },
+                    )
+                    if (parts.isNotEmpty()) " [${parts.joinToString(", ")}]" else ""
+                } ?: ""
+                val anomaly = if (hop.anomalies.isNotEmpty()) {
+                    " ⚠ " + hop.anomalies.joinToString(", ") { it.name }
+                } else ""
+                sb.appendLine("${hop.hopNumber}  ${hop.ip ?: "*"}  $rtt$loc$anomaly")
             }
         }
         return sb.toString().trimEnd()

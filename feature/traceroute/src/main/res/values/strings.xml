@@ -11,4 +11,8 @@
     <string name="traceroute_button_trace">Trace</string>
     <string name="traceroute_button_stop">Stop</string>
     <string name="traceroute_cd_copy_inline">Copy results</string>
+    <string name="traceroute_geo_loading">Resolving locations…</string>
+    <string name="traceroute_anomaly_latency_spike">Latency spike</string>
+    <string name="traceroute_anomaly_geo_jump">Geographic jump</string>
+    <string name="traceroute_anomaly_timeout">Consecutive timeout</string>
 </resources>
