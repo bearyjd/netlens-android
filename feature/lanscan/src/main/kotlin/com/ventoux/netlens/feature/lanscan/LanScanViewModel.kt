@@ -463,32 +463,43 @@ class LanScanViewModel @Inject constructor(
             try {
                 var scanned = 0
                 val total = ports.size
+                val rawBatch = mutableListOf<com.ventoux.netlens.feature.portscan.model.PortResult>()
+                val enrichedBatch = mutableListOf<HostPortResult>()
                 portScanner.scan(detail.device.ip, ports).collect { result ->
                     scanned++
-                    val enriched = HostPortResult(
-                        port = result.port,
-                        serviceName = result.serviceName,
-                        isOpen = result.isOpen,
-                        latencyMs = result.latencyMs,
-                        riskLevel = PortRiskClassifier.classifyRisk(result.port, result.isOpen),
-                        description = WellKnownPorts.getDescription(result.port),
+                    rawBatch.add(result)
+                    enrichedBatch.add(
+                        HostPortResult(
+                            port = result.port,
+                            serviceName = result.serviceName,
+                            isOpen = result.isOpen,
+                            latencyMs = result.latencyMs,
+                            riskLevel = PortRiskClassifier.classifyRisk(result.port, result.isOpen),
+                            description = WellKnownPorts.getDescription(result.port),
+                        ),
                     )
-                    _hostDetail.update { state ->
-                        val updatedRaw = state?.portResults.orEmpty() + result
-                        val updatedEnriched = state?.enrichedResults.orEmpty() + enriched
-                        state?.copy(
-                            portResults = updatedRaw,
-                            enrichedResults = updatedEnriched,
-                            progress = scanned.toFloat() / total,
-                            openCount = updatedRaw.count { it.isOpen },
-                        )
+                    if (rawBatch.size >= 50 || scanned == total) {
+                        val raw = rawBatch.toList()
+                        val enriched = enrichedBatch.toList()
+                        rawBatch.clear()
+                        enrichedBatch.clear()
+                        _hostDetail.update { state ->
+                            val updatedRaw = state?.portResults.orEmpty() + raw
+                            val updatedEnriched = state?.enrichedResults.orEmpty() + enriched
+                            state?.copy(
+                                portResults = updatedRaw,
+                                enrichedResults = updatedEnriched,
+                                progress = scanned.toFloat() / total,
+                                openCount = updatedRaw.count { it.isOpen },
+                            )
+                        }
                     }
                 }
-                val openPorts = _hostDetail.value?.portResults
-                    ?.filter { it.isOpen }
-                    ?.map { it.port }
-                    .orEmpty()
-                val fp = fingerprinter.fingerprintWithPorts(detail.device, openPorts)
+                val currentDetail = _hostDetail.value ?: return@launch
+                val openPorts = currentDetail.portResults
+                    .filter { it.isOpen }
+                    .map { it.port }
+                val fp = fingerprinter.fingerprintWithPorts(currentDetail.device, openPorts)
                 _hostDetail.update {
                     it?.copy(
                         isScanning = false,
@@ -507,7 +518,7 @@ class LanScanViewModel @Inject constructor(
     }
 
     fun buildHostScanJson(): String {
-        val detail = _hostDetail.value ?: return "{}"
+        val detail = _hostDetail.value ?: return ""
         val export = HostScanExport(
             host = detail.device.ip,
             hostname = detail.device.hostname,
