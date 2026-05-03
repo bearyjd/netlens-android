@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventoux.netlens.core.data.dao.KnownDeviceDao
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
+import com.ventoux.netlens.core.data.model.KnownDeviceEntity
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
 import com.ventoux.netlens.core.network.NetworkInterfaceInfo
 import com.ventoux.netlens.core.network.NetworkInterfaceProvider
@@ -52,6 +54,8 @@ class LanScanBuildExportTextTest {
             arpTableReader = FakeArpTableReader(),
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
+            knownDeviceDao = FakeKnownDeviceDao(),
+            newDeviceNotifier = FakeNewDeviceNotifier(),
         )
     }
 
@@ -145,4 +149,21 @@ private class FakeLanScanHistoryDao : LanScanHistoryDao {
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}
     override suspend fun deleteAll() {}
+}
+
+private class FakeKnownDeviceDao : KnownDeviceDao {
+    override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
+    override suspend fun getByMac(mac: String): KnownDeviceEntity? = null
+    override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
+    override suspend fun insertIfNew(device: KnownDeviceEntity): Long = 1L
+    override suspend fun updateLastSeen(mac: String, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
+    override suspend fun setKnown(mac: String, isKnown: Boolean) {}
+    override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
+    override suspend fun delete(mac: String) {}
+    override suspend fun deleteAll() {}
+}
+
+private class FakeNewDeviceNotifier : NewDeviceNotifier {
+    override fun createChannel() {}
+    override fun notify(device: KnownDeviceEntity) {}
 }

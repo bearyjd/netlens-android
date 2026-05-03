@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import com.ventoux.netlens.feature.lanscan.NewDeviceNotifier
+import com.ventoux.netlens.feature.lanscan.NewDeviceNotifierImpl
 import com.ventoux.netlens.feature.lanscan.engine.ArpTableReader
 import com.ventoux.netlens.feature.lanscan.engine.ArpTableReaderImpl
 import com.ventoux.netlens.feature.lanscan.engine.DeviceFingerprinter
@@ -57,4 +59,10 @@ abstract class LanScanModule {
     abstract fun bindDeviceFingerprinter(
         impl: DeviceFingerprinterImpl,
     ): DeviceFingerprinter
+
+    @Binds
+    @Singleton
+    abstract fun bindNewDeviceNotifier(
+        impl: NewDeviceNotifierImpl,
+    ): NewDeviceNotifier
 }
