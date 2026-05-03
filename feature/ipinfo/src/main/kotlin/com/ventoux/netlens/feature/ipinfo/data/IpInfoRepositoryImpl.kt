@@ -14,7 +14,9 @@ class IpInfoRepositoryImpl @Inject constructor(
     @IpInfoHttpClient private val client: HttpClient,
 ) : IpInfoRepository {
 
+    @Volatile
     private var cachedResponse: IpInfoResponse? = null
+    @Volatile
     private var cacheTimestamp: Long = 0L
 
     override suspend fun fetchIpInfo(): Result<IpInfoResponse> {
@@ -28,7 +30,7 @@ class IpInfoRepositoryImpl @Inject constructor(
                 client.get(IPINFO_URL).body<IpInfoResponse>()
             }
             cachedResponse = response
-            cacheTimestamp = now
+            cacheTimestamp = System.currentTimeMillis()
             Result.success(response)
         } catch (e: CancellationException) {
             throw e

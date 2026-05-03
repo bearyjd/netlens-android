@@ -11,6 +11,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
+import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.widget.model.WidgetIpResponse
 import com.ventoux.netlens.widget.util.DnsLeakDetector
 import com.ventoux.netlens.widget.util.NetworkCollector
@@ -44,6 +45,7 @@ class WidgetRefreshWorker(
     @InstallIn(SingletonComponent::class)
     interface WorkerEntryPoint {
         fun lanScanHistoryDao(): LanScanHistoryDao
+        fun userPreferencesRepository(): UserPreferencesRepository
     }
 
     override suspend fun doWork(): Result {
@@ -87,7 +89,18 @@ class WidgetRefreshWorker(
                 null
             }
 
-            val ipData: WidgetIpResponse? = if (isConnected) {
+            val consentGranted = try {
+                val entryPointForConsent = EntryPointAccessors.fromApplication(
+                    appContext,
+                    WorkerEntryPoint::class.java,
+                )
+                entryPointForConsent.userPreferencesRepository()
+                    .ipInfoConsentGranted.first()
+            } catch (_: Exception) {
+                false
+            }
+
+            val ipData: WidgetIpResponse? = if (isConnected && consentGranted) {
                 try {
                     fetchIpInfo()
                 } catch (_: Exception) {
@@ -155,7 +168,7 @@ class WidgetRefreshWorker(
                     val orgName = ip.org.substringAfter(" ").ifBlank { ip.org }
                     prefs[WidgetStateDefinition.PUBLIC_IP] = ip.ip
                     prefs[WidgetStateDefinition.COUNTRY_FLAG] = ip.country.toFlagEmoji()
-                    prefs[WidgetStateDefinition.COUNTRY_NAME] = ip.country
+                    prefs[WidgetStateDefinition.COUNTRY_NAME] = java.util.Locale("", ip.country).displayCountry
                     prefs[WidgetStateDefinition.COUNTRY_CODE] = ip.country
                     prefs[WidgetStateDefinition.ISP_NAME] = orgName
                     prefs[WidgetStateDefinition.ASN_NAME] = asNumber
