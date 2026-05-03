@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="celltower_title">Cell Tower</string>
+    <string name="celltower_navigate_back">Navigate back</string>
+    <string name="celltower_cd_refresh">Refresh cell info</string>
+    <string name="celltower_cd_copy">Copy results</string>
+    <string name="celltower_cd_share">Share results</string>
+    <string name="celltower_connected">Connected Tower</string>
+    <string name="celltower_neighbors">Neighbor Cells (%1$d)</string>
+    <string name="celltower_no_cellular">No cellular connection detected</string>
+    <string name="celltower_permission_title">Location Permission Required</string>
+    <string name="celltower_permission_body">Cell tower information requires precise location access to read cellular network data.</string>
+    <string name="celltower_permission_grant">Grant Permission</string>
+    <string name="celltower_label_operator">Operator</string>
+    <string name="celltower_label_cell_id">Cell ID</string>
+    <string name="celltower_label_tac">TAC / LAC</string>
+    <string name="celltower_label_band">Band</string>
+    <string name="celltower_label_rsrp">RSRP</string>
+    <string name="celltower_label_rsrq">RSRQ</string>
+    <string name="celltower_label_sinr">SINR</string>
+    <string name="celltower_label_rssi">RSSI</string>
+</resources>

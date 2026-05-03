@@ -29,6 +29,7 @@ import com.ventoux.netlens.feature.whois.WhoisScreen
 import com.ventoux.netlens.feature.widgetsettings.WidgetSettingsScreen
 import com.ventoux.netlens.feature.wifi.WifiScreen
 import com.ventoux.netlens.feature.wifiaudit.WifiAuditScreen
+import com.ventoux.netlens.feature.celltower.CellTowerScreen
 import com.ventoux.netlens.feature.wol.WolScreen
 import com.ventoux.netlens.ui.home.HomeScreen
 
@@ -163,6 +164,7 @@ fun NetLensNavHost(
         composable(ToolDestination.SpeedTest.route) { SpeedTestScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.WifiAnalyzer.route) { WifiScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.WifiAudit.route) { WifiAuditScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.CellTower.route) { CellTowerScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.NetLog.route) { NetLogScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.Monitor.route) { MonitorScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.History.route) {
