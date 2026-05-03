@@ -3,13 +3,20 @@ package com.ventoux.netlens.ui.home.latency
 data class LatencyMonitorState(
     val isEnabled: Boolean = false,
     val isRunning: Boolean = false,
-    val host: String = "1.1.1.1",
+    val host: String = DEFAULT_HOST,
     val dataPoints: List<LatencyDataPoint> = emptyList(),
     val summary: LatencySummary? = null,
-    val alertThresholdMs: Int = 200,
+    val alertThresholdMs: Int = DEFAULT_THRESHOLD_MS,
     val isExpanded: Boolean = true,
     val isConfiguring: Boolean = false,
-)
+    val error: String? = null,
+) {
+    companion object {
+        const val DEFAULT_HOST = "1.1.1.1"
+        const val DEFAULT_THRESHOLD_MS = 200
+        const val MAX_DATA_POINTS = 60
+    }
+}
 
 data class LatencyDataPoint(
     val timestampMs: Long,
