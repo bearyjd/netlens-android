@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.ventoux.netlens.feature.dns.DnsLookupScreen
+import com.ventoux.netlens.feature.dnsleak.DnsLeakScreen
 import com.ventoux.netlens.feature.history.HistoryScreen
 import com.ventoux.netlens.feature.httptester.HttpTesterScreen
 import com.ventoux.netlens.feature.ipinfo.IpInfoScreen
@@ -54,6 +55,7 @@ fun NetLensNavHost(
             )
         }
         composable(ToolDestination.Posture.route) { PostureScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.DnsLeak.route) { DnsLeakScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack, onNavigateToTool = navigateToTool) }
         composable(
             route = "${ToolDestination.LanScan.route}?query={query}",

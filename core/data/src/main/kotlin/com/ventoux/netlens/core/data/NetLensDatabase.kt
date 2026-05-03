@@ -26,8 +26,10 @@ import com.ventoux.netlens.core.data.dao.TracerouteHistoryDao
 import com.ventoux.netlens.core.data.dao.TlsHistoryDao
 import com.ventoux.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventoux.netlens.core.data.dao.MdnsHistoryDao
+import com.ventoux.netlens.core.data.dao.KnownDeviceDao
 import com.ventoux.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventoux.netlens.core.data.dao.WolHistoryDao
+import com.ventoux.netlens.core.data.model.KnownDeviceEntity
 import com.ventoux.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventoux.netlens.core.data.model.TlsHistoryEntry
 import com.ventoux.netlens.core.data.model.HttpTesterHistoryEntry
@@ -54,8 +56,9 @@ import com.ventoux.netlens.core.data.model.WolHistoryEntry
         MdnsHistoryEntry::class,
         WolHistoryEntry::class,
         SpeedTestHistoryEntry::class,
+        KnownDeviceEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
@@ -74,4 +77,5 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun mdnsHistoryDao(): MdnsHistoryDao
     abstract fun wolHistoryDao(): WolHistoryDao
     abstract fun speedTestHistoryDao(): SpeedTestHistoryDao
+    abstract fun knownDeviceDao(): KnownDeviceDao
 }
