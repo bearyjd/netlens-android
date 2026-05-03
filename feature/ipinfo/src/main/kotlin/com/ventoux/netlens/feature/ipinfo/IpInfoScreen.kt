@@ -30,6 +30,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,8 +39,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -50,6 +56,8 @@ import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoResponse
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
+import com.ventoux.netlens.feature.ipinfo.model.ReputationResult
+import com.ventoux.netlens.feature.ipinfo.model.ReputationRisk
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +138,11 @@ fun IpInfoScreen(
                 }
 
                 is IpInfoUiState.Success -> {
-                    SuccessContent(data = state.data, onNavigateToTool = onNavigateToTool)
+                    SuccessContent(
+                        state = state,
+                        onNavigateToTool = onNavigateToTool,
+                        onSaveApiKey = viewModel::saveApiKey,
+                    )
                 }
             }
         }
@@ -191,8 +203,24 @@ private fun ErrorContent(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SuccessContent(data: IpInfoResponse, onNavigateToTool: (String, String) -> Unit) {
+private fun SuccessContent(
+    state: IpInfoUiState.Success,
+    onNavigateToTool: (String, String) -> Unit,
+    onSaveApiKey: (String) -> Unit,
+) {
+    val data = state.data
     val clipboardManager = LocalClipboardManager.current
+    var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showApiKeyDialog) {
+        ApiKeyDialog(
+            onSave = { key ->
+                onSaveApiKey(key)
+                showApiKeyDialog = false
+            },
+            onDismiss = { showApiKeyDialog = false },
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -356,28 +384,12 @@ private fun SuccessContent(data: IpInfoResponse, onNavigateToTool: (String, Stri
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.ipinfo_label_privacy_detection),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.ipinfo_privacy_requires_key),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        ReputationCard(
+            reputation = state.reputation,
+            isLoading = state.reputationLoading,
+            error = state.reputationError,
+            onSetupApiKey = { showApiKeyDialog = true },
+        )
 
         Text(
             text = stringResource(R.string.ipinfo_attribution),
@@ -419,4 +431,206 @@ private fun InfoRow(label: String, value: String, onCopy: (() -> Unit)? = null) 
             }
         }
     }
+}
+
+@Composable
+private fun ReputationCard(
+    reputation: ReputationResult?,
+    isLoading: Boolean,
+    error: String?,
+    onSetupApiKey: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.ipinfo_label_reputation),
+                style = MaterialTheme.typography.titleSmall,
+            )
+
+            when {
+                isLoading -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Text(
+                            text = stringResource(R.string.ipinfo_reputation_loading),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                reputation != null -> {
+                    ReputationDetails(reputation = reputation, onChangeKey = onSetupApiKey)
+                }
+
+                error != null -> {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    OutlinedButton(onClick = onSetupApiKey) {
+                        Text(stringResource(R.string.ipinfo_reputation_setup_button))
+                    }
+                }
+
+                else -> {
+                    Text(
+                        text = stringResource(R.string.ipinfo_reputation_setup),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(onClick = onSetupApiKey) {
+                        Text(stringResource(R.string.ipinfo_reputation_setup_button))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReputationDetails(
+    reputation: ReputationResult,
+    onChangeKey: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val riskColor = when (reputation.riskLevel) {
+        ReputationRisk.CLEAN -> Color(0xFF4CAF50)
+        ReputationRisk.LOW -> Color(0xFF3B82F6)
+        ReputationRisk.MEDIUM -> Color(0xFFF59E0B)
+        ReputationRisk.HIGH -> Color(0xFFEF4444)
+    }
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.ipinfo_reputation_score),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "${reputation.abuseConfidenceScore}% — ${reputation.riskLevel.label}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = riskColor,
+            )
+        }
+
+        HorizontalDivider()
+
+        InfoRow(
+            label = stringResource(R.string.ipinfo_reputation_reports),
+            value = reputation.totalReports.toString(),
+        )
+
+        if (reputation.isp.isNotEmpty()) {
+            HorizontalDivider()
+            InfoRow(
+                label = stringResource(R.string.ipinfo_reputation_isp),
+                value = reputation.isp,
+            )
+        }
+
+        if (reputation.usageType.isNotEmpty()) {
+            HorizontalDivider()
+            InfoRow(
+                label = stringResource(R.string.ipinfo_reputation_usage_type),
+                value = reputation.usageType,
+            )
+        }
+
+        if (reputation.domain.isNotEmpty()) {
+            HorizontalDivider()
+            InfoRow(
+                label = stringResource(R.string.ipinfo_reputation_domain),
+                value = reputation.domain,
+            )
+        }
+
+        if (reputation.isWhitelisted) {
+            HorizontalDivider()
+            InfoRow(
+                label = stringResource(R.string.ipinfo_reputation_whitelisted),
+                value = "Yes",
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.ipinfo_reputation_attribution),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = onChangeKey) {
+                Text(
+                    text = stringResource(R.string.ipinfo_reputation_setup_button),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApiKeyDialog(
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var key by rememberSaveable { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ipinfo_apikey_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.ipinfo_apikey_dialog_message),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text(stringResource(R.string.ipinfo_apikey_dialog_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(key) }, enabled = key.isNotBlank()) {
+                Text(stringResource(R.string.ipinfo_apikey_dialog_save))
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onSave("") }) {
+                    Text(stringResource(R.string.ipinfo_apikey_dialog_clear))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.ipinfo_apikey_dialog_cancel))
+                }
+            }
+        },
+    )
 }

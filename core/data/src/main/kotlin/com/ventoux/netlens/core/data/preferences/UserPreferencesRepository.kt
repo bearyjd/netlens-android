@@ -91,6 +91,16 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[LATENCY_ALERT_THRESHOLD_MS] = ms }
     }
 
+    val abuseIpDbApiKey: Flow<String> = dataStore.data.map { prefs ->
+        prefs[ABUSEIPDB_API_KEY] ?: ""
+    }
+
+    suspend fun setAbuseIpDbApiKey(key: String) {
+        dataStore.edit { prefs ->
+            if (key.isBlank()) prefs.remove(ABUSEIPDB_API_KEY) else prefs[ABUSEIPDB_API_KEY] = key
+        }
+    }
+
     val postureScore: Flow<PersistedPostureScore?> = dataStore.data.map { prefs ->
         val grade = prefs[POSTURE_GRADE] ?: return@map null
         PersistedPostureScore(
@@ -119,6 +129,7 @@ class UserPreferencesRepository @Inject constructor(
         private val LATENCY_MONITOR_ENABLED = booleanPreferencesKey("latency_monitor_enabled")
         private val LATENCY_MONITOR_HOST = stringPreferencesKey("latency_monitor_host")
         private val LATENCY_ALERT_THRESHOLD_MS = intPreferencesKey("latency_alert_threshold_ms")
+        private val ABUSEIPDB_API_KEY = stringPreferencesKey("abuseipdb_api_key")
         private val POSTURE_GRADE = stringPreferencesKey("posture_grade")
         private val POSTURE_NUMERIC_SCORE = intPreferencesKey("posture_numeric_score")
         private val POSTURE_ISSUE_COUNT = intPreferencesKey("posture_issue_count")
