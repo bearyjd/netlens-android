@@ -12,12 +12,14 @@ import com.ventoux.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventoux.netlens.core.data.model.IpInfoHistoryEntry
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.feature.ipinfo.data.IpInfoRepository
+import com.ventoux.netlens.feature.ipinfo.data.ReputationClient
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
 import javax.inject.Inject
 
 @HiltViewModel
 class IpInfoViewModel @Inject constructor(
     private val repository: IpInfoRepository,
+    private val reputationClient: ReputationClient,
     private val ipInfoHistoryDao: IpInfoHistoryDao,
     private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
@@ -75,6 +77,7 @@ class IpInfoViewModel @Inject constructor(
                             isVpn = false,
                         ),
                     )
+                    fetchReputation(data.ip)
                 }
                 .onFailure { error ->
                     _uiState.value = IpInfoUiState.Error(
@@ -82,5 +85,39 @@ class IpInfoViewModel @Inject constructor(
                     )
                 }
         }
+    }
+
+    fun saveApiKey(key: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAbuseIpDbApiKey(key.trim())
+            val current = _uiState.value
+            if (current is IpInfoUiState.Success && key.isNotBlank()) {
+                fetchReputation(current.data.ip)
+            }
+        }
+    }
+
+    private suspend fun fetchReputation(ip: String) {
+        val apiKey = userPreferencesRepository.abuseIpDbApiKey.first()
+        if (apiKey.isBlank()) return
+        val current = _uiState.value
+        if (current !is IpInfoUiState.Success) return
+        _uiState.value = current.copy(reputationLoading = true, reputationError = null)
+        reputationClient.checkReputation(ip, apiKey)
+            .onSuccess { result ->
+                val state = _uiState.value
+                if (state is IpInfoUiState.Success) {
+                    _uiState.value = state.copy(reputation = result, reputationLoading = false)
+                }
+            }
+            .onFailure { error ->
+                val state = _uiState.value
+                if (state is IpInfoUiState.Success) {
+                    _uiState.value = state.copy(
+                        reputationLoading = false,
+                        reputationError = error.localizedMessage ?: "Reputation check failed",
+                    )
+                }
+            }
     }
 }
