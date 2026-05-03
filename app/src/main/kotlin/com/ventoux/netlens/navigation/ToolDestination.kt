@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Wifi
@@ -124,6 +125,13 @@ enum class ToolDestination(
         label = "Wi-Fi Audit",
         description = "Security audit on join",
         category = ToolCategory.Security,
+    ),
+    CellTower(
+        route = "celltower",
+        icon = Icons.Default.CellTower,
+        label = "Cell Tower",
+        description = "Signal metrics & neighbors",
+        category = ToolCategory.NetworkInfo,
     ),
     DnsLeak(
         route = "dnsleak",
