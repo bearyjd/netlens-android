@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dnsleak_title">DNS Leak Test</string>
+    <string name="dnsleak_tool_description">Detect DNS query leaks</string>
+    <string name="navigate_back">Back</string>
+    <string name="dnsleak_cd_copy">Copy results</string>
+    <string name="dnsleak_cd_share">Share results</string>
+    <string name="dnsleak_status_not_tested">Not Tested</string>
+    <string name="dnsleak_status_not_tested_detail">Tap the button below to check whether your DNS queries are leaking outside your VPN or private DNS configuration.</string>
+    <string name="dnsleak_status_pass">No DNS Leak</string>
+    <string name="dnsleak_status_pass_detail">Your DNS queries are being handled by the expected resolvers. No leak was detected.</string>
+    <string name="dnsleak_status_fail">DNS Leak Detected</string>
+    <string name="dnsleak_status_fail_detail">Your DNS queries are being sent to ISP or unexpected resolvers, even though a VPN is active. This means your browsing activity may be visible to your ISP.</string>
+    <string name="dnsleak_status_error">Test Failed</string>
+    <string name="dnsleak_button_run">Run DNS Leak Test</string>
+    <string name="dnsleak_button_rerun">Run Again</string>
+    <string name="dnsleak_vpn_active">VPN Active</string>
+    <string name="dnsleak_vpn_inactive">No VPN</string>
+    <string name="dnsleak_resolvers_title">DNS Resolvers Detected</string>
+    <string name="dnsleak_resolvers_leaked_title">Leaked Resolvers</string>
+    <string name="dnsleak_resolvers_expected_title">Expected Resolvers</string>
+    <string name="dnsleak_resolver_public">Public</string>
+    <string name="dnsleak_resolver_isp">ISP / Unknown</string>
+    <string name="dnsleak_what_is_title">What is a DNS leak?</string>
+    <string name="dnsleak_what_is_body">When you use a VPN, all your internet traffic — including DNS queries — should be routed through the VPN tunnel. A DNS leak occurs when your device sends DNS queries directly to your ISP\'s DNS servers instead, revealing the websites you visit even though your other traffic is encrypted.</string>
+    <string name="dnsleak_fix_title">How to fix</string>
+    <string name="dnsleak_fix_step_1">Open Settings → Network &amp; internet → Private DNS</string>
+    <string name="dnsleak_fix_step_2">Set to a private DNS provider hostname (e.g. dns.google, one.one.one.one, or dns.quad9.net)</string>
+    <string name="dnsleak_fix_step_3">If using a VPN, ensure its DNS leak protection setting is enabled</string>
+    <string name="dnsleak_fix_step_4">Re-run this test to verify the fix</string>
+    <string name="dnsleak_no_vpn_info_title">No VPN detected</string>
+    <string name="dnsleak_no_vpn_info_body">DNS leak tests are most meaningful when a VPN is active. Without a VPN, your DNS queries go through your configured DNS servers, which is expected. The resolvers shown below are what your device is currently using.</string>
+</resources>
