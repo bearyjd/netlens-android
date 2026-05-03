@@ -38,7 +38,10 @@ import com.ventoux.netlens.feature.lanscan.model.LanScanTab
 import com.ventoux.netlens.feature.lanscan.model.LanScanUiState
 import com.ventoux.netlens.feature.lanscan.model.ScanRangeMode
 import com.ventoux.netlens.feature.lanscan.model.SuggestedNetwork
+import com.ventoux.netlens.feature.lanscan.model.HostPortResult
+import com.ventoux.netlens.feature.lanscan.model.HostScanExport
 import com.ventoux.netlens.feature.portscan.engine.PortScanner
+import com.ventoux.netlens.feature.portscan.model.PortRiskClassifier
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 import javax.inject.Inject
 
@@ -434,6 +437,7 @@ class LanScanViewModel @Inject constructor(
     fun selectDevice(device: LanDevice) {
         _hostDetail.value = HostDetailState(device = device)
         _uiState.update { it.copy(selectedDevice = device) }
+        scanHostPorts(WellKnownPorts.TOP_1000_PORTS)
     }
 
     fun dismissDetail() {
@@ -443,24 +447,40 @@ class LanScanViewModel @Inject constructor(
         _uiState.update { it.copy(selectedDevice = null) }
     }
 
-    fun scanHostPorts(ports: List<Int> = WellKnownPorts.COMMON_PORTS.keys.sorted()) {
+    fun scanHostPorts(ports: List<Int> = WellKnownPorts.TOP_1000_PORTS) {
         val detail = _hostDetail.value ?: return
         hostScanJob?.cancel()
         hostScanJob = viewModelScope.launch {
             _hostDetail.update {
-                it?.copy(isScanning = true, progress = 0f, portResults = emptyList(), error = null)
+                it?.copy(
+                    isScanning = true,
+                    progress = 0f,
+                    portResults = emptyList(),
+                    enrichedResults = emptyList(),
+                    error = null,
+                )
             }
             try {
                 var scanned = 0
                 val total = ports.size
                 portScanner.scan(detail.device.ip, ports).collect { result ->
                     scanned++
+                    val enriched = HostPortResult(
+                        port = result.port,
+                        serviceName = result.serviceName,
+                        isOpen = result.isOpen,
+                        latencyMs = result.latencyMs,
+                        riskLevel = PortRiskClassifier.classifyRisk(result.port, result.isOpen),
+                        description = WellKnownPorts.getDescription(result.port),
+                    )
                     _hostDetail.update { state ->
-                        val updated = state?.portResults.orEmpty() + result
+                        val updatedRaw = state?.portResults.orEmpty() + result
+                        val updatedEnriched = state?.enrichedResults.orEmpty() + enriched
                         state?.copy(
-                            portResults = updated,
+                            portResults = updatedRaw,
+                            enrichedResults = updatedEnriched,
                             progress = scanned.toFloat() / total,
-                            openCount = updated.count { it.isOpen },
+                            openCount = updatedRaw.count { it.isOpen },
                         )
                     }
                 }
@@ -484,6 +504,21 @@ class LanScanViewModel @Inject constructor(
                 _hostDetail.update { it?.copy(isScanning = false, error = e.message ?: "Port scan failed") }
             }
         }
+    }
+
+    fun buildHostScanJson(): String {
+        val detail = _hostDetail.value ?: return "{}"
+        val export = HostScanExport(
+            host = detail.device.ip,
+            hostname = detail.device.hostname,
+            macAddress = detail.device.macAddress,
+            vendor = detail.device.vendor,
+            scanTimestamp = System.currentTimeMillis(),
+            totalPortsScanned = detail.portResults.size,
+            openPorts = detail.openCount,
+            results = detail.enrichedResults.filter { it.isOpen },
+        )
+        return Json.encodeToString(export)
     }
 
     fun cancelHostScan() {
