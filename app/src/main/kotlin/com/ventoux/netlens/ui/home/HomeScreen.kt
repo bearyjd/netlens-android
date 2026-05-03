@@ -25,12 +25,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.R
 import com.ventoux.netlens.feature.posture.PostureViewModel
@@ -42,6 +46,8 @@ import com.ventoux.netlens.ui.components.NetworkStatusCard
 import com.ventoux.netlens.ui.components.SectionHeader
 import com.ventoux.netlens.ui.components.ToolChip
 import com.ventoux.netlens.ui.components.ToolGridCard
+import com.ventoux.netlens.ui.home.latency.LatencyMonitorCard
+import com.ventoux.netlens.ui.home.latency.LatencyMonitorViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +115,33 @@ fun HomeScreen(
                     postureGrade = postureGrade,
                     postureColor = postureColor,
                     onClick = { handleToolClick(ToolDestination.Posture) },
+                )
+            }
+
+            item(key = "latency_monitor") {
+                val latencyViewModel: LatencyMonitorViewModel = hiltViewModel()
+                val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
+
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        when (event) {
+                            Lifecycle.Event.ON_RESUME -> latencyViewModel.onResume()
+                            Lifecycle.Event.ON_PAUSE -> latencyViewModel.onPause()
+                            else -> {}
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                LatencyMonitorCard(
+                    state = latencyState,
+                    onToggleExpanded = latencyViewModel::toggleExpanded,
+                    onToggleEnabled = latencyViewModel::toggleEnabled,
+                    onConfigure = latencyViewModel::showConfig,
+                    onDismissConfig = latencyViewModel::dismissConfig,
+                    onSaveConfig = latencyViewModel::saveConfig,
                 )
             }
 

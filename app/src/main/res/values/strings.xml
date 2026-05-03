@@ -18,4 +18,20 @@
     <string name="status_disconnected">Disconnected</string>
     <string name="status_ip_label">IP</string>
     <string name="status_gw_label">GW</string>
+
+    <string name="latency_monitor_title">Latency Monitor</string>
+    <string name="latency_monitor_enable">Enable Latency Monitor</string>
+    <string name="latency_min">Min</string>
+    <string name="latency_avg">Avg</string>
+    <string name="latency_max">Max</string>
+    <string name="latency_jitter">Jitter</string>
+    <string name="latency_loss">Loss</string>
+    <string name="latency_ms_format">%1$.0f ms</string>
+    <string name="latency_loss_format">%1$.1f%%</string>
+    <string name="latency_configure">Configure</string>
+    <string name="latency_host">Host</string>
+    <string name="latency_alert_threshold">Alert Threshold</string>
+    <string name="latency_threshold_format">%1$d ms</string>
+    <string name="latency_save">Save</string>
+    <string name="latency_cancel">Cancel</string>
 </resources>

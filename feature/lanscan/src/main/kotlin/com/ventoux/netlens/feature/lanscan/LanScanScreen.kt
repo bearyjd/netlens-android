@@ -146,6 +146,11 @@ fun LanScanScreen(
         } else {
             null
         },
+        onShareJson = if (isPro) {
+            { ResultExporter.shareAsText(context, "Host Scan JSON", viewModel.buildHostScanJson()) }
+        } else {
+            null
+        },
         onToggleKnown = viewModel::toggleKnown,
         onDeleteDevice = viewModel::deleteDevice,
         onClearInventory = viewModel::clearInventory,
@@ -177,6 +182,7 @@ private fun LanScanContent(
     onNavigateToTool: (String, String) -> Unit,
     onCopyResults: () -> Unit = {},
     onShareResults: (() -> Unit)? = null,
+    onShareJson: (() -> Unit)? = null,
     onToggleKnown: (String) -> Unit = {},
     onDeleteDevice: (String) -> Unit = {},
     onClearInventory: () -> Unit = {},
@@ -194,6 +200,7 @@ private fun LanScanContent(
             onScanPorts = onScanHostPorts,
             onCancelScan = onCancelHostScan,
             onNavigateToTool = onNavigateToTool,
+            onShareJson = onShareJson,
         )
     }
 
