@@ -99,6 +99,7 @@ dependencies {
     implementation(project(":feature:wifi"))
     implementation(project(":feature:dnsleak"))
     implementation(project(":feature:wifiaudit"))
+    implementation(project(":feature:celltower"))
 
     // Widget
     implementation(project(":widget"))

@@ -1,0 +1,16 @@
+package com.ventoux.netlens.feature.celltower.di
+
+import com.ventoux.netlens.feature.celltower.engine.CellTowerReader
+import com.ventoux.netlens.feature.celltower.engine.CellTowerReaderImpl
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ViewModelComponent
+
+@Module
+@InstallIn(ViewModelComponent::class)
+abstract class CellTowerModule {
+
+    @Binds
+    abstract fun bindCellTowerReader(impl: CellTowerReaderImpl): CellTowerReader
+}
