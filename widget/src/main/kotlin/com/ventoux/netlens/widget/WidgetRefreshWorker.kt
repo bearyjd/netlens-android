@@ -150,13 +150,15 @@ class WidgetRefreshWorker(
                     score.topIssueId?.let { prefs[WidgetStateDefinition.TOP_ISSUE_ID] = it }
                 }
 
-                ipData?.takeIf { IP_PATTERN.matches(it.query) }?.let { ip ->
-                    prefs[WidgetStateDefinition.PUBLIC_IP] = ip.query
-                    prefs[WidgetStateDefinition.COUNTRY_FLAG] = ip.countryCode.toFlagEmoji()
+                ipData?.takeIf { IP_PATTERN.matches(it.ip) }?.let { ip ->
+                    val asNumber = ip.org.substringBefore(" ").takeIf { it.startsWith("AS") } ?: ""
+                    val orgName = ip.org.substringAfter(" ").ifBlank { ip.org }
+                    prefs[WidgetStateDefinition.PUBLIC_IP] = ip.ip
+                    prefs[WidgetStateDefinition.COUNTRY_FLAG] = ip.country.toFlagEmoji()
                     prefs[WidgetStateDefinition.COUNTRY_NAME] = ip.country
-                    prefs[WidgetStateDefinition.COUNTRY_CODE] = ip.countryCode
-                    prefs[WidgetStateDefinition.ISP_NAME] = ip.isp
-                    prefs[WidgetStateDefinition.ASN_NAME] = ip.asName
+                    prefs[WidgetStateDefinition.COUNTRY_CODE] = ip.country
+                    prefs[WidgetStateDefinition.ISP_NAME] = orgName
+                    prefs[WidgetStateDefinition.ASN_NAME] = asNumber
                 }
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
@@ -336,7 +338,7 @@ private val httpClient = HttpClient(CIO) {
 }
 
 private suspend fun fetchIpInfo(): WidgetIpResponse {
-    return httpClient.get("http://ip-api.com/json/?fields=query,country,countryCode,isp,as").body()
+    return httpClient.get("https://ipinfo.io/json").body()
 }
 
 private suspend fun measureLatency(): Long = withContext(Dispatchers.IO) {

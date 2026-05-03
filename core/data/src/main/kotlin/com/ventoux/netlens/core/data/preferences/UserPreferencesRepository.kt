@@ -3,6 +3,7 @@ package com.ventoux.netlens.core.data.preferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +43,16 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    val ipInfoConsentGranted: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IPINFO_CONSENT_KEY] ?: false
+    }
+
+    suspend fun setIpInfoConsent(granted: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IPINFO_CONSENT_KEY] = granted
+        }
+    }
+
     suspend fun recordToolUsage(route: String) {
         dataStore.edit { prefs ->
             val current = prefs[RECENTS_KEY]
@@ -57,6 +68,7 @@ class UserPreferencesRepository @Inject constructor(
     companion object {
         private val FAVORITES_KEY = stringSetPreferencesKey("favorite_tools")
         private val RECENTS_KEY = stringPreferencesKey("recent_tools")
+        private val IPINFO_CONSENT_KEY = booleanPreferencesKey("ipinfo_consent_granted")
         private const val RECENTS_SEPARATOR = ","
         private const val MAX_RECENTS = 5
         val DEFAULT_FAVORITES = setOf("ping", "lanscan", "dns")

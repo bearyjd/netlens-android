@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -46,7 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
-import com.ventoux.netlens.feature.ipinfo.model.IpApiResponse
+import com.ventoux.netlens.feature.ipinfo.model.IpInfoResponse
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +62,13 @@ fun IpInfoScreen(
     val context = LocalContext.current
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
+
+    if (uiState is IpInfoUiState.ConsentRequired) {
+        ConsentDialog(
+            onAllow = viewModel::grantConsent,
+            onDismiss = onBack,
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -109,6 +118,10 @@ fun IpInfoScreen(
                     }
                 }
 
+                is IpInfoUiState.ConsentRequired -> {
+                    Box(modifier = Modifier.fillMaxSize())
+                }
+
                 is IpInfoUiState.Error -> {
                     ErrorContent(
                         message = state.message,
@@ -122,6 +135,28 @@ fun IpInfoScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ConsentDialog(
+    onAllow: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ipinfo_consent_title)) },
+        text = { Text(stringResource(R.string.ipinfo_consent_message)) },
+        confirmButton = {
+            TextButton(onClick = onAllow) {
+                Text(stringResource(R.string.ipinfo_consent_allow))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.ipinfo_consent_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -156,7 +191,7 @@ private fun ErrorContent(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, String) -> Unit) {
+private fun SuccessContent(data: IpInfoResponse, onNavigateToTool: (String, String) -> Unit) {
     val clipboardManager = LocalClipboardManager.current
 
     Column(
@@ -185,15 +220,31 @@ private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, Strin
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
-                    Text(
-                        text = data.query,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (data.countryFlag.isNotEmpty()) {
+                            Text(
+                                text = data.countryFlag,
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.padding(end = 8.dp),
+                            )
+                        }
+                        Text(
+                            text = data.ip,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    if (data.hostname.isNotEmpty() && data.hostname != data.ip) {
+                        Text(
+                            text = data.hostname,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        )
+                    }
                 }
                 IconButton(
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(data.query))
+                        clipboardManager.setText(AnnotatedString(data.ip))
                     },
                 ) {
                     Icon(
@@ -209,15 +260,15 @@ private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, Strin
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AssistChip(
-                onClick = { onNavigateToTool("ping", data.query) },
+                onClick = { onNavigateToTool("ping", data.ip) },
                 label = { Text(stringResource(R.string.ipinfo_action_ping)) },
             )
             AssistChip(
-                onClick = { onNavigateToTool("traceroute", data.query) },
+                onClick = { onNavigateToTool("traceroute", data.ip) },
                 label = { Text(stringResource(R.string.ipinfo_action_traceroute)) },
             )
             AssistChip(
-                onClick = { onNavigateToTool("whois", data.query) },
+                onClick = { onNavigateToTool("whois", data.ip) },
                 label = { Text(stringResource(R.string.ipinfo_action_whois)) },
             )
         }
@@ -229,11 +280,21 @@ private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, Strin
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                InfoRow(label = stringResource(R.string.ipinfo_label_isp), value = data.isp, onCopy = { clipboardManager.setText(AnnotatedString(data.isp)) })
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_organization),
+                    value = data.orgName.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = { clipboardManager.setText(AnnotatedString(data.orgName)) },
+                )
                 HorizontalDivider()
-                InfoRow(label = stringResource(R.string.ipinfo_label_organization), value = data.org, onCopy = { clipboardManager.setText(AnnotatedString(data.org)) })
-                HorizontalDivider()
-                InfoRow(label = stringResource(R.string.ipinfo_label_as_number), value = data.asNumber, onCopy = { clipboardManager.setText(AnnotatedString(data.asNumber)) })
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_as_number),
+                    value = data.asNumber.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = if (data.asNumber.isNotEmpty()) {
+                        { clipboardManager.setText(AnnotatedString(data.asNumber)) }
+                    } else {
+                        null
+                    },
+                )
             }
         }
 
@@ -244,35 +305,86 @@ private fun SuccessContent(data: IpApiResponse, onNavigateToTool: (String, Strin
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val coords = "${data.lat}, ${data.lon}"
-                InfoRow(label = stringResource(R.string.ipinfo_label_country), value = data.country, onCopy = { clipboardManager.setText(AnnotatedString(data.country)) })
+                val coords = "${data.latitude}, ${data.longitude}"
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_country),
+                    value = data.country.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = { clipboardManager.setText(AnnotatedString(data.country)) },
+                )
                 HorizontalDivider()
-                InfoRow(label = stringResource(R.string.ipinfo_label_region), value = data.regionName, onCopy = { clipboardManager.setText(AnnotatedString(data.regionName)) })
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_region),
+                    value = data.region.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = { clipboardManager.setText(AnnotatedString(data.region)) },
+                )
                 HorizontalDivider()
-                InfoRow(label = stringResource(R.string.ipinfo_label_city), value = data.city, onCopy = { clipboardManager.setText(AnnotatedString(data.city)) })
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_city),
+                    value = data.city.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = { clipboardManager.setText(AnnotatedString(data.city)) },
+                )
                 HorizontalDivider()
-                InfoRow(label = stringResource(R.string.ipinfo_label_coordinates), value = coords, onCopy = { clipboardManager.setText(AnnotatedString(coords)) })
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_postal),
+                    value = data.postal.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = if (data.postal.isNotEmpty()) {
+                        { clipboardManager.setText(AnnotatedString(data.postal)) }
+                    } else {
+                        null
+                    },
+                )
+                HorizontalDivider()
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_timezone),
+                    value = data.timezone.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
+                    onCopy = if (data.timezone.isNotEmpty()) {
+                        { clipboardManager.setText(AnnotatedString(data.timezone)) }
+                    } else {
+                        null
+                    },
+                )
+                HorizontalDivider()
+                InfoRow(
+                    label = stringResource(R.string.ipinfo_label_coordinates),
+                    value = if (data.loc.isNotEmpty()) coords else stringResource(R.string.ipinfo_value_unknown),
+                    onCopy = if (data.loc.isNotEmpty()) {
+                        { clipboardManager.setText(AnnotatedString(coords)) }
+                    } else {
+                        null
+                    },
+                )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                InfoRow(
-                    label = stringResource(R.string.ipinfo_label_proxy_vpn),
-                    value = if (data.proxy) stringResource(R.string.ipinfo_value_detected) else stringResource(R.string.ipinfo_value_not_detected),
+                Text(
+                    text = stringResource(R.string.ipinfo_label_privacy_detection),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                HorizontalDivider()
-                InfoRow(
-                    label = stringResource(R.string.ipinfo_label_hosting),
-                    value = if (data.hosting) stringResource(R.string.ipinfo_value_yes) else stringResource(R.string.ipinfo_value_no),
+                Text(
+                    text = stringResource(R.string.ipinfo_privacy_requires_key),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+
+        Text(
+            text = stringResource(R.string.ipinfo_attribution),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
     }
