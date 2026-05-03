@@ -98,6 +98,7 @@ dependencies {
     implementation(project(":feature:speedtest"))
     implementation(project(":feature:wifi"))
     implementation(project(":feature:dnsleak"))
+    implementation(project(":feature:wifiaudit"))
 
     // Widget
     implementation(project(":widget"))
