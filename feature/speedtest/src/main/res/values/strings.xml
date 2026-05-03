@@ -18,4 +18,6 @@
     <string name="speedtest_label_history">History</string>
     <string name="speedtest_history_empty">No speed tests yet</string>
     <string name="speedtest_history_entry">↓ %.1f  ↑ %.1f Mbps  %d ms</string>
+    <string name="speedtest_chart_download">Download</string>
+    <string name="speedtest_chart_upload">Upload</string>
 </resources>

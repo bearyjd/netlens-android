@@ -34,4 +34,6 @@
     <string name="latency_threshold_format">%1$d ms</string>
     <string name="latency_save">Save</string>
     <string name="latency_cancel">Cancel</string>
+
+    <string name="tile_posture_label">Security Score</string>
 </resources>
