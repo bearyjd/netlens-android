@@ -3,20 +3,27 @@ package com.ventoux.netlens.feature.netlog
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ventoux.netlens.core.data.dao.NetworkEventDao
+import com.ventoux.netlens.core.data.model.NetworkEvent
 import com.ventoux.netlens.feature.netlog.engine.NetworkMonitor
 import com.ventoux.netlens.feature.netlog.model.NetLogUiState
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class NetLogViewModel @Inject constructor(
     private val networkMonitor: NetworkMonitor,
@@ -29,23 +36,26 @@ class NetLogViewModel @Inject constructor(
     private var monitorJob: Job? = null
 
     init {
-        networkEventDao.getRecent(MAX_DISPLAYED_EVENTS)
+        _state.map { FilterParams(it.selectedEventTypes, it.dateRangeStartMs, it.dateRangeEndMs) }
+            .flatMapLatest { params ->
+                networkEventDao.getFiltered(
+                    types = params.types.ifEmpty { setOf("__all__") },
+                    hasTypeFilter = if (params.types.isEmpty()) 0 else 1,
+                    from = params.fromMs,
+                    to = params.toMs,
+                    limit = MAX_DISPLAYED_EVENTS,
+                )
+            }
             .onEach { events -> _state.update { it.copy(events = events) } }
             .catch { e -> _state.update { it.copy(error = e.message ?: "Failed to load events") } }
             .launchIn(viewModelScope)
-    }
-
-    companion object {
-        private const val MAX_DISPLAYED_EVENTS = 500
     }
 
     fun startMonitoring() {
         if (monitorJob?.isActive == true) return
         _state.update { it.copy(isMonitoring = true) }
         monitorJob = networkMonitor.observeNetworkChanges()
-            .onEach { event ->
-                networkEventDao.insert(event)
-            }
+            .onEach { event -> networkEventDao.insert(event) }
             .catch { error ->
                 _state.update {
                     it.copy(
@@ -61,6 +71,25 @@ class NetLogViewModel @Inject constructor(
         monitorJob?.cancel()
         monitorJob = null
         _state.update { it.copy(isMonitoring = false) }
+    }
+
+    fun toggleEventTypeFilter(type: String) {
+        _state.update { current ->
+            val updated = if (type in current.selectedEventTypes) {
+                current.selectedEventTypes - type
+            } else {
+                current.selectedEventTypes + type
+            }
+            current.copy(selectedEventTypes = updated)
+        }
+    }
+
+    fun setDateRange(startMs: Long?, endMs: Long?) {
+        _state.update { it.copy(dateRangeStartMs = startMs, dateRangeEndMs = endMs) }
+    }
+
+    fun clearFilters() {
+        _state.update { it.copy(selectedEventTypes = emptySet(), dateRangeStartMs = null, dateRangeEndMs = null) }
     }
 
     fun showClearConfirmation() {
@@ -84,5 +113,33 @@ class NetLogViewModel @Inject constructor(
 
     fun clearError() {
         _state.update { it.copy(error = null) }
+    }
+
+    fun buildExportJson(): String {
+        val events = _state.value.events
+        val array = JSONArray()
+        for (event in events) {
+            array.put(event.toJson())
+        }
+        return array.toString(2)
+    }
+
+    private fun NetworkEvent.toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("timestamp", timestamp)
+        put("eventType", eventType)
+        put("transportType", transportType)
+        put("networkDetails", networkDetails)
+        put("isVpn", isVpn)
+    }
+
+    private data class FilterParams(
+        val types: Set<String>,
+        val fromMs: Long?,
+        val toMs: Long?,
+    )
+
+    companion object {
+        private const val MAX_DISPLAYED_EVENTS = 1000
     }
 }
