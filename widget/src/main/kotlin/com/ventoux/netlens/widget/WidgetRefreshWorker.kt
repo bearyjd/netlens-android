@@ -84,7 +84,27 @@ class WidgetRefreshWorker(
             }
 
             val score = if (isConnected) {
-                computeWidgetScore(encryptionType, deviceCount, isVpnActive)
+                val persisted = try {
+                    val entryPointForScore = EntryPointAccessors.fromApplication(
+                        appContext,
+                        WorkerEntryPoint::class.java,
+                    )
+                    entryPointForScore.userPreferencesRepository()
+                        .postureScore.first()
+                } catch (_: Exception) {
+                    null
+                }
+                if (persisted != null && (System.currentTimeMillis() - persisted.timestampMs) < 30 * 60 * 1000L) {
+                    WidgetScore(
+                        grade = persisted.grade,
+                        colorArgb = gradeColorArgb(persisted.grade),
+                        issueCount = persisted.issueCount,
+                        topIssue = persisted.topIssue,
+                        topIssueId = null,
+                    )
+                } else {
+                    computeWidgetScore(encryptionType, deviceCount, isVpnActive)
+                }
             } else {
                 null
             }
@@ -252,6 +272,12 @@ internal fun computeWidgetScore(
         topIssue = issues.firstOrNull()?.first,
         topIssueId = issues.firstOrNull()?.second,
     )
+}
+
+internal fun gradeColorArgb(grade: String): Int = when (grade) {
+    "A", "B" -> 0xFF4CAF50.toInt()
+    "C" -> 0xFFFFC107.toInt()
+    else -> 0xFFF44336.toInt()
 }
 
 internal fun gradeFor(score: Int): String = when {

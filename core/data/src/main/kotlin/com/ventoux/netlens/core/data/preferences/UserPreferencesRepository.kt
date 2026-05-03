@@ -5,12 +5,21 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class PersistedPostureScore(
+    val grade: String,
+    val numericScore: Int,
+    val issueCount: Int,
+    val topIssue: String?,
+    val timestampMs: Long,
+)
 
 @Singleton
 class UserPreferencesRepository @Inject constructor(
@@ -82,6 +91,27 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[LATENCY_ALERT_THRESHOLD_MS] = ms }
     }
 
+    val postureScore: Flow<PersistedPostureScore?> = dataStore.data.map { prefs ->
+        val grade = prefs[POSTURE_GRADE] ?: return@map null
+        PersistedPostureScore(
+            grade = grade,
+            numericScore = prefs[POSTURE_NUMERIC_SCORE] ?: 0,
+            issueCount = prefs[POSTURE_ISSUE_COUNT] ?: 0,
+            topIssue = prefs[POSTURE_TOP_ISSUE],
+            timestampMs = prefs[POSTURE_TIMESTAMP] ?: 0L,
+        )
+    }
+
+    suspend fun setPostureScore(grade: String, numericScore: Int, issueCount: Int, topIssue: String?) {
+        dataStore.edit { prefs ->
+            prefs[POSTURE_GRADE] = grade
+            prefs[POSTURE_NUMERIC_SCORE] = numericScore
+            prefs[POSTURE_ISSUE_COUNT] = issueCount
+            if (topIssue != null) prefs[POSTURE_TOP_ISSUE] = topIssue else prefs.remove(POSTURE_TOP_ISSUE)
+            prefs[POSTURE_TIMESTAMP] = System.currentTimeMillis()
+        }
+    }
+
     companion object {
         private val FAVORITES_KEY = stringSetPreferencesKey("favorite_tools")
         private val RECENTS_KEY = stringPreferencesKey("recent_tools")
@@ -89,6 +119,11 @@ class UserPreferencesRepository @Inject constructor(
         private val LATENCY_MONITOR_ENABLED = booleanPreferencesKey("latency_monitor_enabled")
         private val LATENCY_MONITOR_HOST = stringPreferencesKey("latency_monitor_host")
         private val LATENCY_ALERT_THRESHOLD_MS = intPreferencesKey("latency_alert_threshold_ms")
+        private val POSTURE_GRADE = stringPreferencesKey("posture_grade")
+        private val POSTURE_NUMERIC_SCORE = intPreferencesKey("posture_numeric_score")
+        private val POSTURE_ISSUE_COUNT = intPreferencesKey("posture_issue_count")
+        private val POSTURE_TOP_ISSUE = stringPreferencesKey("posture_top_issue")
+        private val POSTURE_TIMESTAMP = longPreferencesKey("posture_timestamp")
         private const val RECENTS_SEPARATOR = ","
         private const val MAX_RECENTS = 5
         val DEFAULT_FAVORITES = setOf("ping", "lanscan", "dns")
