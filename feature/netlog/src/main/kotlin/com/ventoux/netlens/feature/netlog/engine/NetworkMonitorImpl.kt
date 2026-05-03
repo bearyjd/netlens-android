@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import com.ventoux.netlens.core.data.model.NetworkEvent
+import com.ventoux.netlens.core.data.model.NetworkEventType
 import javax.inject.Inject
 
 class NetworkMonitorImpl @Inject constructor(
@@ -28,7 +29,7 @@ class NetworkMonitorImpl @Inject constructor(
 
                 trySend(
                     NetworkEvent(
-                        eventType = EVENT_CONNECTED,
+                        eventType = NetworkEventType.CONNECTED,
                         transportType = transportType,
                         networkDetails = details,
                         isVpn = isVpn,
@@ -39,7 +40,7 @@ class NetworkMonitorImpl @Inject constructor(
             override fun onLost(network: Network) {
                 trySend(
                     NetworkEvent(
-                        eventType = EVENT_DISCONNECTED,
+                        eventType = NetworkEventType.DISCONNECTED,
                         transportType = TRANSPORT_UNKNOWN,
                         networkDetails = "",
                         isVpn = false,
@@ -57,7 +58,7 @@ class NetworkMonitorImpl @Inject constructor(
 
                 trySend(
                     NetworkEvent(
-                        eventType = EVENT_CHANGED,
+                        eventType = NetworkEventType.CHANGED,
                         transportType = transportType,
                         networkDetails = details,
                         isVpn = isVpn,
@@ -100,9 +101,6 @@ class NetworkMonitorImpl @Inject constructor(
     }
 
     private companion object {
-        const val EVENT_CONNECTED = "CONNECTED"
-        const val EVENT_DISCONNECTED = "DISCONNECTED"
-        const val EVENT_CHANGED = "CHANGED"
         const val TRANSPORT_WIFI = "WIFI"
         const val TRANSPORT_CELLULAR = "CELLULAR"
         const val TRANSPORT_VPN = "VPN"

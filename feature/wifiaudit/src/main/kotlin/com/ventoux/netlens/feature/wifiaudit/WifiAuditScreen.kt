@@ -1,8 +1,5 @@
 package com.ventoux.netlens.feature.wifiaudit
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -114,7 +111,7 @@ fun WifiAuditScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                SummaryBar(findings = uiState.findings, modifier = Modifier.padding(horizontal = 16.dp))
+                SummaryBar(findings = visible, modifier = Modifier.padding(horizontal = 16.dp))
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(
                     modifier = Modifier
@@ -123,15 +120,10 @@ fun WifiAuditScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(visible, key = { it.id }) { finding ->
-                        AnimatedVisibility(
-                            visible = true,
-                            exit = fadeOut() + shrinkVertically(),
-                        ) {
-                            FindingCard(
-                                finding = finding,
-                                onDismiss = { viewModel.dismissFinding(finding.id) },
-                            )
-                        }
+                        FindingCard(
+                            finding = finding,
+                            onDismiss = { viewModel.dismissFinding(finding.id) },
+                        )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -37,6 +38,7 @@ class NetLogViewModel @Inject constructor(
 
     init {
         _state.map { FilterParams(it.selectedEventTypes, it.dateRangeStartMs, it.dateRangeEndMs) }
+            .distinctUntilChanged()
             .flatMapLatest { params ->
                 networkEventDao.getFiltered(
                     types = params.types.ifEmpty { setOf("__all__") },
@@ -107,8 +109,8 @@ class NetLogViewModel @Inject constructor(
             }.onFailure { error ->
                 _state.update { it.copy(error = error.message ?: "Failed to clear history") }
             }
+            hideClearConfirmation()
         }
-        hideClearConfirmation()
     }
 
     fun clearError() {

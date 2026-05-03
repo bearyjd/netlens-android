@@ -5,10 +5,12 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import com.ventoux.netlens.feature.wifiaudit.model.ConnectedNetworkInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface WifiInfoReader {
-    fun readConnected(): ConnectedNetworkInfo?
+    suspend fun readConnected(): ConnectedNetworkInfo?
 }
 
 class WifiInfoReaderImpl @Inject constructor(
@@ -19,11 +21,11 @@ class WifiInfoReaderImpl @Inject constructor(
         context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
-    override fun readConnected(): ConnectedNetworkInfo? {
+    override suspend fun readConnected(): ConnectedNetworkInfo? = withContext(Dispatchers.IO) {
         @Suppress("DEPRECATION")
-        val wifiInfo: WifiInfo = wifiManager.connectionInfo ?: return null
-        val ssid = wifiInfo.ssid?.removePrefix("\"")?.removeSuffix("\"") ?: return null
-        if (ssid == "<unknown ssid>") return null
+        val wifiInfo: WifiInfo = wifiManager.connectionInfo ?: return@withContext null
+        val ssid = wifiInfo.ssid?.removePrefix("\"")?.removeSuffix("\"") ?: return@withContext null
+        if (ssid == "<unknown ssid>") return@withContext null
 
         val security = findSecurityForBssid(wifiInfo.bssid)
 
@@ -35,7 +37,7 @@ class WifiInfoReaderImpl @Inject constructor(
             null
         }
 
-        return ConnectedNetworkInfo(
+        ConnectedNetworkInfo(
             ssid = ssid,
             bssid = wifiInfo.bssid ?: "",
             rssi = wifiInfo.rssi,
