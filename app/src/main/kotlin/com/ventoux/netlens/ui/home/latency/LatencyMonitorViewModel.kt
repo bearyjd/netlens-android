@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.feature.ping.engine.Pinger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,7 +28,8 @@ class LatencyMonitorViewModel @Inject constructor(
     val state: StateFlow<LatencyMonitorState> = _state.asStateFlow()
 
     private var pingJob: Job? = null
-    private var isPaused = false
+    private var currentPingHost: String? = null
+    private val _isPaused = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {
@@ -33,42 +37,56 @@ class LatencyMonitorViewModel @Inject constructor(
                 preferences.latencyMonitorEnabled,
                 preferences.latencyMonitorHost,
                 preferences.latencyAlertThresholdMs,
-            ) { enabled, host, threshold ->
-                Triple(enabled, host, threshold)
-            }.collect { (enabled, host, threshold) ->
-                _state.update { it.copy(isEnabled = enabled, host = host, alertThresholdMs = threshold) }
-                if (enabled && !isPaused) startPinging() else stopPinging()
+                _isPaused,
+            ) { enabled, host, threshold, paused ->
+                PingConfig(enabled, host, threshold, paused)
+            }.collect { config ->
+                _state.update {
+                    it.copy(isEnabled = config.enabled, host = config.host, alertThresholdMs = config.threshold)
+                }
+                if (config.enabled && !config.paused) {
+                    startPinging(config.host)
+                } else {
+                    stopPinging()
+                }
             }
         }
     }
 
-    private fun startPinging() {
-        if (pingJob?.isActive == true) return
-        val host = _state.value.host
+    private fun startPinging(host: String) {
+        if (pingJob?.isActive == true && currentPingHost == host) return
+        stopPinging()
+        currentPingHost = host
+        _state.update { it.copy(dataPoints = emptyList(), summary = null, error = null, isRunning = true) }
         pingJob = viewModelScope.launch {
-            _state.update { it.copy(isRunning = true) }
-            pinger.pingContinuous(host).collect { result ->
-                val point = LatencyDataPoint(
-                    timestampMs = System.currentTimeMillis(),
-                    latencyMs = if (result.isTimeout) null else result.latencyMs,
-                )
-                _state.update { current ->
-                    val newPoints = (current.dataPoints + point).takeLast(60)
-                    current.copy(
-                        dataPoints = newPoints,
-                        summary = computeSummary(newPoints),
-                    )
+            pinger.pingContinuous(host)
+                .catch { e ->
+                    if (e is CancellationException) throw e
+                    _state.update { it.copy(error = e.message ?: "Ping failed", isRunning = false) }
                 }
-            }
-        }
-        pingJob?.invokeOnCompletion {
-            _state.update { it.copy(isRunning = false) }
+                .onCompletion { _state.update { it.copy(isRunning = false) } }
+                .collect { result ->
+                    val point = LatencyDataPoint(
+                        timestampMs = System.currentTimeMillis(),
+                        latencyMs = if (result.isTimeout) null else result.latencyMs,
+                    )
+                    _state.update { current ->
+                        val newPoints = (current.dataPoints + point)
+                            .takeLast(LatencyMonitorState.MAX_DATA_POINTS)
+                        current.copy(
+                            dataPoints = newPoints,
+                            summary = computeSummary(newPoints),
+                            error = null,
+                        )
+                    }
+                }
         }
     }
 
     private fun stopPinging() {
         pingJob?.cancel()
         pingJob = null
+        currentPingHost = null
     }
 
     private fun computeSummary(points: List<LatencyDataPoint>): LatencySummary? {
@@ -87,13 +105,11 @@ class LatencyMonitorViewModel @Inject constructor(
     }
 
     fun onResume() {
-        isPaused = false
-        if (_state.value.isEnabled) startPinging()
+        _isPaused.value = false
     }
 
     fun onPause() {
-        isPaused = true
-        stopPinging()
+        _isPaused.value = true
     }
 
     fun toggleEnabled() {
@@ -119,8 +135,6 @@ class LatencyMonitorViewModel @Inject constructor(
             preferences.setLatencyMonitorHost(host)
             preferences.setLatencyAlertThresholdMs(thresholdMs)
             _state.update { it.copy(isConfiguring = false) }
-            stopPinging()
-            if (_state.value.isEnabled && !isPaused) startPinging()
         }
     }
 
@@ -129,3 +143,10 @@ class LatencyMonitorViewModel @Inject constructor(
         super.onCleared()
     }
 }
+
+private data class PingConfig(
+    val enabled: Boolean,
+    val host: String,
+    val threshold: Int,
+    val paused: Boolean,
+)
