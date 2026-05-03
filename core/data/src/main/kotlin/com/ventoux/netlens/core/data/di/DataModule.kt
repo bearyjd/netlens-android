@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import com.ventoux.netlens.core.data.NetLensDatabase
 import com.ventoux.netlens.core.data.dao.DnsHistoryDao
 import com.ventoux.netlens.core.data.dao.EndpointDao
+import com.ventoux.netlens.core.data.dao.KnownDeviceDao
 import com.ventoux.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.dao.NetworkEventDao
@@ -93,6 +94,16 @@ object DataModule {
         }
     }
 
+    private val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `known_devices` (`macAddress` TEXT NOT NULL, `hostname` TEXT, `ip` TEXT NOT NULL, `vendor` TEXT, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, `isKnown` INTEGER NOT NULL DEFAULT 0, `deviceType` TEXT, `osGuess` TEXT, PRIMARY KEY(`macAddress`))""",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_known_devices_lastSeen` ON `known_devices` (`lastSeen`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_known_devices_isKnown` ON `known_devices` (`isKnown`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -101,7 +112,7 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
@@ -164,4 +175,8 @@ object DataModule {
     @Provides
     fun provideSpeedTestHistoryDao(database: NetLensDatabase): SpeedTestHistoryDao =
         database.speedTestHistoryDao()
+
+    @Provides
+    fun provideKnownDeviceDao(database: NetLensDatabase): KnownDeviceDao =
+        database.knownDeviceDao()
 }

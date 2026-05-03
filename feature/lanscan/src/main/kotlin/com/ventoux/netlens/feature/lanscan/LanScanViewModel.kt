@@ -10,13 +10,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.ventoux.netlens.core.data.dao.KnownDeviceDao
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
+import com.ventoux.netlens.core.data.model.KnownDeviceEntity
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
 import com.ventoux.netlens.core.network.NetworkInterfaceProvider
 import com.ventoux.netlens.core.network.calculateNetworkAddress
@@ -26,6 +29,7 @@ import com.ventoux.netlens.feature.lanscan.engine.LanMdnsScanner
 import com.ventoux.netlens.feature.lanscan.engine.NetBiosProber
 import com.ventoux.netlens.feature.lanscan.engine.SsdpScanner
 import com.ventoux.netlens.feature.lanscan.engine.SubnetScanner
+import com.ventoux.netlens.feature.lanscan.model.DeviceSortField
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.LanDevice
@@ -51,6 +55,8 @@ class LanScanViewModel @Inject constructor(
     private val arpTableReader: ArpTableReader,
     private val networkInterfaceProvider: NetworkInterfaceProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
+    private val knownDeviceDao: KnownDeviceDao,
+    private val newDeviceNotifier: NewDeviceNotifier,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -61,6 +67,10 @@ class LanScanViewModel @Inject constructor(
 
     private val _sortOrder = MutableStateFlow(SortOrder.IP)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    private val _inventorySearchQuery = MutableStateFlow("")
+    private val _inventorySortField = MutableStateFlow(DeviceSortField.LAST_SEEN)
+    private val _inventorySortAscending = MutableStateFlow(false)
 
     private var scanJob: Job? = null
     private var hostScanJob: Job? = null
@@ -83,6 +93,36 @@ class LanScanViewModel @Inject constructor(
         viewModelScope.launch {
             historyEntries.collect { entries ->
                 _uiState.update { it.copy(historyEntries = entries) }
+            }
+        }
+        viewModelScope.launch {
+            combine(
+                knownDeviceDao.getAllDevices(),
+                _inventorySearchQuery,
+                _inventorySortField,
+                _inventorySortAscending,
+            ) { allDevices, query, sortField, ascending ->
+                val filtered = if (query.isBlank()) {
+                    allDevices
+                } else {
+                    allDevices.filter { device ->
+                        device.hostname?.contains(query, ignoreCase = true) == true ||
+                            device.ip.contains(query, ignoreCase = true) ||
+                            device.vendor?.contains(query, ignoreCase = true) == true ||
+                            device.macAddress.contains(query, ignoreCase = true)
+                    }
+                }
+                val sorted = sortDevices(filtered, sortField, ascending)
+                Triple(sorted, query, sortField to ascending)
+            }.collect { (devices, query, sortPair) ->
+                _uiState.update {
+                    it.copy(
+                        knownDevices = devices,
+                        inventorySearchQuery = query,
+                        inventorySortField = sortPair.first,
+                        inventorySortAscending = sortPair.second,
+                    )
+                }
             }
         }
     }
@@ -248,7 +288,74 @@ class LanScanViewModel @Inject constructor(
 
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
             saveToHistory()
+            persistScanResults(_uiState.value.devices)
         }
+    }
+
+    private suspend fun persistScanResults(devices: List<LanDevice>) {
+        val now = System.currentTimeMillis()
+        for (device in devices) {
+            val mac = device.macAddress ?: continue
+            val existing = knownDeviceDao.getByMac(mac)
+            if (existing != null) {
+                knownDeviceDao.updateLastSeen(
+                    mac = mac,
+                    hostname = device.hostname ?: existing.hostname,
+                    ip = device.ip,
+                    vendor = device.vendor ?: existing.vendor,
+                    lastSeen = now,
+                    deviceType = device.deviceType ?: existing.deviceType,
+                    osGuess = device.osGuess ?: existing.osGuess,
+                )
+            } else {
+                val entity = KnownDeviceEntity(
+                    macAddress = mac,
+                    hostname = device.hostname,
+                    ip = device.ip,
+                    vendor = device.vendor,
+                    firstSeen = now,
+                    lastSeen = now,
+                    isKnown = false,
+                    deviceType = device.deviceType,
+                    osGuess = device.osGuess,
+                )
+                val insertResult = knownDeviceDao.insertIfNew(entity)
+                if (insertResult != -1L) {
+                    newDeviceNotifier.notify(entity)
+                }
+            }
+        }
+    }
+
+    fun toggleKnown(mac: String) {
+        viewModelScope.launch {
+            val device = knownDeviceDao.getByMac(mac) ?: return@launch
+            knownDeviceDao.setKnown(mac, !device.isKnown)
+        }
+    }
+
+    fun deleteDevice(mac: String) {
+        viewModelScope.launch {
+            knownDeviceDao.delete(mac)
+        }
+    }
+
+    fun clearInventory() {
+        viewModelScope.launch {
+            knownDeviceDao.deleteAll()
+        }
+    }
+
+    fun setInventorySearchQuery(query: String) {
+        _inventorySearchQuery.value = query
+    }
+
+    fun setInventorySortField(field: DeviceSortField) {
+        _inventorySortField.value = field
+    }
+
+    fun toggleInventorySortOrder() {
+        _inventorySortAscending.value = !_inventorySortAscending.value
     }
 
     private suspend fun enrichWithArpAndNetBios() {
@@ -399,7 +506,6 @@ class LanScanViewModel @Inject constructor(
             return ip to prefix
         }
     }
-
 }
 
 private fun SortOrder.comparator(): Comparator<LanDevice> = when (this) {
@@ -411,3 +517,20 @@ private fun ipToLong(ip: String): Long {
     return ip.split(".").fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
 }
 
+private fun sortDevices(
+    devices: List<KnownDeviceEntity>,
+    sortField: DeviceSortField,
+    ascending: Boolean,
+): List<KnownDeviceEntity> {
+    val comparator: Comparator<KnownDeviceEntity> = when (sortField) {
+        DeviceSortField.HOSTNAME -> compareBy(nullsLast()) { it.hostname?.lowercase() }
+        DeviceSortField.IP -> compareBy {
+            it.ip.split(".").fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
+        }
+        DeviceSortField.VENDOR -> compareBy(nullsLast()) { it.vendor?.lowercase() }
+        DeviceSortField.FIRST_SEEN -> compareBy { it.firstSeen }
+        DeviceSortField.LAST_SEEN -> compareBy { it.lastSeen }
+        DeviceSortField.MAC -> compareBy { it.macAddress }
+    }
+    return if (ascending) devices.sortedWith(comparator) else devices.sortedWith(comparator.reversed())
+}

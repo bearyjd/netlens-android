@@ -38,6 +38,7 @@
     <string name="lanscan_chip_all">All (1–1024)</string>
     <string name="lanscan_tab_scan">Scan</string>
     <string name="lanscan_tab_history">History</string>
+    <string name="lanscan_tab_inventory">Inventory</string>
     <string name="lanscan_suggested_networks">Suggested networks</string>
     <string name="lanscan_custom_chip">Custom…</string>
     <string name="lanscan_history_empty">No scan history yet</string>
@@ -56,4 +57,36 @@
     <string name="lanscan_action_whois">WHOIS</string>
     <string name="lanscan_cd_copy_results">Copy results</string>
     <string name="lanscan_cd_share">Share results</string>
+
+    <!-- Inventory -->
+    <string name="lanscan_inventory_search_placeholder">Search devices…</string>
+    <string name="lanscan_inventory_clear_search">Clear search</string>
+    <string name="lanscan_inventory_toggle_sort">Toggle sort order</string>
+    <string name="lanscan_inventory_empty">No devices discovered yet.\nRun a scan to build your inventory.</string>
+    <string name="lanscan_inventory_no_results">No devices match your search</string>
+    <string name="lanscan_inventory_first_seen">First: %1$s</string>
+    <string name="lanscan_inventory_last_seen">Last: %1$s</string>
+    <string name="lanscan_inventory_known">Known device</string>
+    <string name="lanscan_inventory_unknown">Unknown device</string>
+    <string name="lanscan_inventory_delete">Delete device</string>
+    <string name="lanscan_inventory_delete_title">Delete device?</string>
+    <string name="lanscan_inventory_delete_message">Remove %1$s from your device inventory?</string>
+    <string name="lanscan_inventory_delete_confirm">Delete</string>
+    <string name="lanscan_inventory_clear_cancel">Cancel</string>
+    <string name="lanscan_inventory_clear_all">Clear All Devices</string>
+    <string name="lanscan_inventory_clear_title">Clear inventory?</string>
+    <string name="lanscan_inventory_clear_message">This will remove all devices from your inventory. This cannot be undone.</string>
+    <string name="lanscan_inventory_clear_confirm">Clear All</string>
+    <string name="lanscan_sort_hostname">Hostname</string>
+    <string name="lanscan_sort_vendor">Vendor</string>
+    <string name="lanscan_sort_first_seen">First seen</string>
+    <string name="lanscan_sort_last_seen">Last seen</string>
+    <string name="lanscan_sort_mac">MAC</string>
+
+    <!-- Notifications -->
+    <string name="lanscan_notification_channel_name">New Device Alerts</string>
+    <string name="lanscan_notification_channel_desc">Alerts when a new device is detected on your network</string>
+    <string name="lanscan_notification_new_device_title">New device detected</string>
+    <string name="lanscan_notification_new_device_text">%1$s (%2$s)</string>
+    <string name="lanscan_notification_unknown_vendor">Unknown vendor</string>
 </resources>
