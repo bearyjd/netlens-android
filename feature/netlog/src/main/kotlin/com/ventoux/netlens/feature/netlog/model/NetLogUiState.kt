@@ -7,4 +7,7 @@ data class NetLogUiState(
     val isMonitoring: Boolean = false,
     val showClearConfirmation: Boolean = false,
     val error: String? = null,
+    val selectedEventTypes: Set<String> = emptySet(),
+    val dateRangeStartMs: Long? = null,
+    val dateRangeEndMs: Long? = null,
 )
