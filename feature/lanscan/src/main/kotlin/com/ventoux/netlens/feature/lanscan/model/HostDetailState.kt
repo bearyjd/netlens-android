@@ -5,6 +5,7 @@ import com.ventoux.netlens.feature.portscan.model.PortResult
 data class HostDetailState(
     val device: LanDevice,
     val portResults: List<PortResult> = emptyList(),
+    val enrichedResults: List<HostPortResult> = emptyList(),
     val isScanning: Boolean = false,
     val progress: Float = 0f,
     val openCount: Int = 0,

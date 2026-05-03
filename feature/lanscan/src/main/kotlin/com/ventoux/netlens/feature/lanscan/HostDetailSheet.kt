@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.lanscan
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,34 +16,41 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
-import com.ventoux.netlens.feature.portscan.model.PortResult
-import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
+import com.ventoux.netlens.feature.lanscan.model.HostPortResult
+import com.ventoux.netlens.feature.portscan.model.PortRiskLevel
+
+private val AmberColor = Color(0xFFFF9800)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -52,9 +60,9 @@ internal fun HostDetailSheet(
     onScanPorts: (List<Int>) -> Unit,
     onCancelScan: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
+    onShareJson: (() -> Unit)?,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedPreset by remember { mutableIntStateOf(0) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -67,70 +75,88 @@ internal fun HostDetailSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
+            // Host header
             item {
-                Text(
-                    text = state.device.ip,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                state.device.hostname?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Text(
-                        text = stringResource(R.string.lanscan_latency_ms, state.device.latencyMs),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = when (state.device.discoveryMethod) {
-                            DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
-                            DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
-                            DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
-                            DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
-                            DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                state.device.macAddress?.let { mac ->
-                    Text(
-                        text = mac,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-                val typeLabel = state.enrichedType ?: state.device.deviceType
-                val osLabel = state.enrichedOs ?: state.device.osGuess
-                val vendorLabel = state.device.vendor
-                if (typeLabel != null || osLabel != null || vendorLabel != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        typeLabel?.let {
-                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = state.device.ip,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        state.device.hostname?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        osLabel?.let {
-                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.lanscan_latency_ms, state.device.latencyMs),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = when (state.device.discoveryMethod) {
+                                    DiscoveryMethod.PING -> stringResource(R.string.lanscan_discovery_ping)
+                                    DiscoveryMethod.MDNS -> stringResource(R.string.lanscan_discovery_mdns)
+                                    DiscoveryMethod.SSDP -> stringResource(R.string.lanscan_discovery_ssdp)
+                                    DiscoveryMethod.NETBIOS -> stringResource(R.string.lanscan_discovery_netbios)
+                                    DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        vendorLabel?.let {
-                            SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                        state.device.macAddress?.let { mac ->
+                            Text(
+                                text = mac,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        val typeLabel = state.enrichedType ?: state.device.deviceType
+                        val osLabel = state.enrichedOs ?: state.device.osGuess
+                        val vendorLabel = state.device.vendor
+                        if (typeLabel != null || osLabel != null || vendorLabel != null) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.padding(top = 4.dp),
+                            ) {
+                                typeLabel?.let {
+                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                                }
+                                osLabel?.let {
+                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                                }
+                                vendorLabel?.let {
+                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                                }
+                            }
+                        }
+                    }
+                    if (onShareJson != null && state.portResults.isNotEmpty() && !state.isScanning) {
+                        IconButton(onClick = onShareJson) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.lanscan_cd_share),
+                            )
                         }
                     }
                 }
             }
 
+            // Quick actions
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text(
@@ -161,34 +187,19 @@ internal fun HostDetailSheet(
                 }
             }
 
+            // Port scan section header + progress
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(
-                    text = stringResource(R.string.lanscan_port_scan_section),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FilterChip(
-                        selected = selectedPreset == 0,
-                        onClick = { selectedPreset = 0 },
-                        label = { Text(stringResource(R.string.lanscan_chip_common)) },
-                        enabled = !state.isScanning,
+                    Text(
+                        text = stringResource(R.string.lanscan_port_scan_section),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
-                    FilterChip(
-                        selected = selectedPreset == 1,
-                        onClick = { selectedPreset = 1 },
-                        label = { Text(stringResource(R.string.lanscan_chip_all)) },
-                        enabled = !state.isScanning,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp),
-                ) {
                     if (state.isScanning) {
                         OutlinedButton(
                             onClick = onCancelScan,
@@ -198,16 +209,9 @@ internal fun HostDetailSheet(
                         ) {
                             Text(stringResource(R.string.lanscan_cancel_port_scan))
                         }
-                    } else {
-                        Button(onClick = {
-                            val ports = if (selectedPreset == 0) {
-                                WellKnownPorts.COMMON_PORTS.keys.sorted()
-                            } else {
-                                (1..1024).toList()
-                            }
-                            onScanPorts(ports)
-                        }) {
-                            Text(stringResource(R.string.lanscan_scan_ports))
+                    } else if (state.portResults.isNotEmpty()) {
+                        OutlinedButton(onClick = { onScanPorts(com.ventoux.netlens.feature.portscan.model.WellKnownPorts.TOP_1000_PORTS) }) {
+                            Text(stringResource(R.string.lanscan_rescan))
                         }
                     }
                 }
@@ -225,11 +229,26 @@ internal fun HostDetailSheet(
                             .padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text(
-                            text = stringResource(R.string.lanscan_open_count, state.openCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        // Risk summary counts
+                        val criticalCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.CRITICAL }
+                        val openCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.WARNING }
+                        val closedCount = state.enrichedResults.count { !it.isOpen }
+                        if (criticalCount > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_risk_critical_count, criticalCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        if (openCount > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_risk_open_count, openCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AmberColor,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                         Text(
                             text = stringResource(R.string.lanscan_scanned_count, state.portResults.size),
                             style = MaterialTheme.typography.bodySmall,
@@ -249,45 +268,36 @@ internal fun HostDetailSheet(
                 }
             }
 
-            val sorted = state.portResults.sortedWith(
-                compareByDescending<PortResult> { it.isOpen }
-                    .thenBy { it.port },
-            )
-            items(sorted, key = { it.port }) { result ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
-                        contentDescription = null,
-                        tint = if (result.isOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = result.port.toString(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
-                        modifier = Modifier.width(52.dp),
-                    )
-                    Text(
-                        text = result.serviceName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (result.isOpen && result.latencyMs > 0) {
-                        Text(
-                            text = "${result.latencyMs}ms",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Grouped port results by risk level
+            if (state.enrichedResults.isNotEmpty()) {
+                val grouped = state.enrichedResults
+                    .groupBy { it.riskLevel }
+                    .entries
+                    .sortedBy { it.key.sortOrder }
+
+                for ((riskLevel, results) in grouped) {
+                    item(key = "header_${riskLevel.name}") {
+                        RiskGroupHeader(
+                            riskLevel = riskLevel,
+                            count = results.size,
                         )
                     }
+                    items(results, key = { "${riskLevel.name}_${it.port}" }) { result ->
+                        PortResultRow(result = result)
+                    }
+                }
+            } else if (!state.isScanning && state.portResults.isEmpty() && state.error == null) {
+                item {
+                    Text(
+                        text = stringResource(R.string.lanscan_port_scan_starting),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
                 }
             }
 
+            // Fingerprint section
             if (state.fingerprintEvidence.isNotEmpty()) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -326,4 +336,106 @@ internal fun HostDetailSheet(
             }
         }
     }
+}
+
+@Composable
+private fun RiskGroupHeader(
+    riskLevel: PortRiskLevel,
+    count: Int,
+) {
+    val color = riskLevel.toColor()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = riskLevel.label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
+        Surface(
+            color = color.copy(alpha = 0.12f),
+            shape = MaterialTheme.shapes.small,
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PortResultRow(result: HostPortResult) {
+    val riskColor = result.riskLevel.toColor()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = if (result.isOpen) Icons.Default.CheckCircle else Icons.Default.Close,
+                contentDescription = null,
+                tint = riskColor,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = result.port.toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+                modifier = Modifier.width(52.dp),
+            )
+            Text(
+                text = result.serviceName,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Surface(
+                color = riskColor.copy(alpha = 0.12f),
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Text(
+                    text = result.riskLevel.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = riskColor,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+            if (result.isOpen && result.latencyMs > 0) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "${result.latencyMs}ms",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (result.isOpen) {
+            Text(
+                text = result.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 24.dp, top = 1.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PortRiskLevel.toColor(): Color = when (this) {
+    PortRiskLevel.CRITICAL -> MaterialTheme.colorScheme.error
+    PortRiskLevel.WARNING -> AmberColor
+    PortRiskLevel.INFO -> MaterialTheme.colorScheme.tertiary
+    PortRiskLevel.CLOSED -> MaterialTheme.colorScheme.outline
 }
