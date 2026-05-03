@@ -14,6 +14,7 @@ import com.ventoux.netlens.feature.history.HistoryScreen
 import com.ventoux.netlens.feature.httptester.HttpTesterScreen
 import com.ventoux.netlens.feature.ipinfo.IpInfoScreen
 import com.ventoux.netlens.feature.posture.PostureScreen
+import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.speedtest.SpeedTestScreen
 import com.ventoux.netlens.feature.lanscan.LanScanScreen
 import com.ventoux.netlens.feature.mdns.MdnsScreen
@@ -54,7 +55,19 @@ fun NetLensNavHost(
                 },
             )
         }
-        composable(ToolDestination.Posture.route) { PostureScreen(onBack = navController::popBackStack) }
+        composable(ToolDestination.Posture.route) {
+            PostureScreen(
+                onBack = navController::popBackStack,
+                onFactorClick = { factor ->
+                    val route = when (factor) {
+                        PostureFactor.Encryption -> ToolDestination.WifiAnalyzer.route
+                        PostureFactor.DeviceCount -> ToolDestination.LanScan.route
+                        PostureFactor.VpnStatus -> null
+                    }
+                    route?.let { navController.navigate(it) { launchSingleTop = true } }
+                },
+            )
+        }
         composable(ToolDestination.DnsLeak.route) { DnsLeakScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack, onNavigateToTool = navigateToTool) }
         composable(

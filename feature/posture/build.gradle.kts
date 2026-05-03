@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(libs.compose.material.icons)
 
+    testImplementation(libs.datastore.preferences)
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
     testImplementation(libs.kotlinx.coroutines.test)
