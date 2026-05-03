@@ -53,9 +53,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.feature.portscan.model.PortResult
+import com.ventoux.netlens.feature.portscan.model.PortRiskLevel
 import com.ventoux.netlens.feature.portscan.model.PortScanUiState
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 
+private val CriticalColor = Color(0xFFEF4444)
+private val WarningColor = Color(0xFFF59E0B)
+private val InfoColor = Color(0xFF3B82F6)
 private val OpenPortColor = Color(0xFF4CAF50)
 private val ClosedPortColor = Color(0xFF6B7280)
 
@@ -227,7 +231,7 @@ private fun PortScanContent(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             val sortedResults = state.results.sortedWith(
-                compareByDescending<PortResult> { it.isOpen }.thenBy { it.port },
+                compareBy<PortResult> { it.riskLevel.sortOrder }.thenBy { it.port },
             )
             items(sortedResults, key = { it.port }) { result ->
                 PortResultRow(result = result, host = host.trim(), onNavigateToTool = onNavigateToTool)
@@ -238,15 +242,25 @@ private fun PortScanContent(
 
 @Composable
 private fun StatsRow(state: PortScanUiState) {
+    val criticalCount = state.results.count { it.riskLevel == PortRiskLevel.CRITICAL }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
-            text = "${state.openCount} open",
-            color = OpenPortColor,
-            style = MaterialTheme.typography.labelLarge,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "${state.openCount} open",
+                color = OpenPortColor,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            if (criticalCount > 0) {
+                Text(
+                    text = stringResource(R.string.portscan_stats_critical, criticalCount),
+                    color = CriticalColor,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
         Text(
             text = "${state.results.size} scanned",
             style = MaterialTheme.typography.labelLarge,
@@ -263,7 +277,7 @@ private fun PortResultRow(
     onNavigateToTool: (String, String) -> Unit,
 ) {
     val iconColor by animateColorAsState(
-        targetValue = if (result.isOpen) OpenPortColor else ClosedPortColor,
+        targetValue = if (result.isOpen) riskColor(result.riskLevel) else ClosedPortColor,
         label = "portIconColor",
     )
 
@@ -289,16 +303,33 @@ private fun PortResultRow(
                 modifier = Modifier.width(56.dp),
             )
 
-            Text(
-                text = result.serviceName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (result.isOpen) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = result.serviceName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (result.isOpen) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    if (result.isOpen && result.riskLevel != PortRiskLevel.CLOSED) {
+                        RiskBadge(riskLevel = result.riskLevel)
+                    }
+                }
+                if (result.isOpen && result.description.isNotEmpty()) {
+                    Text(
+                        text = result.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
+            }
 
             if (result.isOpen && result.latencyMs > 0) {
                 Text(
@@ -328,6 +359,31 @@ private fun PortResultRow(
             }
         }
     }
+}
+
+@Composable
+private fun RiskBadge(riskLevel: PortRiskLevel) {
+    val color = riskColor(riskLevel)
+    val label = when (riskLevel) {
+        PortRiskLevel.CRITICAL -> stringResource(R.string.portscan_risk_critical)
+        PortRiskLevel.WARNING -> stringResource(R.string.portscan_risk_warning)
+        PortRiskLevel.INFO -> stringResource(R.string.portscan_risk_info)
+        PortRiskLevel.CLOSED -> return
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
+}
+
+private fun riskColor(riskLevel: PortRiskLevel): Color = when (riskLevel) {
+    PortRiskLevel.CRITICAL -> CriticalColor
+    PortRiskLevel.WARNING -> WarningColor
+    PortRiskLevel.INFO -> InfoColor
+    PortRiskLevel.CLOSED -> ClosedPortColor
 }
 
 private val HTTP_PORTS = setOf(80, 443, 8080, 8443)
