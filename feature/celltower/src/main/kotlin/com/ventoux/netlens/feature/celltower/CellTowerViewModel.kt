@@ -10,9 +10,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -35,17 +37,19 @@ class CellTowerViewModel @Inject constructor(
     fun refresh() {
         if (!_state.value.hasPermission) return
         _state.update { it.copy(isRefreshing = true) }
-        val snapshot = cellTowerReader.readOnce()
-        if (snapshot == null) {
-            _state.update { it.copy(isRefreshing = false, noCellular = true) }
-        } else {
-            _state.update {
-                it.copy(
-                    connectedTower = snapshot.connected,
-                    neighborCells = snapshot.neighbors,
-                    isRefreshing = false,
-                    noCellular = false,
-                )
+        viewModelScope.launch {
+            val snapshot = withContext(Dispatchers.IO) { cellTowerReader.readOnce() }
+            if (snapshot == null) {
+                _state.update { it.copy(isRefreshing = false, noCellular = true) }
+            } else {
+                _state.update {
+                    it.copy(
+                        connectedTower = snapshot.connected,
+                        neighborCells = snapshot.neighbors,
+                        isRefreshing = false,
+                        noCellular = false,
+                    )
+                }
             }
         }
     }

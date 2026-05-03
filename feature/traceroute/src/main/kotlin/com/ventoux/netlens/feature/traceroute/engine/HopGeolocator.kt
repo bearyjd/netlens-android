@@ -1,10 +1,13 @@
 package com.ventoux.netlens.feature.traceroute.engine
 
 import com.ventoux.netlens.feature.traceroute.model.HopLocation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
@@ -12,6 +15,7 @@ import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
+import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 
@@ -22,17 +26,20 @@ interface HopGeolocator {
 class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val semaphore = Semaphore(MAX_CONCURRENT)
 
     override suspend fun lookupAll(ips: List<String?>): Map<String, HopLocation> {
         val uniqueIps = ips.filterNotNull()
-            .filter { it.isNotBlank() && !isPrivateIp(it) }
+            .filter { it.isNotBlank() && isValidPublicIp(it) }
             .distinct()
 
         if (uniqueIps.isEmpty()) return emptyMap()
 
         return coroutineScope {
             uniqueIps.map { ip ->
-                async { ip to lookupSingle(ip) }
+                async {
+                    semaphore.withPermit { ip to lookupSingle(ip) }
+                }
             }.awaitAll()
                 .filter { it.second != null }
                 .associate { it.first to it.second!! }
@@ -67,24 +74,28 @@ class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
             } finally {
                 conn.disconnect()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }
     }
 
-    private fun isPrivateIp(ip: String): Boolean {
-        if (ip.startsWith("10.") || ip.startsWith("192.168.") ||
-            ip.startsWith("127.") || ip.startsWith("169.254.")
-        ) return true
-        if (ip.startsWith("172.")) {
-            val second = ip.removePrefix("172.").substringBefore(".").toIntOrNull() ?: 0
-            if (second in 16..31) return true
+    private fun isValidPublicIp(ip: String): Boolean {
+        val addr = try {
+            InetAddress.getByName(ip)
+        } catch (_: Exception) {
+            return false
         }
-        return false
+        return !addr.isSiteLocalAddress &&
+            !addr.isLoopbackAddress &&
+            !addr.isLinkLocalAddress &&
+            !addr.isAnyLocalAddress
     }
 
     private companion object {
         const val BASE_URL = "https://ipwho.is"
         const val TIMEOUT_MS = 5_000
+        const val MAX_CONCURRENT = 5
     }
 }

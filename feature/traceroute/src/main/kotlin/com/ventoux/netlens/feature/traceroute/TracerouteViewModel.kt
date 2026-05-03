@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
@@ -58,10 +59,12 @@ class TracerouteViewModel @Inject constructor(
                         )
                     }
                 }
-                .onCompletion {
+                .onCompletion { cause ->
                     _state.update { it.copy(isTracing = false) }
-                    enrichWithGeolocation()
-                    saveToHistory()
+                    if (cause == null) {
+                        enrichWithGeolocation()
+                        saveToHistory()
+                    }
                 }
                 .collect { hop ->
                     _state.update { current ->
@@ -97,6 +100,8 @@ class TracerouteViewModel @Inject constructor(
             }
 
             _state.update { it.copy(hops = finalHops, isGeoLoading = false) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             _state.update { it.copy(isGeoLoading = false) }
         }

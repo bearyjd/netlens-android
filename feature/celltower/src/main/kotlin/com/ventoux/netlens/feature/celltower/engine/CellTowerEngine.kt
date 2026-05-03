@@ -52,7 +52,11 @@ class CellTowerReaderImpl @Inject constructor(
         ) return null
 
         @Suppress("MissingPermission")
-        val allCells = telephonyManager.allCellInfo ?: return null
+        val allCells = try {
+            telephonyManager.allCellInfo
+        } catch (_: SecurityException) {
+            return null
+        } ?: return null
         val operatorName = telephonyManager.networkOperatorName ?: ""
 
         val parsed = allCells.mapNotNull { parseCellInfo(it, operatorName) }
@@ -87,9 +91,9 @@ class CellTowerReaderImpl @Inject constructor(
         )
     }
 
-    private fun parseNr(info: CellInfoNr, operatorName: String): CellTowerInfo {
-        val identity = info.cellIdentity as android.telephony.CellIdentityNr
-        val signal = info.cellSignalStrength as CellSignalStrengthNr
+    private fun parseNr(info: CellInfoNr, operatorName: String): CellTowerInfo? {
+        val identity = info.cellIdentity as? android.telephony.CellIdentityNr ?: return null
+        val signal = info.cellSignalStrength as? CellSignalStrengthNr ?: return null
         return CellTowerInfo(
             networkType = "5G NR",
             operatorName = operatorName,
