@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Widgets
@@ -115,6 +116,13 @@ enum class ToolDestination(
         label = "Port Scanner",
         description = "Scan open ports",
         category = ToolCategory.Discovery,
+    ),
+    DnsLeak(
+        route = "dnsleak",
+        icon = Icons.Default.GppMaybe,
+        label = "DNS Leak Test",
+        description = "Detect DNS query leaks",
+        category = ToolCategory.Security,
     ),
     Tls(
         route = "tls",
