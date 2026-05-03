@@ -41,7 +41,15 @@ data class WidgetState(
     val isMetered: Boolean = false,
     val isCaptivePortal: Boolean = false,
     val hasPrivateDns: Boolean = false,
+
+    val dnsServers: String = "",
+    val routingMode: String = "",
+    val isDnsLeaking: Boolean = false,
+    val lastRefreshMs: Long = 0L,
+    val chipPingResult: String = "",
+    val chipDnsResult: String = "",
 ) {
+    val primaryDns: String get() = dnsServers.split(",").firstOrNull()?.takeIf { it.isNotEmpty() }.orEmpty()
     fun isStale(now: Long = System.currentTimeMillis()): Boolean =
         lastScanTimestamp > 0L && now - lastScanTimestamp > STALE_THRESHOLD_MS
 
@@ -55,5 +63,6 @@ data class WidgetState(
 
     companion object {
         private const val STALE_THRESHOLD_MS = 5 * 60 * 1000L
+        const val STALE_ALERT_THRESHOLD_MS = 10 * 60 * 1000L
     }
 }

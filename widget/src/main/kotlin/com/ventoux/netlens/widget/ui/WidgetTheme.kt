@@ -27,6 +27,12 @@ object WidgetTheme {
     val METERED_GRAY = Color(0xFF9E9E9E)
     val PRIVATE_DNS_BLUE = Color(0xFF2196F3)
 
+    val CHIP_DEFAULT = Color(0x1AFFFFFF)
+    val CHIP_GOOD = Color(0x1A4CAF50)
+    val CHIP_BAD = Color(0x1AF44336)
+    val CHIP_PORTAL_ACTIVE = Color(0x33FF9800)
+    val DIVIDER = Color(0x33FFFFFF)
+
     fun scoreColor(grade: String): Color = when (grade.uppercase()) {
         "A", "B" -> SCORE_GREEN
         "C" -> SCORE_AMBER
