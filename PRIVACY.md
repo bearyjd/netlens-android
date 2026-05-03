@@ -14,8 +14,7 @@ NetLens is a network diagnostics tool. By design, it sends network traffic to ho
 
 | Service | Purpose | When |
 |---------|---------|------|
-| [ip-api.com](http://ip-api.com) | Public IP geolocation | IP Info screen |
-| [ipapi.co](https://ipapi.co) | Public IP for widget | Home screen widget |
+| [ipinfo.io](https://ipinfo.io) | Public IP geolocation and network info | IP Info screen, Home screen widget |
 
 These services receive your device's public IP address. They are governed by their own privacy policies.
 
