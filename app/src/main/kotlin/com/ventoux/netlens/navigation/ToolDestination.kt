@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Speed
@@ -116,6 +117,13 @@ enum class ToolDestination(
         label = "Port Scanner",
         description = "Scan open ports",
         category = ToolCategory.Discovery,
+    ),
+    WifiAudit(
+        route = "wifiaudit",
+        icon = Icons.Default.GppGood,
+        label = "Wi-Fi Audit",
+        description = "Security audit on join",
+        category = ToolCategory.Security,
     ),
     DnsLeak(
         route = "dnsleak",
