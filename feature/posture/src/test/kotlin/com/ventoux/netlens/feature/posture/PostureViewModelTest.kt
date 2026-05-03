@@ -1,8 +1,10 @@
 package com.ventoux.netlens.feature.posture
 
 import app.cash.turbine.test
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
+import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkMonitor
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
 import com.ventoux.netlens.feature.posture.model.PostureUiState
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PostureViewModelTest {
@@ -29,6 +32,7 @@ class PostureViewModelTest {
     private lateinit var networkMonitor: FakeNetworkMonitor
     private lateinit var encryptionProvider: FakeEncryptionTypeProvider
     private lateinit var lanScanDao: FakeLanScanHistoryDao
+    private lateinit var preferences: UserPreferencesRepository
 
     @BeforeEach
     fun setup() {
@@ -36,6 +40,9 @@ class PostureViewModelTest {
         networkMonitor = FakeNetworkMonitor()
         encryptionProvider = FakeEncryptionTypeProvider()
         lanScanDao = FakeLanScanHistoryDao()
+        preferences = UserPreferencesRepository(
+            PreferenceDataStoreFactory.create { File.createTempFile("test_prefs", ".preferences_pb") },
+        )
     }
 
     @AfterEach
@@ -47,6 +54,7 @@ class PostureViewModelTest {
         networkMonitor = networkMonitor,
         encryptionTypeProvider = encryptionProvider,
         lanScanHistoryDao = lanScanDao,
+        preferences = preferences,
     )
 
     @Test

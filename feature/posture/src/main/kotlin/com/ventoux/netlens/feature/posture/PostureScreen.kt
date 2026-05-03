@@ -1,6 +1,7 @@
 package com.ventoux.netlens.feature.posture
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.feature.posture.model.FactorResult
+import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.posture.model.PostureScore
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import com.ventoux.netlens.feature.posture.model.Severity
@@ -69,6 +71,7 @@ fun gradeColor(grade: String): Color = when (grade) {
 @Composable
 fun PostureScreen(
     onBack: () -> Unit,
+    onFactorClick: (PostureFactor) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PostureViewModel = hiltViewModel(),
 ) {
@@ -146,7 +149,10 @@ fun PostureScreen(
                     ScoreHero(score = s.score)
                     Spacer(modifier = Modifier.height(24.dp))
                     s.score.factors.forEach { factor ->
-                        FactorCard(factor = factor)
+                        FactorCard(
+                            factor = factor,
+                            onClick = { onFactorClick(factor.factor) },
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
@@ -189,9 +195,11 @@ private fun ScoreHero(score: PostureScore) {
 }
 
 @Composable
-private fun FactorCard(factor: FactorResult) {
+private fun FactorCard(factor: FactorResult, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),

@@ -3,6 +3,7 @@ package com.ventoux.netlens.feature.posture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
+import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkMonitor
 import com.ventoux.netlens.feature.posture.engine.PostureScoreEngine
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
@@ -26,6 +27,7 @@ class PostureViewModel @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val encryptionTypeProvider: EncryptionTypeProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
+    private val preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PostureUiState>(PostureUiState.Loading)
@@ -84,10 +86,17 @@ class PostureViewModel @Inject constructor(
                 isVpnActive = vpn,
             )
 
-            _uiState.value = if (score != null) {
-                PostureUiState.Scored(score)
+            if (score != null) {
+                _uiState.value = PostureUiState.Scored(score)
+                val issues = score.factors.filter { it.severity == com.ventoux.netlens.feature.posture.model.Severity.Critical || it.severity == com.ventoux.netlens.feature.posture.model.Severity.Poor }
+                preferences.setPostureScore(
+                    grade = score.grade,
+                    numericScore = score.numericScore,
+                    issueCount = issues.size,
+                    topIssue = issues.firstOrNull()?.detail,
+                )
             } else {
-                PostureUiState.Error("Unable to evaluate network security")
+                _uiState.value = PostureUiState.Error("Unable to evaluate network security")
             }
         } catch (e: CancellationException) {
             throw e
