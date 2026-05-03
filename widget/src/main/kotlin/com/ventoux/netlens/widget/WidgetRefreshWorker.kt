@@ -12,6 +12,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.widget.model.WidgetIpResponse
+import com.ventoux.netlens.widget.util.DnsLeakDetector
 import com.ventoux.netlens.widget.util.NetworkCollector
 import com.ventoux.netlens.widget.util.PingMeasurement
 import com.ventoux.netlens.widget.util.toFlagEmoji
@@ -108,6 +109,21 @@ class WidgetRefreshWorker(
 
             val collected = NetworkCollector.collect(appContext)
 
+            val dnsServers = collected.dnsServers
+            val routingMode = if (isVpnActive) {
+                val routes = cm.getLinkProperties(network)?.routes ?: emptyList()
+                val vpnDefault = routes.any { route ->
+                    route.isDefaultRoute &&
+                        route.`interface` == collected.vpnInterfaceName
+                }
+                DnsLeakDetector.detectRoutingMode(true, vpnDefault)
+            } else {
+                DnsLeakDetector.detectRoutingMode(false, false)
+            }
+            val isDnsLeaking = DnsLeakDetector.isLeaking(
+                dnsServers, isVpnActive, collected.vpnInterfaceName, null,
+            )
+
             val pingResult = if (isConnected) {
                 PingMeasurement.measure()?.also { PingMeasurement.record(it) }
             } else {
@@ -158,11 +174,18 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.IS_METERED] = collected.isMetered
                 prefs[WidgetStateDefinition.IS_CAPTIVE_PORTAL] = collected.isCaptivePortal
                 prefs[WidgetStateDefinition.HAS_PRIVATE_DNS] = collected.hasPrivateDns
+                prefs[WidgetStateDefinition.DNS_SERVERS] = dnsServers.joinToString(",")
+                prefs[WidgetStateDefinition.ROUTING_MODE] = routingMode
+                prefs[WidgetStateDefinition.IS_DNS_LEAKING] = isDnsLeaking
+                prefs[WidgetStateDefinition.LAST_REFRESH_MS] = System.currentTimeMillis()
+                prefs[WidgetStateDefinition.CHIP_PING_RESULT] = ""
+                prefs[WidgetStateDefinition.CHIP_DNS_RESULT] = ""
             }
 
             CompactWidget().updateAll(appContext)
             StandardWidget().updateAll(appContext)
             DashboardWidget().updateAll(appContext)
+            FourByTwoWidget().updateAll(appContext)
 
             Result.success()
         } catch (e: kotlinx.coroutines.CancellationException) {

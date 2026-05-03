@@ -30,13 +30,16 @@ import com.ventoux.netlens.widget.util.Deeplink
 import com.ventoux.netlens.widget.util.formatLinkSpeed
 
 @Composable
-fun DashboardWidgetContent(state: WidgetState) {
+fun DashboardWidgetContent(
+    state: WidgetState,
+    modifier: GlanceModifier = GlanceModifier
+        .fillMaxSize()
+        .cornerRadius(WidgetTheme.CORNER_RADIUS)
+        .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY))
+        .padding(horizontal = 10.dp, vertical = 6.dp),
+) {
     Row(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .cornerRadius(WidgetTheme.CORNER_RADIUS)
-            .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Section 1: Country flag + VPN lock

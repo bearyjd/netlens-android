@@ -16,6 +16,7 @@ suspend fun refreshAllWidgets(context: Context) {
     CompactWidget().updateAll(context)
     StandardWidget().updateAll(context)
     DashboardWidget().updateAll(context)
+    FourByTwoWidget().updateAll(context)
 }
 
 fun enqueueWidgetRefresh(context: Context) {
