@@ -14,4 +14,8 @@
     <string name="portscan_cd_closed">Closed</string>
     <string name="portscan_action_http_test">HTTP Test</string>
     <string name="portscan_action_tls_inspect">TLS Inspect</string>
+    <string name="portscan_risk_critical">Critical</string>
+    <string name="portscan_risk_warning">Open</string>
+    <string name="portscan_risk_info">Info</string>
+    <string name="portscan_stats_critical">%d critical</string>
 </resources>
