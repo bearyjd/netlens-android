@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -50,9 +50,6 @@ import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
 import com.ventoux.netlens.feature.speedtest.model.SpeedTestPhase
 import com.ventoux.netlens.feature.speedtest.model.SpeedTestUiState
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +59,7 @@ fun SpeedTestScreen(
     viewModel: SpeedTestViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
@@ -101,6 +99,7 @@ fun SpeedTestScreen(
     ) { innerPadding ->
         SpeedTestContent(
             state = state,
+            history = history,
             onStartTest = viewModel::startTest,
             onCancelTest = viewModel::cancelTest,
             modifier = Modifier.padding(innerPadding),
@@ -111,6 +110,7 @@ fun SpeedTestScreen(
 @Composable
 private fun SpeedTestContent(
     state: SpeedTestUiState,
+    history: List<SpeedTestHistoryEntry>,
     onStartTest: () -> Unit,
     onCancelTest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -171,6 +171,12 @@ private fun SpeedTestContent(
         if (state.phase == SpeedTestPhase.COMPLETE || state.downloadMbps > 0f || state.uploadMbps > 0f) {
             item {
                 ResultsCard(state = state)
+            }
+        }
+
+        if (history.size >= 2) {
+            item {
+                HistorySparklineCard(history = history)
             }
         }
     }
@@ -328,5 +334,125 @@ private fun StatItem(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun HistorySparklineCard(
+    history: List<SpeedTestHistoryEntry>,
+    modifier: Modifier = Modifier,
+) {
+    val downloadColor = MaterialTheme.colorScheme.primary
+    val uploadColor = MaterialTheme.colorScheme.tertiary
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.speedtest_label_history),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LegendDot(
+                    color = downloadColor,
+                    label = stringResource(R.string.speedtest_chart_download),
+                )
+                LegendDot(
+                    color = uploadColor,
+                    label = stringResource(R.string.speedtest_chart_upload),
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            SparklineChart(
+                history = history,
+                downloadColor = downloadColor,
+                uploadColor = uploadColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegendDot(
+    color: Color,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Canvas(modifier = Modifier.size(8.dp)) {
+            drawCircle(color = color)
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SparklineChart(
+    history: List<SpeedTestHistoryEntry>,
+    downloadColor: Color,
+    uploadColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val chronological = history.sortedBy { it.timestamp }
+    val maxSpeed = chronological.maxOf { maxOf(it.downloadMbps, it.uploadMbps) }.coerceAtLeast(1f)
+
+    Canvas(modifier = modifier) {
+        val pointCount = chronological.size
+        if (pointCount < 2) return@Canvas
+
+        val stepX = size.width / (pointCount - 1)
+        val chartHeight = size.height
+
+        fun buildPath(values: List<Float>): Path = Path().apply {
+            values.forEachIndexed { i, value ->
+                val x = i * stepX
+                val y = chartHeight - (value / maxSpeed) * chartHeight
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+        }
+
+        val downloadPath = buildPath(chronological.map { it.downloadMbps })
+        val uploadPath = buildPath(chronological.map { it.uploadMbps })
+
+        drawPath(
+            path = downloadPath,
+            color = downloadColor,
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+        )
+        drawPath(
+            path = uploadPath,
+            color = uploadColor,
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+        )
+
+        chronological.forEachIndexed { i, entry ->
+            val x = i * stepX
+            drawCircle(
+                color = downloadColor,
+                radius = 3.dp.toPx(),
+                center = Offset(x, chartHeight - (entry.downloadMbps / maxSpeed) * chartHeight),
+            )
+            drawCircle(
+                color = uploadColor,
+                radius = 3.dp.toPx(),
+                center = Offset(x, chartHeight - (entry.uploadMbps / maxSpeed) * chartHeight),
+            )
+        }
     }
 }
