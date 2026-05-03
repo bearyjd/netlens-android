@@ -5,4 +5,6 @@ data class PortResult(
     val serviceName: String,
     val isOpen: Boolean,
     val latencyMs: Long = 0,
+    val riskLevel: PortRiskLevel = PortRiskLevel.CLOSED,
+    val description: String = "",
 )

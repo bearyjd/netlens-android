@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import com.ventoux.netlens.feature.portscan.model.PortResult
+import com.ventoux.netlens.feature.portscan.model.PortRiskClassifier
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -52,6 +53,8 @@ class PortScannerImpl @Inject constructor() : PortScanner {
                 serviceName = serviceName,
                 isOpen = true,
                 latencyMs = latencyMs,
+                riskLevel = PortRiskClassifier.classifyRisk(port, true),
+                description = WellKnownPorts.getDescription(port),
             )
         } catch (_: IOException) {
             PortResult(
@@ -59,6 +62,8 @@ class PortScannerImpl @Inject constructor() : PortScanner {
                 serviceName = serviceName,
                 isOpen = false,
                 latencyMs = 0,
+                riskLevel = PortRiskClassifier.classifyRisk(port, false),
+                description = WellKnownPorts.getDescription(port),
             )
         } finally {
             try {
