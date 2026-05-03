@@ -1,13 +1,13 @@
 package com.ventoux.netlens.widget.model
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class WidgetIpResponse(
-    val query: String = "",
+    val ip: String = "",
+    val city: String = "",
+    val region: String = "",
     val country: String = "",
-    val countryCode: String = "",
-    val isp: String = "",
-    @SerialName("as") val asName: String = "",
+    val org: String = "",
+    val loc: String = "",
 )
