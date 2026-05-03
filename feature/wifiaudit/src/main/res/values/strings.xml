@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigate_back">Back</string>
+    <string name="wifiaudit_title">Wi-Fi Security Audit</string>
+    <string name="wifiaudit_cd_rerun">Re-run audit</string>
+    <string name="wifiaudit_cd_dismiss">Dismiss finding</string>
+    <string name="wifiaudit_network_label">Auditing: %1$s</string>
+    <string name="wifiaudit_empty_clean">All checks passed</string>
+    <string name="wifiaudit_empty_not_connected">Not connected to Wi-Fi</string>
+</resources>
