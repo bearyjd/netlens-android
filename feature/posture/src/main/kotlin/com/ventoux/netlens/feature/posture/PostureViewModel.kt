@@ -92,6 +92,9 @@ class PostureViewModel @Inject constructor(
                 val issues = score.factors.filter {
                     it.severity == Severity.Critical || it.severity == Severity.Poor
                 }
+                // Persist for the home-screen widget. Non-fatal: the in-app Scored state
+                // is already published; a write failure means the widget may serve the
+                // previously cached score until its next refresh.
                 try {
                     preferences.setPostureScore(
                         grade = score.grade,
