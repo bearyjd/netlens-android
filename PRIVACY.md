@@ -49,7 +49,7 @@ Updates to this policy will be posted in this file and noted in the changelog. T
 
 ## Contact
 
-Questions or concerns: [jd@beary.us](mailto:jd@beary.us)
+Questions or concerns: [privacy@ventouxadvisoryco.com](mailto:privacy@ventouxadvisoryco.com)
 
 ## Source
 
