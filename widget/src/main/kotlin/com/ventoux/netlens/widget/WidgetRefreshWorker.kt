@@ -50,6 +50,10 @@ class WidgetRefreshWorker(
 
     override suspend fun doWork(): Result {
         return try {
+            val entryPoint = EntryPointAccessors.fromApplication(
+                appContext,
+                WorkerEntryPoint::class.java,
+            )
             val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = cm.activeNetwork
             val caps = network?.let { cm.getNetworkCapabilities(it) }
@@ -72,10 +76,6 @@ class WidgetRefreshWorker(
             val isVpnActive = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
 
             val deviceCount = try {
-                val entryPoint = EntryPointAccessors.fromApplication(
-                    appContext,
-                    WorkerEntryPoint::class.java,
-                )
                 entryPoint.lanScanHistoryDao()
                     .getRecent(1).first()
                     .firstOrNull()?.deviceCount ?: 0
@@ -85,11 +85,7 @@ class WidgetRefreshWorker(
 
             val score = if (isConnected) {
                 val persisted = try {
-                    val entryPointForScore = EntryPointAccessors.fromApplication(
-                        appContext,
-                        WorkerEntryPoint::class.java,
-                    )
-                    entryPointForScore.userPreferencesRepository()
+                    entryPoint.userPreferencesRepository()
                         .postureScore.first()
                 } catch (_: Exception) {
                     null
@@ -110,11 +106,7 @@ class WidgetRefreshWorker(
             }
 
             val consentGranted = try {
-                val entryPointForConsent = EntryPointAccessors.fromApplication(
-                    appContext,
-                    WorkerEntryPoint::class.java,
-                )
-                entryPointForConsent.userPreferencesRepository()
+                entryPoint.userPreferencesRepository()
                     .ipInfoConsentGranted.first()
             } catch (_: Exception) {
                 false

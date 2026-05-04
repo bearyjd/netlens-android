@@ -1,7 +1,10 @@
 package com.ventoux.netlens.feature.posture
 
 import app.cash.turbine.test
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
@@ -23,6 +26,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PostureViewModelTest {
@@ -171,6 +175,35 @@ class PostureViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `persist failure preserves Scored state`() = runTest {
+        networkMonitor.online.value = true
+        networkMonitor.vpn.value = true
+        encryptionProvider.encryptionType = "WPA3"
+        lanScanDao.entries.add(
+            LanScanHistoryEntry(
+                ssid = "Test",
+                subnet = "192.168.1.0/24",
+                deviceCount = 3,
+                devicesJson = "[]",
+            ),
+        )
+        val throwingPreferences = UserPreferencesRepository(ThrowingDataStore())
+        val vm = PostureViewModel(
+            networkMonitor = networkMonitor,
+            encryptionTypeProvider = encryptionProvider,
+            lanScanHistoryDao = lanScanDao,
+            preferences = throwingPreferences,
+        )
+        vm.uiState.test {
+            assertEquals(PostureUiState.Loading, awaitItem())
+            val scored = awaitItem()
+            assertTrue(scored is PostureUiState.Scored)
+            assertEquals("A", (scored as PostureUiState.Scored).score.grade)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
 
 private class FakeNetworkMonitor : NetworkMonitor {
@@ -186,6 +219,13 @@ private class FakeEncryptionTypeProvider : EncryptionTypeProvider {
     override fun currentEncryptionType(): String? {
         if (shouldThrow) throw RuntimeException("Test error")
         return encryptionType
+    }
+}
+
+private class ThrowingDataStore : DataStore<Preferences> {
+    override val data: Flow<Preferences> = flowOf(emptyPreferences())
+    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+        throw IOException("simulated DataStore write failure")
     }
 }
 
