@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 16 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, IP/subnet calculator, endpoint monitor, network log, and speed test — each in its own feature module.
+NetLens is an Android network diagnostics toolkit (package `com.ventoux.netlens`). It provides 20 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, IP/subnet calculator, endpoint monitor, network log, speed test, security posture, cell tower, Wi-Fi audit, and DNS leak test — each in its own feature module.
 
 ## Build Commands
 
@@ -26,7 +26,7 @@ CI builds `foss` flavor and currently tests only: `:core:network`, `:feature:lan
 ### Module Graph
 
 ```
-app ──┬── feature:* (19 modules)  ── core:network
+app ──┬── feature:* (22 modules)  ── core:network
       ├── core:network                core:data
       ├── core:data                   core:billing
       ├── core:billing                core:oui

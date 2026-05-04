@@ -10,22 +10,26 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netatl
 ## Features
 
 ### Network Info
-- **IP Info** — Public IP address and geolocation lookup
+- **IP Info** — Public IP address and geolocation lookup (IPinfo API)
 - **WHOIS** — Domain and IP ownership information with reverse DNS
+- **Cell Tower** — Serving cell metrics, neighboring cells, and signal strength
+- **Security Posture** — Aggregate network security score with factor breakdown
 
 ### Connectivity
 - **Ping** — Latency and reachability testing with continuous mode
 - **DNS Lookup** — Query A, AAAA, MX, TXT, and other DNS record types
-- **Traceroute** — Trace the network path to any host
-- **Speed Test** — Measure download/upload speed and latency
+- **Traceroute** — Trace the network path with hop geolocation visualization
+- **Speed Test** — Measure download/upload speed and latency with sparkline history
 
 ### Discovery
 - **LAN Scan** — Discover devices on your local network with MAC vendor lookup
 - **mDNS Browser** — Find Bonjour / .local services on the network
-- **Port Scanner** — Scan for open TCP ports on a target host
+- **Port Scanner** — Scan for open TCP ports with risk severity badges
 - **WiFi Analyzer** — View nearby networks, signal strength, and channel usage graph
 
 ### Security & Web
+- **Wi-Fi Audit** — Security audit on join with WPS / weak-cipher detection
+- **DNS Leak Test** — Detect DNS queries escaping the configured resolver
 - **TLS Inspector** — Inspect SSL/TLS certificates and cipher suites
 - **HTTP Tester** — Send custom HTTP requests and inspect responses
 
@@ -35,7 +39,7 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netatl
 - **Endpoint Monitor** — Track uptime and latency of HTTP endpoints
 - **Network Log** — View connection history and network events
 - **History** — Browse past scan results with search and filtering
-- **Home Screen Widget** — Configurable Glance widget for at-a-glance network status
+- **Home Screen Widget** — Configurable Glance widget (4×1 / 4×2) with refresh and quick-launch chips
 
 ## Building
 
@@ -84,9 +88,10 @@ Multi-module Gradle project with convention plugins:
 
 ```
 app                  — Single Activity, navigation host, theme
-feature/*            — 19 self-contained feature modules
-core/network         — Connectivity monitoring, SSRF guard
+feature/*            — 22 self-contained feature modules
+core/network         — Connectivity monitoring, SSRF guard, result export
 core/data            — Room database, DAOs, Hilt data module
+core/billing         — ProStatus interface (FOSS / Google Play flavors)
 core/oui             — MAC address vendor lookup
 widget               — Glance home screen widget
 build-logic/         — Convention plugins (Android, Compose, Hilt)
