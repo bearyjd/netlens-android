@@ -1,17 +1,19 @@
-<!-- Generated: 2026-05-01 | Files scanned: 411 | Token estimate: ~700 -->
+<!-- Generated: 2026-05-04 | Files scanned: 36 | Token estimate: ~750 -->
 
 # Data Layer
 
 ## Database
 
-`NetLensDatabase` — Room, version 9, exportSchema = true
+`NetLensDatabase` — Room, version 10, exportSchema = true
 
 ```
 core/data/src/main/kotlin/com/ventoux/netlens/core/data/
-├── NetLensDatabase.kt        (RoomDatabase, 17 entities)
-├── dao/                      (15 DAOs)
-├── model/                    (entity classes)
-└── di/DataModule.kt          (Hilt SingletonComponent)
+├── NetLensDatabase.kt              (RoomDatabase, 18 entities)
+├── dao/                            (16 DAOs)
+├── model/                          (entity + UI projection classes)
+└── di/
+    ├── DataModule.kt               (Room provider, SingletonComponent)
+    └── PreferencesModule.kt        (DataStore / SharedPreferences providers)
 ```
 
 ## Entities & DAOs
@@ -35,6 +37,7 @@ core/data/src/main/kotlin/com/ventoux/netlens/core/data/
 | MdnsHistoryEntry | MdnsHistoryDao | mDNS, History |
 | WolHistoryEntry | WolHistoryDao | WoL, History |
 | SpeedTestHistoryEntry | SpeedTestHistoryDao | SpeedTest, History |
+| KnownDeviceEntity | KnownDeviceDao | LanScan (devices inventory + new-device alerts) |
 
 ## Data Flow
 
@@ -48,5 +51,6 @@ Feature Screen
 
 ## Other Storage
 
-- `SharedPreferences` — billing Pro status cache (`netlens_billing`)
-- `DataStore` — widget preferences
+- `EncryptedSharedPreferences` — billing Pro status cache (`netlens_billing`, gplay flavor)
+- `DataStore` (`user_preferences`) via `UserPreferencesRepository` — favorite/recent tool routes, IPinfo consent, posture score snapshot, latency-monitor settings (host / threshold / enabled), AbuseIPDB API key
+- `DataStore` (widget) — Glance widget configuration

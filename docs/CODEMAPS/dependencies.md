@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Files scanned: 411 | Token estimate: ~600 -->
+<!-- Generated: 2026-05-04 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~620 -->
 
 # Dependencies
 

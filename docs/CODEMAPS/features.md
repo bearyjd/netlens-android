@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Files scanned: 411 | Token estimate: ~900 -->
+<!-- Generated: 2026-05-04 | Files scanned: 22 modules | Token estimate: ~950 -->
 
 # Feature Modules
 
@@ -13,6 +13,8 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 |--------|--------|----------|---------------|-------------|
 | feature:ipinfo | IpInfoScreen | NetworkInfo | yes | IpInfoHistoryDao |
 | feature:whois | WhoisScreen | NetworkInfo | yes | WhoisHistoryDao |
+| feature:celltower | CellTowerScreen | NetworkInfo | no | — |
+| feature:posture | PostureScreen | NetworkInfo | no | — |
 | feature:ping | PingScreen | Connectivity | no | PingHistoryDao |
 | feature:dns | DnsLookupScreen | Connectivity | yes | DnsHistoryDao |
 | feature:traceroute | TracerouteScreen | Connectivity | yes | TracerouteHistoryDao |
@@ -21,6 +23,8 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 | feature:mdns | MdnsScreen | Discovery | no | MdnsHistoryDao |
 | feature:wifi | WifiScreen | Discovery | no | — |
 | feature:portscan | PortScanScreen | Discovery | yes | PortScanHistoryDao |
+| feature:wifiaudit | WifiAuditScreen | Security | no | — |
+| feature:dnsleak | DnsLeakScreen | Security | no | — |
 | feature:tls | TlsScreen | Security | yes | TlsHistoryDao |
 | feature:httptester | HttpTesterScreen | Security | no | HttpTesterHistoryDao |
 | feature:wol | WolScreen | Tools | no | WolHistoryDao |
@@ -29,7 +33,6 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 | feature:netlog | NetLogScreen | Tools | no | NetworkEventDao |
 | feature:history | HistoryScreen | Tools | yes | (reads all) |
 | feature:widgetsettings | WidgetSettingsScreen | Tools | no | — |
-| feature:posture | PostureScreen | NetworkInfo | no | — |
 
 ## Pro-Gating Patterns
 

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Files scanned: 411 | Token estimate: ~850 -->
+<!-- Generated: 2026-05-04 | Files scanned: 22 modules | Token estimate: ~900 -->
 
 # Architecture
 
@@ -14,9 +14,9 @@ app (single Activity)
 ├── feature:traceroute   │
 ├── feature:wol          │
 ├── feature:tls          │
-├── feature:whois        ├─ all apply netlens.android.feature
-├── feature:httptester   │  (= library + compose + hilt + billing)
-├── feature:mdns         │
+├── feature:whois        │
+├── feature:httptester   ├─ all apply netlens.android.feature
+├── feature:mdns         │  (= library + compose + hilt + billing)
 ├── feature:netlog       │
 ├── feature:monitor      │
 ├── feature:history      │
@@ -24,7 +24,10 @@ app (single Activity)
 ├── feature:posture      │
 ├── feature:ipcalc       │
 ├── feature:speedtest    │
-├── feature:wifi        ─┘
+├── feature:wifi         │
+├── feature:dnsleak      │
+├── feature:wifiaudit    │
+├── feature:celltower   ─┘
 ├── widget              (Glance home screen widget)
 ├── core:network        (connectivity, SSRF guard, export)
 ├── core:data           (Room DB, DAOs, entities)
