@@ -26,8 +26,21 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             .cornerRadius(WidgetTheme.CORNER_RADIUS)
             .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY)),
     ) {
+        WidgetHeaderRow(
+            state = state,
+            modifier = GlanceModifier.padding(horizontal = 10.dp),
+        )
+
+        Spacer(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(ColorProvider(WidgetTheme.DIVIDER)),
+        )
+
         DashboardWidgetContent(
             state = state,
+            showHeader = false,
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .defaultWeight()

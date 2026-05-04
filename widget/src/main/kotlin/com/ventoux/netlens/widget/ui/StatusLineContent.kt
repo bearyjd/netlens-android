@@ -17,7 +17,6 @@ import androidx.glance.unit.ColorProvider
 import com.ventoux.netlens.widget.WidgetState
 import com.ventoux.netlens.widget.action.DeeplinkUriKey
 import com.ventoux.netlens.widget.action.OpenDeeplinkAction
-import com.ventoux.netlens.widget.action.TriggerScanAction
 import com.ventoux.netlens.widget.util.Deeplink
 
 @Composable
@@ -47,7 +46,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             text = statusText,
             style = TextStyle(
                 color = ColorProvider(statusColor),
-                fontSize = 11.sp,
+                fontSize = 14.sp,
             ),
             maxLines = 1,
         )
@@ -58,12 +57,11 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
                 System.currentTimeMillis() - state.lastRefreshMs > WidgetState.STALE_ALERT_THRESHOLD_MS
             Text(
                 text = "Scanned $elapsed",
-                modifier = GlanceModifier.clickable(actionRunCallback<TriggerScanAction>()),
                 style = TextStyle(
                     color = ColorProvider(
                         if (stale) WidgetTheme.CAPTIVE_ORANGE else WidgetTheme.TEXT_MUTED,
                     ),
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 ),
             )
         }

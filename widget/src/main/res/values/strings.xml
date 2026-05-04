@@ -15,4 +15,6 @@
     <string name="widget_standard_description">Score, IP info, latency, and device count (2×2)</string>
     <string name="widget_dashboard_description">Full dashboard with score, speed, alerts, and network detail (4×2)</string>
     <string name="widget_4x2_description">Network dashboard with DNS status and quick diagnostic tools (4×2)</string>
+
+    <string name="widget_refresh_content_description">Refresh network info</string>
 </resources>

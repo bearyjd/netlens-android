@@ -12,7 +12,7 @@ import com.ventoux.netlens.widget.ui.DashboardWidgetContent
 
 class DashboardWidget : GlanceAppWidget() {
 
-    override val sizeMode: SizeMode = SizeMode.Single
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override val stateDefinition: GlanceStateDefinition<Preferences> = WidgetStateDefinition
 
