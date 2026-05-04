@@ -55,7 +55,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
                     color = ColorProvider(
                         if (stale) WidgetTheme.CAPTIVE_ORANGE else WidgetTheme.TEXT_MUTED,
                     ),
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 ),
                 maxLines = 1,
             )

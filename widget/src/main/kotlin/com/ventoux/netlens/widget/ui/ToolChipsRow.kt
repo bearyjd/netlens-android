@@ -12,9 +12,11 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.Text
@@ -30,76 +32,74 @@ import com.ventoux.netlens.widget.util.Deeplink
 
 @Composable
 fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
-    Row(
+    val pingBg = when (state.chipPingResult) {
+        "fail" -> WidgetTheme.CHIP_BAD
+        "", "running" -> WidgetTheme.CHIP_DEFAULT
+        else -> WidgetTheme.CHIP_GOOD
+    }
+    val pingLabel = when (state.chipPingResult) {
+        "" -> "Ping"
+        "running" -> "..."
+        "fail" -> "✗"
+        else -> "${state.chipPingResult}ms"
+    }
+    val dnsBg = when (state.chipDnsResult) {
+        "leak" -> WidgetTheme.CHIP_BAD
+        "clean" -> WidgetTheme.CHIP_GOOD
+        else -> WidgetTheme.CHIP_DEFAULT
+    }
+    val dnsLabel = when (state.chipDnsResult) {
+        "" -> "DNS"
+        "running" -> "..."
+        "clean" -> "Clean"
+        "leak" -> "Leak!"
+        else -> "DNS"
+    }
+    val portalBg = if (state.isCaptivePortal) {
+        WidgetTheme.CHIP_PORTAL_ACTIVE
+    } else {
+        WidgetTheme.CHIP_DEFAULT
+    }
+
+    Column(
         modifier = modifier
             .fillMaxHeight()
             .padding(start = 6.dp),
-        horizontalAlignment = Alignment.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ToolChip(
-            icon = "🔍",
-            label = "LAN",
-            action = actionRunCallback<OpenDeeplinkAction>(
-                actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
-            ),
-            background = WidgetTheme.CHIP_DEFAULT,
-        )
-
-        Spacer(GlanceModifier.width(3.dp))
-
-        val pingBg = when (state.chipPingResult) {
-            "fail" -> WidgetTheme.CHIP_BAD
-            "", "running" -> WidgetTheme.CHIP_DEFAULT
-            else -> WidgetTheme.CHIP_GOOD
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ToolChip(
+                icon = "🔍",
+                label = "LAN",
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
+                ),
+                background = WidgetTheme.CHIP_DEFAULT,
+            )
+            Spacer(GlanceModifier.width(4.dp))
+            ToolChip(
+                icon = "📡",
+                label = pingLabel,
+                action = actionRunCallback<RunPingAction>(),
+                background = pingBg,
+            )
         }
-        val pingLabel = when (state.chipPingResult) {
-            "" -> "Ping"
-            "running" -> "..."
-            "fail" -> "✗"
-            else -> "${state.chipPingResult}ms"
+        Spacer(GlanceModifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ToolChip(
+                icon = "🌐",
+                label = dnsLabel,
+                action = actionRunCallback<RunDnsCheckAction>(),
+                background = dnsBg,
+            )
+            Spacer(GlanceModifier.width(4.dp))
+            ToolChip(
+                icon = "🚪",
+                label = "Portal",
+                action = actionRunCallback<OpenPortalAction>(),
+                background = portalBg,
+            )
         }
-        ToolChip(
-            icon = "📡",
-            label = pingLabel,
-            action = actionRunCallback<RunPingAction>(),
-            background = pingBg,
-        )
-
-        Spacer(GlanceModifier.width(3.dp))
-
-        val dnsBg = when (state.chipDnsResult) {
-            "leak" -> WidgetTheme.CHIP_BAD
-            "clean" -> WidgetTheme.CHIP_GOOD
-            else -> WidgetTheme.CHIP_DEFAULT
-        }
-        val dnsLabel = when (state.chipDnsResult) {
-            "" -> "DNS"
-            "running" -> "..."
-            "clean" -> "Clean"
-            "leak" -> "Leak!"
-            else -> "DNS"
-        }
-        ToolChip(
-            icon = "🌐",
-            label = dnsLabel,
-            action = actionRunCallback<RunDnsCheckAction>(),
-            background = dnsBg,
-        )
-
-        Spacer(GlanceModifier.width(3.dp))
-
-        val portalBg = if (state.isCaptivePortal) {
-            WidgetTheme.CHIP_PORTAL_ACTIVE
-        } else {
-            WidgetTheme.CHIP_DEFAULT
-        }
-        ToolChip(
-            icon = "🚪",
-            label = "Portal",
-            action = actionRunCallback<OpenPortalAction>(),
-            background = portalBg,
-        )
     }
 }
 
@@ -113,7 +113,7 @@ private fun ToolChip(icon: String, label: String, action: Action, background: Co
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .clickable(action),
         style = TextStyle(
-            fontSize = 10.sp,
+            fontSize = 20.sp,
             color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
         ),
         maxLines = 1,

@@ -46,7 +46,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             text = statusText,
             style = TextStyle(
                 color = ColorProvider(statusColor),
-                fontSize = 11.sp,
+                fontSize = 14.sp,
             ),
             maxLines = 1,
         )
@@ -61,7 +61,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
                     color = ColorProvider(
                         if (stale) WidgetTheme.CAPTIVE_ORANGE else WidgetTheme.TEXT_MUTED,
                     ),
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 ),
             )
         }
