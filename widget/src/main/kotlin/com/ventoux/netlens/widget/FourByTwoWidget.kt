@@ -12,7 +12,7 @@ import com.ventoux.netlens.widget.ui.FourByTwoWidgetContent
 
 class FourByTwoWidget : GlanceAppWidget() {
 
-    override val sizeMode: SizeMode = SizeMode.Single
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override val stateDefinition: GlanceStateDefinition<Preferences> = WidgetStateDefinition
 

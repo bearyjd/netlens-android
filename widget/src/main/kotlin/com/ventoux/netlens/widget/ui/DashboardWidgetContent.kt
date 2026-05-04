@@ -15,6 +15,7 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
@@ -32,17 +33,23 @@ import com.ventoux.netlens.widget.util.formatLinkSpeed
 @Composable
 fun DashboardWidgetContent(
     state: WidgetState,
+    showHeader: Boolean = true,
     modifier: GlanceModifier = GlanceModifier
         .fillMaxSize()
         .cornerRadius(WidgetTheme.CORNER_RADIUS)
         .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY))
         .padding(horizontal = 10.dp, vertical = 6.dp),
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Section 1: Country flag + VPN lock
+    Column(modifier = modifier) {
+        if (showHeader) {
+            WidgetHeaderRow(state = state)
+            Spacer(modifier = GlanceModifier.height(2.dp))
+        }
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Section 1: Country flag + VPN lock
         Column(
             modifier = GlanceModifier
                 .width(48.dp)
@@ -247,5 +254,6 @@ fun DashboardWidgetContent(
                 )
             }
         }
+    }
     }
 }
