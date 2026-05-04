@@ -8,6 +8,7 @@ import com.ventoux.netlens.core.network.NetworkMonitor
 import com.ventoux.netlens.feature.posture.engine.PostureScoreEngine
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
 import com.ventoux.netlens.feature.posture.model.PostureUiState
+import com.ventoux.netlens.feature.posture.model.Severity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,13 +89,24 @@ class PostureViewModel @Inject constructor(
 
             if (score != null) {
                 _uiState.value = PostureUiState.Scored(score)
-                val issues = score.factors.filter { it.severity == com.ventoux.netlens.feature.posture.model.Severity.Critical || it.severity == com.ventoux.netlens.feature.posture.model.Severity.Poor }
-                preferences.setPostureScore(
-                    grade = score.grade,
-                    numericScore = score.numericScore,
-                    issueCount = issues.size,
-                    topIssue = issues.firstOrNull()?.detail,
-                )
+                val issues = score.factors.filter {
+                    it.severity == Severity.Critical || it.severity == Severity.Poor
+                }
+                // Persist for the home-screen widget. Non-fatal: the in-app Scored state
+                // is already published; a write failure means the widget may serve the
+                // previously cached score until its next refresh.
+                try {
+                    preferences.setPostureScore(
+                        grade = score.grade,
+                        numericScore = score.numericScore,
+                        issueCount = issues.size,
+                        topIssue = issues.firstOrNull()?.detail,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("PostureViewModel", "Failed to persist posture score", e)
+                }
             } else {
                 _uiState.value = PostureUiState.Error("Unable to evaluate network security")
             }
