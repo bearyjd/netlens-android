@@ -1,0 +1,7 @@
+New tools: Cell Tower, Wi-Fi Audit, DNS Leak Test, Security Posture score.
+
+Visual traceroute with hop geolocation. Connected devices with new-device alerts. Latency monitor on home screen. Host detail with risk-classified port scan. IP reputation via AbuseIPDB. Network change log.
+
+4×1 and 4×2 widgets with refresh. Quick Settings tile for posture. Switched to IPinfo for public IP intel.
+
+Fixes for port scan, latency monitor, and widget concurrency.
