@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,16 +35,29 @@ jobs:
             exit 1
           fi
 
-      - name: Decode release keystore
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+      - name: Guard against shadowing local.properties
         run: |
-          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "::error::RELEASE_KEYSTORE_BASE64 secret is not set"
+          if [ -f local.properties ]; then
+            echo "::error::local.properties is present in CI checkout and would shadow env-based signing"
             exit 1
           fi
+
+      - name: Decode and validate release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          : "${RELEASE_KEYSTORE_BASE64:?RELEASE_KEYSTORE_BASE64 secret is not set}"
+          : "${RELEASE_STORE_PASSWORD:?RELEASE_STORE_PASSWORD secret is not set}"
+          : "${RELEASE_KEY_ALIAS:?RELEASE_KEY_ALIAS secret is not set}"
+          : "${RELEASE_KEY_PASSWORD:?RELEASE_KEY_PASSWORD secret is not set}"
           mkdir -p "$RUNNER_TEMP/keystore"
-          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore/release.keystore"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore/release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/keystore/release.keystore" \
+                  -storepass "$RELEASE_STORE_PASSWORD" \
+                  -alias "$RELEASE_KEY_ALIAS" >/dev/null
           echo "RELEASE_STORE_FILE=$RUNNER_TEMP/keystore/release.keystore" >> "$GITHUB_ENV"
 
       - name: Build release APK and AAB
