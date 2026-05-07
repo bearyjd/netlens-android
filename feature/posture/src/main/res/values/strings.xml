@@ -14,4 +14,14 @@
     <string name="posture_grade_d">Poor — significant vulnerabilities detected</string>
     <string name="posture_grade_f">Critical — immediate action recommended</string>
     <string name="posture_grade_unknown">Not yet evaluated</string>
+    <string name="posture_vpn_label_full">Protected</string>
+    <string name="posture_vpn_label_split">Split Tunnel</string>
+    <string name="posture_vpn_label_none">No VPN</string>
+    <string name="posture_vpn_dialog_full_title">VPN: Full Tunnel</string>
+    <string name="posture_vpn_dialog_full_body">Your traffic is fully routed through a VPN. Your real IP and traffic are protected.</string>
+    <string name="posture_vpn_dialog_split_title">VPN: Split Tunnel</string>
+    <string name="posture_vpn_dialog_split_body">Your VPN is active but only protecting some of your traffic. Other traffic is leaving your device unprotected. Check your VPN app settings and enable full-tunnel mode.</string>
+    <string name="posture_vpn_dialog_none_title">No VPN Active</string>
+    <string name="posture_vpn_dialog_none_body">No VPN is active. On public or untrusted networks, your traffic may be visible to others.</string>
+    <string name="posture_vpn_dialog_dismiss">Got it</string>
 </resources>

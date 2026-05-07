@@ -6,6 +6,8 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import com.ventoux.netlens.core.network.VpnState
+import com.ventoux.netlens.core.network.detectVpnState
 import androidx.datastore.preferences.core.edit
 import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
@@ -73,7 +75,8 @@ class WidgetRefreshWorker(
                 null
             }
 
-            val isVpnActive = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+            val vpnState = detectVpnState(cm)
+            val isVpnActive = vpnState !is VpnState.None
 
             val deviceCount = try {
                 entryPoint.lanScanHistoryDao()
@@ -99,7 +102,7 @@ class WidgetRefreshWorker(
                         topIssueId = null,
                     )
                 } else {
-                    computeWidgetScore(encryptionType, deviceCount, isVpnActive)
+                    computeWidgetScore(encryptionType, deviceCount, vpnState)
                 }
             } else {
                 null
@@ -188,7 +191,7 @@ class WidgetRefreshWorker(
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
                 prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
-                prefs[WidgetStateDefinition.VPN_ACTIVE] = isVpnActive
+                prefs[WidgetStateDefinition.VPN_STATE] = vpnState.serialize()
 
                 prefs[WidgetStateDefinition.LOCAL_IP] = collected.localIp
                 prefs[WidgetStateDefinition.PING_MS] = pingResult ?: -1
@@ -236,19 +239,29 @@ internal data class WidgetScore(
 internal fun computeWidgetScore(
     encryptionType: String?,
     deviceCount: Int,
-    isVpnActive: Boolean,
+    vpnState: VpnState,
 ): WidgetScore {
     val encScore = encryptionScore(encryptionType)
     val devScore = deviceCountScore(deviceCount)
-    val vpnScore = if (isVpnActive) 100 else 40
+    val vpnScore = when (vpnState) {
+        VpnState.FullTunnel -> 100
+        VpnState.SplitTunnel -> 60
+        VpnState.None -> 40
+    }
 
     val numeric = ((encScore * 50 + devScore * 30 + vpnScore * 20) / 100).coerceIn(0, 100)
     val grade = gradeFor(numeric)
 
+    val vpnIssue: Pair<String, String>? = when (vpnState) {
+        VpnState.FullTunnel -> null
+        VpnState.SplitTunnel -> "VPN is split-tunnel" to "vpn"
+        VpnState.None -> "VPN not active" to "vpn"
+    }
+
     val issues = listOfNotNull(
         ("Weak or no encryption" to "encryption").takeIf { encScore <= 20 },
         ("Too many devices on network" to "device_count").takeIf { devScore <= 40 },
-        ("VPN not active" to "vpn").takeIf { !isVpnActive },
+        vpnIssue,
     )
 
     val colorArgb = when (grade) {

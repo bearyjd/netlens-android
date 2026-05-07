@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ventoux.netlens.core.data.dao.NetworkEventDao
 import com.ventoux.netlens.core.data.model.NetworkEvent
 import com.ventoux.netlens.core.network.NetworkMonitor
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.dnsleak.engine.DnsLeakDetector
 import com.ventoux.netlens.feature.dnsleak.model.DnsLeakResult
 import com.ventoux.netlens.feature.dnsleak.model.DnsLeakUiState
@@ -35,7 +36,7 @@ class DnsLeakViewModel @Inject constructor(
         testJob?.cancel()
         _state.update { it.copy(isLoading = true, result = null) }
         testJob = viewModelScope.launch {
-            val vpnActive = networkMonitor.isVpnActive.first()
+            val vpnActive = networkMonitor.vpnState.first() !is VpnState.None
             _state.update { it.copy(vpnActive = vpnActive) }
 
             val result = dnsLeakDetector.detect(vpnActive)

@@ -7,6 +7,7 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.telephony.TelephonyManager
+import com.ventoux.netlens.core.network.getPhysicalNetwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.Inet6Address
@@ -33,20 +34,27 @@ object NetworkCollector {
     suspend fun collect(context: Context): CollectedNetworkData = withContext(Dispatchers.IO) {
         try {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = cm.activeNetwork ?: return@withContext CollectedNetworkData()
-            val caps = cm.getNetworkCapabilities(network) ?: return@withContext CollectedNetworkData()
-            val linkProps = cm.getLinkProperties(network)
+            val activeNetwork = cm.activeNetwork ?: return@withContext CollectedNetworkData()
+            val activeCaps = cm.getNetworkCapabilities(activeNetwork) ?: return@withContext CollectedNetworkData()
+            val isVpn = activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
 
-            val localIp = linkProps?.linkAddresses
+            // Use the physical network for signal/SSID/cellular data — these are blank on the VPN interface.
+            val physicalNetwork = getPhysicalNetwork(cm) ?: activeNetwork
+            val physicalCaps = cm.getNetworkCapabilities(physicalNetwork)
+            val physicalLinkProps = cm.getLinkProperties(physicalNetwork)
+
+            // Use the active (possibly VPN) link properties for VPN-tunnel-specific data
+            val activeLinkProps = cm.getLinkProperties(activeNetwork)
+
+            val localIp = activeLinkProps?.linkAddresses
                 ?.firstOrNull { addr ->
                     val ia = addr.address
                     ia != null && !ia.isLoopbackAddress && ia.address.size == 4
                 }
                 ?.address?.hostAddress.orEmpty()
 
-            val isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
             val vpnInterfaceName = if (isVpn) {
-                linkProps?.interfaceName?.takeIf { iface ->
+                activeLinkProps?.interfaceName?.takeIf { iface ->
                     VPN_INTERFACE_PREFIXES.any { prefix -> iface.startsWith(prefix) }
                 }.orEmpty()
             } else {
@@ -56,9 +64,9 @@ object NetworkCollector {
             val rssi: Int
             val rssiLevel: Int
             val linkSpeedMbps: Int
-            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            if (physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
                 val wifiInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    caps.transportInfo as? WifiInfo
+                    physicalCaps.transportInfo as? WifiInfo
                 } else {
                     @Suppress("DEPRECATION")
                     (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.connectionInfo
@@ -77,30 +85,30 @@ object NetworkCollector {
                 linkSpeedMbps = -1
             }
 
-            val cellGeneration = if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            val cellGeneration = if (physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true) {
                 detectCellGeneration(context)
             } else {
                 ""
             }
 
-            val hasIpv6 = linkProps?.linkAddresses?.any { addr ->
+            val hasIpv6 = activeLinkProps?.linkAddresses?.any { addr ->
                 val ia = addr.address
                 ia is Inet6Address && !ia.isLinkLocalAddress && !ia.isLoopbackAddress
             } ?: false
 
-            val isMetered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            val isMetered = !activeCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
 
-            val isCaptivePortal = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
-                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            val isCaptivePortal = !activeCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
+                activeCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 
             val hasPrivateDns = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                linkProps?.isPrivateDnsActive == true ||
-                    linkProps?.privateDnsServerName != null
+                activeLinkProps?.isPrivateDnsActive == true ||
+                    activeLinkProps?.privateDnsServerName != null
             } else {
                 false
             }
 
-            val dnsServers = linkProps?.dnsServers
+            val dnsServers = activeLinkProps?.dnsServers
                 ?.mapNotNull { it.hostAddress }
                 ?: emptyList()
 
