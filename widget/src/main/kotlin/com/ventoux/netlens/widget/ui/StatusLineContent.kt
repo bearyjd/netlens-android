@@ -14,6 +14,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.widget.WidgetState
 import com.ventoux.netlens.widget.action.DeeplinkUriKey
 import com.ventoux.netlens.widget.action.OpenDeeplinkAction
@@ -35,10 +36,10 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
         val (statusText, statusColor) = when {
             state.isCaptivePortal -> "Captive portal" to WidgetTheme.CAPTIVE_ORANGE
             state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to WidgetTheme.SCORE_AMBER
-            state.vpnActive && state.routingMode == "VPN_FULL" ->
-                "DNS → ${state.primaryDns} · VPN routed" to WidgetTheme.VPN_GREEN
-
-            state.vpnActive -> "DNS → ${state.primaryDns} · Split" to WidgetTheme.TEXT_SECONDARY
+            state.vpnState is VpnState.FullTunnel ->
+                "DNS → ${state.primaryDns} · VPN routed" to WidgetTheme.VPN_FULL_GREEN
+            state.vpnState is VpnState.SplitTunnel ->
+                "DNS → ${state.primaryDns} · Split" to WidgetTheme.VPN_SPLIT_AMBER
             state.isConnected -> "DNS → ${state.primaryDns} · Direct" to WidgetTheme.TEXT_SECONDARY
             else -> "No network" to WidgetTheme.SCORE_RED
         }

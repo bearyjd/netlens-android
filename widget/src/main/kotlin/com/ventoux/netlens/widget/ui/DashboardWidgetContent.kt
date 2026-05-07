@@ -4,12 +4,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -18,12 +21,14 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontStyle
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.ventoux.netlens.core.network.VpnState
+import com.ventoux.netlens.widget.R
 import com.ventoux.netlens.widget.WidgetState
 import com.ventoux.netlens.widget.action.DeeplinkUriKey
 import com.ventoux.netlens.widget.action.OpenDeeplinkAction
@@ -79,25 +84,53 @@ fun DashboardWidgetContent(
                     style = TextStyle(fontSize = 40.sp),
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (state.vpnActive) "🔒" else "🔓",
-                        style = TextStyle(
-                            color = ColorProvider(
-                                if (state.vpnActive) WidgetTheme.VPN_GREEN else WidgetTheme.VPN_GRAY,
-                            ),
-                            fontSize = 22.sp,
-                        ),
+                val (backdropColor, lockDrawable, vpnLabel) = when (state.vpnState) {
+                    VpnState.FullTunnel -> Triple(WidgetTheme.VPN_FULL_GREEN, R.drawable.ic_lock_closed_white, "Protected")
+                    VpnState.SplitTunnel -> Triple(WidgetTheme.VPN_SPLIT_AMBER, R.drawable.ic_lock_closed_white, "Split Tunnel")
+                    VpnState.None -> Triple(WidgetTheme.VPN_NONE_RED, R.drawable.ic_lock_open_white, "No VPN")
+                }
+                Box(
+                    modifier = GlanceModifier
+                        .size(28.dp)
+                        .cornerRadius(6.dp)
+                        .background(ColorProvider(backdropColor)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        provider = ImageProvider(lockDrawable),
+                        contentDescription = vpnLabel,
+                        modifier = GlanceModifier.size(18.dp),
                     )
-                    if (state.hasPrivateDns) {
+                    if (state.vpnState is VpnState.SplitTunnel) {
                         Text(
-                            text = " ●",
+                            text = "⚠",
                             style = TextStyle(
-                                color = ColorProvider(WidgetTheme.PRIVATE_DNS_BLUE),
-                                fontSize = 12.sp,
+                                color = ColorProvider(androidx.compose.ui.graphics.Color.White),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
                             ),
+                            modifier = GlanceModifier.padding(start = 14.dp, bottom = 14.dp),
                         )
                     }
+                }
+                Spacer(modifier = GlanceModifier.height(2.dp))
+                Text(
+                    text = vpnLabel,
+                    style = TextStyle(
+                        color = ColorProvider(backdropColor),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    maxLines = 1,
+                )
+                if (state.hasPrivateDns) {
+                    Text(
+                        text = "●",
+                        style = TextStyle(
+                            color = ColorProvider(WidgetTheme.PRIVATE_DNS_BLUE),
+                            fontSize = 10.sp,
+                        ),
+                    )
                 }
             }
 

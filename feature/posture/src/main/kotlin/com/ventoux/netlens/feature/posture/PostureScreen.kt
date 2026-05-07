@@ -15,14 +15,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,11 +36,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.model.FactorResult
 import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.posture.model.PostureScore
@@ -146,6 +156,12 @@ fun PostureScreen(
                     )
                 }
                 is PostureUiState.Scored -> {
+                    var dialogState by remember { mutableStateOf<VpnState?>(null) }
+                    VpnLockIndicator(
+                        state = s.score.vpnState,
+                        onClick = { dialogState = s.score.vpnState },
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     ScoreHero(score = s.score)
                     Spacer(modifier = Modifier.height(24.dp))
                     s.score.factors.forEach { factor ->
@@ -155,9 +171,47 @@ fun PostureScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
+                    dialogState?.let { dialogVpn ->
+                        val (titleRes, bodyRes) = when (dialogVpn) {
+                            VpnState.FullTunnel -> R.string.posture_vpn_dialog_full_title to R.string.posture_vpn_dialog_full_body
+                            VpnState.SplitTunnel -> R.string.posture_vpn_dialog_split_title to R.string.posture_vpn_dialog_split_body
+                            VpnState.None -> R.string.posture_vpn_dialog_none_title to R.string.posture_vpn_dialog_none_body
+                        }
+                        AlertDialog(
+                            onDismissRequest = { dialogState = null },
+                            title = { Text(stringResource(titleRes)) },
+                            text = { Text(stringResource(bodyRes)) },
+                            confirmButton = {
+                                TextButton(onClick = { dialogState = null }) {
+                                    Text(stringResource(R.string.posture_vpn_dialog_dismiss))
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun VpnLockIndicator(state: VpnState, onClick: () -> Unit) {
+    val (color, icon, labelRes) = when (state) {
+        VpnState.FullTunnel -> Triple(Color(0xFF388E3C), Icons.Default.Lock, R.string.posture_vpn_label_full)
+        VpnState.SplitTunnel -> Triple(Color(0xFFF57C00), Icons.Default.Lock, R.string.posture_vpn_label_split)
+        VpnState.None -> Triple(Color(0xFFD32F2F), Icons.Default.LockOpen, R.string.posture_vpn_label_none)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = stringResource(labelRes), color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 

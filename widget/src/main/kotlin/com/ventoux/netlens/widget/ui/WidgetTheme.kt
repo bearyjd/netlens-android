@@ -22,6 +22,9 @@ object WidgetTheme {
 
     val VPN_GREEN = Color(0xFF4CAF50)
     val VPN_GRAY = Color(0xFF757575)
+    val VPN_NONE_RED = Color(0xFFD32F2F)
+    val VPN_FULL_GREEN = Color(0xFF388E3C)
+    val VPN_SPLIT_AMBER = Color(0xFFF57C00)
     val CAPTIVE_ORANGE = Color(0xFFFF9800)
     val IPV6_TEAL = Color(0xFF00BCD4)
     val METERED_GRAY = Color(0xFF9E9E9E)
@@ -60,7 +63,7 @@ object WidgetTheme {
     }
 
     fun speedIcon(label: String): String = when (label.lowercase()) {
-        "fast" -> "���"
+        "fast" -> "▲"
         "medium" -> "~"
         "slow" -> "▼"
         else -> ""
