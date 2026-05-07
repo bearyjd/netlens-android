@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,6 +27,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
 
       - name: Verify tag matches gradle version
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           GRADLE_VERSION=$(grep '^netlens.versionName=' gradle.properties | cut -d= -f2)
@@ -34,10 +36,44 @@ jobs:
             exit 1
           fi
 
+      - name: Guard against shadowing local.properties
+        run: |
+          if [ -f local.properties ]; then
+            echo "::error::local.properties is present in CI checkout and would shadow env-based signing"
+            exit 1
+          fi
+
+      - name: Decode and validate release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          : "${RELEASE_KEYSTORE_BASE64:?RELEASE_KEYSTORE_BASE64 secret is not set}"
+          : "${RELEASE_STORE_PASSWORD:?RELEASE_STORE_PASSWORD secret is not set}"
+          : "${RELEASE_KEY_ALIAS:?RELEASE_KEY_ALIAS secret is not set}"
+          : "${RELEASE_KEY_PASSWORD:?RELEASE_KEY_PASSWORD secret is not set}"
+          mkdir -p "$RUNNER_TEMP/keystore"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore/release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/keystore/release.keystore" \
+                  -storepass "$RELEASE_STORE_PASSWORD" \
+                  -alias "$RELEASE_KEY_ALIAS" >/dev/null
+          keytool -list -v -keystore "$RUNNER_TEMP/keystore/release.keystore" \
+                  -storepass "$RELEASE_STORE_PASSWORD" \
+                  -alias "$RELEASE_KEY_ALIAS" \
+            | grep -E 'Owner|Issuer|SHA256|Valid until' || true
+          echo "RELEASE_STORE_FILE=$RUNNER_TEMP/keystore/release.keystore" >> "$GITHUB_ENV"
+
       - name: Build release APK and AAB
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleRelease bundleRelease
 
       - name: Upload artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: netlens-${{ github.ref_name }}
@@ -47,6 +83,7 @@ jobs:
           retention-days: 90
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
