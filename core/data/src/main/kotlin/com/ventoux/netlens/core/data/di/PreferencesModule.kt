@@ -9,6 +9,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import com.ventoux.netlens.core.data.secure.EncryptedKeyValueStore
+import com.ventoux.netlens.core.data.secure.KeyValueStore
 import javax.inject.Singleton
 
 private val Context.userPreferencesDataStore by preferencesDataStore(name = "user_preferences")
@@ -22,4 +24,10 @@ object PreferencesModule {
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
     ): DataStore<Preferences> = context.userPreferencesDataStore
+
+    @Provides
+    @Singleton
+    fun provideKeyValueStore(
+        @ApplicationContext context: Context,
+    ): KeyValueStore = EncryptedKeyValueStore(context, "netlens_secrets")
 }

@@ -55,8 +55,12 @@ abstract class BillingModule {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Encrypted prefs unavailable, using plain prefs", e)
-                return context.getSharedPreferences(PREFS_NAME_LEGACY, Context.MODE_PRIVATE)
+                Log.e(TAG, "Encrypted prefs unavailable; Pro state will not persist this session", e)
+                context.getSharedPreferences(PREFS_NAME_LEGACY, Context.MODE_PRIVATE).edit().clear().apply()
+                val transientName = "netlens_billing_transient_${System.currentTimeMillis()}"
+                return context.getSharedPreferences(transientName, Context.MODE_PRIVATE).also {
+                    it.edit().clear().apply()
+                }
             }
 
             val legacy = context.getSharedPreferences(PREFS_NAME_LEGACY, Context.MODE_PRIVATE)
