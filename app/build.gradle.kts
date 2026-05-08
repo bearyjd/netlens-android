@@ -48,6 +48,11 @@ android {
                 "META-INF/*.kotlin_module",
                 "META-INF/LICENSE.md",
                 "META-INF/LICENSE-notice.md",
+                // dnsjava ships JDK name-service SPI descriptors that have no effect
+                // on Android (InetAddress uses Bionic, not java.net.spi). Stripping
+                // them removes dead bytes and silences R8 missing-service warnings.
+                "META-INF/services/java.net.spi.InetAddressResolverProvider",
+                "META-INF/services/sun.net.spi.nameservice.NameServiceDescriptor",
             )
         }
     }
@@ -58,6 +63,8 @@ android {
 
     buildTypes {
         release {
+            isDebuggable = false
+            isJniDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
