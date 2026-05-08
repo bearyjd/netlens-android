@@ -179,17 +179,31 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] = System.currentTimeMillis()
                 prefs[WidgetStateDefinition.IS_SCAN_RUNNING] = false
 
-                encryptionType?.let {
-                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = it
-                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(it)
+                if (encryptionType != null) {
+                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = encryptionType
+                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(encryptionType)
+                } else {
+                    // Same stale-data class as SSID: detectEncryptionType returns null
+                    // when the device is off WiFi, so a previously-cached "WPA3" would
+                    // otherwise linger on the cellular widget.
+                    prefs.remove(WidgetStateDefinition.ENCRYPTION_TYPE)
+                    prefs.remove(WidgetStateDefinition.IS_ENCRYPTION_SECURE)
                 }
 
                 if (score != null) {
                     prefs[WidgetStateDefinition.SCORE_GRADE] = score.grade
                     prefs[WidgetStateDefinition.SCORE_COLOR_ARGB] = score.colorArgb
                     prefs[WidgetStateDefinition.ISSUE_COUNT] = score.issueCount
-                    score.topIssue?.let { prefs[WidgetStateDefinition.TOP_ISSUE] = it }
-                    score.topIssueId?.let { prefs[WidgetStateDefinition.TOP_ISSUE_ID] = it }
+                    if (score.topIssue != null) {
+                        prefs[WidgetStateDefinition.TOP_ISSUE] = score.topIssue
+                    } else {
+                        prefs.remove(WidgetStateDefinition.TOP_ISSUE)
+                    }
+                    if (score.topIssueId != null) {
+                        prefs[WidgetStateDefinition.TOP_ISSUE_ID] = score.topIssueId
+                    } else {
+                        prefs.remove(WidgetStateDefinition.TOP_ISSUE_ID)
+                    }
                 }
 
                 ipData?.takeIf { IP_PATTERN.matches(it.ip) }?.let { ip ->
