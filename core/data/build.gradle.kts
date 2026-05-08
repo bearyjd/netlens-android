@@ -18,5 +18,6 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.datastore.preferences)
+    implementation(libs.security.crypto)
     ksp(libs.room.compiler)
 }

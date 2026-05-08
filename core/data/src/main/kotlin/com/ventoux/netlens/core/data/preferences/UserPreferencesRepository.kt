@@ -8,8 +8,15 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import com.ventoux.netlens.core.data.secure.KeyValueStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +31,30 @@ data class PersistedPostureScore(
 @Singleton
 class UserPreferencesRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    private val encryptedStore: KeyValueStore,
 ) {
+    // AbuseIPDB key is stored in EncryptedKeyValueStore. A MutableStateFlow bridges the
+    // encrypted store (which doesn't natively emit) to the Flow-based API consumers expect.
+    // The init block migrates any previously stored plaintext key from DataStore on first run.
+    private val _abuseIpDbApiKeyFlow = MutableStateFlow(
+        encryptedStore.getString(ABUSEIPDB_ENCRYPTED_KEY) ?: "",
+    )
+
+    init {
+        // One-shot migration: if DataStore has a plaintext AbuseIPDB key from a prior install,
+        // copy it to the encrypted store and remove it from DataStore.
+        CoroutineScope(Dispatchers.IO).launch {
+            val plaintextKey = dataStore.data.first()[ABUSEIPDB_API_KEY]
+            if (!plaintextKey.isNullOrBlank() && encryptedStore.getString(ABUSEIPDB_ENCRYPTED_KEY).isNullOrBlank()) {
+                encryptedStore.putString(ABUSEIPDB_ENCRYPTED_KEY, plaintextKey)
+                _abuseIpDbApiKeyFlow.value = plaintextKey
+            }
+            if (!plaintextKey.isNullOrBlank()) {
+                dataStore.edit { it.remove(ABUSEIPDB_API_KEY) }
+            }
+        }
+    }
+
     val favoriteToolRoutes: Flow<Set<String>> = dataStore.data.map { prefs ->
         prefs[FAVORITES_KEY] ?: DEFAULT_FAVORITES
     }
@@ -91,14 +121,12 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[LATENCY_ALERT_THRESHOLD_MS] = ms }
     }
 
-    val abuseIpDbApiKey: Flow<String> = dataStore.data.map { prefs ->
-        prefs[ABUSEIPDB_API_KEY] ?: ""
-    }
+    val abuseIpDbApiKey: Flow<String> = _abuseIpDbApiKeyFlow.asStateFlow()
 
     suspend fun setAbuseIpDbApiKey(key: String) {
-        dataStore.edit { prefs ->
-            if (key.isBlank()) prefs.remove(ABUSEIPDB_API_KEY) else prefs[ABUSEIPDB_API_KEY] = key
-        }
+        val trimmed = key.trim()
+        encryptedStore.putString(ABUSEIPDB_ENCRYPTED_KEY, trimmed.ifBlank { null })
+        _abuseIpDbApiKeyFlow.value = trimmed
     }
 
     val postureScore: Flow<PersistedPostureScore?> = dataStore.data.map { prefs ->
@@ -129,7 +157,10 @@ class UserPreferencesRepository @Inject constructor(
         private val LATENCY_MONITOR_ENABLED = booleanPreferencesKey("latency_monitor_enabled")
         private val LATENCY_MONITOR_HOST = stringPreferencesKey("latency_monitor_host")
         private val LATENCY_ALERT_THRESHOLD_MS = intPreferencesKey("latency_alert_threshold_ms")
+        // Legacy DataStore key — kept only for one-shot migration in init block.
         private val ABUSEIPDB_API_KEY = stringPreferencesKey("abuseipdb_api_key")
+        // Key used inside EncryptedKeyValueStore (netlens_secrets).
+        private const val ABUSEIPDB_ENCRYPTED_KEY = "abuseipdb_api_key"
         private val POSTURE_GRADE = stringPreferencesKey("posture_grade")
         private val POSTURE_NUMERIC_SCORE = intPreferencesKey("posture_numeric_score")
         private val POSTURE_ISSUE_COUNT = intPreferencesKey("posture_issue_count")
