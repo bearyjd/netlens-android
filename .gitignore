@@ -21,3 +21,4 @@ out/
 *.jks
 *.keystore
 .claude/PRPs/
+.claude/scheduled_tasks.lock
