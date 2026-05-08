@@ -18,3 +18,9 @@
 # Google Play Billing
 -keep class com.android.billingclient.** { *; }
 -keep class com.ventoux.netlens.billing.** { *; }
+
+# Tink (transitive of androidx.security:security-crypto). These annotations are
+# referenced by Tink's bytecode but not on the runtime classpath; safe to ignore.
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.j2objc.annotations.**
+-dontwarn javax.annotation.**
