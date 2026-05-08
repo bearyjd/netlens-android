@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import com.ventoux.netlens.core.data.secure.KeyValueStore
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,7 +37,14 @@ class UserPreferencesRepositoryTest {
             scope = testScope.backgroundScope,
             produceFile = { File(tempDir, "test_prefs.preferences_pb") },
         )
-        repository = UserPreferencesRepository(dataStore)
+        val fakeKeyValueStore = object : KeyValueStore {
+            private val map = mutableMapOf<String, String>()
+            override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
+            override fun putString(key: String, value: String?) {
+                if (value.isNullOrBlank()) map.remove(key) else map[key] = value
+            }
+        }
+        repository = UserPreferencesRepository(dataStore, fakeKeyValueStore)
     }
 
     @Test
