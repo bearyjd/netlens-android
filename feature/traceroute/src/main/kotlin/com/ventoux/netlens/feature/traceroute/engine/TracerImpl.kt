@@ -35,7 +35,7 @@ class TracerImpl @Inject constructor() : Tracer {
         for (ttl in 1..maxHops) {
             if (!coroutineContext.isActive) break
 
-            val process = ProcessBuilder("ping", "-c", "1", "-t", ttl.toString(), "-W", "2", sanitized)
+            val process = ProcessBuilder("ping", "-c", "1", "-t", ttl.toString(), "-W", "2", "--", sanitized)
                 .redirectErrorStream(true)
                 .start()
 

@@ -25,12 +25,12 @@ class PingerImpl @Inject constructor() : Pinger {
 
     override fun ping(host: String, count: Int): Flow<PingResult> {
         val sanitized = validateHost(host)
-        return runPingProcess(listOf("ping", "-c", count.toString(), sanitized))
+        return runPingProcess(listOf("ping", "-c", count.toString(), "--", sanitized))
     }
 
     override fun pingContinuous(host: String): Flow<PingResult> {
         val sanitized = validateHost(host)
-        return runPingProcess(listOf("ping", "-i", "1", sanitized))
+        return runPingProcess(listOf("ping", "-i", "1", "--", sanitized))
     }
 
     private fun runPingProcess(args: List<String>): Flow<PingResult> = callbackFlow {
