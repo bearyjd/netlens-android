@@ -26,12 +26,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Widget deep links use netlens://feature/* scheme.
-                 BROWSABLE allows external apps (e.g. browsers) to reach this Activity. -->
+            <!-- Widget and tile deep links use netlens://feature/* scheme.
+                 BROWSABLE intentionally omitted: only first-party widgets/tiles fire
+                 these intents; allowing browsers/other apps to launch feature screens
+                 is unnecessary attack surface. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="netlens" android:host="feature" />
             </intent-filter>
         </activity>
