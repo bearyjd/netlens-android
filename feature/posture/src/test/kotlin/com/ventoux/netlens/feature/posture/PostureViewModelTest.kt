@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -28,13 +29,18 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PostureViewModelTest {
 
+    @TempDir
+    lateinit var tempDir: File
+
     private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
 
     private lateinit var networkMonitor: FakeNetworkMonitor
     private lateinit var encryptionProvider: FakeEncryptionTypeProvider
@@ -48,17 +54,27 @@ class PostureViewModelTest {
         networkMonitor = FakeNetworkMonitor()
         encryptionProvider = FakeEncryptionTypeProvider()
         lanScanDao = FakeLanScanHistoryDao()
+        // Bind the DataStore's internal scope to testScope.backgroundScope so its
+        // async update work is structured-cancelled with the test, instead of
+        // resuming on Dispatchers.Main after resetMain() ran. See issue #73.
         preferences = UserPreferencesRepository(
-            PreferenceDataStoreFactory.create { File.createTempFile("test_prefs", ".preferences_pb") },
+            PreferenceDataStoreFactory.create(
+                scope = testScope.backgroundScope,
+                produceFile = { File(tempDir, "test_prefs.preferences_pb") },
+            ),
         )
     }
 
     @AfterEach
     fun tearDown() {
-        // Cancel each VM's viewModelScope so its observeNetwork() collector
-        // doesn't leak into the next test as UncaughtExceptionsBeforeTest.
+        // 1. Cancel each VM's viewModelScope so its observeNetwork() collector
+        //    doesn't leak as UncaughtExceptionsBeforeTest.
         createdViewModels.forEach { it.viewModelScope.cancel() }
         createdViewModels.clear()
+        // 2. Cancel the test scope so DataStore's IO update work stops before
+        //    the Main dispatcher is reset.
+        testScope.cancel()
+        // 3. Reset Main last.
         Dispatchers.resetMain()
     }
 
