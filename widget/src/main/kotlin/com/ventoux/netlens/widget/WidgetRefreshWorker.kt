@@ -8,6 +8,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.core.network.detectVpnState
+import com.ventoux.netlens.core.network.getPhysicalNetwork
 import androidx.datastore.preferences.core.edit
 import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
@@ -18,6 +19,7 @@ import com.ventoux.netlens.widget.model.WidgetIpResponse
 import com.ventoux.netlens.widget.util.DnsLeakDetector
 import com.ventoux.netlens.widget.util.NetworkCollector
 import com.ventoux.netlens.widget.util.PingMeasurement
+import com.ventoux.netlens.widget.util.gateSsidForTransport
 import com.ventoux.netlens.widget.util.toFlagEmoji
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -61,13 +63,19 @@ class WidgetRefreshWorker(
             val caps = network?.let { cm.getNetworkCapabilities(it) }
             val isConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
-            val ssid = try {
+            // Gate the SSID by physical-transport. WifiManager.connectionInfo keeps
+            // returning the last associated SSID even after the device switches to
+            // cellular, so the value must be dropped when the physical link is not WiFi.
+            val physicalCaps = getPhysicalNetwork(cm)?.let { cm.getNetworkCapabilities(it) }
+            val onWifi = physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            val rawSsid = try {
                 val wm = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 @Suppress("DEPRECATION") // SSID requires location on API 31+; degrades to null
                 wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it != "<unknown ssid>" }
             } catch (_: Exception) {
                 null
             }
+            val ssid = gateSsidForTransport(isWifiTransport = onWifi, rawSsid = rawSsid)
 
             val encryptionType = try {
                 detectEncryptionType(appContext, caps)
@@ -161,7 +169,13 @@ class WidgetRefreshWorker(
             val dataStore = WidgetStateDefinition.getDataStore(appContext, "")
             dataStore.edit { prefs ->
                 prefs[WidgetStateDefinition.IS_CONNECTED] = isConnected
-                ssid?.let { prefs[WidgetStateDefinition.SSID] = it }
+                if (ssid != null) {
+                    prefs[WidgetStateDefinition.SSID] = ssid
+                } else {
+                    // Explicitly remove so a previously-connected SSID does not
+                    // linger in the widget after switching to cellular or going offline.
+                    prefs.remove(WidgetStateDefinition.SSID)
+                }
                 prefs[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] = System.currentTimeMillis()
                 prefs[WidgetStateDefinition.IS_SCAN_RUNNING] = false
 
