@@ -1,9 +1,12 @@
 package com.ventoux.netlens.feature.posture.model
 
+import com.ventoux.netlens.core.network.VpnState
+
 data class PostureScore(
     val grade: String,
     val numericScore: Int,
     val factors: List<FactorResult>,
+    val vpnState: VpnState = VpnState.None,
 )
 
 data class FactorResult(

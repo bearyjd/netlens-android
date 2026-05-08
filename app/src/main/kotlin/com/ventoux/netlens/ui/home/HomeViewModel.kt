@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkInterfaceProvider
 import com.ventoux.netlens.core.network.NetworkMonitor
+import com.ventoux.netlens.core.network.VpnState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,14 +29,14 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         networkMonitor.isOnline,
-        networkMonitor.isVpnActive,
+        networkMonitor.vpnState,
         userPreferencesRepository.favoriteToolRoutes,
         userPreferencesRepository.recentToolRoutes,
     ) { online, vpn, favorites, recents ->
         val iface = if (online) networkInterfaceProvider.getActiveNetworkInterface() else null
         HomeUiState(
             isConnected = online,
-            isVpnActive = vpn,
+            isVpnActive = vpn !is VpnState.None,
             localIp = iface?.ip,
             interfaceLabel = iface?.label,
             gatewayIp = iface?.gateway,

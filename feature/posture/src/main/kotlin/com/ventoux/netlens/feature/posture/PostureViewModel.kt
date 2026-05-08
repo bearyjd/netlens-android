@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkMonitor
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.engine.PostureScoreEngine
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
 import com.ventoux.netlens.feature.posture.model.PostureUiState
@@ -56,14 +57,14 @@ class PostureViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 networkMonitor.isOnline,
-                networkMonitor.isVpnActive,
+                networkMonitor.vpnState,
             ) { online, vpn -> online to vpn }
                 .collectLatest { (online, vpn) ->
                     refreshJob?.cancel()
                     if (!online) {
                         _uiState.value = PostureUiState.Disconnected
                     } else {
-                        recalculate(isOnline = true, isVpnActive = vpn)
+                        recalculate(isOnline = true, vpnState = vpn)
                     }
                 }
         }
@@ -71,20 +72,24 @@ class PostureViewModel @Inject constructor(
 
     private suspend fun recalculate(
         isOnline: Boolean = true,
-        isVpnActive: Boolean? = null,
+        vpnState: VpnState? = null,
     ) {
         try {
-            val vpn = isVpnActive ?: networkMonitor.isVpnActive.first()
+            val vpn = vpnState ?: networkMonitor.vpnState.first()
             val encryption = encryptionTypeProvider.currentEncryptionType()
             val latestScan = lanScanHistoryDao.getRecent(1)
                 .map { it.firstOrNull()?.deviceCount }
                 .first()
 
+            // TODO: integrate network trust model — for now treat all networks as untrusted.
+            val untrustedNetwork = true
+
             val score = PostureScoreEngine.compute(
                 encryptionType = encryption,
                 isConnected = isOnline,
                 deviceCount = latestScan,
-                isVpnActive = vpn,
+                vpnState = vpn,
+                untrustedNetwork = untrustedNetwork,
             )
 
             if (score != null) {

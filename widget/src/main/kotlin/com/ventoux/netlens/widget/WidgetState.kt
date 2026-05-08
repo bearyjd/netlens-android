@@ -1,5 +1,7 @@
 package com.ventoux.netlens.widget
 
+import com.ventoux.netlens.core.network.VpnState
+
 data class WidgetState(
     val scoreGrade: String = "",
     val scoreColorArgb: Int = 0,
@@ -25,7 +27,7 @@ data class WidgetState(
 
     val latencyMs: Long = -1L,
     val deviceCount: Int = 0,
-    val vpnActive: Boolean = false,
+    val vpnState: VpnState = VpnState.None,
 
     val lastScanTimestamp: Long = 0L,
     val isScanRunning: Boolean = false,

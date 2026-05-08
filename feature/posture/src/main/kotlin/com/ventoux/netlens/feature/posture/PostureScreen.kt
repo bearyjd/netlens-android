@@ -1,5 +1,9 @@
 package com.ventoux.netlens.feature.posture
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,12 +19,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -37,7 +44,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.model.FactorResult
 import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.posture.model.PostureScore
@@ -146,6 +156,25 @@ fun PostureScreen(
                     )
                 }
                 is PostureUiState.Scored -> {
+                    val context = LocalContext.current
+                    VpnLockIndicator(
+                        state = s.score.vpnState,
+                        onClick = {
+                            val vpnIntent = Intent(Settings.ACTION_VPN_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                context.startActivity(vpnIntent)
+                            } catch (e: ActivityNotFoundException) {
+                                // AOSP forks without a VPN settings activity (rare).
+                                Log.w("PostureScreen", "ACTION_VPN_SETTINGS not handled", e)
+                                context.startActivity(
+                                    Intent(Settings.ACTION_SETTINGS)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     ScoreHero(score = s.score)
                     Spacer(modifier = Modifier.height(24.dp))
                     s.score.factors.forEach { factor ->
@@ -158,6 +187,27 @@ fun PostureScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun VpnLockIndicator(state: VpnState, onClick: () -> Unit) {
+    val (color, icon, labelRes) = when (state) {
+        VpnState.FullTunnel -> Triple(Color(0xFF388E3C), Icons.Default.Lock, R.string.posture_vpn_label_full)
+        VpnState.SplitTunnel -> Triple(Color(0xFFF57C00), Icons.Default.Lock, R.string.posture_vpn_label_split)
+        VpnState.None -> Triple(Color(0xFFD32F2F), Icons.Default.LockOpen, R.string.posture_vpn_label_none)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = stringResource(labelRes), color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 

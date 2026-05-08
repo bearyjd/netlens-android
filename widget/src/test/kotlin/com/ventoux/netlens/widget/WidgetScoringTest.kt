@@ -1,5 +1,6 @@
 package com.ventoux.netlens.widget
 
+import com.ventoux.netlens.core.network.VpnState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -150,7 +151,7 @@ class WidgetScoringTest {
         val score = computeWidgetScore(
             encryptionType = "WPA3",
             deviceCount = 3,
-            isVpnActive = true,
+            vpnState = VpnState.FullTunnel,
         )
         assertEquals("A", score.grade)
         assertEquals(0xFF4CAF50.toInt(), score.colorArgb)
@@ -161,7 +162,7 @@ class WidgetScoringTest {
         val score = computeWidgetScore(
             encryptionType = "Open",
             deviceCount = 50,
-            isVpnActive = false,
+            vpnState = VpnState.None,
         )
         assertEquals(3, score.issueCount)
         assertEquals("Weak or no encryption", score.topIssue)
@@ -173,9 +174,21 @@ class WidgetScoringTest {
         val score = computeWidgetScore(
             encryptionType = null,
             deviceCount = 10,
-            isVpnActive = true,
+            vpnState = VpnState.FullTunnel,
         )
         assertTrue(score.issueCount >= 1)
         assertNotEquals("vpn", score.topIssueId)
+    }
+
+    @Test
+    fun `computeWidgetScore split tunnel scores between full and none`() {
+        val full = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.FullTunnel)
+        val split = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.SplitTunnel)
+        val none = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.None)
+        // SplitTunnel must NOT collapse to FullTunnel — that was the migrated HIGH bug.
+        assertNotEquals(full.grade, split.grade)
+        assertEquals("VPN is split-tunnel", split.topIssue)
+        assertEquals("vpn", split.topIssueId)
+        assertEquals("VPN not active", none.topIssue)
     }
 }
