@@ -4,11 +4,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 
-internal data class NetworkCapsSnapshot(
-    val hasVpn: Boolean,
-    val hasInternet: Boolean,
-    val hasValidated: Boolean,
-    val hasWifiOrCellular: Boolean,
+internal data class VpnNetworkSnapshot(
+    val hasDefaultRoute: Boolean,
 )
 
 /**
@@ -26,34 +23,28 @@ fun getPhysicalNetwork(cm: ConnectivityManager): Network? =
     }
 
 /**
- * Detect the current VPN tunneling mode.
+ * Detect the current VPN tunneling mode by inspecting the VPN's own routing table.
+ * A full-tunnel VPN installs a default route (0.0.0.0/0 / ::/0) so all traffic exits
+ * the tunnel. A split-tunnel VPN only installs specific subnet routes, leaving other
+ * traffic on the underlying physical interface.
  *
- * Heuristic: if any non-VPN internet-capable network is also validated and active alongside
- * the VPN, treat it as a split tunnel. Otherwise the VPN is the only path → full tunnel.
- *
- * Known limitation: some VPN clients keep the underlying interface validated even in
- * full-tunnel mode, which can produce a false SplitTunnel reading. Acceptable trade-off
- * for security-awareness purposes.
+ * This is more reliable than checking whether the underlying network is still validated:
+ * many VPN clients keep the cellular/Wi-Fi interface validated even in full-tunnel mode,
+ * which would falsely look like a split tunnel.
  */
 fun detectVpnState(cm: ConnectivityManager): VpnState {
-    val snapshots = cm.allNetworks.mapNotNull { network ->
-        val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
-        NetworkCapsSnapshot(
-            hasVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
-            hasInternet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
-            hasValidated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
-            hasWifiOrCellular = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-        )
+    val vpnSnapshot = cm.allNetworks.firstNotNullOfOrNull { network ->
+        val caps = cm.getNetworkCapabilities(network) ?: return@firstNotNullOfOrNull null
+        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return@firstNotNullOfOrNull null
+        val routes = cm.getLinkProperties(network)?.routes.orEmpty()
+        VpnNetworkSnapshot(hasDefaultRoute = routes.any { it.isDefaultRoute })
     }
-    return detectVpnStateFromSnapshots(snapshots)
+    return detectVpnStateFromSnapshot(vpnSnapshot)
 }
 
-internal fun detectVpnStateFromSnapshots(snapshots: List<NetworkCapsSnapshot>): VpnState {
-    val hasVpn = snapshots.any { it.hasVpn }
-    if (!hasVpn) return VpnState.None
-    val hasNonVpnInternet = snapshots.any {
-        !it.hasVpn && it.hasInternet && it.hasValidated && it.hasWifiOrCellular
+internal fun detectVpnStateFromSnapshot(snapshot: VpnNetworkSnapshot?): VpnState =
+    when {
+        snapshot == null -> VpnState.None
+        snapshot.hasDefaultRoute -> VpnState.FullTunnel
+        else -> VpnState.SplitTunnel
     }
-    return if (hasNonVpnInternet) VpnState.SplitTunnel else VpnState.FullTunnel
-}
