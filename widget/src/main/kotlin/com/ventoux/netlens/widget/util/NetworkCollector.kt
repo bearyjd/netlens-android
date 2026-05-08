@@ -64,25 +64,38 @@ object NetworkCollector {
             val rssi: Int
             val rssiLevel: Int
             val linkSpeedMbps: Int
-            if (physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
-                val wifiInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    physicalCaps.transportInfo as? WifiInfo
-                } else {
-                    @Suppress("DEPRECATION")
-                    (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.connectionInfo
+            when {
+                physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> {
+                    val wifiInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        physicalCaps.transportInfo as? WifiInfo
+                    } else {
+                        @Suppress("DEPRECATION")
+                        (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.connectionInfo
+                    }
+                    rssi = wifiInfo?.rssi ?: -1000
+                    rssiLevel = if (rssi > -1000) {
+                        @Suppress("DEPRECATION")
+                        WifiManager.calculateSignalLevel(rssi, 5)
+                    } else {
+                        -1
+                    }
+                    linkSpeedMbps = wifiInfo?.linkSpeed ?: -1
                 }
-                rssi = wifiInfo?.rssi ?: -1000
-                rssiLevel = if (rssi > -1000) {
-                    @Suppress("DEPRECATION")
-                    WifiManager.calculateSignalLevel(rssi, 5)
-                } else {
-                    -1
+                physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> {
+                    val (cellDbm, cellLevel) = readCellularSignal(context)
+                    rssi = cellDbm
+                    rssiLevel = cellLevel
+                    // Cellular has no per-link speed; fall back to the kernel's downstream
+                    // bandwidth estimate (kbps → Mbps). This is what NetworkCapabilities
+                    // exposes for non-WiFi transports.
+                    val downstreamKbps = physicalCaps.linkDownstreamBandwidthKbps
+                    linkSpeedMbps = if (downstreamKbps > 0) downstreamKbps / 1000 else -1
                 }
-                linkSpeedMbps = wifiInfo?.linkSpeed ?: -1
-            } else {
-                rssi = -1000
-                rssiLevel = -1
-                linkSpeedMbps = -1
+                else -> {
+                    rssi = -1000
+                    rssiLevel = -1
+                    linkSpeedMbps = -1
+                }
             }
 
             val cellGeneration = if (physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true) {
@@ -130,6 +143,23 @@ object NetworkCollector {
             throw e
         } catch (_: Exception) {
             CollectedNetworkData()
+        }
+    }
+
+    private fun readCellularSignal(context: Context): Pair<Int, Int> {
+        return try {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+                ?: return -1000 to -1
+            val signal = tm.signalStrength ?: return -1000 to -1
+            val dbm = signal.cellSignalStrengths.firstOrNull()?.dbm ?: -1000
+            val level = signal.level.coerceIn(0, 4)
+            dbm to level
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: SecurityException) {
+            -1000 to -1
+        } catch (_: Exception) {
+            -1000 to -1
         }
     }
 
