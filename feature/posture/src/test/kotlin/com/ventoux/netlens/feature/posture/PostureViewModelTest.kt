@@ -1,5 +1,6 @@
 package com.ventoux.netlens.feature.posture
 
+import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -9,10 +10,12 @@ import com.ventoux.netlens.core.data.dao.LanScanHistoryDao
 import com.ventoux.netlens.core.data.model.LanScanHistoryEntry
 import com.ventoux.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventoux.netlens.core.network.NetworkMonitor
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.engine.EncryptionTypeProvider
 import com.ventoux.netlens.feature.posture.model.PostureUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -37,6 +40,7 @@ class PostureViewModelTest {
     private lateinit var encryptionProvider: FakeEncryptionTypeProvider
     private lateinit var lanScanDao: FakeLanScanHistoryDao
     private lateinit var preferences: UserPreferencesRepository
+    private val createdViewModels = mutableListOf<PostureViewModel>()
 
     @BeforeEach
     fun setup() {
@@ -51,6 +55,10 @@ class PostureViewModelTest {
 
     @AfterEach
     fun tearDown() {
+        // Cancel each VM's viewModelScope so its observeNetwork() collector
+        // doesn't leak into the next test as UncaughtExceptionsBeforeTest.
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         Dispatchers.resetMain()
     }
 
@@ -59,7 +67,7 @@ class PostureViewModelTest {
         encryptionTypeProvider = encryptionProvider,
         lanScanHistoryDao = lanScanDao,
         preferences = preferences,
-    )
+    ).also { createdViewModels.add(it) }
 
     @Test
     fun `initial state is Loading`() = runTest {
@@ -84,7 +92,7 @@ class PostureViewModelTest {
     @Test
     fun `emits Scored with grade A for WPA3 VPN and few devices`() = runTest {
         networkMonitor.online.value = true
-        networkMonitor.vpn.value = true
+        networkMonitor.vpn.value = VpnState.FullTunnel
         encryptionProvider.encryptionType = "WPA3"
         lanScanDao.entries.add(
             LanScanHistoryEntry(
@@ -107,7 +115,7 @@ class PostureViewModelTest {
     @Test
     fun `refresh recalculates score`() = runTest {
         networkMonitor.online.value = true
-        networkMonitor.vpn.value = true
+        networkMonitor.vpn.value = VpnState.FullTunnel
         encryptionProvider.encryptionType = "WPA2"
         lanScanDao.entries.add(
             LanScanHistoryEntry(
@@ -149,7 +157,7 @@ class PostureViewModelTest {
     @Test
     fun `online with no scan history excludes device count factor`() = runTest {
         networkMonitor.online.value = true
-        networkMonitor.vpn.value = true
+        networkMonitor.vpn.value = VpnState.FullTunnel
         encryptionProvider.encryptionType = "WPA3"
         val vm = createViewModel()
         vm.uiState.test {
@@ -179,7 +187,7 @@ class PostureViewModelTest {
     @Test
     fun `persist failure preserves Scored state`() = runTest {
         networkMonitor.online.value = true
-        networkMonitor.vpn.value = true
+        networkMonitor.vpn.value = VpnState.FullTunnel
         encryptionProvider.encryptionType = "WPA3"
         lanScanDao.entries.add(
             LanScanHistoryEntry(
@@ -195,7 +203,7 @@ class PostureViewModelTest {
             encryptionTypeProvider = encryptionProvider,
             lanScanHistoryDao = lanScanDao,
             preferences = throwingPreferences,
-        )
+        ).also { createdViewModels.add(it) }
         vm.uiState.test {
             assertEquals(PostureUiState.Loading, awaitItem())
             val scored = awaitItem()
@@ -208,9 +216,9 @@ class PostureViewModelTest {
 
 private class FakeNetworkMonitor : NetworkMonitor {
     val online = MutableStateFlow(true)
-    val vpn = MutableStateFlow(false)
+    val vpn = MutableStateFlow<VpnState>(VpnState.None)
     override val isOnline: Flow<Boolean> = online
-    override val isVpnActive: Flow<Boolean> = vpn
+    override val vpnState: Flow<VpnState> = vpn
 }
 
 private class FakeEncryptionTypeProvider : EncryptionTypeProvider {

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.state.GlanceStateDefinition
+import com.ventoux.netlens.core.network.VpnState
 import java.io.File
 
 object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
@@ -38,7 +39,7 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
 
     val LATENCY_MS = longPreferencesKey("latency_ms")
     val DEVICE_COUNT = intPreferencesKey("device_count")
-    val VPN_ACTIVE = booleanPreferencesKey("vpn_active")
+    val VPN_STATE = stringPreferencesKey("vpn_state")
 
     val LAST_SCAN_TIMESTAMP = longPreferencesKey("last_scan_timestamp")
     val IS_SCAN_RUNNING = booleanPreferencesKey("is_scan_running")
@@ -100,7 +101,7 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
     speedTimestamp = this[WidgetStateDefinition.SPEED_TIMESTAMP] ?: 0L,
     latencyMs = this[WidgetStateDefinition.LATENCY_MS] ?: -1L,
     deviceCount = this[WidgetStateDefinition.DEVICE_COUNT] ?: 0,
-    vpnActive = this[WidgetStateDefinition.VPN_ACTIVE] ?: false,
+    vpnState = VpnState.deserialize(this[WidgetStateDefinition.VPN_STATE]),
     lastScanTimestamp = this[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] ?: 0L,
     isScanRunning = this[WidgetStateDefinition.IS_SCAN_RUNNING] ?: false,
     localIp = this[WidgetStateDefinition.LOCAL_IP].orEmpty(),

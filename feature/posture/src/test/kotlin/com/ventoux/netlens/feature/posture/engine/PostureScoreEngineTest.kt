@@ -1,5 +1,6 @@
 package com.ventoux.netlens.feature.posture.engine
 
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.model.Severity
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -146,17 +147,38 @@ class PostureScoreEngineTest {
     @Nested
     inner class Vpn {
         @Test
-        fun `VPN active scores 100`() {
-            val result = PostureScoreEngine.evaluateVpn(true)
+        fun `VPN FullTunnel scores 100`() {
+            val result = PostureScoreEngine.evaluateVpn(VpnState.FullTunnel, untrustedNetwork = false)
             assertEquals(100, result.score)
             assertEquals(Severity.Good, result.severity)
         }
 
         @Test
-        fun `VPN inactive scores 40`() {
-            val result = PostureScoreEngine.evaluateVpn(false)
-            assertEquals(40, result.score)
+        fun `VPN SplitTunnel on trusted scores 80`() {
+            val result = PostureScoreEngine.evaluateVpn(VpnState.SplitTunnel, untrustedNetwork = false)
+            assertEquals(80, result.score)
+            assertEquals(Severity.Good, result.severity)
+        }
+
+        @Test
+        fun `VPN SplitTunnel on untrusted scores 60`() {
+            val result = PostureScoreEngine.evaluateVpn(VpnState.SplitTunnel, untrustedNetwork = true)
+            assertEquals(60, result.score)
             assertEquals(Severity.Moderate, result.severity)
+        }
+
+        @Test
+        fun `VPN None on trusted scores 60`() {
+            val result = PostureScoreEngine.evaluateVpn(VpnState.None, untrustedNetwork = false)
+            assertEquals(60, result.score)
+            assertEquals(Severity.Moderate, result.severity)
+        }
+
+        @Test
+        fun `VPN None on untrusted scores 30`() {
+            val result = PostureScoreEngine.evaluateVpn(VpnState.None, untrustedNetwork = true)
+            assertEquals(30, result.score)
+            assertEquals(Severity.Poor, result.severity)
         }
     }
 
@@ -168,7 +190,8 @@ class PostureScoreEngineTest {
                 encryptionType = "WPA3",
                 isConnected = false,
                 deviceCount = 3,
-                isVpnActive = true,
+                vpnState = VpnState.FullTunnel,
+                untrustedNetwork = true,
             )
             assertNull(result)
         }
@@ -179,7 +202,8 @@ class PostureScoreEngineTest {
                 encryptionType = "WPA3",
                 isConnected = true,
                 deviceCount = 3,
-                isVpnActive = true,
+                vpnState = VpnState.FullTunnel,
+                untrustedNetwork = true,
             )
             assertEquals("A", result?.grade)
             assertEquals(3, result?.factors?.size)
@@ -191,7 +215,8 @@ class PostureScoreEngineTest {
                 encryptionType = "WPA2",
                 isConnected = true,
                 deviceCount = 20,
-                isVpnActive = false,
+                vpnState = VpnState.None,
+                untrustedNetwork = true,
             )
             assertTrue(result?.grade in listOf("C", "D"))
         }
@@ -202,7 +227,8 @@ class PostureScoreEngineTest {
                 encryptionType = "",
                 isConnected = true,
                 deviceCount = 50,
-                isVpnActive = false,
+                vpnState = VpnState.None,
+                untrustedNetwork = true,
             )
             assertEquals("F", result?.grade)
         }
@@ -213,7 +239,8 @@ class PostureScoreEngineTest {
                 encryptionType = "WPA3",
                 isConnected = true,
                 deviceCount = null,
-                isVpnActive = true,
+                vpnState = VpnState.FullTunnel,
+                untrustedNetwork = true,
             )
             assertEquals(2, result?.factors?.size)
             assertEquals("A", result?.grade)
@@ -225,7 +252,8 @@ class PostureScoreEngineTest {
                 encryptionType = "WPA3",
                 isConnected = true,
                 deviceCount = 1,
-                isVpnActive = true,
+                vpnState = VpnState.FullTunnel,
+                untrustedNetwork = true,
             )
             assertTrue(result?.numericScore in 0..100)
         }
@@ -236,7 +264,8 @@ class PostureScoreEngineTest {
                 encryptionType = null,
                 isConnected = true,
                 deviceCount = 3,
-                isVpnActive = true,
+                vpnState = VpnState.FullTunnel,
+                untrustedNetwork = true,
             )
             val encFactor = result?.factors?.first { it.factor.displayName == "Wi-Fi Encryption" }
             assertEquals(Severity.Unavailable, encFactor?.severity)

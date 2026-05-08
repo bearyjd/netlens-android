@@ -6,6 +6,9 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import com.ventoux.netlens.core.network.VpnState
+import com.ventoux.netlens.core.network.detectVpnState
+import com.ventoux.netlens.core.network.getPhysicalNetwork
 import androidx.datastore.preferences.core.edit
 import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
@@ -16,6 +19,7 @@ import com.ventoux.netlens.widget.model.WidgetIpResponse
 import com.ventoux.netlens.widget.util.DnsLeakDetector
 import com.ventoux.netlens.widget.util.NetworkCollector
 import com.ventoux.netlens.widget.util.PingMeasurement
+import com.ventoux.netlens.widget.util.gateSsidForTransport
 import com.ventoux.netlens.widget.util.toFlagEmoji
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -59,13 +63,19 @@ class WidgetRefreshWorker(
             val caps = network?.let { cm.getNetworkCapabilities(it) }
             val isConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
-            val ssid = try {
+            // Gate the SSID by physical-transport. WifiManager.connectionInfo keeps
+            // returning the last associated SSID even after the device switches to
+            // cellular, so the value must be dropped when the physical link is not WiFi.
+            val physicalCaps = getPhysicalNetwork(cm)?.let { cm.getNetworkCapabilities(it) }
+            val onWifi = physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            val rawSsid = try {
                 val wm = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 @Suppress("DEPRECATION") // SSID requires location on API 31+; degrades to null
                 wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it != "<unknown ssid>" }
             } catch (_: Exception) {
                 null
             }
+            val ssid = gateSsidForTransport(isWifiTransport = onWifi, rawSsid = rawSsid)
 
             val encryptionType = try {
                 detectEncryptionType(appContext, caps)
@@ -73,7 +83,8 @@ class WidgetRefreshWorker(
                 null
             }
 
-            val isVpnActive = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+            val vpnState = detectVpnState(cm)
+            val isVpnActive = vpnState !is VpnState.None
 
             val deviceCount = try {
                 entryPoint.lanScanHistoryDao()
@@ -99,7 +110,7 @@ class WidgetRefreshWorker(
                         topIssueId = null,
                     )
                 } else {
-                    computeWidgetScore(encryptionType, deviceCount, isVpnActive)
+                    computeWidgetScore(encryptionType, deviceCount, vpnState)
                 }
             } else {
                 null
@@ -158,21 +169,41 @@ class WidgetRefreshWorker(
             val dataStore = WidgetStateDefinition.getDataStore(appContext, "")
             dataStore.edit { prefs ->
                 prefs[WidgetStateDefinition.IS_CONNECTED] = isConnected
-                ssid?.let { prefs[WidgetStateDefinition.SSID] = it }
+                if (ssid != null) {
+                    prefs[WidgetStateDefinition.SSID] = ssid
+                } else {
+                    // Explicitly remove so a previously-connected SSID does not
+                    // linger in the widget after switching to cellular or going offline.
+                    prefs.remove(WidgetStateDefinition.SSID)
+                }
                 prefs[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] = System.currentTimeMillis()
                 prefs[WidgetStateDefinition.IS_SCAN_RUNNING] = false
 
-                encryptionType?.let {
-                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = it
-                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(it)
+                if (encryptionType != null) {
+                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = encryptionType
+                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(encryptionType)
+                } else {
+                    // Same stale-data class as SSID: detectEncryptionType returns null
+                    // when the device is off WiFi, so a previously-cached "WPA3" would
+                    // otherwise linger on the cellular widget.
+                    prefs.remove(WidgetStateDefinition.ENCRYPTION_TYPE)
+                    prefs.remove(WidgetStateDefinition.IS_ENCRYPTION_SECURE)
                 }
 
                 if (score != null) {
                     prefs[WidgetStateDefinition.SCORE_GRADE] = score.grade
                     prefs[WidgetStateDefinition.SCORE_COLOR_ARGB] = score.colorArgb
                     prefs[WidgetStateDefinition.ISSUE_COUNT] = score.issueCount
-                    score.topIssue?.let { prefs[WidgetStateDefinition.TOP_ISSUE] = it }
-                    score.topIssueId?.let { prefs[WidgetStateDefinition.TOP_ISSUE_ID] = it }
+                    if (score.topIssue != null) {
+                        prefs[WidgetStateDefinition.TOP_ISSUE] = score.topIssue
+                    } else {
+                        prefs.remove(WidgetStateDefinition.TOP_ISSUE)
+                    }
+                    if (score.topIssueId != null) {
+                        prefs[WidgetStateDefinition.TOP_ISSUE_ID] = score.topIssueId
+                    } else {
+                        prefs.remove(WidgetStateDefinition.TOP_ISSUE_ID)
+                    }
                 }
 
                 ipData?.takeIf { IP_PATTERN.matches(it.ip) }?.let { ip ->
@@ -188,7 +219,7 @@ class WidgetRefreshWorker(
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
                 prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
-                prefs[WidgetStateDefinition.VPN_ACTIVE] = isVpnActive
+                prefs[WidgetStateDefinition.VPN_STATE] = vpnState.serialize()
 
                 prefs[WidgetStateDefinition.LOCAL_IP] = collected.localIp
                 prefs[WidgetStateDefinition.PING_MS] = pingResult ?: -1
@@ -236,19 +267,29 @@ internal data class WidgetScore(
 internal fun computeWidgetScore(
     encryptionType: String?,
     deviceCount: Int,
-    isVpnActive: Boolean,
+    vpnState: VpnState,
 ): WidgetScore {
     val encScore = encryptionScore(encryptionType)
     val devScore = deviceCountScore(deviceCount)
-    val vpnScore = if (isVpnActive) 100 else 40
+    val vpnScore = when (vpnState) {
+        VpnState.FullTunnel -> 100
+        VpnState.SplitTunnel -> 60
+        VpnState.None -> 40
+    }
 
     val numeric = ((encScore * 50 + devScore * 30 + vpnScore * 20) / 100).coerceIn(0, 100)
     val grade = gradeFor(numeric)
 
+    val vpnIssue: Pair<String, String>? = when (vpnState) {
+        VpnState.FullTunnel -> null
+        VpnState.SplitTunnel -> "VPN is split-tunnel" to "vpn"
+        VpnState.None -> "VPN not active" to "vpn"
+    }
+
     val issues = listOfNotNull(
         ("Weak or no encryption" to "encryption").takeIf { encScore <= 20 },
         ("Too many devices on network" to "device_count").takeIf { devScore <= 40 },
-        ("VPN not active" to "vpn").takeIf { !isVpnActive },
+        vpnIssue,
     )
 
     val colorArgb = when (grade) {

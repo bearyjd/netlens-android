@@ -1,5 +1,6 @@
 package com.ventoux.netlens.feature.posture.engine
 
+import com.ventoux.netlens.core.network.VpnState
 import com.ventoux.netlens.feature.posture.model.FactorResult
 import com.ventoux.netlens.feature.posture.model.PostureFactor
 import com.ventoux.netlens.feature.posture.model.PostureScore
@@ -11,14 +12,15 @@ object PostureScoreEngine {
         encryptionType: String?,
         isConnected: Boolean,
         deviceCount: Int?,
-        isVpnActive: Boolean,
+        vpnState: VpnState,
+        untrustedNetwork: Boolean,
     ): PostureScore? {
         if (!isConnected) return null
 
         val factors = buildList {
             add(evaluateEncryption(encryptionType))
             deviceCount?.let { add(evaluateDeviceCount(it)) }
-            add(evaluateVpn(isVpnActive))
+            add(evaluateVpn(vpnState, untrustedNetwork))
         }
 
         val activeFactors = factors.filter { it.severity != Severity.Unavailable }
@@ -34,6 +36,7 @@ object PostureScoreEngine {
             grade = grade,
             numericScore = numericScore,
             factors = factors,
+            vpnState = vpnState,
         )
     }
 
@@ -85,22 +88,31 @@ object PostureScoreEngine {
         )
     }
 
-    internal fun evaluateVpn(isActive: Boolean): FactorResult {
-        return if (isActive) {
-            FactorResult(
+    internal fun evaluateVpn(state: VpnState, untrustedNetwork: Boolean): FactorResult {
+        return when (state) {
+            VpnState.FullTunnel -> FactorResult(
                 factor = PostureFactor.VpnStatus,
                 score = 100,
-                label = "Active",
-                detail = "VPN is active — your traffic is encrypted and your IP is hidden",
+                label = "Full tunnel",
+                detail = "VPN is active and protecting all traffic — your IP is hidden",
                 severity = Severity.Good,
             )
-        } else {
-            FactorResult(
+            VpnState.SplitTunnel -> FactorResult(
                 factor = PostureFactor.VpnStatus,
-                score = 40,
+                score = if (untrustedNetwork) 60 else 80,
+                label = "Split tunnel",
+                detail = "Only some traffic is protected — review your VPN settings to enable full-tunnel mode",
+                severity = if (untrustedNetwork) Severity.Moderate else Severity.Good,
+            )
+            VpnState.None -> FactorResult(
+                factor = PostureFactor.VpnStatus,
+                score = if (untrustedNetwork) 30 else 60,
                 label = "Inactive",
-                detail = "No VPN detected — your ISP and network operator can see your traffic",
-                severity = Severity.Moderate,
+                detail = if (untrustedNetwork)
+                    "No VPN on an untrusted network — your traffic may be visible to others"
+                else
+                    "No VPN — fine on networks you trust, otherwise enable a VPN",
+                severity = if (untrustedNetwork) Severity.Poor else Severity.Moderate,
             )
         }
     }

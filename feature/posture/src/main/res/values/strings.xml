@@ -14,4 +14,7 @@
     <string name="posture_grade_d">Poor — significant vulnerabilities detected</string>
     <string name="posture_grade_f">Critical — immediate action recommended</string>
     <string name="posture_grade_unknown">Not yet evaluated</string>
+    <string name="posture_vpn_label_full">Protected</string>
+    <string name="posture_vpn_label_split">Split Tunnel</string>
+    <string name="posture_vpn_label_none">No VPN</string>
 </resources>
