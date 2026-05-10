@@ -102,3 +102,22 @@ JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in
 ## Strings
 
 User-facing strings are extracted to `res/values/strings.xml` in each feature module. Use string resources, not hardcoded text in composables.
+
+## Skill routing for this repo
+
+Project-scoped skills live under `.claude/skills/`. When invoking Claude Code in this repo, prefer:
+
+- "release", "ship release", "tag and release", "cut v…" → `/android-release` (the skill at `.claude/skills/android-release/SKILL.md`). Refuses to tag if the CHANGELOG entry, F-Droid changelog file, signed local build, cert continuity, or tag-not-already-existing checks fail. Encodes the lessons from the v1.1.0 → v1.1.1 incident.
+- "review my changes", "code review" → `/review` or `/code-review`
+- "security audit" → `/cso`
+- "investigate bug", "why is X broken" → `/investigate`
+
+## Release signing
+
+- `local.properties` contains only `sdk.dir`. Release signing falls through **per field** to `RELEASE_STORE_FILE` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_ALIAS` / `RELEASE_KEY_PASSWORD` env vars when a `release.*` key is absent or blank in `local.properties`. See `app/build.gradle.kts:25-42`.
+- A signed local build is the pre-flight for any release. If `assembleRelease` produces `*-unsigned.apk`, env wiring is wrong — fix that, do not push.
+- The release CI workflow at `.github/workflows/release.yml` decodes the keystore from `RELEASE_KEYSTORE_BASE64` (GitHub secret) and signs at the `assembleRelease`/`bundleRelease` step. Tag-vs-`gradle.properties` mismatch fails the workflow at the version-verification step.
+
+## Versioning
+
+`gradle.properties` is the source of truth for `netlens.versionName` and `netlens.versionCode`. The tag (`v<versionName>`) and CHANGELOG header (`## [<versionName>] - <date>`) must match. The F-Droid changelog file at `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` is required for F-Droid metadata to pick up the release; missing this file means F-Droid silently ships the new code without a release note.
