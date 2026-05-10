@@ -1,0 +1,7 @@
+Security hardening release.
+
+The AbuseIPDB API key is now encrypted on device. Android Auto Backup is disabled so adb backup cannot exfiltrate stored secrets. Pro entitlement no longer silently downgrades to plaintext on a degraded keystore.
+
+The netlens:// deep-link filter no longer accepts launches from browsers or other apps; widgets and the Quick Settings tile keep working unchanged.
+
+Defense-in-depth argv handling for ping and traceroute. Gradle build pipeline pinned by SHA-256.

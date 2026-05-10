@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-10
+
+### Security
+- Encrypt the user-supplied AbuseIPDB API key with EncryptedSharedPreferences; one-shot migration from prior plaintext DataStore storage (#79)
+- Disable Android Auto Backup (`allowBackup="false"`, `fullBackupContent="false"`) so `adb backup` cannot exfiltrate DataStore or SharedPreferences (#79)
+- Fail closed when EncryptedSharedPreferences cannot initialize for billing; Pro state no longer silently downgrades to plaintext (#79)
+- Drop `BROWSABLE` from the `netlens://feature/*` deep-link intent filter; first-party widgets and the QS tile keep working, browsers and other apps can no longer auto-launch feature screens (#80)
+- Defense-in-depth `--` argv separator before the host argument in ping and traceroute (#79)
+- Pin Gradle wrapper distribution by SHA-256 to verify the binary, not just the URL origin (#80)
+
+### Changed
+- Explicit `isDebuggable=false` / `isJniDebuggable=false` on the release build type (#80)
+- R8 keep rules for Tink errorprone annotations and dnsjava JDK SPI declarations to silence release-build warnings (#80)
+
 ## [1.1.0] - 2026-05-04
 
 ### Added
