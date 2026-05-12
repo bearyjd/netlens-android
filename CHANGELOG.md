@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - AGP 8.7.3 NPE resolved by upgrading to Gradle 8.14 / AGP 8.9.0
 - Widget security vulnerabilities closed
 
-[Unreleased]: https://github.com/bearyjd/netatlas-android/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/bearyjd/netatlas-android/releases/tag/v1.1.0
-[1.0.1]: https://github.com/bearyjd/netatlas-android/releases/tag/v1.0.1
-[1.0.0]: https://github.com/bearyjd/netatlas-android/releases/tag/v1.0.0
+[Unreleased]: https://github.com/bearyjd/netlens-android/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/bearyjd/netlens-android/releases/tag/v1.1.0
+[1.0.1]: https://github.com/bearyjd/netlens-android/releases/tag/v1.0.1
+[1.0.0]: https://github.com/bearyjd/netlens-android/releases/tag/v1.0.0

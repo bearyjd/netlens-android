@@ -24,21 +24,22 @@ android {
 
     signingConfigs {
         create("release") {
-            val props = rootProject.file("local.properties")
-            if (props.exists()) {
-                val localProps = Properties().apply {
-                    props.inputStream().use { load(it) }
-                }
-                storeFile = localProps.getProperty("release.storeFile")?.let(::file)
-                storePassword = localProps.getProperty("release.storePassword")
-                keyAlias = localProps.getProperty("release.keyAlias")
-                keyPassword = localProps.getProperty("release.keyPassword")
-            } else {
-                storeFile = System.getenv("RELEASE_STORE_FILE")?.let(::file)
-                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
-                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
-            }
+            // Per-field fallback: prefer local.properties when a key is present and
+            // non-blank, otherwise fall through to the corresponding RELEASE_* env
+            // var. Avoids the trap where local.properties exists with only sdk.dir
+            // and silently shadows valid env vars, producing an unsigned APK.
+            val localProps = rootProject.file("local.properties")
+                .takeIf { it.exists() }
+                ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
+
+            fun pick(propKey: String, envKey: String): String? =
+                localProps?.getProperty(propKey)?.takeIf { it.isNotBlank() }
+                    ?: System.getenv(envKey)?.takeIf { it.isNotBlank() }
+
+            pick("release.storeFile", "RELEASE_STORE_FILE")?.let { storeFile = file(it) }
+            storePassword = pick("release.storePassword", "RELEASE_STORE_PASSWORD")
+            keyAlias = pick("release.keyAlias", "RELEASE_KEY_ALIAS")
+            keyPassword = pick("release.keyPassword", "RELEASE_KEY_PASSWORD")
         }
     }
 
