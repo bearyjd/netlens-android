@@ -3,7 +3,7 @@
 ## Plan 1: fix/lanscan-arp — PR #7
 
 **Branch:** `fix/lanscan-arp`
-**PR:** https://github.com/bearyjd/netatlas-android/pull/7
+**PR:** https://github.com/bearyjd/netlens-android/pull/7
 **Status:** Merged-ready (all tests pass, no blocking issues)
 **Review rounds:** 2 (round 1 found 1 HIGH + 1 MEDIUM + 1 LOW; round 2 found 3 HIGH + 5 MEDIUM + 3 LOW)
 

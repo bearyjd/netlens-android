@@ -53,4 +53,4 @@ Questions or concerns: [privacy@ventouxadvisoryco.com](mailto:privacy@ventouxadv
 
 ## Source
 
-NetLens is licensed under AGPL-3.0. The complete source code is available at [github.com/bearyjd/netatlas-android](https://github.com/bearyjd/netatlas-android).
+NetLens is licensed under AGPL-3.0. The complete source code is available at [github.com/bearyjd/netlens-android](https://github.com/bearyjd/netlens-android).
