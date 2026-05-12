@@ -5,13 +5,13 @@ Categories:
 License: AGPL-3.0-only
 AuthorName: Ventoux Advisory Co
 AuthorEmail: privacy@ventouxadvisoryco.com
-SourceCode: https://github.com/bearyjd/netatlas-android
-IssueTracker: https://github.com/bearyjd/netatlas-android/issues
+SourceCode: https://github.com/bearyjd/netlens-android
+IssueTracker: https://github.com/bearyjd/netlens-android/issues
 
 AutoName: NetLens
 
 RepoType: git
-Repo: https://github.com/bearyjd/netatlas-android.git
+Repo: https://github.com/bearyjd/netlens-android.git
 
 AntiFeatures:
   NonFreeNet:
