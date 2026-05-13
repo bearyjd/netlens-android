@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Http
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.NetworkPing
 import androidx.compose.material.icons.filled.Power
@@ -132,6 +133,13 @@ enum class ToolDestination(
         label = "Cell Tower",
         description = "Signal metrics & neighbors",
         category = ToolCategory.NetworkInfo,
+    ),
+    VpnStatus(
+        route = "vpnstatus",
+        icon = Icons.Default.VpnLock,
+        label = "VPN Status",
+        description = "Tunnel state & leak check",
+        category = ToolCategory.Security,
     ),
     DnsLeak(
         route = "dnsleak",

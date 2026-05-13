@@ -108,6 +108,7 @@ dependencies {
     implementation(project(":feature:dnsleak"))
     implementation(project(":feature:wifiaudit"))
     implementation(project(":feature:celltower"))
+    implementation(project(":feature:vpnstatus"))
 
     // Widget
     implementation(project(":widget"))
