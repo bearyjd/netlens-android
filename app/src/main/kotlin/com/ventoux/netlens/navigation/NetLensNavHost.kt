@@ -24,6 +24,7 @@ import com.ventoux.netlens.feature.ping.PingScreen
 import com.ventoux.netlens.feature.traceroute.TracerouteScreen
 import com.ventoux.netlens.feature.portscan.PortScanScreen
 import com.ventoux.netlens.feature.tls.TlsScreen
+import com.ventoux.netlens.feature.vpnstatus.VpnStatusScreen
 import com.ventoux.netlens.feature.ipcalc.IpCalcScreen
 import com.ventoux.netlens.feature.whois.WhoisScreen
 import com.ventoux.netlens.feature.widgetsettings.WidgetSettingsScreen
@@ -64,9 +65,17 @@ fun NetLensNavHost(
                     val route = when (factor) {
                         PostureFactor.Encryption -> ToolDestination.WifiAnalyzer.route
                         PostureFactor.DeviceCount -> ToolDestination.LanScan.route
-                        PostureFactor.VpnStatus -> null
+                        PostureFactor.VpnStatus -> ToolDestination.VpnStatus.route
                     }
                     route?.let { navController.navigate(it) { launchSingleTop = true } }
+                },
+            )
+        }
+        composable(ToolDestination.VpnStatus.route) {
+            VpnStatusScreen(
+                onBack = navController::popBackStack,
+                onOpenDnsLeak = {
+                    navController.navigate(ToolDestination.DnsLeak.route) { launchSingleTop = true }
                 },
             )
         }

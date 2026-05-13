@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vpnstatus_title">VPN Status</string>
+    <string name="vpnstatus_back">Back</string>
+    <string name="vpnstatus_refresh">Refresh</string>
+    <string name="vpnstatus_state_protected">Protected</string>
+    <string name="vpnstatus_state_split">Split Tunnel</string>
+    <string name="vpnstatus_state_none">No VPN</string>
+    <string name="vpnstatus_state_offline">Offline</string>
+    <string name="vpnstatus_desc_protected">All traffic is routed through the VPN tunnel.</string>
+    <string name="vpnstatus_desc_split">Some traffic bypasses the VPN tunnel. Apps not configured for split-tunnel routing may leak.</string>
+    <string name="vpnstatus_desc_none">No VPN is active. Your traffic uses the device default network unprotected.</string>
+    <string name="vpnstatus_desc_offline">Device is offline. Reconnect to evaluate VPN status.</string>
+    <string name="vpnstatus_run_leak_test">Run DNS Leak Test</string>
+    <string name="vpnstatus_caption">Tunnel state is detected from the active network\'s transport. Some VPN apps may take a moment to reflect changes.</string>
+</resources>
