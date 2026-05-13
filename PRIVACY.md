@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Effective date:** 2026-04-25
+**Effective date:** 2026-05-12
 
-NetLens is an open-source Android application developed by JD Beary. This policy describes what data the app accesses and how it is handled.
+NetLens is an open-source Android application published by Ventoux Advisory Co. This policy describes what data the app accesses and how it is handled.
 
 ## Data Collection
 
@@ -14,7 +14,8 @@ NetLens is a network diagnostics tool. By design, it sends network traffic to ho
 
 | Service | Purpose | When |
 |---------|---------|------|
-| [ipinfo.io](https://ipinfo.io) | Public IP geolocation and network info | IP Info screen, Home screen widget |
+| [ip-api.com](https://ip-api.com) | Public IP geolocation and network info | IP Info screen |
+| [ipapi.co](https://ipapi.co) | Public IP geolocation | Home screen widget |
 
 These services receive your device's public IP address. They are governed by their own privacy policies.
 
