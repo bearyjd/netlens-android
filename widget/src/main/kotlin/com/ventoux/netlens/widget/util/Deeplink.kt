@@ -6,6 +6,7 @@ object Deeplink {
 
     const val HOME = "$SCHEME://$HOST/home"
     const val POSTURE = "$SCHEME://$HOST/posture"
+    const val VPNSTATUS = "$SCHEME://$HOST/vpnstatus"
     const val WIFI_AUDIT = "$SCHEME://$HOST/wifiaudit"
     const val IPINFO = "$SCHEME://$HOST/ipinfo"
     const val SPEED_TEST = "$SCHEME://$HOST/speedtest"

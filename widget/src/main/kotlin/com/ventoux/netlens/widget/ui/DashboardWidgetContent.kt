@@ -66,14 +66,14 @@ fun DashboardWidgetContent(
             modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Section 1: Country flag + VPN lock
+            // Section 1: Country flag + VPN lock — taps open the VPN Status screen
             Column(
                 modifier = GlanceModifier
                     .width(64.dp)
                     .fillMaxHeight()
                     .clickable(
                         actionRunCallback<OpenDeeplinkAction>(
-                            actionParametersOf(DeeplinkUriKey to Deeplink.POSTURE),
+                            actionParametersOf(DeeplinkUriKey to Deeplink.VPNSTATUS),
                         ),
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
