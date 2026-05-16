@@ -7,10 +7,13 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 suspend fun refreshAllWidgets(context: Context) {
     CompactWidget().updateAll(context)
@@ -31,6 +34,29 @@ fun enqueueWidgetRefresh(context: Context) {
         "widget_refresh",
         ExistingWorkPolicy.REPLACE,
         workRequest,
+    )
+}
+
+// The XML updatePeriodMillis=30min broadcast is unreliable under Doze (idle
+// devices coalesce it into maintenance windows that can be hours apart), so
+// schedule the refresh through WorkManager too. KEEP preserves an existing
+// cadence — safe to call from every receiver onEnabled() and from
+// Application.onCreate().
+fun enqueuePeriodicWidgetRefresh(context: Context) {
+    val request = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(
+        30, TimeUnit.MINUTES,
+        5, TimeUnit.MINUTES,
+    )
+        .setConstraints(
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build(),
+        )
+        .build()
+    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        "widget_refresh_periodic",
+        ExistingPeriodicWorkPolicy.KEEP,
+        request,
     )
 }
 
