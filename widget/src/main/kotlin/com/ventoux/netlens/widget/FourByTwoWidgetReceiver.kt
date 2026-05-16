@@ -12,6 +12,7 @@ class FourByTwoWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         enqueueWidgetRefresh(context)
+        enqueuePeriodicWidgetRefresh(context)
         networkCallback = registerWidgetNetworkCallback(context, networkCallback)
     }
 
