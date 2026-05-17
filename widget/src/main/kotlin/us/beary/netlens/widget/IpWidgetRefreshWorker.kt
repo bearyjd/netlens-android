@@ -1,6 +1,11 @@
 package us.beary.netlens.widget
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
+import android.os.Build
 import androidx.datastore.preferences.core.edit
 import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
@@ -40,6 +45,7 @@ class IpWidgetRefreshWorker(
                 .get(IP_API_URL)
                 .body<IpApiResponse>()
 
+            val wifi = readWifiSignal()
             val dataStore = IpWidgetStateDefinition.getDataStore(appContext, "ip_widget")
             dataStore.edit { prefs ->
                 prefs[IpWidgetStateDefinition.IP_KEY] = response.query
@@ -47,6 +53,8 @@ class IpWidgetRefreshWorker(
                 prefs[IpWidgetStateDefinition.IS_VPN_KEY] = response.proxy
                 prefs[IpWidgetStateDefinition.LAN_IP_KEY] = readLanIp()
                 prefs[IpWidgetStateDefinition.LAST_UPDATED_KEY] = System.currentTimeMillis()
+                prefs[IpWidgetStateDefinition.SIGNAL_DBM_KEY] = wifi?.rssi ?: 0
+                prefs[IpWidgetStateDefinition.LINK_SPEED_KEY] = wifi?.linkSpeed ?: 0
             }
 
             NetLensWidget().updateAll(appContext)
@@ -56,6 +64,29 @@ class IpWidgetRefreshWorker(
         } finally {
             client.close()
         }
+    }
+
+    private data class WifiSignal(val rssi: Int, val linkSpeed: Int)
+
+    @Suppress("DEPRECATION")
+    private fun readWifiSignal(): WifiSignal? = try {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? ConnectivityManager
+        val active = cm?.activeNetwork
+        val caps = active?.let { cm.getNetworkCapabilities(it) }
+        if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) {
+            null
+        } else {
+            val info: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                caps.transportInfo as? WifiInfo
+            } else {
+                (appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)
+                    ?.connectionInfo
+            }
+            info?.let { WifiSignal(rssi = it.rssi, linkSpeed = it.linkSpeed) }
+        }
+    } catch (_: Exception) {
+        null
     }
 
     private fun readLanIp(): String = try {

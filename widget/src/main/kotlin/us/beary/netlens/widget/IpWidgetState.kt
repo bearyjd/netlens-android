@@ -6,4 +6,6 @@ data class IpWidgetState(
     val isVpn: Boolean = false,
     val lanIp: String = "",
     val lastUpdatedEpochMs: Long = 0L,
+    val signalDbm: Int = 0,
+    val linkSpeedMbps: Int = 0,
 )

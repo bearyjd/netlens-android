@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,6 +18,8 @@ object IpWidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val IS_VPN_KEY = booleanPreferencesKey("widget_is_vpn")
     val LAN_IP_KEY = stringPreferencesKey("widget_lan_ip")
     val LAST_UPDATED_KEY = longPreferencesKey("widget_last_updated")
+    val SIGNAL_DBM_KEY = intPreferencesKey("widget_signal_dbm")
+    val LINK_SPEED_KEY = intPreferencesKey("widget_link_speed")
 
     private const val DATA_STORE_NAME = "ip_widget_prefs"
 
@@ -41,4 +44,6 @@ fun Preferences.toIpWidgetState(): IpWidgetState = IpWidgetState(
     isVpn = this[IpWidgetStateDefinition.IS_VPN_KEY] ?: false,
     lanIp = this[IpWidgetStateDefinition.LAN_IP_KEY].orEmpty(),
     lastUpdatedEpochMs = this[IpWidgetStateDefinition.LAST_UPDATED_KEY] ?: 0L,
+    signalDbm = this[IpWidgetStateDefinition.SIGNAL_DBM_KEY] ?: 0,
+    linkSpeedMbps = this[IpWidgetStateDefinition.LINK_SPEED_KEY] ?: 0,
 )

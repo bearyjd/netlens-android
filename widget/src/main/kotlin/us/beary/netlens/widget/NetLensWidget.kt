@@ -113,6 +113,10 @@ private fun CompactContent(state: IpWidgetState) {
                     colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurface),
                 )
             }
+            if (state.signalDbm != 0 || state.linkSpeedMbps > 0) {
+                Spacer(modifier = GlanceModifier.size(2.dp))
+                SignalRow(rssi = state.signalDbm, linkSpeedMbps = state.linkSpeedMbps)
+            }
             Spacer(modifier = GlanceModifier.size(2.dp))
             Text(
                 text = formatScannedAt(state.lastUpdatedEpochMs),
@@ -124,6 +128,62 @@ private fun CompactContent(state: IpWidgetState) {
             )
         }
     }
+}
+
+@Composable
+private fun SignalRow(rssi: Int, linkSpeedMbps: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (rssi != 0) {
+            val bars = signalBars(rssi)
+            Text(
+                text = "▮".repeat(bars) + "▯".repeat(4 - bars),
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontSize = 9.sp,
+                ),
+                maxLines = 1,
+            )
+            Spacer(modifier = GlanceModifier.width(4.dp))
+        }
+        if (linkSpeedMbps > 0) {
+            Text(
+                text = "${linkSpeedMbps}M",
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+            )
+            Spacer(modifier = GlanceModifier.width(4.dp))
+        }
+        if (rssi != 0) {
+            Text(
+                text = "$rssi",
+                style = TextStyle(
+                    color = ColorProvider(signalColor(rssi)),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private fun signalBars(rssi: Int): Int = when {
+    rssi == 0 -> 0
+    rssi >= -55 -> 4
+    rssi >= -65 -> 3
+    rssi >= -75 -> 2
+    rssi >= -85 -> 1
+    else -> 0
+}
+
+private fun signalColor(rssi: Int): androidx.compose.ui.graphics.Color = when {
+    rssi >= -65 -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+    rssi >= -80 -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+    else -> androidx.compose.ui.graphics.Color(0xFFE53935)
 }
 
 @Composable
