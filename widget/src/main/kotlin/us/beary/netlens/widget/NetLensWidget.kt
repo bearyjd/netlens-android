@@ -1,7 +1,9 @@
 package us.beary.netlens.widget
 
 import android.content.Context
+import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -11,9 +13,11 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -36,19 +40,132 @@ import androidx.glance.unit.ColorProvider
 private val VpnOnColor = androidx.compose.ui.graphics.Color(0xFFFFC107)
 private val VpnOffColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
 
+private val CompactSize = DpSize(250.dp, 40.dp)
+private val FullSize = DpSize(180.dp, 110.dp)
+
 class NetLensWidget : GlanceAppWidget() {
 
     override val stateDefinition: GlanceStateDefinition<Preferences> = IpWidgetStateDefinition
+
+    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(CompactSize, FullSize))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
                 val prefs = currentState<Preferences>()
                 val state = prefs.toIpWidgetState()
-                WidgetContent(state = state)
+                val size = LocalSize.current
+                if (size.height < FullSize.height) {
+                    CompactContent(state = state)
+                } else {
+                    WidgetContent(state = state)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun CompactContent(state: IpWidgetState) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .background(GlanceTheme.colors.widgetBackground),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            CompactIpRow(label = "WAN", value = state.ip.ifEmpty { "—" })
+            Spacer(modifier = GlanceModifier.size(2.dp))
+            CompactIpRow(label = "LAN", value = state.lanIp.ifEmpty { "—" })
+        }
+        Spacer(modifier = GlanceModifier.width(8.dp))
+        Column(
+            horizontalAlignment = Alignment.End,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    provider = ImageProvider(
+                        if (state.isVpn) R.drawable.ic_vpn_on else R.drawable.ic_vpn_off,
+                    ),
+                    contentDescription = if (state.isVpn) "VPN detected" else "No VPN",
+                    modifier = GlanceModifier.size(10.dp),
+                    colorFilter = ColorFilter.tint(
+                        ColorProvider(if (state.isVpn) VpnOnColor else VpnOffColor),
+                    ),
+                )
+                Spacer(modifier = GlanceModifier.width(3.dp))
+                Text(
+                    text = if (state.isVpn) "VPN" else "Direct",
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurface,
+                        fontSize = 10.sp,
+                    ),
+                    maxLines = 1,
+                )
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                Image(
+                    provider = ImageProvider(R.drawable.ic_refresh),
+                    contentDescription = "Refresh",
+                    modifier = GlanceModifier
+                        .size(16.dp)
+                        .clickable(actionRunCallback<IpWidgetRefreshAction>()),
+                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurface),
+                )
+            }
+            Spacer(modifier = GlanceModifier.size(2.dp))
+            Text(
+                text = formatScannedAt(state.lastUpdatedEpochMs),
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontSize = 9.sp,
+                ),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactIpRow(label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurfaceVariant,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium,
+            ),
+            modifier = GlanceModifier.width(28.dp),
+            maxLines = 1,
+        )
+        Text(
+            text = value,
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurface,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            maxLines = 1,
+            modifier = GlanceModifier.clickable(
+                actionRunCallback<CopyIpAction>(actionParametersOf()),
+            ),
+        )
+    }
+}
+
+private fun formatScannedAt(epochMs: Long): String {
+    if (epochMs <= 0L) return "Not scanned"
+    val now = System.currentTimeMillis()
+    val delta = now - epochMs
+    if (delta < DateUtils.MINUTE_IN_MILLIS) return "Scanned just now"
+    val relative = DateUtils.getRelativeTimeSpanString(
+        epochMs,
+        now,
+        DateUtils.MINUTE_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE,
+    )
+    return "Scanned $relative"
 }
 
 @Composable

@@ -14,6 +14,8 @@ import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import us.beary.netlens.feature.ipinfo.model.IpApiResponse
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 class IpWidgetRefreshWorker(
     private val appContext: Context,
@@ -43,6 +45,8 @@ class IpWidgetRefreshWorker(
                 prefs[IpWidgetStateDefinition.IP_KEY] = response.query
                 prefs[IpWidgetStateDefinition.ISP_KEY] = response.isp
                 prefs[IpWidgetStateDefinition.IS_VPN_KEY] = response.proxy
+                prefs[IpWidgetStateDefinition.LAN_IP_KEY] = readLanIp()
+                prefs[IpWidgetStateDefinition.LAST_UPDATED_KEY] = System.currentTimeMillis()
             }
 
             NetLensWidget().updateAll(appContext)
@@ -52,6 +56,19 @@ class IpWidgetRefreshWorker(
         } finally {
             client.close()
         }
+    }
+
+    private fun readLanIp(): String = try {
+        NetworkInterface.getNetworkInterfaces().asSequence()
+            .filter { it.isUp && !it.isLoopback && !it.isVirtual }
+            .flatMap { it.inetAddresses.asSequence() }
+            .filterIsInstance<Inet4Address>()
+            .filter { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+            .mapNotNull { it.hostAddress }
+            .firstOrNull()
+            .orEmpty()
+    } catch (_: Exception) {
+        ""
     }
 
     private companion object {
