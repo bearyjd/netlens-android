@@ -1,6 +1,7 @@
 package com.ventoux.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -18,10 +19,8 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -39,12 +38,9 @@ import com.ventoux.netlens.widget.action.RunDnsCheckAction
 import com.ventoux.netlens.widget.action.RunPingAction
 import com.ventoux.netlens.widget.action.TriggerScanAction
 import com.ventoux.netlens.widget.util.Deeplink
-import com.ventoux.netlens.widget.util.formatLinkSpeed
 
 /**
- * 4x1 widget content with feature parity to the 4x2:
- *   row 1: score · flag · VPN lock · WAN IP · LAN IP · refresh
- *   row 2: signal · speed · DNS status · scanned-ago · 4 action chips
+ * 4x1 widget content — three rows: WAN/LAN big IPs, flag/lock/DNS, action chips.
  */
 @Composable
 fun DashboardFullContent(state: WidgetState) {
@@ -53,301 +49,276 @@ fun DashboardFullContent(state: WidgetState) {
             .fillMaxSize()
             .cornerRadius(WidgetTheme.CORNER_RADIUS)
             .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
-        TopRow(state)
-        Spacer(modifier = GlanceModifier.height(2.dp))
-        BottomRow(state)
-    }
-}
-
-@Composable
-private fun TopRow(state: WidgetState) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val gradeText = if (state.hasScore) state.scoreGrade else "?"
-        val gradeColor = if (state.hasScore) {
-            WidgetTheme.scoreColor(state.scoreGrade)
-        } else {
-            WidgetTheme.SCORE_GRAY
-        }
-        Text(
-            text = gradeText,
-            style = TextStyle(
-                color = ColorProvider(gradeColor),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-            ),
-            modifier = GlanceModifier.clickable(
-                actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.POSTURE),
+        // Row 1: WAN + LAN (big)
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = GlanceModifier.defaultWeight().clickable(
+                    actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.IPINFO),
+                    ),
                 ),
-            ),
-        )
+            ) {
+                Text(
+                    text = "WAN",
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    maxLines = 1,
+                )
+                Text(
+                    text = state.publicIp.ifEmpty { "—.—.—.—" },
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                    ),
+                    maxLines = 1,
+                )
+            }
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Column(
+                modifier = GlanceModifier.defaultWeight().clickable(
+                    actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
+                    ),
+                ),
+                horizontalAlignment = Alignment.End,
+            ) {
+                Text(
+                    text = "LAN",
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    maxLines = 1,
+                )
+                Text(
+                    text = state.localIp.ifEmpty { "—" },
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                    ),
+                    maxLines = 1,
+                )
+            }
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Image(
+                provider = ImageProvider(R.drawable.ic_refresh),
+                contentDescription = "Refresh",
+                colorFilter = ColorFilter.tint(ColorProvider(WidgetTheme.TEXT_SECONDARY)),
+                modifier = GlanceModifier
+                    .size(20.dp)
+                    .clickable(actionRunCallback<TriggerScanAction>()),
+            )
+        }
 
-        Spacer(modifier = GlanceModifier.width(6.dp))
-
-        VpnFlagBlock(state)
-
-        Spacer(modifier = GlanceModifier.width(6.dp))
-
-        IpColumn(
-            label = "WAN",
-            value = state.publicIp.ifEmpty { "—.—.—.—" },
-            deeplink = Deeplink.IPINFO,
-            modifier = GlanceModifier.defaultWeight(),
-            alignEnd = false,
-        )
-
-        Spacer(modifier = GlanceModifier.width(4.dp))
-
-        IpColumn(
-            label = "LAN",
-            value = state.localIp.ifEmpty { "—" },
-            deeplink = Deeplink.DEVICES,
-            modifier = GlanceModifier.defaultWeight(),
-            alignEnd = true,
-        )
-
-        Spacer(modifier = GlanceModifier.width(4.dp))
-
-        Image(
-            provider = ImageProvider(R.drawable.ic_refresh),
-            contentDescription = "Refresh",
-            colorFilter = ColorFilter.tint(ColorProvider(WidgetTheme.TEXT_SECONDARY)),
-            modifier = GlanceModifier
-                .size(16.dp)
-                .clickable(actionRunCallback<TriggerScanAction>()),
-        )
-    }
-}
-
-@Composable
-private fun BottomRow(state: WidgetState) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (state.hasRssi) {
-            SignalBarsIcon(level = state.rssiLevel)
-            Spacer(modifier = GlanceModifier.width(3.dp))
+        // Row 2: flag + VPN lock + DNS status
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val (backdrop, lockDrawable, vpnLabel) = when (state.vpnState) {
+                VpnState.FullTunnel ->
+                    Triple(WidgetTheme.VPN_FULL_GREEN, R.drawable.ic_lock_closed_white, "Protected")
+                VpnState.SplitTunnel ->
+                    Triple(WidgetTheme.VPN_SPLIT_AMBER, R.drawable.ic_lock_closed_white, "Split")
+                VpnState.None ->
+                    Triple(WidgetTheme.VPN_NONE_RED, R.drawable.ic_lock_open_white, "No VPN")
+            }
+            Row(
+                modifier = GlanceModifier.clickable(
+                    actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.VPNSTATUS),
+                    ),
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = state.countryFlag.ifEmpty { "🌐" },
+                    style = TextStyle(fontSize = 16.sp),
+                )
+                Spacer(modifier = GlanceModifier.width(4.dp))
+                Box(
+                    modifier = GlanceModifier
+                        .size(16.dp)
+                        .cornerRadius(4.dp)
+                        .background(ColorProvider(backdrop)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        provider = ImageProvider(lockDrawable),
+                        contentDescription = vpnLabel,
+                        modifier = GlanceModifier.size(11.dp),
+                    )
+                }
+            }
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            val (statusText, statusColor) = dnsStatus(state)
             Text(
-                text = "${state.rssi}",
+                text = statusText,
                 style = TextStyle(
-                    color = ColorProvider(WidgetTheme.rssiColor(state.rssiLevel)),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ColorProvider(statusColor),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+                modifier = GlanceModifier.defaultWeight().clickable(
+                    actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
+                    ),
                 ),
             )
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            if (state.hasRssi) {
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                SignalBarsIcon(level = state.rssiLevel)
+                Spacer(modifier = GlanceModifier.width(3.dp))
+                Text(
+                    text = "${state.rssi}",
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.rssiColor(state.rssiLevel)),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    maxLines = 1,
+                )
+            } else if (state.cellGeneration.isNotEmpty()) {
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                Text(
+                    text = state.cellGeneration,
+                    style = TextStyle(
+                        color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
 
-        val speedLabel = when {
-            state.hasLinkSpeed -> formatLinkSpeed(state.linkSpeedMbps)
-            state.cellGeneration.isNotEmpty() -> state.cellGeneration
-            else -> ""
-        }
-        if (speedLabel.isNotEmpty()) {
-            Text(
-                text = speedLabel,
-                style = TextStyle(
-                    color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
-                    fontSize = 10.sp,
+        // Row 3: action chips
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BigChip(
+                icon = "🔍",
+                label = "LAN",
+                background = WidgetTheme.CHIP_DEFAULT,
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
                 ),
+                modifier = GlanceModifier.defaultWeight(),
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
+            BigChip(
+                icon = "📡",
+                label = pingLabel(state),
+                background = pingBg(state),
+                action = actionRunCallback<RunPingAction>(),
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            Spacer(modifier = GlanceModifier.width(4.dp))
+            BigChip(
+                icon = "🌐",
+                label = dnsChipLabel(state),
+                background = dnsChipBg(state),
+                action = actionRunCallback<RunDnsCheckAction>(),
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            Spacer(modifier = GlanceModifier.width(4.dp))
+            BigChip(
+                icon = "🚪",
+                label = "Portal",
+                background = if (state.isCaptivePortal) {
+                    WidgetTheme.CHIP_PORTAL_ACTIVE
+                } else {
+                    WidgetTheme.CHIP_DEFAULT
+                },
+                action = actionRunCallback<OpenPortalAction>(),
+                modifier = GlanceModifier.defaultWeight(),
+            )
         }
-
-        DnsStatusText(state = state, modifier = GlanceModifier.defaultWeight())
-
-        Spacer(modifier = GlanceModifier.width(4.dp))
-
-        MiniChips(state)
     }
 }
 
 @Composable
-private fun VpnFlagBlock(state: WidgetState) {
-    val (backdrop, lockDrawable, vpnLabel) = when (state.vpnState) {
-        VpnState.FullTunnel ->
-            Triple(WidgetTheme.VPN_FULL_GREEN, R.drawable.ic_lock_closed_white, "Protected")
-        VpnState.SplitTunnel ->
-            Triple(WidgetTheme.VPN_SPLIT_AMBER, R.drawable.ic_lock_closed_white, "Split Tunnel")
-        VpnState.None ->
-            Triple(WidgetTheme.VPN_NONE_RED, R.drawable.ic_lock_open_white, "No VPN")
-    }
+private fun BigChip(
+    icon: String,
+    label: String,
+    background: Color,
+    action: Action,
+    modifier: GlanceModifier,
+) {
     Row(
-        modifier = GlanceModifier
-            .fillMaxHeight()
-            .clickable(
-                actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.VPNSTATUS),
-                ),
-            ),
+        modifier = modifier
+            .cornerRadius(6.dp)
+            .background(ColorProvider(background))
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .clickable(action),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = state.countryFlag.ifEmpty { "🌐" },
+            text = icon,
             style = TextStyle(fontSize = 14.sp),
         )
         Spacer(modifier = GlanceModifier.width(3.dp))
-        Box(
-            modifier = GlanceModifier
-                .size(14.dp)
-                .cornerRadius(3.dp)
-                .background(ColorProvider(backdrop)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                provider = ImageProvider(lockDrawable),
-                contentDescription = vpnLabel,
-                modifier = GlanceModifier.size(10.dp),
-            )
-        }
-        if (state.hasPrivateDns) {
-            Spacer(modifier = GlanceModifier.width(2.dp))
-            Text(
-                text = "●",
-                style = TextStyle(
-                    color = ColorProvider(WidgetTheme.PRIVATE_DNS_BLUE),
-                    fontSize = 9.sp,
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun IpColumn(
-    label: String,
-    value: String,
-    deeplink: String,
-    modifier: GlanceModifier,
-    alignEnd: Boolean,
-) {
-    Column(
-        modifier = modifier.clickable(
-            actionRunCallback<OpenDeeplinkAction>(
-                actionParametersOf(DeeplinkUriKey to deeplink),
-            ),
-        ),
-        horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start,
-    ) {
         Text(
             text = label,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_MUTED),
-                fontSize = 8.sp,
-            ),
-            maxLines = 1,
-        )
-        Text(
-            text = value,
-            style = TextStyle(
                 color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
-                fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
             ),
             maxLines = 1,
         )
     }
 }
 
-@Composable
-private fun DnsStatusText(state: WidgetState, modifier: GlanceModifier) {
-    val (statusText, statusColor) = when {
-        state.isCaptivePortal -> "Captive portal" to WidgetTheme.CAPTIVE_ORANGE
-        state.isDnsLeaking -> "DNS leak!" to WidgetTheme.SCORE_AMBER
-        state.vpnState is VpnState.FullTunnel ->
-            "DNS→${state.primaryDns.ifEmpty { "?" }} · VPN" to WidgetTheme.VPN_FULL_GREEN
-        state.vpnState is VpnState.SplitTunnel ->
-            "DNS→${state.primaryDns.ifEmpty { "?" }} · Split" to WidgetTheme.VPN_SPLIT_AMBER
-        state.isConnected ->
-            "DNS→${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.TEXT_SECONDARY
-        else -> "Offline" to WidgetTheme.SCORE_RED
-    }
-    val elapsed = WidgetTheme.relativeTime(state.lastRefreshMs)
-    val suffix = if (elapsed.isNotEmpty()) " · $elapsed" else ""
-    Text(
-        text = "$statusText$suffix",
-        style = TextStyle(
-            color = ColorProvider(statusColor),
-            fontSize = 10.sp,
-        ),
-        maxLines = 1,
-        modifier = modifier.clickable(
-            actionRunCallback<OpenDeeplinkAction>(
-                actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
-            ),
-        ),
-    )
+private fun dnsStatus(state: WidgetState): Pair<String, Color> = when {
+    state.isCaptivePortal -> "Captive portal" to WidgetTheme.CAPTIVE_ORANGE
+    state.isDnsLeaking ->
+        "DNS → ${state.primaryDns.ifEmpty { "?" }} · Leak!" to WidgetTheme.SCORE_AMBER
+    state.vpnState is VpnState.FullTunnel ->
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.VPN_FULL_GREEN
+    state.vpnState is VpnState.SplitTunnel ->
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.VPN_SPLIT_AMBER
+    state.isConnected ->
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.TEXT_SECONDARY
+    else -> "Offline" to WidgetTheme.SCORE_RED
 }
 
-@Composable
-private fun MiniChips(state: WidgetState) {
-    val pingBg = when (state.chipPingResult) {
-        "fail" -> WidgetTheme.CHIP_BAD
-        "", "running" -> WidgetTheme.CHIP_DEFAULT
-        else -> WidgetTheme.CHIP_GOOD
-    }
-    val dnsBg = when (state.chipDnsResult) {
-        "leak" -> WidgetTheme.CHIP_BAD
-        "clean" -> WidgetTheme.CHIP_GOOD
-        else -> WidgetTheme.CHIP_DEFAULT
-    }
-    val portalBg = if (state.isCaptivePortal) {
-        WidgetTheme.CHIP_PORTAL_ACTIVE
-    } else {
-        WidgetTheme.CHIP_DEFAULT
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        MiniChip(
-            icon = "🔍",
-            action = actionRunCallback<OpenDeeplinkAction>(
-                actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
-            ),
-            background = WidgetTheme.CHIP_DEFAULT,
-        )
-        Spacer(modifier = GlanceModifier.width(2.dp))
-        MiniChip(
-            icon = "📡",
-            action = actionRunCallback<RunPingAction>(),
-            background = pingBg,
-        )
-        Spacer(modifier = GlanceModifier.width(2.dp))
-        MiniChip(
-            icon = "🌐",
-            action = actionRunCallback<RunDnsCheckAction>(),
-            background = dnsBg,
-        )
-        Spacer(modifier = GlanceModifier.width(2.dp))
-        MiniChip(
-            icon = "🚪",
-            action = actionRunCallback<OpenPortalAction>(),
-            background = portalBg,
-        )
-    }
+private fun pingLabel(state: WidgetState): String = when (state.chipPingResult) {
+    "" -> "Ping"
+    "running" -> "..."
+    "fail" -> "✗"
+    else -> "${state.chipPingResult}ms"
 }
 
-@Composable
-private fun MiniChip(
-    icon: String,
-    action: Action,
-    background: androidx.compose.ui.graphics.Color,
-) {
-    Text(
-        text = icon,
-        modifier = GlanceModifier
-            .cornerRadius(3.dp)
-            .background(ColorProvider(background))
-            .padding(horizontal = 2.dp, vertical = 1.dp)
-            .clickable(action),
-        style = TextStyle(
-            fontSize = 11.sp,
-            color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
-        ),
-        maxLines = 1,
-    )
+private fun pingBg(state: WidgetState): Color = when (state.chipPingResult) {
+    "fail" -> WidgetTheme.CHIP_BAD
+    "", "running" -> WidgetTheme.CHIP_DEFAULT
+    else -> WidgetTheme.CHIP_GOOD
+}
+
+private fun dnsChipLabel(state: WidgetState): String = when (state.chipDnsResult) {
+    "running" -> "..."
+    "clean" -> "Clean"
+    "leak" -> "Leak!"
+    else -> "DNS"
+}
+
+private fun dnsChipBg(state: WidgetState): Color = when (state.chipDnsResult) {
+    "leak" -> WidgetTheme.CHIP_BAD
+    "clean" -> WidgetTheme.CHIP_GOOD
+    else -> WidgetTheme.CHIP_DEFAULT
 }
