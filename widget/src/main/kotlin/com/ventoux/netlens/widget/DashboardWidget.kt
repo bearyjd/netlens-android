@@ -8,7 +8,7 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import androidx.glance.state.GlanceStateDefinition
-import com.ventoux.netlens.widget.ui.DashboardWidgetContent
+import com.ventoux.netlens.widget.ui.DashboardFullContent
 
 class DashboardWidget : GlanceAppWidget() {
 
@@ -19,7 +19,7 @@ class DashboardWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<Preferences>()
-            DashboardWidgetContent(state = prefs.toWidgetState())
+            DashboardFullContent(state = prefs.toWidgetState())
         }
     }
 }

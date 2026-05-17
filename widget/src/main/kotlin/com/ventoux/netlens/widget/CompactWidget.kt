@@ -7,7 +7,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import androidx.glance.state.GlanceStateDefinition
-import com.ventoux.netlens.widget.ui.CompactWidgetContent
+import com.ventoux.netlens.widget.ui.CompactFullContent
 
 class CompactWidget : GlanceAppWidget() {
 
@@ -16,7 +16,7 @@ class CompactWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<Preferences>()
-            CompactWidgetContent(state = prefs.toWidgetState())
+            CompactFullContent(state = prefs.toWidgetState())
         }
     }
 }
