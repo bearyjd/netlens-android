@@ -20,6 +20,7 @@ object IpWidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val LAST_UPDATED_KEY = longPreferencesKey("widget_last_updated")
     val SIGNAL_DBM_KEY = intPreferencesKey("widget_signal_dbm")
     val LINK_SPEED_KEY = intPreferencesKey("widget_link_speed")
+    val TRANSPORT_KEY = stringPreferencesKey("widget_transport")
 
     private const val DATA_STORE_NAME = "ip_widget_prefs"
 
@@ -46,4 +47,5 @@ fun Preferences.toIpWidgetState(): IpWidgetState = IpWidgetState(
     lastUpdatedEpochMs = this[IpWidgetStateDefinition.LAST_UPDATED_KEY] ?: 0L,
     signalDbm = this[IpWidgetStateDefinition.SIGNAL_DBM_KEY] ?: 0,
     linkSpeedMbps = this[IpWidgetStateDefinition.LINK_SPEED_KEY] ?: 0,
+    transport = Transport.fromStorageKey(this[IpWidgetStateDefinition.TRANSPORT_KEY]),
 )

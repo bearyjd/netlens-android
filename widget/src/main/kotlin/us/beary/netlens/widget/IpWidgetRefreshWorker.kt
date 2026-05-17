@@ -45,7 +45,7 @@ class IpWidgetRefreshWorker(
                 .get(IP_API_URL)
                 .body<IpApiResponse>()
 
-            val wifi = readWifiSignal()
+            val network = readNetworkSnapshot()
             val dataStore = IpWidgetStateDefinition.getDataStore(appContext, "ip_widget")
             dataStore.edit { prefs ->
                 prefs[IpWidgetStateDefinition.IP_KEY] = response.query
@@ -53,8 +53,9 @@ class IpWidgetRefreshWorker(
                 prefs[IpWidgetStateDefinition.IS_VPN_KEY] = response.proxy
                 prefs[IpWidgetStateDefinition.LAN_IP_KEY] = readLanIp()
                 prefs[IpWidgetStateDefinition.LAST_UPDATED_KEY] = System.currentTimeMillis()
-                prefs[IpWidgetStateDefinition.SIGNAL_DBM_KEY] = wifi?.rssi ?: 0
-                prefs[IpWidgetStateDefinition.LINK_SPEED_KEY] = wifi?.linkSpeed ?: 0
+                prefs[IpWidgetStateDefinition.SIGNAL_DBM_KEY] = network.rssi
+                prefs[IpWidgetStateDefinition.LINK_SPEED_KEY] = network.linkSpeed
+                prefs[IpWidgetStateDefinition.TRANSPORT_KEY] = network.transport.storageKey
             }
 
             NetLensWidget().updateAll(appContext)
@@ -66,27 +67,44 @@ class IpWidgetRefreshWorker(
         }
     }
 
-    private data class WifiSignal(val rssi: Int, val linkSpeed: Int)
+    private data class NetworkSnapshot(
+        val transport: Transport,
+        val rssi: Int,
+        val linkSpeed: Int,
+    )
 
     @Suppress("DEPRECATION")
-    private fun readWifiSignal(): WifiSignal? = try {
+    private fun readNetworkSnapshot(): NetworkSnapshot = try {
         val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE)
             as? ConnectivityManager
         val active = cm?.activeNetwork
         val caps = active?.let { cm.getNetworkCapabilities(it) }
-        if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) {
-            null
+        if (caps == null) {
+            NetworkSnapshot(Transport.UNKNOWN, 0, 0)
         } else {
-            val info: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                caps.transportInfo as? WifiInfo
+            val transport = transportFromCaps(caps)
+            if (transport == Transport.WIFI) {
+                val info: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    caps.transportInfo as? WifiInfo
+                } else {
+                    (appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)
+                        ?.connectionInfo
+                }
+                NetworkSnapshot(transport, info?.rssi ?: 0, info?.linkSpeed ?: 0)
             } else {
-                (appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)
-                    ?.connectionInfo
+                NetworkSnapshot(transport, 0, 0)
             }
-            info?.let { WifiSignal(rssi = it.rssi, linkSpeed = it.linkSpeed) }
         }
     } catch (_: Exception) {
-        null
+        NetworkSnapshot(Transport.UNKNOWN, 0, 0)
+    }
+
+    private fun transportFromCaps(caps: NetworkCapabilities): Transport = when {
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Transport.WIFI
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Transport.ETHERNET
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Transport.CELLULAR
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> Transport.VPN
+        else -> Transport.UNKNOWN
     }
 
     private fun readLanIp(): String = try {

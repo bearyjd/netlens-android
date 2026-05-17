@@ -113,9 +113,23 @@ private fun CompactContent(state: IpWidgetState) {
                     colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurface),
                 )
             }
-            if (state.signalDbm != 0 || state.linkSpeedMbps > 0) {
+            val hasSignal = state.signalDbm != 0 || state.linkSpeedMbps > 0
+            val transportLabel = transportLabel(state.transport)
+            if (hasSignal || transportLabel != null) {
                 Spacer(modifier = GlanceModifier.size(2.dp))
-                SignalRow(rssi = state.signalDbm, linkSpeedMbps = state.linkSpeedMbps)
+                if (hasSignal) {
+                    SignalRow(rssi = state.signalDbm, linkSpeedMbps = state.linkSpeedMbps)
+                } else {
+                    Text(
+                        text = transportLabel.orEmpty(),
+                        style = TextStyle(
+                            color = GlanceTheme.colors.onSurfaceVariant,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        maxLines = 1,
+                    )
+                }
             }
             Spacer(modifier = GlanceModifier.size(2.dp))
             Text(
@@ -184,6 +198,14 @@ private fun signalColor(rssi: Int): androidx.compose.ui.graphics.Color = when {
     rssi >= -65 -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
     rssi >= -80 -> androidx.compose.ui.graphics.Color(0xFFFFC107)
     else -> androidx.compose.ui.graphics.Color(0xFFE53935)
+}
+
+private fun transportLabel(transport: Transport): String? = when (transport) {
+    Transport.WIFI -> "Wi-Fi"
+    Transport.CELLULAR -> "Cellular"
+    Transport.ETHERNET -> "Ethernet"
+    Transport.VPN -> null
+    Transport.UNKNOWN -> null
 }
 
 @Composable
