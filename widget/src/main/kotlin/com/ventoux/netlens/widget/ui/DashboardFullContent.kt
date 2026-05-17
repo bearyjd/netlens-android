@@ -41,6 +41,11 @@ import com.ventoux.netlens.widget.util.Deeplink
 
 /**
  * 4x1 widget content — three rows: WAN/LAN big IPs, flag/lock/DNS, action chips.
+ *
+ * Row content is intentionally inlined into the outer Column rather than split into
+ * private composables. Extracting Rows that carry `defaultWeight()` modifiers caused
+ * the widget to render blank on device — Glance's weight attribute does not survive
+ * being constructed in one composable's scope and consumed in another.
  */
 @Composable
 fun DashboardFullContent(state: WidgetState) {
