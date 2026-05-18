@@ -26,35 +26,10 @@ import com.ventoux.netlens.widget.WidgetState
 import com.ventoux.netlens.widget.action.DeeplinkUriKey
 import com.ventoux.netlens.widget.action.OpenDeeplinkAction
 import com.ventoux.netlens.widget.action.OpenPortalAction
-import com.ventoux.netlens.widget.action.RunDnsCheckAction
-import com.ventoux.netlens.widget.action.RunPingAction
 import com.ventoux.netlens.widget.util.Deeplink
 
 @Composable
 fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
-    val pingBg = when (state.chipPingResult) {
-        "fail" -> WidgetTheme.CHIP_BAD
-        "", "running" -> WidgetTheme.CHIP_DEFAULT
-        else -> WidgetTheme.CHIP_GOOD
-    }
-    val pingLabel = when (state.chipPingResult) {
-        "" -> "Ping"
-        "running" -> "..."
-        "fail" -> "✗"
-        else -> "${state.chipPingResult}ms"
-    }
-    val dnsBg = when (state.chipDnsResult) {
-        "leak" -> WidgetTheme.CHIP_BAD
-        "clean" -> WidgetTheme.CHIP_GOOD
-        else -> WidgetTheme.CHIP_DEFAULT
-    }
-    val dnsLabel = when (state.chipDnsResult) {
-        "" -> "DNS"
-        "running" -> "..."
-        "clean" -> "Clean"
-        "leak" -> "Leak!"
-        else -> "DNS"
-    }
     val portalBg = if (state.isCaptivePortal) {
         WidgetTheme.CHIP_PORTAL_ACTIVE
     } else {
@@ -79,18 +54,22 @@ fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) 
             Spacer(GlanceModifier.width(4.dp))
             ToolChip(
                 icon = "📡",
-                label = pingLabel,
-                action = actionRunCallback<RunPingAction>(),
-                background = pingBg,
+                label = "Ping",
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.LATENCY),
+                ),
+                background = WidgetTheme.CHIP_DEFAULT,
             )
         }
         Spacer(GlanceModifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             ToolChip(
                 icon = "🌐",
-                label = dnsLabel,
-                action = actionRunCallback<RunDnsCheckAction>(),
-                background = dnsBg,
+                label = "DNS",
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
+                ),
+                background = WidgetTheme.CHIP_DEFAULT,
             )
             Spacer(GlanceModifier.width(4.dp))
             ToolChip(

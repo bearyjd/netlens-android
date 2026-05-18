@@ -34,8 +34,6 @@ import com.ventoux.netlens.widget.WidgetState
 import com.ventoux.netlens.widget.action.DeeplinkUriKey
 import com.ventoux.netlens.widget.action.OpenDeeplinkAction
 import com.ventoux.netlens.widget.action.OpenPortalAction
-import com.ventoux.netlens.widget.action.RunDnsCheckAction
-import com.ventoux.netlens.widget.action.RunPingAction
 import com.ventoux.netlens.widget.action.TriggerScanAction
 import com.ventoux.netlens.widget.util.Deeplink
 
@@ -226,17 +224,21 @@ fun DashboardFullContent(state: WidgetState) {
             Spacer(modifier = GlanceModifier.width(4.dp))
             BigChip(
                 icon = "📡",
-                label = pingLabel(state),
-                background = pingBg(state),
-                action = actionRunCallback<RunPingAction>(),
+                label = "Ping",
+                background = WidgetTheme.CHIP_DEFAULT,
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.LATENCY),
+                ),
                 modifier = GlanceModifier.defaultWeight(),
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             BigChip(
                 icon = "🌐",
-                label = dnsChipLabel(state),
-                background = dnsChipBg(state),
-                action = actionRunCallback<RunDnsCheckAction>(),
+                label = "DNS",
+                background = WidgetTheme.CHIP_DEFAULT,
+                action = actionRunCallback<OpenDeeplinkAction>(
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
+                ),
                 modifier = GlanceModifier.defaultWeight(),
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
@@ -302,28 +304,3 @@ private fun dnsStatus(state: WidgetState): Pair<String, Color> = when {
     else -> "Offline" to WidgetTheme.SCORE_RED
 }
 
-private fun pingLabel(state: WidgetState): String = when (state.chipPingResult) {
-    "" -> "Ping"
-    "running" -> "..."
-    "fail" -> "✗"
-    else -> "${state.chipPingResult}ms"
-}
-
-private fun pingBg(state: WidgetState): Color = when (state.chipPingResult) {
-    "fail" -> WidgetTheme.CHIP_BAD
-    "", "running" -> WidgetTheme.CHIP_DEFAULT
-    else -> WidgetTheme.CHIP_GOOD
-}
-
-private fun dnsChipLabel(state: WidgetState): String = when (state.chipDnsResult) {
-    "running" -> "..."
-    "clean" -> "Clean"
-    "leak" -> "Leak!"
-    else -> "DNS"
-}
-
-private fun dnsChipBg(state: WidgetState): Color = when (state.chipDnsResult) {
-    "leak" -> WidgetTheme.CHIP_BAD
-    "clean" -> WidgetTheme.CHIP_GOOD
-    else -> WidgetTheme.CHIP_DEFAULT
-}

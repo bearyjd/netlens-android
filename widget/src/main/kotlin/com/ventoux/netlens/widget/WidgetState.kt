@@ -48,8 +48,6 @@ data class WidgetState(
     val routingMode: String = "",
     val isDnsLeaking: Boolean = false,
     val lastRefreshMs: Long = 0L,
-    val chipPingResult: String = "",
-    val chipDnsResult: String = "",
 ) {
     val primaryDns: String get() = dnsServers.split(",").firstOrNull()?.takeIf { it.isNotEmpty() }.orEmpty()
     fun isStale(now: Long = System.currentTimeMillis()): Boolean =
