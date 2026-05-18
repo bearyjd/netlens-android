@@ -227,7 +227,7 @@ fun DashboardFullContent(state: WidgetState) {
                 label = "Ping",
                 background = WidgetTheme.CHIP_DEFAULT,
                 action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.LATENCY),
+                    actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
                 ),
                 modifier = GlanceModifier.defaultWeight(),
             )
@@ -237,7 +237,7 @@ fun DashboardFullContent(state: WidgetState) {
                 label = "DNS",
                 background = WidgetTheme.CHIP_DEFAULT,
                 action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
                 ),
                 modifier = GlanceModifier.defaultWeight(),
             )
