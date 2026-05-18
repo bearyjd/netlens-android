@@ -13,9 +13,11 @@ object Deeplink {
     const val LATENCY = "$SCHEME://$HOST/ping"
     const val DEVICES = "$SCHEME://$HOST/lanscan"
     const val DNS = "$SCHEME://$HOST/dns"
+    const val DNS_LEAK = "$SCHEME://$HOST/dnsleak"
     const val PORT_SCAN = "$SCHEME://$HOST/portscan"
     const val TRIGGER_SCAN = "$SCHEME://$HOST/scan"
 
+    fun pingHost(host: String): String = "$LATENCY?host=$host"
     fun lanScanForDevice(ip: String): String = "$DEVICES?device=$ip"
     fun dnsWithServer(server: String): String = "$DNS?server=$server"
     fun issue(issueId: String): String = "$SCHEME://$HOST/issue/$issueId"

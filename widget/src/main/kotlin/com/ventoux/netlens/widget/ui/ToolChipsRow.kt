@@ -56,7 +56,7 @@ fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) 
                 icon = "📡",
                 label = "Ping",
                 action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.LATENCY),
+                    actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
                 ),
                 background = WidgetTheme.CHIP_DEFAULT,
             )
@@ -67,7 +67,7 @@ fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) 
                 icon = "🌐",
                 label = "DNS",
                 action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
+                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
                 ),
                 background = WidgetTheme.CHIP_DEFAULT,
             )
