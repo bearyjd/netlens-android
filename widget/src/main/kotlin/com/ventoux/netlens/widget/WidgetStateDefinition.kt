@@ -60,8 +60,6 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val ROUTING_MODE = stringPreferencesKey("routing_mode")
     val IS_DNS_LEAKING = booleanPreferencesKey("is_dns_leaking")
     val LAST_REFRESH_MS = longPreferencesKey("last_refresh_ms")
-    val CHIP_PING_RESULT = stringPreferencesKey("chip_ping_result")
-    val CHIP_DNS_RESULT = stringPreferencesKey("chip_dns_result")
 
     private const val DATA_STORE_NAME = "netlens_widget_state"
 
@@ -119,6 +117,4 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
     routingMode = this[WidgetStateDefinition.ROUTING_MODE].orEmpty(),
     isDnsLeaking = this[WidgetStateDefinition.IS_DNS_LEAKING] ?: false,
     lastRefreshMs = this[WidgetStateDefinition.LAST_REFRESH_MS] ?: 0L,
-    chipPingResult = this[WidgetStateDefinition.CHIP_PING_RESULT].orEmpty(),
-    chipDnsResult = this[WidgetStateDefinition.CHIP_DNS_RESULT].orEmpty(),
 )

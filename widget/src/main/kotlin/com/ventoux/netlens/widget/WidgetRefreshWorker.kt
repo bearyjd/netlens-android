@@ -236,8 +236,6 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.ROUTING_MODE] = routingMode
                 prefs[WidgetStateDefinition.IS_DNS_LEAKING] = isDnsLeaking
                 prefs[WidgetStateDefinition.LAST_REFRESH_MS] = System.currentTimeMillis()
-                prefs[WidgetStateDefinition.CHIP_PING_RESULT] = ""
-                prefs[WidgetStateDefinition.CHIP_DNS_RESULT] = ""
             }
 
             CompactWidget().updateAll(appContext)
