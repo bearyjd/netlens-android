@@ -54,6 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
+import com.ventoux.netlens.core.ui.LocalStatusColors
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoResponse
 import com.ventoux.netlens.feature.ipinfo.model.IpInfoUiState
 import com.ventoux.netlens.feature.ipinfo.model.ReputationResult
@@ -507,11 +508,12 @@ private fun ReputationDetails(
     onChangeKey: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val status = LocalStatusColors.current
     val riskColor = when (reputation.riskLevel) {
-        ReputationRisk.CLEAN -> Color(0xFF4CAF50)
-        ReputationRisk.LOW -> Color(0xFF3B82F6)
-        ReputationRisk.MEDIUM -> Color(0xFFF59E0B)
-        ReputationRisk.HIGH -> Color(0xFFEF4444)
+        ReputationRisk.CLEAN -> status.pass
+        ReputationRisk.LOW -> status.info
+        ReputationRisk.MEDIUM -> status.warn
+        ReputationRisk.HIGH -> status.fail
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {

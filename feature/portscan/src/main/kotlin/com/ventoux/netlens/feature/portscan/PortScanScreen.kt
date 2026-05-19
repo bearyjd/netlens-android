@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.ventoux.netlens.core.billing.LocalProStatus
 import com.ventoux.netlens.core.network.export.ResultExporter
+import com.ventoux.netlens.core.ui.LocalStatusColors
+import com.ventoux.netlens.core.ui.StatusColors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,12 +58,6 @@ import com.ventoux.netlens.feature.portscan.model.PortResult
 import com.ventoux.netlens.feature.portscan.model.PortRiskLevel
 import com.ventoux.netlens.feature.portscan.model.PortScanUiState
 import com.ventoux.netlens.feature.portscan.model.WellKnownPorts
-
-private val CriticalColor = Color(0xFFEF4444)
-private val WarningColor = Color(0xFFF59E0B)
-private val InfoColor = Color(0xFF3B82F6)
-private val OpenPortColor = Color(0xFF4CAF50)
-private val ClosedPortColor = Color(0xFF6B7280)
 
 private const val PRESET_COMMON = 0
 private const val PRESET_ALL = 1
@@ -242,6 +238,7 @@ private fun PortScanContent(
 
 @Composable
 private fun StatsRow(state: PortScanUiState) {
+    val status = LocalStatusColors.current
     val criticalCount = state.results.count { it.riskLevel == PortRiskLevel.CRITICAL }
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -250,13 +247,13 @@ private fun StatsRow(state: PortScanUiState) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = "${state.openCount} open",
-                color = OpenPortColor,
+                color = status.pass,
                 style = MaterialTheme.typography.labelLarge,
             )
             if (criticalCount > 0) {
                 Text(
                     text = stringResource(R.string.portscan_stats_critical, criticalCount),
-                    color = CriticalColor,
+                    color = status.fail,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -276,8 +273,9 @@ private fun PortResultRow(
     host: String,
     onNavigateToTool: (String, String) -> Unit,
 ) {
+    val status = LocalStatusColors.current
     val iconColor by animateColorAsState(
-        targetValue = if (result.isOpen) riskColor(result.riskLevel) else ClosedPortColor,
+        targetValue = if (result.isOpen) riskColor(result.riskLevel, status) else status.muted,
         label = "portIconColor",
     )
 
@@ -363,7 +361,7 @@ private fun PortResultRow(
 
 @Composable
 private fun RiskBadge(riskLevel: PortRiskLevel) {
-    val color = riskColor(riskLevel)
+    val color = riskColor(riskLevel, LocalStatusColors.current)
     val label = when (riskLevel) {
         PortRiskLevel.CRITICAL -> stringResource(R.string.portscan_risk_critical)
         PortRiskLevel.WARNING -> stringResource(R.string.portscan_risk_warning)
@@ -379,11 +377,11 @@ private fun RiskBadge(riskLevel: PortRiskLevel) {
     )
 }
 
-private fun riskColor(riskLevel: PortRiskLevel): Color = when (riskLevel) {
-    PortRiskLevel.CRITICAL -> CriticalColor
-    PortRiskLevel.WARNING -> WarningColor
-    PortRiskLevel.INFO -> InfoColor
-    PortRiskLevel.CLOSED -> ClosedPortColor
+private fun riskColor(riskLevel: PortRiskLevel, status: StatusColors): Color = when (riskLevel) {
+    PortRiskLevel.CRITICAL -> status.fail
+    PortRiskLevel.WARNING -> status.warn
+    PortRiskLevel.INFO -> status.info
+    PortRiskLevel.CLOSED -> status.muted
 }
 
 private val HTTP_PORTS = setOf(80, 443, 8080, 8443)

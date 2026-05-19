@@ -118,6 +118,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:oui"))
     implementation(project(":core:billing"))
+    implementation(project(":core:ui"))
 
     // Billing (gplay only)
     "gplayImplementation"(libs.billing)
