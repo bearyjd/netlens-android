@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-18
+
+### Fixed
+- 4×1 widget Ping and DNS chips appeared inert because their callbacks refreshed only the 4×2 widget after writing results — replaced inline measurement with deep-links to the full Ping and DNS feature screens
+- Restore the missing `androidx.compose.ui.graphics.Color` import in LAN scan host detail (regression from the design-system refactor)
+
+### Changed
+- Widget Portal chip opens Wi-Fi Settings (where Android surfaces the native "Sign in to network" affordance) instead of launching Chrome on Apple's captive-portal probe URL
+- Widget Ping chip pre-fills `8.8.8.8` so a single tap measures latency without typing
+- Widget DNS chip opens DNS Leak Test instead of DNS Lookup
+
+### Internal
+- Extracted shared design tokens (`StatusColors` palette + `Spacing` scale) into a new `:core:ui` module, removing 50+ inline color literals across port-scan, IP info, and LAN host detail screens
+- Captured the design system in a new `DESIGN.md` at the repo root
+
 ## [1.1.1] - 2026-05-10
 
 ### Security
