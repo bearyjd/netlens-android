@@ -20,6 +20,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("navigation-compose").get())
                 add("implementation", libs.findLibrary("kotlinx-coroutines-android").get())
                 add("implementation", project(":core:billing"))
+                add("implementation", project(":core:ui"))
             }
         }
     }

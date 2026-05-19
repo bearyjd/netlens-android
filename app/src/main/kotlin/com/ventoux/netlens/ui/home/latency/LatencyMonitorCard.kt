@@ -297,7 +297,7 @@ private fun ConfigDialog(
                 )
                 Text(
                     text = stringResource(R.string.latency_threshold_format, thresholdSlider.toInt()),
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = MonoFontFamily),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

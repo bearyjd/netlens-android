@@ -41,16 +41,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ventoux.netlens.core.ui.LocalStatusColors
 import com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod
 import com.ventoux.netlens.feature.lanscan.model.HostDetailState
 import com.ventoux.netlens.feature.lanscan.model.HostPortResult
 import com.ventoux.netlens.feature.portscan.model.PortRiskLevel
-
-private val AmberColor = Color(0xFFFF9800)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -245,7 +243,7 @@ internal fun HostDetailSheet(
                             Text(
                                 text = stringResource(R.string.lanscan_risk_open_count, openCount),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = AmberColor,
+                                color = LocalStatusColors.current.warn,
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
@@ -435,7 +433,7 @@ private fun PortResultRow(result: HostPortResult) {
 @Composable
 private fun PortRiskLevel.toColor(): Color = when (this) {
     PortRiskLevel.CRITICAL -> MaterialTheme.colorScheme.error
-    PortRiskLevel.WARNING -> AmberColor
+    PortRiskLevel.WARNING -> LocalStatusColors.current.warn
     PortRiskLevel.INFO -> MaterialTheme.colorScheme.tertiary
     PortRiskLevel.CLOSED -> MaterialTheme.colorScheme.outline
 }

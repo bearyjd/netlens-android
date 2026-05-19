@@ -67,38 +67,45 @@ rather than "consumer."
 | `onSurface`             | `#191C1C` | `#E1E3E6` | `OnLightSurface` / `OnDarkSurface` |
 | `onSurfaceVariant`      | `#3F4948` | `#9BA1AB` | `OnLightSurfaceVariant` / `OnDarkSurfaceVariant` |
 
-**Status colors:** Not defined in the theme. Features that need risk/severity
-indicators (port scan, IP info posture, posture screen, VPN status) currently use
-inline `Color(0xFF...)` literals. The recurring values are:
+**Status colors:** Defined in `:core:ui` as a `StatusColors` palette, provided
+via `LocalStatusColors` from `NetLensTheme`. Read in any composable as
+`LocalStatusColors.current.<token>`:
 
-| Meaning      | Hex          | Used in (examples)                                              |
-|--------------|--------------|-----------------------------------------------------------------|
-| Pass / safe  | `#FF4CAF50`  | posture, vpnstatus, ipinfo, portscan                            |
-| Critical     | `#FFEF4444`  | portscan, ipinfo, posture                                       |
-| Info         | `#FF3B82F6`  | portscan, ipinfo, posture                                       |
-| Warning      | `#FFF59E0B`  | portscan, ipinfo, posture, lanscan host detail                  |
+| Token   | Hex          | Use                                                     |
+|---------|--------------|---------------------------------------------------------|
+| `pass`  | `#FF4CAF50`  | Open ports, clean reputation, safe posture, healthy VPN |
+| `warn`  | `#FFF59E0B`  | Medium-risk findings, advisory warnings                 |
+| `fail`  | `#FFEF4444`  | Critical findings, leaks, failures                      |
+| `info`  | `#FF3B82F6`  | Informational, low-risk findings                        |
+| `muted` | `#FF9E9E9E`  | Closed / inactive / disabled state                      |
 
-Until these are pulled into a `StatusColors` object on the theme, treat the values
-above as canonical and reuse them — do not invent new shades.
+The Posture and VpnStatus screens use a deliberately deeper variant of these
+colors (`#388E3C` / `#F57C00` / `#D32F2F`) for the VPN lock indicator — the
+darker palette reads as more "serious" on security-coded UI. Those values stay
+inline with a comment explaining the exception. Don't replace them with the
+brighter `LocalStatusColors` defaults without a design conversation first.
 
 ### Spacing
 
-No central spacing scale exists. Inline `.dp` values are the convention. The
-observed scale (by frequency, across ~300 use sites) is:
+Defined in `:core:ui` as `com.ventoux.netlens.core.ui.Spacing`. Import and use
+directly: `Spacing.lg`, `Spacing.sm`, etc.
 
-| Token (informal) | Value | Use |
-|------------------|-------|-----|
-| `xs`             | 4dp   | Tight gaps inside chips, dense rows |
-| `sm`             | 8dp   | Default padding step |
-| `md`             | 12dp  | Medium gaps, card inner padding |
-| `lg`             | 16dp  | Card padding, section gaps |
-| `xl`             | 24dp  | Between major sections |
-| `xxl`            | 32dp  | Screen-edge padding when generous |
+| Token   | Value | Use |
+|---------|-------|-----|
+| `xs`    | 4dp   | Tight gaps inside chips, dense rows |
+| `sm`    | 8dp   | Default padding step |
+| `md`    | 12dp  | Medium gaps, card inner padding |
+| `lg`    | 16dp  | Card padding, section gaps |
+| `xl`    | 24dp  | Between major sections |
+| `xxl`   | 32dp  | Screen-edge padding when generous |
 
-Outliers (2, 6, 18, 64, 80, 100dp) appear in fewer than 5 sites each.
+**Rule:** Stick to the scale. Outliers (2, 6, 18, 64, 80, 100dp) may stay inline
+when the layout has a documented reason — leave a one-line comment at the call
+site if you have to break the scale. The scale is small on purpose; don't grow
+it without removing something else.
 
-**Rule:** Stick to {4, 8, 12, 16, 24, 32}dp unless the layout has a documented
-reason to break the scale.
+The existing ~300 inline `.dp` call sites have not been mass-migrated; adopt
+the scale in new code and convert opportunistically.
 
 ### Shape
 
@@ -169,6 +176,7 @@ constants) may be inline at author discretion.
 
 | Date       | Decision                                                                                             | Source / Rationale |
 |------------|------------------------------------------------------------------------------------------------------|--------------------|
+| 2026-05-18 | Extracted `StatusColors` (+ `LocalStatusColors`) and `Spacing` scale into new `:core:ui` module.       | Audit found 50 inline color literals and ~300 inline `.dp` values; consolidation gives one source of truth and theme-aware tokens. Posture/VpnStatus deep-palette deliberately kept inline. |
 | 2026-05-17 | Documented existing design system at v1.1.1 baseline.                                                | This file. Captures Theme.kt, Type.kt, Color.kt as currently shipped. |
 | pre-2026-05| Inter + JetBrains Mono adopted; `labelSmall` redefined to use Mono for technical data.               | "Billing and typography shipped" milestone; CLAUDE.md → Typography. |
 | pre-2026-05| Teal/Cyan brand palette chosen; Material You dynamic color enabled API 31+.                          | `Theme.kt`. |

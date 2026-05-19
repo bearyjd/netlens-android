@@ -20,6 +20,11 @@ val MonoFontFamily = FontFamily(
     Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
 )
 
+// displayLarge, headlineLarge, headlineMedium, titleLarge, and bodyLarge are
+// intentionally defined but seldom used (most screens reach for the small/medium
+// roles). Keeping them in place so Material 3 components that default to these
+// roles (TopAppBar uses titleLarge, etc.) inherit Inter rather than the system
+// fallback. See DESIGN.md → Typography for usage guidance.
 val NetLensTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = InterFontFamily,
