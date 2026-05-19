@@ -1,0 +1,1 @@
+Widget fixes: Ping and DNS chips on the 4×1 widget now correctly open the full Ping and DNS Leak Test screens (the inline result chips were silently broken on the 4×1 size). Portal chip opens Wi-Fi Settings — the OS-native sign-in flow — instead of dumping you into a browser. Ping chip pre-fills 8.8.8.8 for one-tap latency checks.
