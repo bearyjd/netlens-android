@@ -36,21 +36,21 @@ As a user, I want to monitor the availability of important URLs and get notified
 | `feature/uptime/build.gradle.kts` | CREATE | netlens.android.feature, deps: :core:network, :core:data, work-runtime, Ktor client libs |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:uptime")` |
 | `app/build.gradle.kts` | UPDATE | Add implementation project dep |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/MonitoredEndpointEntity.kt` | CREATE | @Entity: id (auto PK), name, url, intervalMinutes, lastStatus (UP/DOWN/UNKNOWN), lastCheckedAt, lastStatusChangeAt, notifyOnChange |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/EndpointCheckEntity.kt` | CREATE | @Entity: id (auto PK), endpointId (FK), timestamp, statusCode, latencyMs, isUp, errorMessage |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/MonitoredEndpointDao.kt` | CREATE | @Dao: getAll (Flow), getById, insert, update, delete |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/EndpointCheckDao.kt` | CREATE | @Dao: getByEndpoint (Flow, ordered by timestamp DESC, limit 100), insert, deleteOlderThan |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add both entities, bump version, add abstract DAOs |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides both DAOs |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/worker/EndpointCheckWorker.kt` | CREATE | CoroutineWorker. Query all endpoints from DAO. For each: HTTP HEAD via Ktor, record status code + latency. If status changed from last, send notification. Insert EndpointCheckEntity. Update MonitoredEndpointEntity lastStatus/lastCheckedAt. |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/worker/EndpointMonitorScheduler.kt` | CREATE | Schedules PeriodicWorkRequest per endpoint interval. Uses unique work names per endpoint ID. |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/notification/UptimeNotificationHelper.kt` | CREATE | Creates NotificationChannel, builds status change notifications |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/model/UptimeUiState.kt` | CREATE | data class: endpoints list with last status, isLoading, showAddDialog, editingEndpoint |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/di/UptimeModule.kt` | CREATE | @Module providing scheduler |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/UptimeViewModel.kt` | CREATE | @HiltViewModel, CRUD endpoints, schedule/cancel workers, observe status |
-| `feature/uptime/src/main/kotlin/com.ventoux.netlens/feature/uptime/UptimeScreen.kt` | CREATE | LazyColumn of endpoint cards (name, URL, status indicator green/red/gray, last checked time, latency). FAB to add. AlertDialog for add/edit (name, URL, interval dropdown, notify toggle). Tap card → detail view with check history. |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/entity/MonitoredEndpointEntity.kt` | CREATE | @Entity: id (auto PK), name, url, intervalMinutes, lastStatus (UP/DOWN/UNKNOWN), lastCheckedAt, lastStatusChangeAt, notifyOnChange |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/entity/EndpointCheckEntity.kt` | CREATE | @Entity: id (auto PK), endpointId (FK), timestamp, statusCode, latencyMs, isUp, errorMessage |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/dao/MonitoredEndpointDao.kt` | CREATE | @Dao: getAll (Flow), getById, insert, update, delete |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/dao/EndpointCheckDao.kt` | CREATE | @Dao: getByEndpoint (Flow, ordered by timestamp DESC, limit 100), insert, deleteOlderThan |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add both entities, bump version, add abstract DAOs |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides both DAOs |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/worker/EndpointCheckWorker.kt` | CREATE | CoroutineWorker. Query all endpoints from DAO. For each: HTTP HEAD via Ktor, record status code + latency. If status changed from last, send notification. Insert EndpointCheckEntity. Update MonitoredEndpointEntity lastStatus/lastCheckedAt. |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/worker/EndpointMonitorScheduler.kt` | CREATE | Schedules PeriodicWorkRequest per endpoint interval. Uses unique work names per endpoint ID. |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/notification/UptimeNotificationHelper.kt` | CREATE | Creates NotificationChannel, builds status change notifications |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/model/UptimeUiState.kt` | CREATE | data class: endpoints list with last status, isLoading, showAddDialog, editingEndpoint |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/di/UptimeModule.kt` | CREATE | @Module providing scheduler |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/UptimeViewModel.kt` | CREATE | @HiltViewModel, CRUD endpoints, schedule/cancel workers, observe status |
+| `feature/uptime/src/main/kotlin/com.ventouxlabs.netlens/feature/uptime/UptimeScreen.kt` | CREATE | LazyColumn of endpoint cards (name, URL, status indicator green/red/gray, last checked time, latency). FAB to add. AlertDialog for add/edit (name, URL, interval dropdown, notify toggle). Tap card → detail view with check history. |
 | `app/src/main/AndroidManifest.xml` | UPDATE | Add POST_NOTIFICATIONS permission (API 33+) |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for uptime |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for uptime |
 
 ## Step-by-Step Tasks
 

@@ -29,19 +29,19 @@ As a user, I want to query DNS records for any domain by type, so that I can tro
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/model/DnsRecordType.kt` | CREATE | enum class: A, AAAA, MX, TXT, CNAME, NS, SOA |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/model/DnsRecord.kt` | CREATE | Sealed interface with data class variants per type |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/model/DnsLookupUiState.kt` | CREATE | data class: domain, selectedType, records list, isLoading, error |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/engine/DnsLookupEngine.kt` | CREATE | Interface: suspend fun resolve(domain: String, type: DnsRecordType): Result<List<DnsRecord>> |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/engine/AndroidDnsResolver.kt` | CREATE | API 29+ DnsResolver for A/AAAA, wraps callback in suspendCancellableCoroutine |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/engine/DnsJavaResolver.kt` | CREATE | Uses dnsjava SimpleResolver for MX, TXT, CNAME, NS, SOA. Maps org.xbill.DNS types to DnsRecord |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/engine/CompositeDnsResolver.kt` | CREATE | Delegates A/AAAA to AndroidDnsResolver, others to DnsJavaResolver |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/data/DnsLookupRepository.kt` | CREATE | Interface: suspend fun lookup(domain, type): Result<List<DnsRecord>> |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/data/DnsLookupRepositoryImpl.kt` | CREATE | Wraps CompositeDnsResolver, adds Dispatchers.IO |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/di/DnsModule.kt` | CREATE | @Module binding repository + providing resolvers |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/DnsLookupViewModel.kt` | CREATE | @HiltViewModel, lookup(domain, type), state with records |
-| `feature/dns/src/main/kotlin/com.ventoux.netlens/feature/dns/DnsLookupScreen.kt` | CREATE | Domain TextField, record type chips (FilterChip row), results list, each record type has distinct display |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Dns route |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/model/DnsRecordType.kt` | CREATE | enum class: A, AAAA, MX, TXT, CNAME, NS, SOA |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/model/DnsRecord.kt` | CREATE | Sealed interface with data class variants per type |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/model/DnsLookupUiState.kt` | CREATE | data class: domain, selectedType, records list, isLoading, error |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/engine/DnsLookupEngine.kt` | CREATE | Interface: suspend fun resolve(domain: String, type: DnsRecordType): Result<List<DnsRecord>> |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/engine/AndroidDnsResolver.kt` | CREATE | API 29+ DnsResolver for A/AAAA, wraps callback in suspendCancellableCoroutine |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/engine/DnsJavaResolver.kt` | CREATE | Uses dnsjava SimpleResolver for MX, TXT, CNAME, NS, SOA. Maps org.xbill.DNS types to DnsRecord |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/engine/CompositeDnsResolver.kt` | CREATE | Delegates A/AAAA to AndroidDnsResolver, others to DnsJavaResolver |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/data/DnsLookupRepository.kt` | CREATE | Interface: suspend fun lookup(domain, type): Result<List<DnsRecord>> |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/data/DnsLookupRepositoryImpl.kt` | CREATE | Wraps CompositeDnsResolver, adds Dispatchers.IO |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/di/DnsModule.kt` | CREATE | @Module binding repository + providing resolvers |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/DnsLookupViewModel.kt` | CREATE | @HiltViewModel, lookup(domain, type), state with records |
+| `feature/dns/src/main/kotlin/com.ventouxlabs.netlens/feature/dns/DnsLookupScreen.kt` | CREATE | Domain TextField, record type chips (FilterChip row), results list, each record type has distinct display |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Dns route |
 
 ## Step-by-Step Tasks
 

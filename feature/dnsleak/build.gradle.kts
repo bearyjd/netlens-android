@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.dnsleak"
+    namespace = "com.ventouxlabs.netlens.feature.dnsleak"
 }
 
 dependencies {

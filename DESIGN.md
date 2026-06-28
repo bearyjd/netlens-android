@@ -7,7 +7,7 @@ feature modules; the design system is intentionally compact and Material 3 nativ
 
 ## Product Context
 
-- **What:** Android network diagnostics toolkit (`com.ventoux.netlens`) — 20 tools, each in its own feature module.
+- **What:** Android network diagnostics toolkit (`com.ventouxlabs.netlens`) — 20 tools, each in its own feature module.
 - **Surface type:** Information-dense utility app. Lots of tabular and code-like data (IPs, MACs, ports, TTLs, hex), short-lived task screens, and a few persistent monitors.
 - **Users:** Network admins, security engineers, hobbyists. Expect data legibility over decoration.
 - **Platform:** Material 3, compileSdk 35, minSdk 29. Dark theme is a first-class peer of light.
@@ -21,7 +21,7 @@ Two families, both bundled as TTF in `app/src/main/res/font/`:
 - **Inter** — UI text. Regular, Medium, SemiBold, Bold.
 - **JetBrains Mono** — technical data only (IPs, ports, MACs, hex, timestamps). Regular, Medium.
 
-Defined in `app/src/main/kotlin/com/ventoux/netlens/ui/theme/Type.kt` as
+Defined in `app/src/main/kotlin/com/ventouxlabs/netlens/ui/theme/Type.kt` as
 `InterFontFamily` and `MonoFontFamily`. The Material 3 `Typography` object overrides
 all 12 roles; **`labelSmall` is the only role that uses `MonoFontFamily`** — it is
 the canonical vector for monospace text in this app.
@@ -87,7 +87,7 @@ brighter `LocalStatusColors` defaults without a design conversation first.
 
 ### Spacing
 
-Defined in `:core:ui` as `com.ventoux.netlens.core.ui.Spacing`. Import and use
+Defined in `:core:ui` as `com.ventouxlabs.netlens.core.ui.Spacing`. Import and use
 directly: `Spacing.lg`, `Spacing.sm`, etc.
 
 | Token   | Value | Use |

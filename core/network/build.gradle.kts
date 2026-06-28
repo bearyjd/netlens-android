@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.core.network"
+    namespace = "com.ventouxlabs.netlens.core.network"
 
     testOptions {
         unitTests.all { it.useJUnitPlatform() }

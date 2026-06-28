@@ -248,10 +248,10 @@ class FakePinger : Pinger {
 ## Step-by-Step Tasks
 
 ### Task 1: Create DiscoveryMethod enum
-- **ACTION**: Create new file `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/model/DiscoveryMethod.kt`
+- **ACTION**: Create new file `feature/lanscan/src/main/kotlin/com.ventouxlabs.netlens/feature/lanscan/model/DiscoveryMethod.kt`
 - **IMPLEMENT**:
   ```kotlin
-  package com.ventoux.netlens.feature.lanscan.model
+  package com.ventouxlabs.netlens.feature.lanscan.model
 
   enum class DiscoveryMethod { PING, MDNS, BOTH }
   ```
@@ -278,7 +278,7 @@ class FakePinger : Pinger {
   )
   ```
 - **MIRROR**: Existing data class style with defaults
-- **IMPORTS**: `com.ventoux.netlens.feature.lanscan.model.DiscoveryMethod`
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.lanscan.model.DiscoveryMethod`
 - **GOTCHA**: All existing construction sites pass no `discoveryMethod` — defaults to `PING` which is correct for existing ping-only code paths. No breakage.
 - **VALIDATE**: Module compiles without errors
 
@@ -333,7 +333,7 @@ class FakePinger : Pinger {
   - Keep `resolveHostname()` and `calculateIpRange()` unchanged
   - Remove `OuiLookup` from constructor (no MAC → no OUI lookup)
 - **MIRROR**: PING_BATCH_COROUTINE, FLOW_ON_IO
-- **IMPORTS**: Add `kotlinx.coroutines.sync.Semaphore`, `kotlinx.coroutines.sync.withPermit`, `kotlinx.coroutines.withTimeoutOrNull`; remove `com.ventoux.netlens.core.oui.OuiLookup`
+- **IMPORTS**: Add `kotlinx.coroutines.sync.Semaphore`, `kotlinx.coroutines.sync.withPermit`, `kotlinx.coroutines.withTimeoutOrNull`; remove `com.ventouxlabs.netlens.core.oui.OuiLookup`
 - **GOTCHA**: Don't emit from inside `coroutineScope` — collect results, return list, emit from outer `flow {}`. Using `Semaphore(64)` prevents ANR from 254 simultaneous coroutines. `withTimeoutOrNull` wraps `isReachable` for double safety.
 - **VALIDATE**: Module compiles. No references to `ArpTableReader`. No import of `OuiLookup`.
 
@@ -579,8 +579,8 @@ class FakePinger : Pinger {
 - **VALIDATE**: No unresolved string references
 
 ### Task 11: Delete ArpTableReader
-- **ACTION**: Delete `feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/engine/ArpTableReader.kt`
-- **IMPLEMENT**: `git rm feature/lanscan/src/main/kotlin/com.ventoux.netlens/feature/lanscan/engine/ArpTableReader.kt`
+- **ACTION**: Delete `feature/lanscan/src/main/kotlin/com.ventouxlabs.netlens/feature/lanscan/engine/ArpTableReader.kt`
+- **IMPLEMENT**: `git rm feature/lanscan/src/main/kotlin/com.ventouxlabs.netlens/feature/lanscan/engine/ArpTableReader.kt`
 - **MIRROR**: N/A
 - **IMPORTS**: N/A
 - **GOTCHA**: Verify no remaining references via grep. The only caller was `SubnetScannerImpl` (already updated in Task 3).
@@ -607,7 +607,7 @@ class FakePinger : Pinger {
 - **VALIDATE**: No compilation errors. Fingerprinting still applied to all devices.
 
 ### Task 13: Write unit tests for SubnetScannerImpl
-- **ACTION**: Create `feature/lanscan/src/test/kotlin/com.ventoux.netlens/feature/lanscan/engine/SubnetScannerImplTest.kt`
+- **ACTION**: Create `feature/lanscan/src/test/kotlin/com.ventouxlabs.netlens/feature/lanscan/engine/SubnetScannerImplTest.kt`
 - **IMPLEMENT**:
   ```kotlin
   class SubnetScannerImplTest {

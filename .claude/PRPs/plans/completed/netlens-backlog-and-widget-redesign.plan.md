@@ -24,7 +24,7 @@ As a power user, I want a prioritized roadmap of features that deepen NetLens's 
 ## Critical Codebase Findings
 
 ### Bug: Manifest references old package name
-`app/src/main/AndroidManifest.xml:47,57` registers `us.beary.netlens.widget.WideWidgetReceiver` and `us.beary.netlens.widget.BannerWidgetReceiver` — but the package was renamed to `com.ventoux.netlens` in commit `972ad72`. These receivers will fail to resolve.
+`app/src/main/AndroidManifest.xml:47,57` registers `us.beary.netlens.widget.WideWidgetReceiver` and `us.beary.netlens.widget.BannerWidgetReceiver` — but the package was renamed to `com.ventouxlabs.netlens` in commit `972ad72`. These receivers will fail to resolve.
 
 ### Bug: Deep links not routed
 `MainActivity.kt` has zero intent handling — no `onNewIntent`, no URI extraction. The manifest declares `<data android:scheme="netlens" android:host="feature" />` but tapping a widget deep link just opens the app to the home screen. `NetLensApp.kt` and `NetLensNavHost.kt` do not process incoming intents.
@@ -601,7 +601,7 @@ object Deeplink {
 ## Step-by-Step Tasks
 
 ### Task 1: Create WidgetState model
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/WidgetState.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/WidgetState.kt`
 - **IMPLEMENT**: Data class with all fields from the "New Widget State Model" section above. Include companion object with default/stub factory: `fun stub() = WidgetState()` and `fun isStale(thresholdMs: Long = 300_000L)` computed property.
 - **MIRROR**: `IpWidgetState` pattern — flat data class, no sealed hierarchy
 - **IMPORTS**: none (pure data class)
@@ -609,7 +609,7 @@ object Deeplink {
 - **VALIDATE**: Compiles, no references to old `IpWidgetState` yet
 
 ### Task 2: Create WidgetStateDefinition
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/WidgetStateDefinition.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/WidgetStateDefinition.kt`
 - **IMPLEMENT**: DataStore-backed `GlanceStateDefinition<Preferences>` with `PreferencesKey` for every field in `WidgetState`. Include `Preferences.toWidgetState()` extension and `WidgetState.toPreferences()` mapper. Keep `CAROUSEL_PAGE_KEY` for backward compat if needed by standard widget.
 - **MIRROR**: Existing `IpWidgetStateDefinition` pattern
 - **IMPORTS**: `androidx.datastore.preferences.core.*`, `androidx.glance.state.GlanceStateDefinition`
@@ -617,13 +617,13 @@ object Deeplink {
 - **VALIDATE**: Both mappers are inverse of each other (round-trip test)
 
 ### Task 3: Extend Deeplink constants
-- **ACTION**: Update `widget/src/main/kotlin/com/ventoux/netlens/widget/util/Deeplink.kt`
+- **ACTION**: Update `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/util/Deeplink.kt`
 - **IMPLEMENT**: Add constants for HOME, POSTURE, WIFI_AUDIT, SPEED_TEST, LATENCY, DEVICES. Add `fun issue(id: String)` and `fun triggerScan()` constants.
 - **MIRROR**: Existing Deeplink object pattern
 - **VALIDATE**: All constants use `SCHEME://HOST/route` format matching `ToolDestination.route` values
 
 ### Task 4: Create WidgetTheme
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/ui/WidgetTheme.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/ui/WidgetTheme.kt`
 - **IMPLEMENT**: Object with functions:
   - `scoreColor(grade: String): Color` — green for A/B, amber for C, red for D/F, gray for empty
   - `scoreBorderColor(grade: String): Color` — same logic, slightly different shade for border
@@ -635,7 +635,7 @@ object Deeplink {
 - **VALIDATE**: All color functions handle empty/null inputs gracefully
 
 ### Task 5: Create CompactWidgetContent (2x1)
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/ui/CompactWidgetContent.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/ui/CompactWidgetContent.kt`
 - **IMPLEMENT**: `@Composable fun CompactWidgetContent(state: WidgetState)`
   - Layout: `Row` — shield badge left, network name center, status line right
   - Shield: Text emoji "🛡" colored by score grade, or gray circle if unscanned
@@ -650,7 +650,7 @@ object Deeplink {
 - **VALIDATE**: Preview in widget host, all three states render (connected, disconnected, no permission)
 
 ### Task 6: Create StandardWidgetContent (2x2)
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/ui/StandardWidgetContent.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/ui/StandardWidgetContent.kt`
 - **IMPLEMENT**: `@Composable fun StandardWidgetContent(state: WidgetState)`
   - Header row: Large score badge (left, dominant) + Network name + encryption badge (right)
   - IP row: Flag emoji + public IP — both clickable → `Deeplink.IPINFO`
@@ -666,7 +666,7 @@ object Deeplink {
 - **VALIDATE**: All tap targets fire distinct deep links
 
 ### Task 7: Create DashboardWidgetContent (4x2)
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/ui/DashboardWidgetContent.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/ui/DashboardWidgetContent.kt`
 - **IMPLEMENT**: `@Composable fun DashboardWidgetContent(state: WidgetState)`
   - Header row: "NetLens" text left + Score badge right (score color = accent border)
   - Network row: SSID + encryption badge + ISP/ASN name muted below
@@ -681,7 +681,7 @@ object Deeplink {
 - **VALIDATE**: All 7 rows render without overflow; all 6+ tap targets work
 
 ### Task 8: Rewrite NetLensWidget to route to new sizes
-- **ACTION**: Rewrite `widget/src/main/kotlin/com/ventoux/netlens/widget/NetLensWidget.kt`
+- **ACTION**: Rewrite `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/NetLensWidget.kt`
 - **IMPLEMENT**: Three separate `GlanceAppWidget` subclasses:
   - `CompactWidget` → uses `CompactWidgetContent`
   - `StandardWidget` → uses `StandardWidgetContent`
@@ -692,7 +692,7 @@ object Deeplink {
 - **VALIDATE**: Each widget class compiles independently
 
 ### Task 9: Create widget receivers
-- **ACTION**: Create 3 receiver classes in `widget/src/main/kotlin/com/ventoux/netlens/widget/receiver/`
+- **ACTION**: Create 3 receiver classes in `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/receiver/`
 - **IMPLEMENT**:
   ```kotlin
   class CompactWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -721,7 +721,7 @@ object Deeplink {
 - **VALIDATE**: XMLs parse correctly
 
 ### Task 11: Create TriggerScanAction
-- **ACTION**: Create `widget/src/main/kotlin/com/ventoux/netlens/widget/action/TriggerScanAction.kt`
+- **ACTION**: Create `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/action/TriggerScanAction.kt`
 - **IMPLEMENT**: `ActionCallback` that:
   1. Sets `isScanRunning = true` in WidgetState DataStore
   2. Refreshes all widgets (shows spinner in footer)
@@ -731,7 +731,7 @@ object Deeplink {
 - **VALIDATE**: Tap on footer triggers worker, widget shows "Scanning..." briefly
 
 ### Task 12: Rewrite IpWidgetRefreshWorker
-- **ACTION**: Rewrite `widget/src/main/kotlin/com/ventoux/netlens/widget/IpWidgetRefreshWorker.kt` → rename to `WidgetRefreshWorker.kt`
+- **ACTION**: Rewrite `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/IpWidgetRefreshWorker.kt` → rename to `WidgetRefreshWorker.kt`
 - **IMPLEMENT**: `CoroutineWorker` that:
   1. Reads connectivity via `ConnectivityManager`
   2. Gets SSID from `WifiManager` (requires `ACCESS_FINE_LOCATION` on Android 12+)
@@ -751,10 +751,10 @@ object Deeplink {
 ### Task 13: Fix AndroidManifest
 - **ACTION**: Update `app/src/main/AndroidManifest.xml`
 - **IMPLEMENT**:
-  1. Remove old receivers: `com.ventoux.netlens.widget.NetLensWidgetReceiver`, `us.beary.netlens.widget.WideWidgetReceiver`, `us.beary.netlens.widget.BannerWidgetReceiver`
-  2. Add 3 new receivers with correct `com.ventoux.netlens.widget.receiver.*` package:
+  1. Remove old receivers: `com.ventouxlabs.netlens.widget.NetLensWidgetReceiver`, `us.beary.netlens.widget.WideWidgetReceiver`, `us.beary.netlens.widget.BannerWidgetReceiver`
+  2. Add 3 new receivers with correct `com.ventouxlabs.netlens.widget.receiver.*` package:
      ```xml
-     <receiver android:name="com.ventoux.netlens.widget.receiver.CompactWidgetReceiver" android:exported="true">
+     <receiver android:name="com.ventouxlabs.netlens.widget.receiver.CompactWidgetReceiver" android:exported="true">
          <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
          <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_compact" />
      </receiver>
@@ -765,7 +765,7 @@ object Deeplink {
 - **VALIDATE**: `./gradlew :app:assembleDebug` succeeds, no manifest merge errors
 
 ### Task 14: Add deep link routing to MainActivity
-- **ACTION**: Update `app/src/main/kotlin/com/ventoux/netlens/MainActivity.kt`
+- **ACTION**: Update `app/src/main/kotlin/com/ventouxlabs/netlens/MainActivity.kt`
 - **IMPLEMENT**: Override `onNewIntent()` and extract deep link from `onCreate()`/`onNewIntent()`:
   ```kotlin
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -789,7 +789,7 @@ object Deeplink {
 - **VALIDATE**: Tap widget element → app opens to correct screen (not just home)
 
 ### Task 15: Wire deep link routing in NetLensNavHost
-- **ACTION**: Update `app/src/main/kotlin/com/ventoux/netlens/navigation/NetLensNavHost.kt`
+- **ACTION**: Update `app/src/main/kotlin/com/ventouxlabs/netlens/navigation/NetLensNavHost.kt`
 - **IMPLEMENT**: Accept `deepLinkUri: String?` parameter. In a `LaunchedEffect(deepLinkUri)`, parse the URI and navigate:
   ```kotlin
   LaunchedEffect(deepLinkUri) {
@@ -844,7 +844,7 @@ object Deeplink {
 - **VALIDATE**: `./gradlew assembleDebug` succeeds with zero references to deleted types
 
 ### Task 18: Update WidgetRefresh for broadcast-driven updates
-- **ACTION**: Update `widget/src/main/kotlin/com/ventoux/netlens/widget/WidgetRefresh.kt`
+- **ACTION**: Update `widget/src/main/kotlin/com/ventouxlabs/netlens/widget/WidgetRefresh.kt`
 - **IMPLEMENT**:
   - `refreshAllWidgets()` → call `updateAll()` on all 3 widget classes
   - Remove 15-minute periodic polling (spec says zero polling)

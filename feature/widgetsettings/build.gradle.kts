@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.widgetsettings"
+    namespace = "com.ventouxlabs.netlens.feature.widgetsettings"
 }
 
 dependencies {

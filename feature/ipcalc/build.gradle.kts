@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.ipcalc"
+    namespace = "com.ventouxlabs.netlens.feature.ipcalc"
 }
 
 dependencies {
