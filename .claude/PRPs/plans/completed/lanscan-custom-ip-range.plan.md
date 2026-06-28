@@ -245,7 +245,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
   ```
   Import `ScanRangeMode` from the ViewModel file (or define it in the model package).
 - **MIRROR**: STATE_UPDATE pattern — all fields have sensible defaults
-- **IMPORTS**: `com.ventoux.netlens.feature.lanscan.model.ScanRangeMode`
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode`
 - **GOTCHA**: `rangeError` is separate from `error` — `error` is for scan-time failures, `rangeError` is for input validation
 - **VALIDATE**: Build compiles; all existing callers of `LanScanUiState()` still work because all new fields have defaults
 
@@ -254,7 +254,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
 - **IMPLEMENT**:
   Create `feature/lanscan/.../model/ScanRangeMode.kt`:
   ```kotlin
-  package com.ventoux.netlens.feature.lanscan.model
+  package com.ventouxlabs.netlens.feature.lanscan.model
   
   enum class ScanRangeMode { AUTO, CUSTOM }
   ```
@@ -286,7 +286,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
   }
   ```
 - **MIRROR**: NAMING_CONVENTION — enum in model package like `DiscoveryMethod`, camelCase methods
-- **IMPORTS**: `com.ventoux.netlens.feature.lanscan.model.ScanRangeMode`
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode`
 - **GOTCHA**: Prefix range 16–30 prevents scanning huge ranges (>1024 hosts already capped in `SubnetScannerImpl`). Prefix <16 = 65k+ hosts = unreasonable. Prefix >30 = 1 or 0 hosts = useless.
 - **VALIDATE**: Build compiles; calling `onRangeModeChanged(CUSTOM)` then `onCustomRangeChanged("192.168.1.0/24")` updates state correctly
 
@@ -333,7 +333,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
       // ... rest of startScan() unchanged from line 86 onward
   ```
 - **MIRROR**: ERROR_HANDLING — set error string on state and return early
-- **IMPORTS**: `com.ventoux.netlens.feature.lanscan.model.ScanRangeMode` (already imported from Task 2)
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode` (already imported from Task 2)
 - **GOTCHA**: The destructured Triple must be `val (subnet, prefixLength, subnetInfo)` — Kotlin destructuring works with Triple. Make sure `rangeError` is cleared on valid scan start in the state reset block (line 86-95 equivalent).
 - **VALIDATE**: Build compiles. Manual test: set custom range "192.168.1.0/24" → scan uses that range. Set invalid "abc" → shows validation error. Auto mode → existing behavior unchanged.
 
@@ -412,7 +412,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
   - `androidx.compose.foundation.text.KeyboardActions` (if adding imeAction handler)
   - `androidx.compose.ui.text.input.KeyboardType`
   - `androidx.compose.ui.text.input.ImeAction`
-  - `com.ventoux.netlens.feature.lanscan.model.ScanRangeMode`
+  - `com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode`
 - **GOTCHA**: `FilterChip` needs the M3 import, not M2. The `enabled = !uiState.isScanning` prevents mode switching mid-scan. `AnimatedVisibility` is already imported in this file.
 - **VALIDATE**: Build compiles. Visual check: chips appear, toggling Custom shows the text field, typing updates state, error text appears below field in red when `rangeError` is set.
 
@@ -436,7 +436,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
 - **IMPLEMENT**:
   Test the `parseCidr` logic indirectly through `SubnetScannerImpl.calculateIpRange` (already `internal` visibility) and add ViewModel tests:
 
-  `feature/lanscan/src/test/kotlin/com.ventoux.netlens/feature/lanscan/CidrValidationTest.kt`:
+  `feature/lanscan/src/test/kotlin/com.ventouxlabs.netlens/feature/lanscan/CidrValidationTest.kt`:
   ```kotlin
   class CidrValidationTest {
       @Test
@@ -473,7 +473,7 @@ This function already accepts arbitrary subnet/prefix — no changes needed in t
   }
   ```
 - **MIRROR**: JUnit 5 backtick-quoted test names, no mocking framework
-- **IMPORTS**: `org.junit.jupiter.api.Test`, `org.junit.jupiter.api.Assertions.*`, `com.ventoux.netlens.feature.lanscan.engine.SubnetScannerImpl`
+- **IMPORTS**: `org.junit.jupiter.api.Test`, `org.junit.jupiter.api.Assertions.*`, `com.ventouxlabs.netlens.feature.lanscan.engine.SubnetScannerImpl`
 - **GOTCHA**: `calculateIpRange` is `internal` — test must be in the same module (which it is, under `src/test/`). The `MAX_HOSTS = 1024` cap means /8 returns empty.
 - **VALIDATE**: `./gradlew :feature:lanscan:testDebugUnitTest` passes
 

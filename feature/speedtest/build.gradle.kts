@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.speedtest"
+    namespace = "com.ventouxlabs.netlens.feature.speedtest"
 }
 
 dependencies {

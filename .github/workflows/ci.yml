@@ -28,12 +28,15 @@ jobs:
         run: ./gradlew assembleFossDebug
 
       - name: Run unit tests
-        run: ./gradlew testFossDebugUnitTest
+        # :app is the only flavored module (testFossDebugUnitTest); the library
+        # modules expose testDebugUnitTest. Both are needed for full coverage —
+        # the two task names don't overlap, so nothing runs twice.
+        run: ./gradlew testFossDebugUnitTest testDebugUnitTest
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results
-          path: "**/build/test-results/testFossDebugUnitTest/"
+          path: "**/build/test-results/**/TEST-*.xml"
           retention-days: 14

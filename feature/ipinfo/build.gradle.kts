@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.ipinfo"
+    namespace = "com.ventouxlabs.netlens.feature.ipinfo"
 }
 
 dependencies {
@@ -18,4 +18,5 @@ dependencies {
     implementation(libs.compose.material.icons)
 
     testImplementation(libs.datastore.preferences)
+    testImplementation(libs.ktor.client.mock)
 }

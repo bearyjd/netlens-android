@@ -255,7 +255,7 @@ data class WidgetIpResponse(
   8. Call updateAll() on all three widgets
   ```
 - **MIRROR**: WIDGET_DATASTORE_WRITE, ENCRYPTION_DETECTION_API31, POSTURE_SCORE_COMPUTE, COROUTINE_WORKER_ERROR_HANDLING
-- **IMPORTS**: `android.net.wifi.WifiInfo`, `android.net.wifi.WifiManager`, `android.os.Build`, `io.ktor.client.*`, `io.ktor.client.call.body`, `io.ktor.client.plugins.contentnegotiation.ContentNegotiation`, `io.ktor.serialization.kotlinx.json.json`, `kotlinx.serialization.json.Json`, `com.ventoux.netlens.widget.model.WidgetIpResponse`, `com.ventoux.netlens.widget.util.toFlagEmoji`, `java.net.InetAddress`, `java.net.Socket`, `androidx.room.Room`, `com.ventoux.netlens.core.data.NetLensDatabase`
+- **IMPORTS**: `android.net.wifi.WifiInfo`, `android.net.wifi.WifiManager`, `android.os.Build`, `io.ktor.client.*`, `io.ktor.client.call.body`, `io.ktor.client.plugins.contentnegotiation.ContentNegotiation`, `io.ktor.serialization.kotlinx.json.json`, `kotlinx.serialization.json.Json`, `com.ventouxlabs.netlens.widget.model.WidgetIpResponse`, `com.ventouxlabs.netlens.widget.util.toFlagEmoji`, `java.net.InetAddress`, `java.net.Socket`, `androidx.room.Room`, `com.ventouxlabs.netlens.core.data.NetLensDatabase`
 - **GOTCHA**: 
   - Must rethrow CancellationException (already handled in existing pattern)
   - Ktor client must be closed after use (`client.use { }`)
