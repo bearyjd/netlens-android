@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.dao.TracerouteHistoryDao
 import com.ventouxlabs.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventouxlabs.netlens.feature.traceroute.engine.FakeTracer
+import com.ventouxlabs.netlens.feature.traceroute.engine.HopGeolocator
+import com.ventouxlabs.netlens.feature.traceroute.model.HopLocation
 import com.ventouxlabs.netlens.feature.traceroute.model.TracerouteHop
 import com.ventouxlabs.netlens.feature.traceroute.model.TracerouteUiState
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +34,7 @@ class TracerouteViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeTracer = FakeTracer()
-        viewModel = TracerouteViewModel(fakeTracer, FakeTracerouteHistoryDao())
+        viewModel = TracerouteViewModel(fakeTracer, FakeTracerouteHistoryDao(), FakeHopGeolocator())
     }
 
     @AfterEach
@@ -169,6 +171,10 @@ class TracerouteViewModelTest {
             assertFalse(finalState.hops[2].isTimeout)
         }
     }
+}
+
+private class FakeHopGeolocator : HopGeolocator {
+    override suspend fun lookupAll(ips: List<String?>): Map<String, HopLocation> = emptyMap()
 }
 
 private class FakeTracerouteHistoryDao : TracerouteHistoryDao {
