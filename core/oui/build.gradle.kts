@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.core.oui"
+    namespace = "com.ventouxlabs.netlens.core.oui"
 }
 
 dependencies {

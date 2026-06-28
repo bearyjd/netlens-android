@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [1.0.1] - 2026-04-25
 
 ### Changed
-- Renamed application package from `us.beary.netlens` to `com.ventoux.netlens`
+- Renamed application package from `us.beary.netlens` to `com.ventouxlabs.netlens`
 - Added Play Store phone screenshots
 
 ## [1.0.0] - 2026-04-25

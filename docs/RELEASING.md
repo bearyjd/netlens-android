@@ -42,7 +42,7 @@ Fully automated via CI:
 ### F-Droid
 
 1. Ensure the `v*` tag exists on GitHub (F-Droid builds from tags)
-2. Update `fdroid/com.ventoux.netlens.yml`:
+2. Update `fdroid/com.ventouxlabs.netlens.yml`:
    - Add a new entry under `Builds:` with the new versionName/versionCode
    - Update `CurrentVersion` and `CurrentVersionCode`
 3. Submit a pull request to [fdroiddata](https://gitlab.com/fdroid/fdroiddata) with the updated recipe

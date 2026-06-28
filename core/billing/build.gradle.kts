@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.core.billing"
+    namespace = "com.ventouxlabs.netlens.core.billing"
 }
 
 dependencies {

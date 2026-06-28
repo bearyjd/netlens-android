@@ -29,20 +29,20 @@ As a user, I want to send Wake-on-LAN magic packets to saved devices, so that I 
 
 | File | Action | Description |
 |------|--------|-------------|
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/WolTargetEntity.kt` | CREATE | @Entity: id (auto PK), name, mac, broadcastIp, port |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/WolTargetDao.kt` | CREATE | @Dao: getAll Flow, insert, update, delete |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add WolTargetEntity, bump version, add abstract wolTargetDao() |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides WolTargetDao |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/model/WolTarget.kt` | CREATE | Domain data class: id, name, mac, broadcastIp, port |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/model/WolUiState.kt` | CREATE | data class: targets list, isSending, lastSentTarget, error, showAddDialog |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/engine/WolSender.kt` | CREATE | Interface: suspend fun send(mac: String, broadcastIp: String, port: Int): Result<Unit> |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/engine/WolSenderImpl.kt` | CREATE | Build 102-byte magic packet (6x 0xFF + 16x MAC bytes). DatagramSocket + DatagramPacket to broadcastIp:port. Acquire MulticastLock from WifiManager. |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/data/WolRepository.kt` | CREATE | Interface: getTargets Flow, addTarget, updateTarget, deleteTarget, sendWol |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/data/WolRepositoryImpl.kt` | CREATE | Combines WolTargetDao + WolSender, maps entities |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/di/WolModule.kt` | CREATE | @Module binding sender + repository |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/WolViewModel.kt` | CREATE | @HiltViewModel, CRUD targets, send WoL, show snackbar state |
-| `feature/wol/src/main/kotlin/com.ventoux.netlens/feature/wol/WolScreen.kt` | CREATE | LazyColumn of saved targets with send button per item, FAB to add, AlertDialog for add/edit (name, MAC, broadcast IP, port fields), snackbar on send |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Wol route |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/entity/WolTargetEntity.kt` | CREATE | @Entity: id (auto PK), name, mac, broadcastIp, port |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/dao/WolTargetDao.kt` | CREATE | @Dao: getAll Flow, insert, update, delete |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add WolTargetEntity, bump version, add abstract wolTargetDao() |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides WolTargetDao |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/model/WolTarget.kt` | CREATE | Domain data class: id, name, mac, broadcastIp, port |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/model/WolUiState.kt` | CREATE | data class: targets list, isSending, lastSentTarget, error, showAddDialog |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/engine/WolSender.kt` | CREATE | Interface: suspend fun send(mac: String, broadcastIp: String, port: Int): Result<Unit> |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/engine/WolSenderImpl.kt` | CREATE | Build 102-byte magic packet (6x 0xFF + 16x MAC bytes). DatagramSocket + DatagramPacket to broadcastIp:port. Acquire MulticastLock from WifiManager. |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/data/WolRepository.kt` | CREATE | Interface: getTargets Flow, addTarget, updateTarget, deleteTarget, sendWol |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/data/WolRepositoryImpl.kt` | CREATE | Combines WolTargetDao + WolSender, maps entities |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/di/WolModule.kt` | CREATE | @Module binding sender + repository |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/WolViewModel.kt` | CREATE | @HiltViewModel, CRUD targets, send WoL, show snackbar state |
+| `feature/wol/src/main/kotlin/com.ventouxlabs.netlens/feature/wol/WolScreen.kt` | CREATE | LazyColumn of saved targets with send button per item, FAB to add, AlertDialog for add/edit (name, MAC, broadcast IP, port fields), snackbar on send |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Wol route |
 
 ## Step-by-Step Tasks
 

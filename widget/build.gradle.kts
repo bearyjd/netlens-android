@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.widget"
+    namespace = "com.ventouxlabs.netlens.widget"
 }
 
 tasks.withType<Test>().configureEach {

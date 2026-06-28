@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.wifi"
+    namespace = "com.ventouxlabs.netlens.feature.wifi"
 }
 
 dependencies {

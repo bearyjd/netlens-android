@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.traceroute"
+    namespace = "com.ventouxlabs.netlens.feature.traceroute"
 }
 
 dependencies {

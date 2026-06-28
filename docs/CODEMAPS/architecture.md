@@ -1,6 +1,8 @@
-<!-- Generated: 2026-05-04 | Files scanned: 22 modules | Token estimate: ~900 -->
+<!-- Generated: 2026-06-28 | Files scanned: 30 modules | Token estimate: ~950 -->
 
 # Architecture
+
+Package: `com.ventouxlabs.netlens`
 
 ## Module Graph
 
@@ -27,11 +29,13 @@ app (single Activity)
 ├── feature:wifi         │
 ├── feature:dnsleak      │
 ├── feature:wifiaudit    │
+├── feature:vpnstatus    │
 ├── feature:celltower   ─┘
 ├── widget              (Glance home screen widget)
 ├── core:network        (connectivity, SSRF guard, export)
 ├── core:data           (Room DB, DAOs, entities)
 ├── core:billing        (ProStatus interface, LocalProStatus)
+├── core:ui             (shared UI tokens: StatusColors, Spacing)
 └── core:oui            (MAC vendor lookup)
 ```
 
