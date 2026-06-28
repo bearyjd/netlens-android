@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Files scanned: 22 modules | Token estimate: ~950 -->
+<!-- Generated: 2026-06-28 | Files scanned: 23 feature modules | Token estimate: ~970 -->
 
 # Feature Modules
 
@@ -24,6 +24,7 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 | feature:wifi | WifiScreen | Discovery | no | — |
 | feature:portscan | PortScanScreen | Discovery | yes | PortScanHistoryDao |
 | feature:wifiaudit | WifiAuditScreen | Security | no | — |
+| feature:vpnstatus | VpnStatusScreen | Security | no | — |
 | feature:dnsleak | DnsLeakScreen | Security | no | — |
 | feature:tls | TlsScreen | Security | yes | TlsHistoryDao |
 | feature:httptester | HttpTesterScreen | Security | no | HttpTesterHistoryDao |

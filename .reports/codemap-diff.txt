@@ -1,33 +1,24 @@
-Codemap Generation Report — 2026-05-01
-═══════════════════════════════════════
+Codemap refresh — 2026-06-28
 
-Status: Initial generation (no prior codemaps existed)
+Trigger: package rename com.ventoux.netlens -> com.ventouxlabs.netlens + structural drift catch-up.
 
-Files Generated:
-  docs/CODEMAPS/architecture.md  — module graph, DI, navigation, flavors
-  docs/CODEMAPS/features.md      — 19 feature modules, pro-gating patterns
-  docs/CODEMAPS/data.md          — Room DB v9, 17 entities, 15 DAOs
-  docs/CODEMAPS/dependencies.md  — libraries, build toolchain, CI
+Modules: 30 gradle projects (app, widget, 5 core, 23 feature).
 
-Source Files Scanned:
-  .kt  files: 324
-  .xml files: 57
-  .kts files: 30
-  Total: 411
+Changes since last scan (2026-05-04):
+  + core:ui          NEW — shared UI tokens (StatusColors, Spacing)   [added to architecture.md]
+  + feature:vpnstatus NEW — VPN Status screen, Security category,
+                            "Tunnel state & leak check", no history DAO, no export
+                            [added to architecture.md + features.md]
+  ~ package coordinate renamed to com.ventouxlabs.netlens
+                            [data.md path auto-updated by rename sweep; package noted in architecture.md]
 
-Project Structure:
-  Modules: 24 (1 app + 4 core + 19 feature + 1 widget — note: some feature
-           modules like history, widgetsettings, posture are non-tool utility screens)
-  Convention plugins: 5 (in build-logic/)
-  Product flavors: 2 (foss, gplay)
-  Room DB version: 9
-  Room entities: 17
+Per-file:
+  architecture.md  MODIFIED  +core:ui, +feature:vpnstatus, +package line, header 22->30 modules, date bumped
+  features.md      MODIFIED  +feature:vpnstatus row (Security), header 22->23 feature modules, date bumped
+  data.md          MODIFIED  package path -> com/ventouxlabs/netlens (rename sweep), date bumped
+  dependencies.md  UNCHANGED no drift (no per-module list / no package literal); date left as last-verified
 
-Key Architectural Notes:
-  - Single Activity architecture with Compose Navigation
-  - All features follow Screen+ViewModel+DI+Engine pattern
-  - Pro billing via CompositionLocal (foss=always Pro, gplay=IAP)
-  - Cross-tool navigation via query parameter encoding
-  - 13 tool ViewModels expose buildExportText() for share/copy
+New dependencies detected: none.
+Architecture changes: 2 new modules (core:ui, feature:vpnstatus); no new routes beyond vpnstatus; no DI/flavor changes.
 
-No Staleness Warnings (first generation).
+Staleness warnings (>90 days): none after this refresh. dependencies.md last verified 2026-05-04 (~55 days) — still accurate.
