@@ -40,7 +40,7 @@
         </activity>
 
         <receiver
-            android:name="com.ventoux.netlens.widget.CompactWidgetReceiver"
+            android:name="com.ventouxlabs.netlens.widget.CompactWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -51,7 +51,7 @@
         </receiver>
 
         <receiver
-            android:name="com.ventoux.netlens.widget.StandardWidgetReceiver"
+            android:name="com.ventouxlabs.netlens.widget.StandardWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -62,7 +62,7 @@
         </receiver>
 
         <receiver
-            android:name="com.ventoux.netlens.widget.DashboardWidgetReceiver"
+            android:name="com.ventouxlabs.netlens.widget.DashboardWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -73,7 +73,7 @@
         </receiver>
 
         <receiver
-            android:name="com.ventoux.netlens.widget.FourByTwoWidgetReceiver"
+            android:name="com.ventouxlabs.netlens.widget.FourByTwoWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

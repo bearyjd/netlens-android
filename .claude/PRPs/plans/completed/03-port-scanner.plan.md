@@ -23,7 +23,7 @@ As a user, I want to scan a host for open TCP ports so that I can identify runni
 // SOURCE: feature/portscan/build.gradle.kts — depends on :core:network
 
 ### ASSET_LOADING
-// SOURCE: core/oui/src/main/kotlin/com.ventoux.netlens/core/oui/OuiLookup.kt
+// SOURCE: core/oui/src/main/kotlin/com.ventouxlabs.netlens/core/oui/OuiLookup.kt
 - context.assets.open() pattern for loading CSV from assets
 
 ## Files to Change
@@ -31,16 +31,16 @@ As a user, I want to scan a host for open TCP ports so that I can identify runni
 | File | Action | Description |
 |------|--------|-------------|
 | `feature/portscan/src/main/assets/top-1000-ports.csv` | CREATE | CSV: port,service_name (e.g., 22,SSH / 80,HTTP / 443,HTTPS) |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/model/PortInfo.kt` | CREATE | data class PortInfo(val port: Int, val serviceName: String) |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/model/PortResult.kt` | CREATE | data class PortResult(val port: Int, val serviceName: String, val isOpen: Boolean, val latencyMs: Long) |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/model/PortScanUiState.kt` | CREATE | data class: host, results list, isScanning, progress, scannedCount, totalCount, error |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/engine/PortScanner.kt` | CREATE | Interface: fun scan(host: String, ports: List<PortInfo>): Flow<PortResult> |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/engine/PortScannerImpl.kt` | CREATE | Semaphore(100), Socket().connect(InetSocketAddress(host, port), 1000), measure latency with System.nanoTime, emit PortResult per port |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/data/PortListLoader.kt` | CREATE | @Singleton, loads top-1000-ports.csv from assets, caches List<PortInfo> |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/di/PortScanModule.kt` | CREATE | @Module @Binds PortScanner |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/PortScanViewModel.kt` | CREATE | @HiltViewModel, startScan(host), cancel, accumulate results sorted by port |
-| `feature/portscan/src/main/kotlin/com.ventoux.netlens/feature/portscan/PortScanScreen.kt` | CREATE | Host TextField + Scan button, LazyColumn of port results (green=open, gray=closed), progress bar, filter toggle (show all / open only) |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for PortScan route with PortScanScreen() |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/model/PortInfo.kt` | CREATE | data class PortInfo(val port: Int, val serviceName: String) |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/model/PortResult.kt` | CREATE | data class PortResult(val port: Int, val serviceName: String, val isOpen: Boolean, val latencyMs: Long) |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/model/PortScanUiState.kt` | CREATE | data class: host, results list, isScanning, progress, scannedCount, totalCount, error |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/engine/PortScanner.kt` | CREATE | Interface: fun scan(host: String, ports: List<PortInfo>): Flow<PortResult> |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/engine/PortScannerImpl.kt` | CREATE | Semaphore(100), Socket().connect(InetSocketAddress(host, port), 1000), measure latency with System.nanoTime, emit PortResult per port |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/data/PortListLoader.kt` | CREATE | @Singleton, loads top-1000-ports.csv from assets, caches List<PortInfo> |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/di/PortScanModule.kt` | CREATE | @Module @Binds PortScanner |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/PortScanViewModel.kt` | CREATE | @HiltViewModel, startScan(host), cancel, accumulate results sorted by port |
+| `feature/portscan/src/main/kotlin/com.ventouxlabs.netlens/feature/portscan/PortScanScreen.kt` | CREATE | Host TextField + Scan button, LazyColumn of port results (green=open, gray=closed), progress bar, filter toggle (show all / open only) |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for PortScan route with PortScanScreen() |
 
 ## Step-by-Step Tasks
 

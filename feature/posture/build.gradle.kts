@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.posture"
+    namespace = "com.ventouxlabs.netlens.feature.posture"
     testOptions {
         unitTests.isReturnDefaultValues = true
     }

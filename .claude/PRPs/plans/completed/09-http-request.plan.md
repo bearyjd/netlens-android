@@ -32,19 +32,19 @@ As a user, I want to build and send custom HTTP requests with full control over 
 | `feature/httprequest/build.gradle.kts` | CREATE | netlens.android.feature + kotlin-serialization, deps: :core:network, :core:data, Ktor libs, kotlinx-serialization |
 | `settings.gradle.kts` | UPDATE | Add `include(":feature:httprequest")` |
 | `app/build.gradle.kts` | UPDATE | Add implementation project dep |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/entity/HttpRequestEntity.kt` | CREATE | @Entity: id, method, url, headersJson, body, responseStatus, responseBody, latencyMs, timestamp |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/dao/HttpRequestDao.kt` | CREATE | @Dao: getAll (Flow, ordered by timestamp desc), insert, delete, deleteAll |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add HttpRequestEntity, bump version, add abstract DAO |
-| `core/data/src/main/kotlin/com.ventoux.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides HttpRequestDao |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/model/HttpRequestConfig.kt` | CREATE | data class: method (GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS), url, headers (Map<String,String>), body (String?) |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/model/HttpResponseResult.kt` | CREATE | data class: statusCode, statusText, headers (Map<String,List<String>>), body, latencyMs |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/model/HttpRequestUiState.kt` | CREATE | data class: config, response, isLoading, history list, error, showHistory |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/engine/HttpRequestExecutor.kt` | CREATE | Interface: suspend fun execute(config: HttpRequestConfig): Result<HttpResponseResult> |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/engine/HttpRequestExecutorImpl.kt` | CREATE | Uses Ktor HttpClient. Builds request from config. Measures latency. Returns status + headers + body. |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/di/HttpRequestModule.kt` | CREATE | @Module binding executor, providing Ktor client |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/HttpRequestViewModel.kt` | CREATE | @HiltViewModel, send(), save to history, load history, replay from history |
-| `feature/httprequest/src/main/kotlin/com.ventoux.netlens/feature/httprequest/HttpRequestScreen.kt` | CREATE | Method dropdown, URL field, expandable headers editor (key-value pairs), body editor (for POST/PUT/PATCH), Send button, response viewer (status badge, headers, body with monospace font), history drawer |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for httprequest |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/entity/HttpRequestEntity.kt` | CREATE | @Entity: id, method, url, headersJson, body, responseStatus, responseBody, latencyMs, timestamp |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/dao/HttpRequestDao.kt` | CREATE | @Dao: getAll (Flow, ordered by timestamp desc), insert, delete, deleteAll |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/NetLensDatabase.kt` | UPDATE | Add HttpRequestEntity, bump version, add abstract DAO |
+| `core/data/src/main/kotlin/com.ventouxlabs.netlens/core/data/di/DataModule.kt` | UPDATE | @Provides HttpRequestDao |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/model/HttpRequestConfig.kt` | CREATE | data class: method (GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS), url, headers (Map<String,String>), body (String?) |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/model/HttpResponseResult.kt` | CREATE | data class: statusCode, statusText, headers (Map<String,List<String>>), body, latencyMs |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/model/HttpRequestUiState.kt` | CREATE | data class: config, response, isLoading, history list, error, showHistory |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/engine/HttpRequestExecutor.kt` | CREATE | Interface: suspend fun execute(config: HttpRequestConfig): Result<HttpResponseResult> |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/engine/HttpRequestExecutorImpl.kt` | CREATE | Uses Ktor HttpClient. Builds request from config. Measures latency. Returns status + headers + body. |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/di/HttpRequestModule.kt` | CREATE | @Module binding executor, providing Ktor client |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/HttpRequestViewModel.kt` | CREATE | @HiltViewModel, send(), save to history, load history, replay from history |
+| `feature/httprequest/src/main/kotlin/com.ventouxlabs.netlens/feature/httprequest/HttpRequestScreen.kt` | CREATE | Method dropdown, URL field, expandable headers editor (key-value pairs), body editor (for POST/PUT/PATCH), Send button, response viewer (status badge, headers, body with monospace font), history drawer |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Add composable route for httprequest |
 
 ## Step-by-Step Tasks
 

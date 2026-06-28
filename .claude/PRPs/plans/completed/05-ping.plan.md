@@ -29,15 +29,15 @@ As a user, I want to ping a host and see real-time round-trip times on a chart, 
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/model/PingResult.kt` | CREATE | data class: sequenceNumber, host, ttl, timeMs, isTimeout |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/model/PingSummary.kt` | CREATE | data class: transmitted, received, lossPercent, minMs, avgMs, maxMs |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/model/PingUiState.kt` | CREATE | data class: host, results list, summary, isPinging, error |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/engine/PingEngine.kt` | CREATE | Interface: fun ping(host: String, count: Int = 4): Flow<PingResult> |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/engine/PingEngineImpl.kt` | CREATE | ProcessBuilder("ping", "-c", count.toString(), host). Read stdout line-by-line. Parse "icmp_seq=N ttl=T time=X.XX ms" with regex. Emit PingResult per line. Parse summary line for stats. |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/di/PingModule.kt` | CREATE | @Module @Binds PingEngine |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/PingViewModel.kt` | CREATE | @HiltViewModel, startPing(host, count), cancel, accumulate results |
-| `feature/ping/src/main/kotlin/com.ventoux.netlens/feature/ping/PingScreen.kt` | CREATE | Host TextField + count selector + Start button, Canvas line chart for RTT values, stats row (min/avg/max/loss), LazyColumn of per-ping results |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Ping route |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/model/PingResult.kt` | CREATE | data class: sequenceNumber, host, ttl, timeMs, isTimeout |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/model/PingSummary.kt` | CREATE | data class: transmitted, received, lossPercent, minMs, avgMs, maxMs |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/model/PingUiState.kt` | CREATE | data class: host, results list, summary, isPinging, error |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/engine/PingEngine.kt` | CREATE | Interface: fun ping(host: String, count: Int = 4): Flow<PingResult> |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/engine/PingEngineImpl.kt` | CREATE | ProcessBuilder("ping", "-c", count.toString(), host). Read stdout line-by-line. Parse "icmp_seq=N ttl=T time=X.XX ms" with regex. Emit PingResult per line. Parse summary line for stats. |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/di/PingModule.kt` | CREATE | @Module @Binds PingEngine |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/PingViewModel.kt` | CREATE | @HiltViewModel, startPing(host, count), cancel, accumulate results |
+| `feature/ping/src/main/kotlin/com.ventouxlabs.netlens/feature/ping/PingScreen.kt` | CREATE | Host TextField + count selector + Start button, Canvas line chart for RTT values, stats row (min/avg/max/loss), LazyColumn of per-ping results |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for Ping route |
 
 ## Step-by-Step Tasks
 

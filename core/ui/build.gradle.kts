@@ -4,5 +4,5 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.core.ui"
+    namespace = "com.ventouxlabs.netlens.core.ui"
 }

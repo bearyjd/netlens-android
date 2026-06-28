@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.celltower"
+    namespace = "com.ventouxlabs.netlens.feature.celltower"
 }
 
 dependencies {

@@ -30,15 +30,15 @@ As a user, I want to see my public IP address, ISP, location, and VPN status at 
 // Pattern: interface + impl with @Inject, suspend fun returning Result<T>
 
 ### DI_MODULE
-// SOURCE: core/network/src/main/kotlin/com.ventoux.netlens/core/network/di/NetworkModule.kt
+// SOURCE: core/network/src/main/kotlin/com.ventouxlabs.netlens/core/network/di/NetworkModule.kt
 - @Module @InstallIn(SingletonComponent::class) + @Binds @Singleton
 
 ### NAVIGATION
-// SOURCE: app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt
+// SOURCE: app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt
 - Replace PlaceholderScreen for TopLevelDestination.IpInfo with IpInfoScreen()
 
 ### WIDGET
-// SOURCE: widget/src/main/kotlin/com.ventoux.netlens/widget/NetLensWidget.kt
+// SOURCE: widget/src/main/kotlin/com.ventouxlabs.netlens/widget/NetLensWidget.kt
 - Extend provideGlance to read from DataStore via GlanceStateDefinition
 - SOURCE: widget/build.gradle.kts — already depends on :feature:ipinfo, work-runtime, datastore-preferences
 
@@ -46,25 +46,25 @@ As a user, I want to see my public IP address, ISP, location, and VPN status at 
 
 | File | Action | Description |
 |------|--------|-------------|
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/model/IpApiResponse.kt` | CREATE | @Serializable data class with fields: query, isp, org, as_, country, regionName, city, lat, lon, proxy, hosting |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/model/IpInfoUiState.kt` | CREATE | Sealed interface: Loading, Success(data: IpApiResponse), Error(message: String) |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/data/IpInfoRepository.kt` | CREATE | Interface with `suspend fun fetchIpInfo(): Result<IpApiResponse>` |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/data/IpInfoRepositoryImpl.kt` | CREATE | Ktor HttpClient GET to `http://ip-api.com/json/?fields=query,isp,org,as,country,regionName,city,lat,lon,proxy,hosting` |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/di/IpInfoModule.kt` | CREATE | @Module @InstallIn(SingletonComponent) binding repo + providing Ktor HttpClient |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/IpInfoViewModel.kt` | CREATE | @HiltViewModel, StateFlow<IpInfoUiState>, refresh(), init fetches |
-| `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/IpInfoScreen.kt` | CREATE | @Composable with pull-to-refresh, displays all fields, copy-IP button |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/IpWidgetState.kt` | CREATE | Data class: ip, isp, isVpn — serialized to/from DataStore |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/IpWidgetStateDefinition.kt` | CREATE | GlanceStateDefinition<IpWidgetState> backed by DataStore<Preferences> |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/IpWidgetRefreshWorker.kt` | CREATE | CoroutineWorker fetching ip-api, writing to DataStore, updating widget |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/IpWidgetRefreshAction.kt` | CREATE | ActionCallback that enqueues OneTimeWorkRequest |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/NetLensWidget.kt` | UPDATE | Read IpWidgetState, display IP + ISP + VPN dot (green/yellow), tap-to-copy via actionRunCallback, tap-refresh |
-| `widget/src/main/kotlin/com.ventoux.netlens/widget/NetLensWidgetReceiver.kt` | UPDATE | Override onEnabled to enqueue initial refresh worker |
-| `app/src/main/kotlin/com.ventoux.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for IpInfo route with IpInfoScreen() |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/model/IpApiResponse.kt` | CREATE | @Serializable data class with fields: query, isp, org, as_, country, regionName, city, lat, lon, proxy, hosting |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/model/IpInfoUiState.kt` | CREATE | Sealed interface: Loading, Success(data: IpApiResponse), Error(message: String) |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/data/IpInfoRepository.kt` | CREATE | Interface with `suspend fun fetchIpInfo(): Result<IpApiResponse>` |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/data/IpInfoRepositoryImpl.kt` | CREATE | Ktor HttpClient GET to `http://ip-api.com/json/?fields=query,isp,org,as,country,regionName,city,lat,lon,proxy,hosting` |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/di/IpInfoModule.kt` | CREATE | @Module @InstallIn(SingletonComponent) binding repo + providing Ktor HttpClient |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/IpInfoViewModel.kt` | CREATE | @HiltViewModel, StateFlow<IpInfoUiState>, refresh(), init fetches |
+| `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/IpInfoScreen.kt` | CREATE | @Composable with pull-to-refresh, displays all fields, copy-IP button |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/IpWidgetState.kt` | CREATE | Data class: ip, isp, isVpn — serialized to/from DataStore |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/IpWidgetStateDefinition.kt` | CREATE | GlanceStateDefinition<IpWidgetState> backed by DataStore<Preferences> |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/IpWidgetRefreshWorker.kt` | CREATE | CoroutineWorker fetching ip-api, writing to DataStore, updating widget |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/IpWidgetRefreshAction.kt` | CREATE | ActionCallback that enqueues OneTimeWorkRequest |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/NetLensWidget.kt` | UPDATE | Read IpWidgetState, display IP + ISP + VPN dot (green/yellow), tap-to-copy via actionRunCallback, tap-refresh |
+| `widget/src/main/kotlin/com.ventouxlabs.netlens/widget/NetLensWidgetReceiver.kt` | UPDATE | Override onEnabled to enqueue initial refresh worker |
+| `app/src/main/kotlin/com.ventouxlabs.netlens/navigation/NetLensNavHost.kt` | UPDATE | Replace PlaceholderScreen for IpInfo route with IpInfoScreen() |
 
 ## Step-by-Step Tasks
 
 ### Task 1: Create IpApiResponse model
-- **ACTION**: Create `feature/ipinfo/src/main/kotlin/com.ventoux.netlens/feature/ipinfo/model/IpApiResponse.kt` with `@Serializable data class IpApiResponse(val query: String, val isp: String, val org: String, @SerialName("as") val asNumber: String, val country: String, val regionName: String, val city: String, val lat: Double, val lon: Double, val proxy: Boolean, val hosting: Boolean)`
+- **ACTION**: Create `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/model/IpApiResponse.kt` with `@Serializable data class IpApiResponse(val query: String, val isp: String, val org: String, @SerialName("as") val asNumber: String, val country: String, val regionName: String, val city: String, val lat: Double, val lon: Double, val proxy: Boolean, val hosting: Boolean)`
 - **VALIDATE**: Compiles with `./gradlew :feature:ipinfo:compileDebugKotlin`
 
 ### Task 2: Create IpInfoUiState

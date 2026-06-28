@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.httptester"
+    namespace = "com.ventouxlabs.netlens.feature.httptester"
 }
 
 dependencies {

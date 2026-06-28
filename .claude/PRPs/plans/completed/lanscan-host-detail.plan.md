@@ -185,7 +185,7 @@ class DeviceFingerprinterTest {
 ## Step-by-Step Tasks
 
 ### Task 1: Create HostDetailState model
-- **ACTION**: Create `feature/lanscan/src/main/kotlin/com/ventoux/netlens/feature/lanscan/model/HostDetailState.kt`
+- **ACTION**: Create `feature/lanscan/src/main/kotlin/com/ventouxlabs/netlens/feature/lanscan/model/HostDetailState.kt`
 - **IMPLEMENT**:
   ```kotlin
   data class HostDetailState(
@@ -201,7 +201,7 @@ class DeviceFingerprinterTest {
   )
   ```
 - **MIRROR**: LanScanUiState pattern — flat data class, no sealed hierarchy
-- **IMPORTS**: `com.ventoux.netlens.feature.portscan.model.PortResult`
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.portscan.model.PortResult`
 - **VALIDATE**: Compiles with no errors
 
 ### Task 2: Add selectedDevice to LanScanUiState
@@ -336,7 +336,7 @@ class DeviceFingerprinterTest {
   }
   ```
 - **MIRROR**: STATE_UPDATE pattern, scan/cancel pattern from existing `startScan()`/`cancelScan()`
-- **IMPORTS**: `com.ventoux.netlens.feature.portscan.engine.PortScanner`, `com.ventoux.netlens.feature.portscan.model.PortResult`, `com.ventoux.netlens.feature.portscan.model.WellKnownPorts`
+- **IMPORTS**: `com.ventouxlabs.netlens.feature.portscan.engine.PortScanner`, `com.ventouxlabs.netlens.feature.portscan.model.PortResult`, `com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts`
 - **GOTCHA**: Must rethrow CancellationException. Use `_hostDetail.update {}` (nullable-safe) not `.value =`
 - **VALIDATE**: Build compiles, unit tests for select/dismiss/scan flow
 

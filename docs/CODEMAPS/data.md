@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Files scanned: 36 | Token estimate: ~750 -->
+<!-- Generated: 2026-06-28 | Files scanned: 36 | Token estimate: ~750 -->
 
 # Data Layer
 
@@ -7,7 +7,7 @@
 `NetLensDatabase` — Room, version 10, exportSchema = true
 
 ```
-core/data/src/main/kotlin/com/ventoux/netlens/core/data/
+core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 ├── NetLensDatabase.kt              (RoomDatabase, 18 entities)
 ├── dao/                            (16 DAOs)
 ├── model/                          (entity + UI projection classes)

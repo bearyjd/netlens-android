@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.history"
+    namespace = "com.ventouxlabs.netlens.feature.history"
 }
 
 dependencies {

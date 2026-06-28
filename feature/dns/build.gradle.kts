@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.dns"
+    namespace = "com.ventouxlabs.netlens.feature.dns"
 }
 
 dependencies {

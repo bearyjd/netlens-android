@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.whois"
+    namespace = "com.ventouxlabs.netlens.feature.whois"
 }
 
 dependencies {

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ventoux.netlens.feature.vpnstatus"
+    namespace = "com.ventouxlabs.netlens.feature.vpnstatus"
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
