@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.core.network.NetworkMonitor
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.feature.posture.engine.EncryptionTypeProvider
@@ -62,6 +63,7 @@ class PostureViewModelTest {
                 scope = testScope.backgroundScope,
                 produceFile = { File(tempDir, "test_prefs.preferences_pb") },
             ),
+            FakeKeyValueStore(),
         )
     }
 
@@ -213,7 +215,7 @@ class PostureViewModelTest {
                 devicesJson = "[]",
             ),
         )
-        val throwingPreferences = UserPreferencesRepository(ThrowingDataStore())
+        val throwingPreferences = UserPreferencesRepository(ThrowingDataStore(), FakeKeyValueStore())
         val vm = PostureViewModel(
             networkMonitor = networkMonitor,
             encryptionTypeProvider = encryptionProvider,
@@ -227,6 +229,14 @@ class PostureViewModelTest {
             assertEquals("A", (scored as PostureUiState.Scored).score.grade)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+}
+
+private class FakeKeyValueStore : KeyValueStore {
+    private val map = mutableMapOf<String, String>()
+    override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
+    override fun putString(key: String, value: String?) {
+        if (value.isNullOrBlank()) map.remove(key) else map[key] = value
     }
 }
 

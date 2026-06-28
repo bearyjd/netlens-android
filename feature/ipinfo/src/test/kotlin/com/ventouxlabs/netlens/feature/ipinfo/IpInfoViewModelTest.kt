@@ -1,6 +1,9 @@
 package com.ventouxlabs.netlens.feature.ipinfo
 
 import app.cash.turbine.test
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +27,9 @@ import kotlinx.coroutines.flow.update
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventouxlabs.netlens.core.data.model.IpInfoHistoryEntry
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.feature.ipinfo.data.FakeIpInfoRepository
+import com.ventouxlabs.netlens.feature.ipinfo.data.ReputationClient
 import com.ventouxlabs.netlens.feature.ipinfo.model.IpInfoResponse
 import com.ventouxlabs.netlens.feature.ipinfo.model.IpInfoUiState
 
@@ -35,6 +40,10 @@ class IpInfoViewModelTest {
     private lateinit var viewModel: IpInfoViewModel
     private lateinit var fakeDataStore: FakeDataStore
     private lateinit var userPreferencesRepository: UserPreferencesRepository
+
+    // Never invoked by these tests: fetchReputation() returns early while the
+    // AbuseIPDB API key is blank, so the MockEngine handler is never reached.
+    private val reputationClient = ReputationClient(HttpClient(MockEngine { respond("") }))
 
     private val fakeIpInfoHistoryDao = object : IpInfoHistoryDao {
         override fun getRecent(limit: Int): Flow<List<IpInfoHistoryEntry>> = flowOf(emptyList())
@@ -63,7 +72,7 @@ class IpInfoViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeRepository = FakeIpInfoRepository()
         fakeDataStore = FakeDataStore()
-        userPreferencesRepository = UserPreferencesRepository(fakeDataStore)
+        userPreferencesRepository = UserPreferencesRepository(fakeDataStore, FakeKeyValueStore())
     }
 
     @AfterEach
@@ -74,7 +83,7 @@ class IpInfoViewModelTest {
     @Test
     fun `init shows ConsentRequired when consent not granted`() = runTest {
         // consent not granted (default false)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         viewModel.uiState.test {
             assertEquals(IpInfoUiState.ConsentRequired, awaitItem())
@@ -84,7 +93,7 @@ class IpInfoViewModelTest {
     @Test
     fun `grantConsent transitions from ConsentRequired to Success`() = runTest {
         fakeRepository.result = Result.success(testIpData)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         viewModel.uiState.test {
             assertEquals(IpInfoUiState.ConsentRequired, awaitItem())
@@ -97,7 +106,7 @@ class IpInfoViewModelTest {
     fun `init auto-loads data and shows Success when consent already granted`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.success(testIpData)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         viewModel.uiState.test {
             assertEquals(IpInfoUiState.Success(testIpData), awaitItem())
@@ -109,7 +118,7 @@ class IpInfoViewModelTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.success(testIpData)
         fakeRepository.enableSuspend()
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         viewModel.uiState.test {
             assertEquals(IpInfoUiState.Loading, awaitItem())
@@ -122,7 +131,7 @@ class IpInfoViewModelTest {
     fun `init auto-loads data and shows Error on failure when consent granted`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.failure(RuntimeException("Network error"))
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         viewModel.uiState.test {
             assertEquals(IpInfoUiState.Error("Network error"), awaitItem())
@@ -133,7 +142,7 @@ class IpInfoViewModelTest {
     fun `refresh with success shows Success state`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.success(testIpData)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         val updatedData = testIpData.copy(ip = "198.51.100.1", city = "New York")
         fakeRepository.result = Result.success(updatedData)
@@ -149,7 +158,7 @@ class IpInfoViewModelTest {
     fun `refresh with failure shows Error state`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.success(testIpData)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         fakeRepository.result = Result.failure(RuntimeException("Timeout"))
 
@@ -164,7 +173,7 @@ class IpInfoViewModelTest {
     fun `refresh with failure and null message shows default error`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.success(testIpData)
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         fakeRepository.result = Result.failure(RuntimeException())
 
@@ -179,7 +188,7 @@ class IpInfoViewModelTest {
     fun `refresh after error recovers to Success`() = runTest {
         fakeDataStore.setConsent(true)
         fakeRepository.result = Result.failure(RuntimeException("fail"))
-        viewModel = IpInfoViewModel(fakeRepository, fakeIpInfoHistoryDao, userPreferencesRepository)
+        viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
         fakeRepository.result = Result.success(testIpData)
 
@@ -188,6 +197,14 @@ class IpInfoViewModelTest {
             viewModel.refresh()
             assertEquals(IpInfoUiState.Success(testIpData), awaitItem())
         }
+    }
+}
+
+private class FakeKeyValueStore : KeyValueStore {
+    private val map = mutableMapOf<String, String>()
+    override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
+    override fun putString(key: String, value: String?) {
+        if (value.isNullOrBlank()) map.remove(key) else map[key] = value
     }
 }
 

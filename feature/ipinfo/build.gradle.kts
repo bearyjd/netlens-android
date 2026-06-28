@@ -18,4 +18,5 @@ dependencies {
     implementation(libs.compose.material.icons)
 
     testImplementation(libs.datastore.preferences)
+    testImplementation(libs.ktor.client.mock)
 }
