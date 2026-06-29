@@ -22,3 +22,9 @@ out/
 *.keystore
 .claude/PRPs/
 .claude/scheduled_tasks.lock
+
+# fastlane / Play publishing — never commit the service-account key
+fastlane/play-service-account.json
+fastlane/*.json
+fastlane/report.xml
+fastlane/README.md

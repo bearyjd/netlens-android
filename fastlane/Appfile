@@ -1,0 +1,14 @@
+# fastlane Play publishing config.
+#
+# The service-account JSON is supplied via the PLAY_SERVICE_ACCOUNT_JSON env var
+# (a path to the key file). Locally you can instead drop the key at
+# fastlane/play-service-account.json. NEVER commit the key — it is git-ignored.
+json_key_file(
+  if ENV["PLAY_SERVICE_ACCOUNT_JSON"].to_s.empty?
+    "fastlane/play-service-account.json"
+  else
+    ENV["PLAY_SERVICE_ACCOUNT_JSON"]
+  end,
+)
+
+package_name("com.ventouxlabs.netlens")
