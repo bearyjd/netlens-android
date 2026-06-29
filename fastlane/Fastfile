@@ -1,0 +1,33 @@
+# fastlane configuration for NetLens Google Play publishing.
+#
+# PREREQUISITE (one-time, manual): the `com.ventouxlabs.netlens` app must already
+# exist in the Play Console AND have had at least one AAB uploaded manually.
+# Google's Play Developer API cannot create a new app or perform the very first
+# upload for a package — `supply` can only automate releases after that bootstrap.
+# See docs/play-store.md.
+
+default_platform(:android)
+
+GPLAY_AAB = "app/build/outputs/bundle/gplayRelease/app-gplay-release.aab"
+
+platform :android do
+  desc "Upload the signed gplay AAB + store listing to a Play track (defaults: internal / draft)"
+  lane :deploy do |options|
+    upload_to_play_store(
+      track: options[:track] || "internal",
+      release_status: options[:release_status] || "draft",
+      aab: options[:aab] || GPLAY_AAB,
+      skip_upload_apk: true,
+      metadata_path: "fastlane/metadata/android",
+    )
+  end
+
+  desc "Upload only the store listing (title, descriptions, images, changelogs) — no binary"
+  lane :listing do
+    upload_to_play_store(
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      metadata_path: "fastlane/metadata/android",
+    )
+  end
+end
