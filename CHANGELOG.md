@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-06-29
+
+### Changed
+- Renamed the application ID and package from `com.ventoux.netlens` to `com.ventouxlabs.netlens`. **This is a new app identity:** existing installs of `com.ventoux.netlens` will not update in place — F-Droid and Google Play treat the renamed build as a separate app, so moving to it requires a fresh install.
+
+### Internal
+- Repaired stale unit tests in the IP Info, Security Posture, and Traceroute modules that had drifted from their current ViewModel constructors and no longer compiled
+- CI now runs the library modules' `testDebugUnitTest` alongside the app's `testFossDebugUnitTest`; ~460 previously-unexecuted unit tests now gate every change
+- Refreshed the architecture and feature codemaps
+
 ## [1.1.2] - 2026-05-18
 
 ### Fixed
