@@ -62,6 +62,15 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
   signed AAB and runs `fastlane deploy`.
 
 ### One-time service-account setup
+
+> 🚧 **Status (as of 2026-06-29): NOT yet done.** The `PLAY_SERVICE_ACCOUNT_JSON`
+> repository secret is **not set**, so the **Play Publish** workflow will hard-fail
+> at the "Write Play service-account key" step until the three steps below are
+> completed. The signing secrets (`RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`,
+> `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) **are** set, so the signed-AAB build
+> portion of the workflow does run. The bootstrap manual upload (app creation + first
+> AAB) has **not been verified** and must also be done before automation can succeed.
+
 1. Google Cloud Console → create a **service account**; create a JSON key.
 2. Play Console → **Users & permissions** → invite the service-account email →
    grant release permissions for this app.
