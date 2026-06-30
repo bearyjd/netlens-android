@@ -86,6 +86,36 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
   ```
 - **CI:** Actions → **Play Publish** → Run workflow → pick track + release status.
 
+### Go-live checklist (remaining manual steps)
+
+The signed-AAB build half of the pipeline is already proven — workflow run
+[28410296295](https://github.com/bearyjd/netlens-android/actions/runs/28410296295)
+built the signed `app-gplay-release.aab` and failed only at the service-account
+step. Completing the boxes below unblocks a fully-green **Play Publish** run.
+All of these are done in Google consoles / GitHub settings, not in code.
+
+**A. Bootstrap the listing** — Google's API cannot create the app or perform the
+first upload for `com.ventouxlabs.netlens`:
+- [ ] Play Console → **Create app** → name `NetLens`, package `com.ventouxlabs.netlens`
+- [ ] Fill console-only fields: category, contact email, **privacy policy URL**,
+      content rating questionnaire, data safety form, countries/pricing (free)
+- [ ] Manually upload one AAB — `app-gplay-release.aab` from the
+      [v1.1.3 release](https://github.com/bearyjd/netlens-android/releases/tag/v1.1.3)
+      (listing copy + assets are ready in `fastlane/metadata/android/en-US/`)
+
+**B. Service account + the missing secret:**
+- [ ] Google Cloud Console → create a **service account** → create a **JSON key**
+- [ ] Play Console → **Users & permissions** → invite the service-account email →
+      grant **release** permissions for this app
+- [ ] GitHub → repo **Settings → Secrets and variables → Actions** → add
+      **`PLAY_SERVICE_ACCOUNT_JSON`** = the entire JSON key contents
+      (the four `RELEASE_*` signing secrets are already set)
+
+**C. First automated upload:**
+- [ ] Actions → **Play Publish** → Run workflow → `track: internal`,
+      `release_status: draft`
+- [ ] Confirm the run is fully green and a draft appears on the internal track
+
 ### Notes
 - The workflow reuses the existing release-signing secrets
   (`RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
