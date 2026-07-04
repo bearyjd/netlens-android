@@ -37,6 +37,13 @@ object IpInfoProvidesModule {
 
     private const val TIMEOUT_MS = 10_000L
 
+    // SSRF note: unlike feature/httptester's HttpRequesterImpl, this client is left with Ktor's
+    // default auto-follow-redirects behavior. Both current call sites (IpInfoRepositoryImpl,
+    // ReputationClient) only ever request fixed, hardcoded hosts (ipinfo.io, api.abuseipdb.com);
+    // the only user-derived value passed through this client is a query-string parameter, never
+    // part of the request URL/host. If a future call site routes a user-supplied URL or host
+    // through this client, disable followRedirects and re-validate each hop via SsrfGuard first,
+    // mirroring HttpRequesterImpl.kt's configureSecureDefaults().
     @Provides
     @Singleton
     @IpInfoHttpClient
