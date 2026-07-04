@@ -48,6 +48,9 @@ class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
 
     private suspend fun lookupSingle(ip: String): HopLocation? = withContext(Dispatchers.IO) {
         try {
+            // SSRF note: BASE_URL is a fixed, hardcoded host (ipwho.is); only the
+            // already-validated public IP appears in the path, never in the host or
+            // scheme, so there is no user-controlled redirect/host-injection surface here.
             val url = URL("$BASE_URL/$ip")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = TIMEOUT_MS
