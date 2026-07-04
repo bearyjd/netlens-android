@@ -1,6 +1,8 @@
 package com.ventouxlabs.netlens.feature.httptester.engine
 
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.headers
@@ -19,16 +21,14 @@ import java.io.Closeable
 import java.net.URL
 import javax.inject.Inject
 
-class HttpRequesterImpl @Inject constructor() : HttpRequester, Closeable {
+class HttpRequesterImpl private constructor(
+    private val client: HttpClient,
+) : HttpRequester, Closeable {
 
-    private val client = HttpClient(CIO) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 15_000
-            connectTimeoutMillis = 15_000
-            socketTimeoutMillis = 15_000
-        }
-        expectSuccess = false
-    }
+    @Inject constructor() : this(HttpClient(CIO) { configureSecureDefaults() })
+
+    /** Visible for testing: allows swapping in a [io.ktor.client.engine.mock.MockEngine]. */
+    internal constructor(engine: HttpClientEngine) : this(HttpClient(engine) { configureSecureDefaults() })
 
     override suspend fun execute(config: HttpRequestConfig): HttpResponseResult {
         val url = config.url.trim()
@@ -98,5 +98,22 @@ class HttpRequesterImpl @Inject constructor() : HttpRequester, Closeable {
 
     companion object {
         private const val MAX_RESPONSE_BODY_BYTES = 1_048_576L // 1 MB
+        private const val TIMEOUT_MS = 15_000L
+
+        private fun HttpClientConfig<*>.configureSecureDefaults() {
+            install(HttpTimeout) {
+                requestTimeoutMillis = TIMEOUT_MS
+                connectTimeoutMillis = TIMEOUT_MS
+                socketTimeoutMillis = TIMEOUT_MS
+            }
+            expectSuccess = false
+            // SSRF hardening: SsrfGuard only validates the user-entered host before the
+            // first request. Ktor auto-follows redirects by default with no re-validation,
+            // so a malicious/compromised endpoint could 302 the client into a private or
+            // loopback address. Disabling auto-follow means any 3xx is returned as-is to
+            // the caller; following a redirect the user sees re-enters execute() and goes
+            // through the same SsrfGuard check on the new host.
+            followRedirects = false
+        }
     }
 }
