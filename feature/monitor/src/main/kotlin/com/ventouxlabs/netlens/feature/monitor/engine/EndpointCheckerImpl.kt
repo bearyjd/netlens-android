@@ -1,6 +1,9 @@
 package com.ventouxlabs.netlens.feature.monitor.engine
 
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.head
 import io.ktor.client.request.get
@@ -13,16 +16,14 @@ import java.net.URL
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-class EndpointCheckerImpl @Inject constructor() : EndpointChecker, Closeable {
+class EndpointCheckerImpl private constructor(
+    private val client: HttpClient,
+) : EndpointChecker, Closeable {
 
-    private val client = HttpClient(io.ktor.client.engine.cio.CIO) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 10_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 10_000
-        }
-        expectSuccess = false
-    }
+    @Inject constructor() : this(HttpClient(CIO) { configureSecureDefaults() })
+
+    /** Visible for testing: allows swapping in a [io.ktor.client.engine.mock.MockEngine]. */
+    internal constructor(engine: HttpClientEngine) : this(HttpClient(engine) { configureSecureDefaults() })
 
     override suspend fun check(url: String): EndpointCheck {
         val trimmedUrl = url.trim()
@@ -74,6 +75,26 @@ class EndpointCheckerImpl @Inject constructor() : EndpointChecker, Closeable {
             throw e
         } catch (_: Exception) {
             client.get(url)
+        }
+    }
+
+    companion object {
+        private const val TIMEOUT_MS = 10_000L
+
+        private fun HttpClientConfig<*>.configureSecureDefaults() {
+            install(HttpTimeout) {
+                requestTimeoutMillis = TIMEOUT_MS
+                connectTimeoutMillis = TIMEOUT_MS
+                socketTimeoutMillis = TIMEOUT_MS
+            }
+            expectSuccess = false
+            // SSRF hardening: SsrfGuard only validates the user-entered host before the
+            // first request. Ktor auto-follows redirects by default with no re-validation,
+            // so a monitored endpoint that starts 302-ing could redirect the client into a
+            // private or loopback address. Disabling auto-follow means any 3xx is returned
+            // as-is; check() treats a 3xx status as a reachable/successful check without
+            // ever contacting the redirect target.
+            followRedirects = false
         }
     }
 }
