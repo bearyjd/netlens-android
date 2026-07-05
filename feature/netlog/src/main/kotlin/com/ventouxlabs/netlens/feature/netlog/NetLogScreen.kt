@@ -95,10 +95,11 @@ fun NetLogScreen(
                 },
                 actions = {
                     if (uiState.events.isNotEmpty()) {
+                        val exportTitle = stringResource(R.string.netlog_export_title)
                         IconButton(onClick = {
                             ResultExporter.shareAsText(
                                 context,
-                                "Network Event Log",
+                                exportTitle,
                                 viewModel.buildExportJson(),
                             )
                         }) {
@@ -247,7 +248,11 @@ private fun EventTimeline(
     events: List<NetworkEvent>,
     modifier: Modifier = Modifier,
 ) {
-    val grouped = remember(events) { groupByDate(events) }
+    val todayLabel = stringResource(R.string.netlog_date_today)
+    val yesterdayLabel = stringResource(R.string.netlog_date_yesterday)
+    val grouped = remember(events, todayLabel, yesterdayLabel) {
+        groupByDate(events, todayLabel, yesterdayLabel)
+    }
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
@@ -429,15 +434,16 @@ private val FILTER_EVENT_TYPES = listOf(
     NetworkEventType.NEW_DEVICE,
 )
 
+@Composable
 private fun eventTypeLabel(type: String): String = when (type) {
-    NetworkEventType.CONNECTED -> "Connected"
-    NetworkEventType.DISCONNECTED -> "Disconnected"
-    NetworkEventType.CHANGED -> "Changed"
-    NetworkEventType.DNS_CHANGE -> "DNS Change"
-    NetworkEventType.SPEED_TEST -> "Speed Test"
-    NetworkEventType.SECURITY_AUDIT -> "Security"
-    NetworkEventType.SCORE_CHANGE -> "Score"
-    NetworkEventType.NEW_DEVICE -> "New Device"
+    NetworkEventType.CONNECTED -> stringResource(R.string.netlog_event_connected)
+    NetworkEventType.DISCONNECTED -> stringResource(R.string.netlog_event_disconnected)
+    NetworkEventType.CHANGED -> stringResource(R.string.netlog_event_changed)
+    NetworkEventType.DNS_CHANGE -> stringResource(R.string.netlog_event_dns_change)
+    NetworkEventType.SPEED_TEST -> stringResource(R.string.netlog_event_speed_test)
+    NetworkEventType.SECURITY_AUDIT -> stringResource(R.string.netlog_event_security_audit)
+    NetworkEventType.SCORE_CHANGE -> stringResource(R.string.netlog_event_score_change)
+    NetworkEventType.NEW_DEVICE -> stringResource(R.string.netlog_event_new_device)
     else -> type
 }
 
@@ -452,7 +458,11 @@ private val TIME_FORMATTER: DateTimeFormatter =
 private fun formatTime(timestamp: Long): String =
     TIME_FORMATTER.format(Instant.ofEpochMilli(timestamp))
 
-private fun groupByDate(events: List<NetworkEvent>): List<Pair<String, List<NetworkEvent>>> {
+private fun groupByDate(
+    events: List<NetworkEvent>,
+    todayLabel: String,
+    yesterdayLabel: String,
+): List<Pair<String, List<NetworkEvent>>> {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
     val yesterday = today.minusDays(1)
@@ -462,8 +472,8 @@ private fun groupByDate(events: List<NetworkEvent>): List<Pair<String, List<Netw
     }.toSortedMap(compareByDescending { it })
         .map { (date, dayEvents) ->
             val label = when (date) {
-                today -> "Today"
-                yesterday -> "Yesterday"
+                today -> todayLabel
+                yesterday -> yesterdayLabel
                 else -> DATE_FORMATTER.format(date.atStartOfDay(zone))
             }
             label to dayEvents
