@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
 import com.ventouxlabs.netlens.core.data.model.NetworkEventType
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.resolve
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -71,9 +72,10 @@ fun NetLogScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    val errorMessage = uiState.error?.resolve()
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message ->
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearError()
         }

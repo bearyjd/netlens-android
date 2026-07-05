@@ -13,6 +13,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.PortScanHistoryEntry
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
 import javax.inject.Inject
@@ -88,7 +89,7 @@ class PortScanViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isScanning = false,
-                        error = e.message ?: "Scan failed",
+                        error = UiText.of(e.message, R.string.portscan_error_scan_failed),
                     )
                 }
             }

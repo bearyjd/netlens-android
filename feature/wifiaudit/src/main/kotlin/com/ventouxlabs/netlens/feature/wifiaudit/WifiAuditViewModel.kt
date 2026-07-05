@@ -7,6 +7,7 @@ import com.ventouxlabs.netlens.core.data.model.NetworkEvent
 import com.ventouxlabs.netlens.core.data.model.NetworkEventType
 import com.ventouxlabs.netlens.feature.wifiaudit.engine.WifiAuditEngine
 import com.ventouxlabs.netlens.feature.wifiaudit.engine.WifiInfoReader
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditSeverity
 import com.ventouxlabs.netlens.feature.wifiaudit.model.WifiAuditUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,7 +41,7 @@ class WifiAuditViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isAuditing = false,
-                            error = "Not connected to a Wi-Fi network",
+                            error = UiText.Resource(R.string.wifiaudit_error_not_connected),
                         )
                     }
                     return@launch
@@ -60,7 +61,7 @@ class WifiAuditViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isAuditing = false,
-                        error = error.message ?: "Audit failed",
+                        error = UiText.of(error.message, R.string.wifiaudit_error_audit_failed),
                     )
                 }
             }

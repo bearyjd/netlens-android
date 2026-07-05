@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.data.model.WolTarget
+import com.ventouxlabs.netlens.core.ui.resolve
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,16 +63,18 @@ fun WolScreen(
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val statusMessage = uiState.lastSentStatus?.resolve()
+    val errorMessage = uiState.error?.resolve()
 
-    LaunchedEffect(uiState.lastSentStatus) {
-        uiState.lastSentStatus?.let { message ->
+    LaunchedEffect(statusMessage) {
+        statusMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearStatus()
         }
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message ->
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearError()
         }
@@ -85,7 +88,7 @@ fun WolScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },

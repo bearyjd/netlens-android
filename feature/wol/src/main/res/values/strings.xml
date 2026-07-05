@@ -21,4 +21,9 @@
     <string name="wol_button_update">Update</string>
     <string name="wol_button_save">Save</string>
     <string name="wol_button_cancel">Cancel</string>
+    <string name="wol_status_sent">Magic packet sent to %1$s</string>
+    <string name="wol_error_send_failed">Failed to send magic packet</string>
+    <string name="wol_error_save_failed">Failed to save target</string>
+    <string name="wol_error_update_failed">Failed to update target</string>
+    <string name="wol_error_delete_failed">Failed to delete target</string>
 </resources>

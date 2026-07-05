@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.netlog.dao.FakeNetworkEventDao
 import com.ventouxlabs.netlens.feature.netlog.engine.FakeNetworkMonitor
 import com.ventouxlabs.netlens.feature.netlog.model.NetLogUiState
@@ -221,7 +222,7 @@ class NetLogViewModelTest {
             monitor.channel.close(RuntimeException("Monitoring error"))
 
             val errorState = awaitItem()
-            assertEquals("Monitoring error", errorState.error)
+            assertEquals(UiText.Dynamic("Monitoring error"), errorState.error)
             assertFalse(errorState.isMonitoring)
 
             viewModel.clearError()
