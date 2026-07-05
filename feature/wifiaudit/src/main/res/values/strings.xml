@@ -15,4 +15,58 @@
         <item quantity="one">%d warning</item>
         <item quantity="other">%d warnings</item>
     </plurals>
+    <string name="wifiaudit_severity_critical">Critical</string>
+    <string name="wifiaudit_severity_warning">Warning</string>
+    <string name="wifiaudit_severity_info">Info</string>
+    <string name="wifiaudit_severity_pass">Passed</string>
+    <string name="wifiaudit_guidance_no_action">No action needed.</string>
+
+    <string name="wifiaudit_encryption_wpa3_title">WPA3 Encryption</string>
+    <string name="wifiaudit_encryption_wpa3_description">This network uses WPA3, the strongest available Wi-Fi encryption standard.</string>
+    <string name="wifiaudit_encryption_wpa2_title">WPA2 Encryption</string>
+    <string name="wifiaudit_encryption_wpa2_description">This network uses WPA2. It is adequate but can be vulnerable to offline dictionary attacks.</string>
+    <string name="wifiaudit_encryption_wpa2_guidance">Consider upgrading your router to WPA3 if supported.</string>
+    <string name="wifiaudit_encryption_wpa_title">Outdated WPA Encryption</string>
+    <string name="wifiaudit_encryption_wpa_description">WPA is outdated and has known vulnerabilities including TKIP weaknesses.</string>
+    <string name="wifiaudit_encryption_wpa_guidance">Upgrade your router firmware and switch to WPA2 or WPA3.</string>
+    <string name="wifiaudit_encryption_wep_title">WEP Encryption (Broken)</string>
+    <string name="wifiaudit_encryption_wep_description">WEP can be cracked in minutes with freely available tools. Your traffic is effectively unprotected.</string>
+    <string name="wifiaudit_encryption_wep_guidance">Switch to WPA2 or WPA3 immediately. If your router only supports WEP, replace it.</string>
+    <string name="wifiaudit_encryption_open_title">Open Network (No Encryption)</string>
+    <string name="wifiaudit_encryption_open_description">This network has no encryption. Anyone nearby can intercept your traffic including passwords, emails, and browsing activity.</string>
+    <string name="wifiaudit_encryption_open_guidance">Avoid transmitting sensitive data. Use a VPN, or connect to a password-protected network.</string>
+
+    <string name="wifiaudit_signal_strong_title">Strong Signal (%1$d dBm)</string>
+    <string name="wifiaudit_signal_strong_description">Excellent signal strength. Connection should be stable and fast.</string>
+    <string name="wifiaudit_signal_good_title">Good Signal (%1$d dBm)</string>
+    <string name="wifiaudit_signal_good_description">Good signal strength for normal use.</string>
+    <string name="wifiaudit_signal_moderate_title">Moderate Signal (%1$d dBm)</string>
+    <string name="wifiaudit_signal_moderate_description">Signal is moderate. You may experience occasional slowdowns.</string>
+    <string name="wifiaudit_signal_moderate_guidance">Move closer to the router or consider a Wi-Fi extender.</string>
+    <string name="wifiaudit_signal_weak_title">Weak Signal (%1$d dBm)</string>
+    <string name="wifiaudit_signal_weak_description">Weak signal increases packet loss and latency. Distant or spoofed access points often appear with low signal.</string>
+    <string name="wifiaudit_signal_weak_guidance">Move closer to the access point. Verify you are connected to the intended network.</string>
+
+    <string name="wifiaudit_hidden_ssid_title">Hidden Network Name</string>
+    <string name="wifiaudit_hidden_ssid_description">This network does not broadcast its SSID. Hidden networks are not more secure — devices actively probe for them, which can leak the network name.</string>
+    <string name="wifiaudit_hidden_ssid_guidance">Hiding the SSID provides no real security. Rely on strong encryption (WPA3/WPA2) instead.</string>
+
+    <string name="wifiaudit_wps_title">WPS Enabled</string>
+    <string name="wifiaudit_wps_description">Wi-Fi Protected Setup (WPS) has a known brute-force vulnerability that can expose your network password.</string>
+    <string name="wifiaudit_wps_guidance">Disable WPS in your router settings. Use a strong password with WPA2/WPA3 instead.</string>
+
+    <string name="wifiaudit_tkip_mixed_title">TKIP Available (Mixed Mode)</string>
+    <string name="wifiaudit_tkip_mixed_description">The router supports both TKIP and AES/CCMP. TKIP is a legacy cipher with known weaknesses.</string>
+    <string name="wifiaudit_tkip_mixed_guidance">Configure your router to use AES/CCMP only and disable TKIP.</string>
+    <string name="wifiaudit_tkip_only_title">TKIP Only (Weak Cipher)</string>
+    <string name="wifiaudit_tkip_only_description">This network uses only TKIP, a deprecated cipher vulnerable to certain attacks.</string>
+    <string name="wifiaudit_tkip_only_guidance">Switch your router to AES/CCMP mode. Most devices made after 2010 support it.</string>
+
+    <string name="wifiaudit_band_24ghz_title">2.4 GHz Band</string>
+    <string name="wifiaudit_band_24ghz_description">You are on the 2.4 GHz band, which is more congested and susceptible to interference from neighboring networks and devices.</string>
+    <string name="wifiaudit_band_24ghz_guidance">Connect to the 5 GHz band if your router offers it for better speed and less interference.</string>
+
+    <string name="wifiaudit_link_speed_low_title">Low Link Speed (%1$d Mbps)</string>
+    <string name="wifiaudit_link_speed_low_description">The negotiated link speed is very low, which may indicate an old access point or heavy interference.</string>
+    <string name="wifiaudit_link_speed_low_guidance">Check for sources of interference. Consider upgrading to a newer router.</string>
 </resources>

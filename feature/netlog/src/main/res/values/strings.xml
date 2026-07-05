@@ -23,4 +23,15 @@
     <string name="netlog_error_load_failed">Failed to load events</string>
     <string name="netlog_error_monitoring_failed">Monitoring failed</string>
     <string name="netlog_error_clear_history_failed">Failed to clear history</string>
+    <string name="netlog_export_title">Network Event Log</string>
+    <string name="netlog_event_connected">Connected</string>
+    <string name="netlog_event_disconnected">Disconnected</string>
+    <string name="netlog_event_changed">Changed</string>
+    <string name="netlog_event_dns_change">DNS Change</string>
+    <string name="netlog_event_speed_test">Speed Test</string>
+    <string name="netlog_event_security_audit">Security</string>
+    <string name="netlog_event_score_change">Score</string>
+    <string name="netlog_event_new_device">New Device</string>
+    <string name="netlog_date_today">Today</string>
+    <string name="netlog_date_yesterday">Yesterday</string>
 </resources>
