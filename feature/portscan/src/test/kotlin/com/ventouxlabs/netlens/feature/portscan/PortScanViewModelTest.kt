@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.PortScanHistoryEntry
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.portscan.engine.FakePortScanner
 import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
 import com.ventouxlabs.netlens.feature.portscan.model.PortResult
@@ -100,7 +101,7 @@ class PortScanViewModelTest {
 
             val finalState = expectMostRecentItem()
             assertFalse(finalState.isScanning)
-            assertEquals("Host unreachable", finalState.error)
+            assertEquals(UiText.Dynamic("Host unreachable"), finalState.error)
         }
     }
 
@@ -114,7 +115,7 @@ class PortScanViewModelTest {
 
             val finalState = expectMostRecentItem()
             assertFalse(finalState.isScanning)
-            assertEquals("Scan failed", finalState.error)
+            assertEquals(UiText.Resource(R.string.portscan_error_scan_failed), finalState.error)
         }
     }
 

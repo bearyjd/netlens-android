@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.WolTarget
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wol.dao.FakeWolTargetDao
 import com.ventouxlabs.netlens.feature.wol.engine.FakeWolSender
 import com.ventouxlabs.netlens.feature.wol.model.WolUiState
@@ -118,7 +119,10 @@ class WolViewModelTest {
             viewModel.sendWol("AA:BB:CC:DD:EE:FF", "255.255.255.255", 9)
 
             val withStatus = awaitItem()
-            assertEquals("Magic packet sent to AA:BB:CC:DD:EE:FF", withStatus.lastSentStatus)
+            assertEquals(
+                UiText.Resource(R.string.wol_status_sent, listOf("AA:BB:CC:DD:EE:FF")),
+                withStatus.lastSentStatus,
+            )
             assertNull(withStatus.error)
             cancelAndConsumeRemainingEvents()
         }
@@ -134,7 +138,7 @@ class WolViewModelTest {
             viewModel.sendWol("AA:BB:CC:DD:EE:FF", "255.255.255.255", 9)
 
             val errorState = awaitItem()
-            assertEquals("Network unreachable", errorState.error)
+            assertEquals(UiText.Dynamic("Network unreachable"), errorState.error)
         }
     }
 
@@ -243,7 +247,7 @@ class WolViewModelTest {
 
         viewModel.state.test {
             val current = awaitItem()
-            assertEquals("fail", current.error)
+            assertEquals(UiText.Dynamic("fail"), current.error)
 
             viewModel.clearError()
 
@@ -259,7 +263,10 @@ class WolViewModelTest {
 
         viewModel.state.test {
             val current = awaitItem()
-            assertEquals("Magic packet sent to AA:BB:CC:DD:EE:FF", current.lastSentStatus)
+            assertEquals(
+                UiText.Resource(R.string.wol_status_sent, listOf("AA:BB:CC:DD:EE:FF")),
+                current.lastSentStatus,
+            )
 
             viewModel.clearStatus()
 
@@ -286,7 +293,10 @@ class WolViewModelTest {
             viewModel.sendWolToTarget(target)
 
             val withStatus = awaitItem()
-            assertEquals("Magic packet sent to 11:22:33:44:55:66", withStatus.lastSentStatus)
+            assertEquals(
+                UiText.Resource(R.string.wol_status_sent, listOf("11:22:33:44:55:66")),
+                withStatus.lastSentStatus,
+            )
             cancelAndConsumeRemainingEvents()
         }
     }

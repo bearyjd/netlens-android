@@ -1,16 +1,17 @@
 package com.ventouxlabs.netlens.feature.wol.model
 
 import com.ventouxlabs.netlens.core.data.model.WolTarget
+import com.ventouxlabs.netlens.core.ui.UiText
 
 data class WolUiState(
     val savedTargets: List<WolTarget> = emptyList(),
     val macInput: String = "",
     val broadcastIp: String = "255.255.255.255",
     val port: Int = 9,
-    val lastSentStatus: String? = null,
+    val lastSentStatus: UiText? = null,
     val showAddDialog: Boolean = false,
     val addLabel: String = "",
     val addMac: String = "",
     val editingTarget: WolTarget? = null,
-    val error: String? = null,
+    val error: UiText? = null,
 )

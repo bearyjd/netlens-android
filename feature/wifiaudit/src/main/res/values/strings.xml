@@ -7,4 +7,12 @@
     <string name="wifiaudit_network_label">Auditing: %1$s</string>
     <string name="wifiaudit_empty_clean">All checks passed</string>
     <string name="wifiaudit_empty_not_connected">Not connected to Wi-Fi</string>
+    <string name="wifiaudit_error_not_connected">Not connected to a Wi-Fi network</string>
+    <string name="wifiaudit_error_audit_failed">Audit failed</string>
+    <string name="wifiaudit_summary_critical">%d critical</string>
+    <string name="wifiaudit_summary_passed">%d passed</string>
+    <plurals name="wifiaudit_summary_warnings">
+        <item quantity="one">%d warning</item>
+        <item quantity="other">%d warnings</item>
+    </plurals>
 </resources>

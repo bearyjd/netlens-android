@@ -15,6 +15,7 @@ import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WolTargetDao
 import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.WolTarget
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wol.engine.WolSender
 import com.ventouxlabs.netlens.feature.wol.model.WolUiState
 import javax.inject.Inject
@@ -52,13 +53,13 @@ class WolViewModel @Inject constructor(
             wolSender.sendMagicPacket(macAddress, broadcastIp, port)
                 .onSuccess {
                     saveToHistory(macAddress, broadcastIp)
-                    _state.update { it.copy(lastSentStatus = "Magic packet sent to $macAddress") }
+                    _state.update { it.copy(lastSentStatus = UiText.Resource(R.string.wol_status_sent, listOf(macAddress))) }
                     delay(SNACKBAR_DURATION_MS)
                     _state.update { it.copy(lastSentStatus = null) }
                 }
                 .onFailure { error ->
                     _state.update {
-                        it.copy(error = error.message ?: "Failed to send magic packet")
+                        it.copy(error = UiText.of(error.message, R.string.wol_error_send_failed))
                     }
                 }
         }
@@ -107,7 +108,7 @@ class WolViewModel @Inject constructor(
                     ),
                 )
             }.onFailure { error ->
-                _state.update { it.copy(error = error.message ?: "Failed to save target") }
+                _state.update { it.copy(error = UiText.of(error.message, R.string.wol_error_save_failed)) }
             }
             hideAddDialog()
         }
@@ -126,7 +127,7 @@ class WolViewModel @Inject constructor(
                     ),
                 )
             }.onFailure { error ->
-                _state.update { it.copy(error = error.message ?: "Failed to update target") }
+                _state.update { it.copy(error = UiText.of(error.message, R.string.wol_error_update_failed)) }
             }
             hideAddDialog()
         }
@@ -137,7 +138,7 @@ class WolViewModel @Inject constructor(
             runCatching {
                 wolTargetDao.delete(target)
             }.onFailure { error ->
-                _state.update { it.copy(error = error.message ?: "Failed to delete target") }
+                _state.update { it.copy(error = UiText.of(error.message, R.string.wol_error_delete_failed)) }
             }
         }
     }

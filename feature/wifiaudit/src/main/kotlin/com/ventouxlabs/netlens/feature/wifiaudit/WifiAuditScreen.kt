@@ -39,10 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ventouxlabs.netlens.core.ui.resolve
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditFinding
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditSeverity
 
@@ -54,9 +56,10 @@ fun WifiAuditScreen(
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val errorMessage = uiState.error?.resolve()
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message ->
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearError()
         }
@@ -145,21 +148,21 @@ private fun SummaryBar(findings: List<AuditFinding>, modifier: Modifier = Modifi
         if (critical > 0) {
             SummaryChip(
                 icon = Icons.Default.Error,
-                label = "$critical critical",
+                label = stringResource(R.string.wifiaudit_summary_critical, critical),
                 color = MaterialTheme.colorScheme.error,
             )
         }
         if (warnings > 0) {
             SummaryChip(
                 icon = Icons.Default.Warning,
-                label = "$warnings warning${if (warnings != 1) "s" else ""}",
+                label = pluralStringResource(R.plurals.wifiaudit_summary_warnings, warnings, warnings),
                 color = MaterialTheme.colorScheme.tertiary,
             )
         }
         if (passed > 0) {
             SummaryChip(
                 icon = Icons.Default.CheckCircle,
-                label = "$passed passed",
+                label = stringResource(R.string.wifiaudit_summary_passed, passed),
                 color = MaterialTheme.colorScheme.primary,
             )
         }

@@ -20,4 +20,7 @@
     <string name="netlog_filter_clear">Clear filters</string>
     <string name="netlog_date_confirm">OK</string>
     <string name="netlog_date_cancel">Cancel</string>
+    <string name="netlog_error_load_failed">Failed to load events</string>
+    <string name="netlog_error_monitoring_failed">Monitoring failed</string>
+    <string name="netlog_error_clear_history_failed">Failed to clear history</string>
 </resources>

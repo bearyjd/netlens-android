@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ventouxlabs.netlens.core.data.dao.NetworkEventDao
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.netlog.engine.NetworkMonitor
 import com.ventouxlabs.netlens.feature.netlog.model.NetLogUiState
 import org.json.JSONArray
@@ -49,7 +50,7 @@ class NetLogViewModel @Inject constructor(
                 )
             }
             .onEach { events -> _state.update { it.copy(events = events) } }
-            .catch { e -> _state.update { it.copy(error = e.message ?: "Failed to load events") } }
+            .catch { e -> _state.update { it.copy(error = UiText.of(e.message, R.string.netlog_error_load_failed)) } }
             .launchIn(viewModelScope)
     }
 
@@ -62,7 +63,7 @@ class NetLogViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isMonitoring = false,
-                        error = error.message ?: "Monitoring failed",
+                        error = UiText.of(error.message, R.string.netlog_error_monitoring_failed),
                     )
                 }
             }
@@ -107,7 +108,7 @@ class NetLogViewModel @Inject constructor(
             runCatching {
                 networkEventDao.deleteAll()
             }.onFailure { error ->
-                _state.update { it.copy(error = error.message ?: "Failed to clear history") }
+                _state.update { it.copy(error = UiText.of(error.message, R.string.netlog_error_clear_history_failed)) }
             }
             hideClearConfirmation()
         }

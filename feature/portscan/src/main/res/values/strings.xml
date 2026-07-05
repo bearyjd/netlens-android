@@ -18,4 +18,10 @@
     <string name="portscan_risk_warning">Open</string>
     <string name="portscan_risk_info">Info</string>
     <string name="portscan_stats_critical">%d critical</string>
+    <string name="portscan_stats_open">%d open</string>
+    <string name="portscan_stats_scanned">%d scanned</string>
+    <string name="portscan_latency_ms">%dms</string>
+    <string name="portscan_export_label_clipboard">Port Scan</string>
+    <string name="portscan_export_label_share">Port Scan Results</string>
+    <string name="portscan_error_scan_failed">Scan failed</string>
 </resources>

@@ -50,6 +50,7 @@ import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.ui.StatusColors
+import com.ventouxlabs.netlens.core.ui.resolve
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -87,20 +88,22 @@ fun PortScanScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
                 actions = {
                     if (uiState.results.isNotEmpty()) {
+                        val clipboardLabel = stringResource(R.string.portscan_export_label_clipboard)
+                        val shareLabel = stringResource(R.string.portscan_export_label_share)
                         IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "Port Scan", viewModel.buildExportText())
+                            ResultExporter.copyToClipboard(context, clipboardLabel, viewModel.buildExportText())
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.portscan_cd_copy_open_ports))
                         }
                         if (isPro) {
                             IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "Port Scan Results", viewModel.buildExportText())
+                                ResultExporter.shareAsText(context, shareLabel, viewModel.buildExportText())
                             }) {
                                 Icon(Icons.Default.Share, contentDescription = stringResource(R.string.portscan_cd_share))
                             }
@@ -215,7 +218,7 @@ private fun PortScanContent(
 
         state.error?.let { error ->
             Text(
-                text = error,
+                text = error.resolve(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -246,7 +249,7 @@ private fun StatsRow(state: PortScanUiState) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = "${state.openCount} open",
+                text = stringResource(R.string.portscan_stats_open, state.openCount),
                 color = status.pass,
                 style = MaterialTheme.typography.labelLarge,
             )
@@ -259,7 +262,7 @@ private fun StatsRow(state: PortScanUiState) {
             }
         }
         Text(
-            text = "${state.results.size} scanned",
+            text = stringResource(R.string.portscan_stats_scanned, state.results.size),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -331,7 +334,7 @@ private fun PortResultRow(
 
             if (result.isOpen && result.latencyMs > 0) {
                 Text(
-                    text = "${result.latencyMs}ms",
+                    text = stringResource(R.string.portscan_latency_ms, result.latencyMs),
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.labelSmall.fontFamily),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
