@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.dao.NetworkEventDao
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
 import com.ventouxlabs.netlens.core.data.model.NetworkEventType
+import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wifiaudit.engine.WifiAuditEngine
 import com.ventouxlabs.netlens.feature.wifiaudit.engine.WifiInfoReader
-import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditSeverity
 import com.ventouxlabs.netlens.feature.wifiaudit.model.WifiAuditUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
