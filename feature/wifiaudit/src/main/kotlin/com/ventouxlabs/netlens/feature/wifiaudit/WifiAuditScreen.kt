@@ -214,6 +214,12 @@ private fun FindingCard(
         AuditSeverity.Info -> Icons.Default.Info
         AuditSeverity.Pass -> Icons.Default.CheckCircle
     }
+    val severityLabel = when (finding.severity) {
+        AuditSeverity.Critical -> stringResource(R.string.wifiaudit_severity_critical)
+        AuditSeverity.Warning -> stringResource(R.string.wifiaudit_severity_warning)
+        AuditSeverity.Info -> stringResource(R.string.wifiaudit_severity_info)
+        AuditSeverity.Pass -> stringResource(R.string.wifiaudit_severity_pass)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -234,12 +240,12 @@ private fun FindingCard(
                 ) {
                     Icon(
                         imageVector = severityIcon,
-                        contentDescription = finding.severity.name,
+                        contentDescription = severityLabel,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = finding.title,
+                        text = finding.title.resolve(),
                         style = MaterialTheme.typography.titleSmall,
                     )
                 }
@@ -255,12 +261,12 @@ private fun FindingCard(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = finding.description,
+                text = finding.description.resolve(),
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = finding.guidance,
+                text = finding.guidance.resolve(),
                 style = MaterialTheme.typography.labelMedium,
                 color = contentColor.copy(alpha = 0.8f),
             )
