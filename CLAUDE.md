@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NetLens is an Android network diagnostics toolkit (package `com.ventouxlabs.netlens`). It provides 20 network tools — ping, traceroute, DNS lookup, LAN scan, port scan, WHOIS, TLS inspector, HTTP tester, mDNS browser, WiFi analyzer, Wake-on-LAN, IP info, IP/subnet calculator, endpoint monitor, network log, speed test, security posture, cell tower, Wi-Fi audit, and DNS leak test — each in its own feature module.
 
+For known verification gaps, missing test coverage, and prioritized next steps for making autonomous agent work on this repo more reliable, see `.agent_native/agent_roadmap.md`.
+
 ## Build Commands
 
 ```bash
@@ -15,9 +17,9 @@ NetLens is an Android network diagnostics toolkit (package `com.ventouxlabs.netl
 ./gradlew testFossDebugUnitTest                # Run all unit tests
 ```
 
-Two product flavors: `foss` (F-Droid / source builds, Pro always on) and `gplay` (Google Play, Pro via in-app purchase).
+Two product flavors: `foss` (F-Droid / source builds, Pro always on) and `gplay` (Google Play, Pro via in-app purchase). Only `:app` is flavored — feature/core/widget modules build and test via the unflavored task names (`assembleDebug`, `testDebugUnitTest`).
 
-CI builds `foss` flavor and currently tests only: `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`.
+CI (`.github/workflows/ci.yml`) builds `assembleFossDebug`, then runs `testFossDebugUnitTest testDebugUnitTest` — this covers **every** module that has a `src/test` tree (unflavored `testDebugUnitTest` for core/feature/widget modules, flavored `testFossDebugUnitTest` for `:app`), not a fixed subset. If you add tests to a previously-untested module, CI picks them up automatically — no workflow edit needed.
 
 **SDK targets**: compileSdk 35, minSdk 29, Java 17.
 
@@ -81,7 +83,9 @@ Inter (Regular, Medium, SemiBold, Bold) for all UI text. JetBrains Mono (Regular
 
 ## Testing
 
-JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in `src/test/` per module. Prefer hand-written fakes over mocking frameworks.
+JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in `src/test/` per module. Prefer hand-written fakes over mocking frameworks. Canonical example of the fake-per-engine pattern: `feature/lanscan/src/test/.../engine/Fake*.kt` (fakes for `ArpTableReader`, `NetBiosProber`, `SsdpScanner`, `SubnetScanner`, `OuiLookup`) — copy this shape for new engine tests rather than reaching for a mocking library. For HTTP-touching code (`httptester`, `monitor`), use Ktor's `MockEngine`, matching the existing `HttpRequesterImplTest.kt` / `EndpointCheckerImplTest.kt` setup.
+
+**Known gaps** (tracked in `.agent_native/agent_roadmap.md`): `feature:history` and `feature:widgetsettings` currently have zero unit tests. `feature:celltower`, `feature:wifiaudit`, `core:billing`, and `core:oui` were fixed in the 2026-07-07 pass — `CellTowerReader` and `WifiInfoReader` already had interface seams (mirroring `lanscan`'s `Fake*` pattern), they just lacked fakes/tests; `core:oui`'s parsing logic was extracted into testable companion functions the same way `ArpTableReaderImpl.parseArpTable` is. `history`/`widgetsettings` are harder: `WidgetSettingsViewModel` reads a real `Application` `Context` directly into a DataStore-backed singleton with no seam, and `HistoryViewModel` depends on a **concrete** `HistoryRepository` (not an interface) wrapping 11 Room DAOs plus `NetLensDatabase.withTransaction`. There is no Robolectric anywhere in the repo and no instrumentation (`androidTest`) or screenshot tests at all — code that touches `Context`, `WifiManager`, `TelephonyManager`, or a live `Room`/`DataStore` instance cannot be verified without a physical device, emulator, or Robolectric today. If you're an agent picking up a bug in `history` or `widgetsettings`, flag the verification gap rather than assuming a test can be added the same way as elsewhere.
 
 ## Key Dependencies
 
