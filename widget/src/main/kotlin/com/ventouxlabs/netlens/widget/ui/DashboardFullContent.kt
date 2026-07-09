@@ -49,8 +49,7 @@ fun DashboardFullContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
-            .background(NetLensWidgetColors.background)
+            .widgetBackground()
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         // Row 1: WAN + LAN (big)

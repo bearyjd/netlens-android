@@ -218,6 +218,10 @@ class WidgetRefreshWorker(
                 }
 
                 prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
+                prefs[WidgetStateDefinition.LATENCY_HISTORY] = appendLatencySample(
+                    existingCsv = prefs[WidgetStateDefinition.LATENCY_HISTORY],
+                    sample = latencyMs.takeIf { it >= 0L }?.toInt(),
+                )
                 prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
                 prefs[WidgetStateDefinition.VPN_STATE] = vpnState.serialize()
 
@@ -393,6 +397,20 @@ internal fun parseCapabilities(capabilities: String): String = when {
     capabilities.contains("WPA") -> "WPA"
     capabilities.contains("WEP") -> "WEP"
     else -> "Open"
+}
+
+/**
+ * Appends a new latency sample (ms) to a comma-separated history, capping it at the
+ * most recent [cap] samples. A `null` [sample] (missing/failed measurement) is a
+ * no-op — the existing history is returned unchanged (malformed entries dropped).
+ */
+internal fun appendLatencySample(existingCsv: String?, sample: Int?, cap: Int = 12): String {
+    val existing = existingCsv
+        ?.split(",")
+        ?.mapNotNull { it.trim().toIntOrNull() }
+        .orEmpty()
+    if (sample == null) return existing.joinToString(",")
+    return (existing + sample).takeLast(cap).joinToString(",")
 }
 
 private val IP_PATTERN = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")

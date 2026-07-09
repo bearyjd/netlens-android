@@ -1,6 +1,8 @@
 package com.ventouxlabs.netlens.widget
 
 import android.content.Context
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
@@ -12,7 +14,7 @@ import com.ventouxlabs.netlens.widget.ui.DashboardFullContent
 
 class DashboardWidget : GlanceAppWidget() {
 
-    override val sizeMode: SizeMode = SizeMode.Exact
+    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(DpSize(250.dp, 50.dp)))
 
     override val stateDefinition: GlanceStateDefinition<Preferences> = WidgetStateDefinition
 

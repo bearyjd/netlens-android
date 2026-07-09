@@ -7,8 +7,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -34,8 +32,7 @@ fun StandardWidgetContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
-            .background(NetLensWidgetColors.background)
+            .widgetBackground()
             .padding(12.dp),
     ) {
         HeaderRow(state)
