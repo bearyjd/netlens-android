@@ -11,8 +11,8 @@ import com.ventouxlabs.netlens.core.ui.NetLensPalette
  * Glance resolves the day/night pair against the system theme at render
  * time — widgets get full dark-mode support with no manual switching.
  *
- * This replaces the hardcoded, dark-only [WidgetTheme] as widget layouts are
- * redesigned; do not add new usages of [WidgetTheme].
+ * This replaces the legacy hardcoded, dark-only widget theme colors — all
+ * widget content composables have been migrated to these tokens.
  */
 object NetLensWidgetColors {
     val background = ColorProvider(day = NetLensPalette.paper, night = NetLensPalette.paperDark)
@@ -42,4 +42,22 @@ object NetLensWidgetColors {
     /** Solid accent fill (stays deep teal in both modes) with legible text. */
     val accentFill = ColorProvider(NetLensPalette.accent)
     val onAccentFill = ColorProvider(NetLensPalette.card)
+
+    /**
+     * Maps a security posture letter grade to the three-state status semantics:
+     * A/B are normal/secure, C/D need attention, everything else (including
+     * unrecognized grades) reads as an active risk.
+     */
+    fun scoreColor(grade: String): ColorProvider = when (grade.uppercase()) {
+        "A", "B" -> accent
+        "C", "D" -> warn
+        else -> stamp
+    }
+
+    /** Maps a 0..3 Wi-Fi/cellular signal level to the three-state status semantics. */
+    fun rssiColor(level: Int): ColorProvider = when {
+        level >= 3 -> accent
+        level == 2 -> warn
+        else -> stamp
+    }
 }

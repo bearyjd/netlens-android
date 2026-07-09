@@ -15,7 +15,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
@@ -41,7 +40,7 @@ internal fun WidgetIpRow(state: WidgetState, showCountryName: Boolean = false) {
         Text(
             text = state.publicIp.ifEmpty { "—" },
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                color = NetLensWidgetColors.ink,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
             ),
@@ -51,7 +50,7 @@ internal fun WidgetIpRow(state: WidgetState, showCountryName: Boolean = false) {
             Text(
                 text = " · ${state.countryName}",
                 style = TextStyle(
-                    color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                    color = NetLensWidgetColors.inkSoft,
                     fontSize = 12.sp,
                 ),
                 maxLines = 1,

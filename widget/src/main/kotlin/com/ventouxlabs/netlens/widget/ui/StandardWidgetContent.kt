@@ -27,15 +27,16 @@ import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.action.TriggerScanAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
+import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
 @Composable
 fun StandardWidgetContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(WidgetTheme.CORNER_RADIUS)
-            .background(ColorProvider(WidgetTheme.BACKGROUND))
-            .padding(WidgetTheme.PADDING),
+            .cornerRadius(16.dp)
+            .background(NetLensWidgetColors.background)
+            .padding(12.dp),
     ) {
         HeaderRow(state)
         Spacer(modifier = GlanceModifier.height(8.dp))
@@ -55,14 +56,14 @@ private fun HeaderRow(state: WidgetState) {
     ) {
         val gradeText = if (state.hasScore) state.scoreGrade else "?"
         val gradeColor = if (state.hasScore) {
-            WidgetTheme.scoreColor(state.scoreGrade)
+            NetLensWidgetColors.scoreColor(state.scoreGrade)
         } else {
-            WidgetTheme.SCORE_GRAY
+            NetLensWidgetColors.inkSoft
         }
         Text(
             text = gradeText,
             style = TextStyle(
-                color = ColorProvider(gradeColor),
+                color = gradeColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
             ),
@@ -91,19 +92,19 @@ private fun HeaderRow(state: WidgetState) {
                 Text(
                     text = networkName,
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                        color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp,
                     ),
                     maxLines = 1,
                 )
                 if (state.encryptionType.isNotEmpty()) {
-                    val suffix = WidgetTheme.encryptionSuffix(state.encryptionType)
-                    val color = WidgetTheme.encryptionColor(state.encryptionType)
+                    val suffix = encryptionSuffix(state.encryptionType)
+                    val color = encryptionColor(state.encryptionType)
                     Text(
                         text = " ${state.encryptionType}$suffix",
                         style = TextStyle(
-                            color = ColorProvider(color),
+                            color = color,
                             fontSize = 11.sp,
                         ),
                     )
@@ -128,7 +129,7 @@ private fun StatsRow(state: WidgetState) {
         Text(
             text = latencyText,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                color = NetLensWidgetColors.inkSoft,
                 fontSize = 12.sp,
             ),
             modifier = GlanceModifier.clickable(
@@ -141,7 +142,7 @@ private fun StatsRow(state: WidgetState) {
         Text(
             text = " · ",
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                color = NetLensWidgetColors.inkSoft,
                 fontSize = 12.sp,
             ),
         )
@@ -150,7 +151,7 @@ private fun StatsRow(state: WidgetState) {
         Text(
             text = deviceText,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                color = NetLensWidgetColors.inkSoft,
                 fontSize = 12.sp,
             ),
             modifier = GlanceModifier.clickable(
@@ -167,20 +168,32 @@ private fun FooterRow(state: WidgetState) {
     val footerText = when {
         state.isScanRunning -> "Scanning…"
         state.lastScanTimestamp > 0L -> {
-            val rel = WidgetTheme.relativeTime(state.lastScanTimestamp)
+            val rel = relativeTimeLabel(state.lastScanTimestamp)
             if (state.isStale()) "Stale · $rel" else "Scanned $rel"
         }
         else -> "Not scanned"
     }
-    val footerColor = if (state.isStale()) WidgetTheme.SCORE_AMBER else WidgetTheme.TEXT_MUTED
+    val footerColor = if (state.isStale()) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft
     Text(
         text = footerText,
         style = TextStyle(
-            color = ColorProvider(footerColor),
+            color = footerColor,
             fontSize = 11.sp,
         ),
         modifier = GlanceModifier.fillMaxWidth().clickable(
             actionRunCallback<TriggerScanAction>(),
         ),
     )
+}
+
+private fun encryptionSuffix(type: String): String = when (type.uppercase()) {
+    "WPA3" -> " (secure)"
+    "WEP" -> " (weak)"
+    else -> ""
+}
+
+private fun encryptionColor(type: String): ColorProvider = when (type.uppercase()) {
+    "WPA3" -> NetLensWidgetColors.accent
+    "WEP" -> NetLensWidgetColors.stamp
+    else -> NetLensWidgetColors.inkSoft
 }

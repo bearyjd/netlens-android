@@ -8,5 +8,8 @@ android {
 
 dependencies {
     implementation(project(":widget"))
+    implementation(project(":core:data"))
     implementation(libs.compose.material.icons)
+
+    testImplementation(libs.datastore.preferences)
 }

@@ -2,7 +2,7 @@
 <resources>
     <!-- RemoteViews (widget_initial.xml) can't read Kotlin design tokens, so this
          is the one place in the widget module where hex is allowed. Mirrors
-         NetLensPalette.paper / NetLensPalette.ink (day). -->
-    <color name="widget_initial_background">#F5F2EA</color>
-    <color name="widget_initial_text">#22201C</color>
+         NetLensPalette.paperDark / NetLensPalette.inkOnDark (night). -->
+    <color name="widget_initial_background">#17181B</color>
+    <color name="widget_initial_text">#E9E6DD</color>
 </resources>

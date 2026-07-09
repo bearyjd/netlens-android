@@ -13,12 +13,12 @@ import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
+import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
 @Composable
 fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
@@ -34,34 +34,32 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val (statusText, statusColor) = when {
-            state.isCaptivePortal -> "Captive portal" to WidgetTheme.CAPTIVE_ORANGE
-            state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to WidgetTheme.SCORE_AMBER
+            state.isCaptivePortal -> "Captive portal" to NetLensWidgetColors.warn
+            state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to NetLensWidgetColors.warn
             state.vpnState is VpnState.FullTunnel ->
-                "DNS → ${state.primaryDns} · VPN routed" to WidgetTheme.VPN_FULL_GREEN
+                "DNS → ${state.primaryDns} · VPN routed" to NetLensWidgetColors.accent
             state.vpnState is VpnState.SplitTunnel ->
-                "DNS → ${state.primaryDns} · Split" to WidgetTheme.VPN_SPLIT_AMBER
-            state.isConnected -> "DNS → ${state.primaryDns} · Direct" to WidgetTheme.TEXT_SECONDARY
-            else -> "No network" to WidgetTheme.SCORE_RED
+                "DNS → ${state.primaryDns} · Split" to NetLensWidgetColors.warn
+            state.isConnected -> "DNS → ${state.primaryDns} · Direct" to NetLensWidgetColors.inkSoft
+            else -> "No network" to NetLensWidgetColors.stamp
         }
         Text(
             text = statusText,
             style = TextStyle(
-                color = ColorProvider(statusColor),
+                color = statusColor,
                 fontSize = 14.sp,
             ),
             maxLines = 1,
         )
 
-        val elapsed = WidgetTheme.relativeTime(state.lastRefreshMs)
+        val elapsed = relativeTimeLabel(state.lastRefreshMs)
         if (elapsed.isNotEmpty()) {
             val stale = state.lastRefreshMs > 0L &&
                 System.currentTimeMillis() - state.lastRefreshMs > WidgetState.STALE_ALERT_THRESHOLD_MS
             Text(
                 text = "Scanned $elapsed",
                 style = TextStyle(
-                    color = ColorProvider(
-                        if (stale) WidgetTheme.CAPTIVE_ORANGE else WidgetTheme.TEXT_MUTED,
-                    ),
+                    color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
                     fontSize = 11.sp,
                 ),
             )

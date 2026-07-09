@@ -15,7 +15,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.widget.WidgetState
 
 @Composable
@@ -23,8 +22,8 @@ fun FourByTwoWidgetContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(WidgetTheme.CORNER_RADIUS)
-            .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY)),
+            .cornerRadius(16.dp)
+            .background(NetLensWidgetColors.background),
     ) {
         WidgetHeaderRow(
             state = state,
@@ -35,7 +34,7 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(ColorProvider(WidgetTheme.DIVIDER)),
+                .background(NetLensWidgetColors.line),
         )
 
         DashboardWidgetContent(
@@ -51,7 +50,7 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(ColorProvider(WidgetTheme.DIVIDER)),
+                .background(NetLensWidgetColors.line),
         )
 
         Row(
@@ -70,7 +69,7 @@ fun FourByTwoWidgetContent(state: WidgetState) {
                 modifier = GlanceModifier
                     .width(1.dp)
                     .fillMaxHeight()
-                    .background(ColorProvider(WidgetTheme.DIVIDER)),
+                    .background(NetLensWidgetColors.line),
             )
 
             ToolChipsRow(
