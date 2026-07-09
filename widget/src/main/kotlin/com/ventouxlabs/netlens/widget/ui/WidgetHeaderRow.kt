@@ -21,10 +21,10 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.widget.R
 import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.TriggerScanAction
+import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
 private val SHOW_TIMESTAMP_MIN_HEIGHT = 60.dp
 private val GENEROUS_PAD_MIN_HEIGHT = 80.dp
@@ -40,7 +40,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
     val showTimestamp = shouldShowHeaderTimestamp(size.height)
     val verticalPad = headerVerticalPad(size.height)
 
-    val elapsed = WidgetTheme.relativeTime(state.lastRefreshMs)
+    val elapsed = relativeTimeLabel(state.lastRefreshMs)
     val stale = state.lastRefreshMs > 0L &&
         System.currentTimeMillis() - state.lastRefreshMs > WidgetState.STALE_ALERT_THRESHOLD_MS
 
@@ -52,9 +52,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
             Text(
                 text = "Scanned $elapsed",
                 style = TextStyle(
-                    color = ColorProvider(
-                        if (stale) WidgetTheme.CAPTIVE_ORANGE else WidgetTheme.TEXT_MUTED,
-                    ),
+                    color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
                     fontSize = 11.sp,
                 ),
                 maxLines = 1,
@@ -64,7 +62,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
         Image(
             provider = ImageProvider(R.drawable.ic_refresh),
             contentDescription = context.getString(R.string.widget_refresh_content_description),
-            colorFilter = ColorFilter.tint(ColorProvider(WidgetTheme.TEXT_SECONDARY)),
+            colorFilter = ColorFilter.tint(NetLensWidgetColors.inkSoft),
             modifier = GlanceModifier
                 .size(20.dp)
                 .cornerRadius(10.dp)

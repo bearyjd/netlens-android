@@ -24,7 +24,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.widget.R
 import com.ventouxlabs.netlens.widget.WidgetState
@@ -40,8 +39,8 @@ fun CompactFullContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(WidgetTheme.CORNER_RADIUS)
-            .background(ColorProvider(WidgetTheme.BACKGROUND))
+            .cornerRadius(16.dp)
+            .background(NetLensWidgetColors.background)
             .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
         val rowModifier = GlanceModifier.fillMaxWidth().defaultWeight()
@@ -88,11 +87,11 @@ private fun BottomRow(state: WidgetState, modifier: GlanceModifier) {
 private fun FlagAndLock(state: WidgetState) {
     val (backdrop, lockDrawable, vpnLabel) = when (state.vpnState) {
         VpnState.FullTunnel ->
-            Triple(WidgetTheme.VPN_FULL_GREEN, R.drawable.ic_lock_closed_white, "Protected")
+            Triple(NetLensWidgetColors.accent, R.drawable.ic_lock_closed_white, "Protected")
         VpnState.SplitTunnel ->
-            Triple(WidgetTheme.VPN_SPLIT_AMBER, R.drawable.ic_lock_closed_white, "Split Tunnel")
+            Triple(NetLensWidgetColors.warn, R.drawable.ic_lock_closed_white, "Split Tunnel")
         VpnState.None ->
-            Triple(WidgetTheme.VPN_NONE_RED, R.drawable.ic_lock_open_white, "No VPN")
+            Triple(NetLensWidgetColors.stamp, R.drawable.ic_lock_open_white, "No VPN")
     }
     Row(
         modifier = GlanceModifier.clickable(
@@ -103,7 +102,7 @@ private fun FlagAndLock(state: WidgetState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = state.countryFlag.ifEmpty { "🌐" },
+            text = state.countryFlag.ifEmpty { "—" },
             style = TextStyle(fontSize = 13.sp),
         )
         Spacer(modifier = GlanceModifier.width(2.dp))
@@ -111,7 +110,7 @@ private fun FlagAndLock(state: WidgetState) {
             modifier = GlanceModifier
                 .size(13.dp)
                 .cornerRadius(3.dp)
-                .background(ColorProvider(backdrop)),
+                .background(backdrop),
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -132,7 +131,7 @@ private fun SignalBlock(state: WidgetState) {
             Text(
                 text = state.cellGeneration,
                 style = TextStyle(
-                    color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                    color = NetLensWidgetColors.inkSoft,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Medium,
                 ),
@@ -141,7 +140,7 @@ private fun SignalBlock(state: WidgetState) {
             Text(
                 text = "▯▯▯▯",
                 style = TextStyle(
-                    color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                    color = NetLensWidgetColors.inkSoft,
                     fontSize = 10.sp,
                 ),
             )
@@ -167,7 +166,7 @@ private fun IpText(
         Text(
             text = label,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                color = NetLensWidgetColors.inkSoft,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Medium,
             ),
@@ -176,7 +175,7 @@ private fun IpText(
         Text(
             text = value,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                color = NetLensWidgetColors.ink,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
             ),

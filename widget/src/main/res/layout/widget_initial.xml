@@ -2,6 +2,8 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/widget_initial_background"
     android:gravity="center"
     android:text="NetLens"
+    android:textColor="@color/widget_initial_text"
     android:textSize="14sp" />

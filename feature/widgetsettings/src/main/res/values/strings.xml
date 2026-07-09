@@ -3,40 +3,12 @@
     <string name="widget_settings_title">Widget Settings</string>
     <string name="widget_settings_cd_back">Back</string>
 
-    <string name="widget_settings_section_appearance">Appearance</string>
-    <string name="widget_settings_section_layout">Layout</string>
+    <string name="widget_settings_info_title">Widgets follow your app theme</string>
+    <string name="widget_settings_info_description">Widgets automatically switch between light and dark to match your device theme, and update roughly every 30 minutes.</string>
 
-    <string name="widget_settings_label_background">Background</string>
-    <string name="widget_settings_label_opacity">Opacity</string>
-    <string name="widget_settings_label_accent">Accent</string>
-    <string name="widget_settings_label_text_size">Text size</string>
-    <string name="widget_settings_label_corner_radius">Corner radius</string>
+    <string name="widget_settings_section_data">Data</string>
+    <string name="widget_settings_ipinfo_label">Show public IP</string>
+    <string name="widget_settings_ipinfo_description">Fetches your public IP from ipinfo.io</string>
 
-    <string name="widget_settings_size_resize_hint">Resize the widget on your home screen after changing this</string>
-
-    <string name="widget_settings_text_small">Small</string>
-    <string name="widget_settings_text_medium">Medium</string>
-    <string name="widget_settings_text_large">Large</string>
-
-    <string name="widget_settings_button_apply">Apply to Widget</string>
-
-    <string name="widget_settings_size_compact">Compact</string>
-    <string name="widget_settings_size_standard">Standard</string>
-    <string name="widget_settings_size_dashboard">Dashboard</string>
-    <string name="widget_settings_size_compact_dimensions">2×1</string>
-    <string name="widget_settings_size_standard_dimensions">2×2</string>
-    <string name="widget_settings_size_dashboard_dimensions">4×2</string>
-
-    <string name="widget_settings_preview_ip">1.2.3.4</string>
-    <string name="widget_settings_preview_ssid_name">Home-WiFi</string>
-    <string name="widget_settings_preview_all_clear">All clear</string>
-
-    <string name="widget_settings_format_percent">%1$d%%</string>
-    <string name="widget_settings_format_dp">%1$ddp</string>
-
-    <string name="widget_settings_color_black">Black</string>
-    <string name="widget_settings_color_white">White</string>
-    <string name="widget_settings_color_dark_gray">Dark gray</string>
-    <string name="widget_settings_color_navy">Navy</string>
-    <string name="widget_settings_color_green">Green</string>
+    <string name="widget_settings_button_refresh">Refresh now</string>
 </resources>

@@ -3,44 +3,35 @@ package com.ventouxlabs.netlens.feature.widgetsettings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.widget.refreshAllWidgets
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.ventouxlabs.netlens.widget.data.WidgetPreferencesRepository
-import com.ventouxlabs.netlens.widget.model.WidgetColor
-import com.ventouxlabs.netlens.widget.model.WidgetPreferences
-import com.ventouxlabs.netlens.widget.model.WidgetSize
-import com.ventouxlabs.netlens.widget.model.WidgetTextSize
-import com.ventouxlabs.netlens.widget.refreshAllWidgets
-import javax.inject.Inject
 
 @HiltViewModel
 class WidgetSettingsViewModel @Inject constructor(
     application: Application,
+    private val userPreferencesRepository: UserPreferencesRepository,
 ) : AndroidViewModel(application) {
 
     private val context get() = getApplication<Application>()
 
-    val prefs = WidgetPreferencesRepository.observe(context)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WidgetPreferences())
+    val ipInfoConsent: StateFlow<Boolean> = userPreferencesRepository.ipInfoConsentGranted
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    fun setBackgroundColor(color: WidgetColor) = update { it.copy(backgroundColor = color) }
-    fun setBackgroundAlpha(alpha: Float) = update { it.copy(backgroundAlpha = alpha) }
-    fun setAccentColor(color: WidgetColor) = update { it.copy(accentColor = color) }
-    fun setTextSize(size: WidgetTextSize) = update { it.copy(textSize = size) }
-    fun setCornerRadius(radius: Int) = update { it.copy(cornerRadius = radius) }
-    fun setWidgetSize(size: WidgetSize) = update { it.copy(widgetSize = size) }
-
-    fun applyToWidget() {
+    fun setIpInfoConsent(granted: Boolean) {
         viewModelScope.launch {
-            refreshAllWidgets(context)
+            userPreferencesRepository.setIpInfoConsent(granted)
         }
     }
 
-    private fun update(transform: (WidgetPreferences) -> WidgetPreferences) {
+    fun refreshWidgets() {
         viewModelScope.launch {
-            WidgetPreferencesRepository.update(context, transform)
+            refreshAllWidgets(context)
         }
     }
 }

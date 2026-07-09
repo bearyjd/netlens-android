@@ -1,7 +1,6 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
@@ -30,10 +29,15 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
 
 @Composable
 fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
-    val portalBg = if (state.isCaptivePortal) {
-        WidgetTheme.CHIP_PORTAL_ACTIVE
+    val portalBackground = if (state.isCaptivePortal) {
+        NetLensWidgetColors.warnSoft
     } else {
-        WidgetTheme.CHIP_DEFAULT
+        NetLensWidgetColors.accentSoft
+    }
+    val portalOnBackground = if (state.isCaptivePortal) {
+        NetLensWidgetColors.onWarnSoft
+    } else {
+        NetLensWidgetColors.onAccentSoft
     }
 
     Column(
@@ -44,56 +48,61 @@ fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) 
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ToolChip(
-                icon = "🔍",
                 label = "LAN",
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
                 ),
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
             )
             Spacer(GlanceModifier.width(4.dp))
             ToolChip(
-                icon = "📡",
                 label = "Ping",
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
                 ),
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
             )
         }
         Spacer(GlanceModifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             ToolChip(
-                icon = "🌐",
                 label = "DNS",
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
                 ),
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
             )
             Spacer(GlanceModifier.width(4.dp))
             ToolChip(
-                icon = "🚪",
                 label = "Portal",
                 action = actionRunCallback<OpenPortalAction>(),
-                background = portalBg,
+                background = portalBackground,
+                onBackground = portalOnBackground,
             )
         }
     }
 }
 
 @Composable
-private fun ToolChip(icon: String, label: String, action: Action, background: Color) {
+private fun ToolChip(
+    label: String,
+    action: Action,
+    background: ColorProvider,
+    onBackground: ColorProvider,
+) {
     Text(
-        text = "$icon$label",
+        text = label,
         modifier = GlanceModifier
             .cornerRadius(4.dp)
-            .background(ColorProvider(background))
+            .background(background)
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .clickable(action),
         style = TextStyle(
-            fontSize = 20.sp,
-            color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+            fontSize = 14.sp,
+            color = onBackground,
         ),
         maxLines = 1,
     )

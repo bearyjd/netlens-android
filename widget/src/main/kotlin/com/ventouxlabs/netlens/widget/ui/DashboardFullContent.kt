@@ -1,7 +1,6 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -50,8 +49,8 @@ fun DashboardFullContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(WidgetTheme.CORNER_RADIUS)
-            .background(ColorProvider(WidgetTheme.BACKGROUND_NAVY))
+            .cornerRadius(16.dp)
+            .background(NetLensWidgetColors.background)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         // Row 1: WAN + LAN (big)
@@ -69,7 +68,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = "WAN",
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                        color = NetLensWidgetColors.inkSoft,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -78,7 +77,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = state.publicIp.ifEmpty { "—.—.—.—" },
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                        color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                     ),
@@ -97,7 +96,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = "LAN",
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_MUTED),
+                        color = NetLensWidgetColors.inkSoft,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -106,7 +105,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = state.localIp.ifEmpty { "—" },
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                        color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                     ),
@@ -117,7 +116,7 @@ fun DashboardFullContent(state: WidgetState) {
             Image(
                 provider = ImageProvider(R.drawable.ic_refresh),
                 contentDescription = "Refresh",
-                colorFilter = ColorFilter.tint(ColorProvider(WidgetTheme.TEXT_SECONDARY)),
+                colorFilter = ColorFilter.tint(NetLensWidgetColors.inkSoft),
                 modifier = GlanceModifier
                     .size(20.dp)
                     .clickable(actionRunCallback<TriggerScanAction>()),
@@ -131,11 +130,11 @@ fun DashboardFullContent(state: WidgetState) {
         ) {
             val (backdrop, lockDrawable, vpnLabel) = when (state.vpnState) {
                 VpnState.FullTunnel ->
-                    Triple(WidgetTheme.VPN_FULL_GREEN, R.drawable.ic_lock_closed_white, "Protected")
+                    Triple(NetLensWidgetColors.accent, R.drawable.ic_lock_closed_white, "Protected")
                 VpnState.SplitTunnel ->
-                    Triple(WidgetTheme.VPN_SPLIT_AMBER, R.drawable.ic_lock_closed_white, "Split")
+                    Triple(NetLensWidgetColors.warn, R.drawable.ic_lock_closed_white, "Split")
                 VpnState.None ->
-                    Triple(WidgetTheme.VPN_NONE_RED, R.drawable.ic_lock_open_white, "No VPN")
+                    Triple(NetLensWidgetColors.stamp, R.drawable.ic_lock_open_white, "No VPN")
             }
             Row(
                 modifier = GlanceModifier.clickable(
@@ -146,7 +145,7 @@ fun DashboardFullContent(state: WidgetState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = state.countryFlag.ifEmpty { "🌐" },
+                    text = state.countryFlag.ifEmpty { "—" },
                     style = TextStyle(fontSize = 16.sp),
                 )
                 Spacer(modifier = GlanceModifier.width(4.dp))
@@ -154,7 +153,7 @@ fun DashboardFullContent(state: WidgetState) {
                     modifier = GlanceModifier
                         .size(16.dp)
                         .cornerRadius(4.dp)
-                        .background(ColorProvider(backdrop)),
+                        .background(backdrop),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
@@ -169,7 +168,7 @@ fun DashboardFullContent(state: WidgetState) {
             Text(
                 text = statusText,
                 style = TextStyle(
-                    color = ColorProvider(statusColor),
+                    color = statusColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                 ),
@@ -187,7 +186,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = "${state.rssi}",
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.rssiColor(state.rssiLevel)),
+                        color = NetLensWidgetColors.rssiColor(state.rssiLevel),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -198,7 +197,7 @@ fun DashboardFullContent(state: WidgetState) {
                 Text(
                     text = state.cellGeneration,
                     style = TextStyle(
-                        color = ColorProvider(WidgetTheme.TEXT_SECONDARY),
+                        color = NetLensWidgetColors.inkSoft,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -213,9 +212,9 @@ fun DashboardFullContent(state: WidgetState) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BigChip(
-                icon = "🔍",
                 label = "LAN",
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
                 ),
@@ -223,9 +222,9 @@ fun DashboardFullContent(state: WidgetState) {
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             BigChip(
-                icon = "📡",
                 label = "Ping",
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
                 ),
@@ -233,9 +232,9 @@ fun DashboardFullContent(state: WidgetState) {
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             BigChip(
-                icon = "🌐",
                 label = "DNS",
-                background = WidgetTheme.CHIP_DEFAULT,
+                background = NetLensWidgetColors.accentSoft,
+                onBackground = NetLensWidgetColors.onAccentSoft,
                 action = actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
                 ),
@@ -243,12 +242,16 @@ fun DashboardFullContent(state: WidgetState) {
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             BigChip(
-                icon = "🚪",
                 label = "Portal",
                 background = if (state.isCaptivePortal) {
-                    WidgetTheme.CHIP_PORTAL_ACTIVE
+                    NetLensWidgetColors.warnSoft
                 } else {
-                    WidgetTheme.CHIP_DEFAULT
+                    NetLensWidgetColors.accentSoft
+                },
+                onBackground = if (state.isCaptivePortal) {
+                    NetLensWidgetColors.onWarnSoft
+                } else {
+                    NetLensWidgetColors.onAccentSoft
                 },
                 action = actionRunCallback<OpenPortalAction>(),
                 modifier = GlanceModifier.defaultWeight(),
@@ -259,30 +262,25 @@ fun DashboardFullContent(state: WidgetState) {
 
 @Composable
 private fun BigChip(
-    icon: String,
     label: String,
-    background: Color,
+    background: ColorProvider,
+    onBackground: ColorProvider,
     action: Action,
     modifier: GlanceModifier,
 ) {
     Row(
         modifier = modifier
             .cornerRadius(6.dp)
-            .background(ColorProvider(background))
+            .background(background)
             .padding(horizontal = 4.dp, vertical = 4.dp)
             .clickable(action),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = icon,
-            style = TextStyle(fontSize = 14.sp),
-        )
-        Spacer(modifier = GlanceModifier.width(3.dp))
-        Text(
             text = label,
             style = TextStyle(
-                color = ColorProvider(WidgetTheme.TEXT_PRIMARY),
+                color = onBackground,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
             ),
@@ -291,16 +289,15 @@ private fun BigChip(
     }
 }
 
-private fun dnsStatus(state: WidgetState): Pair<String, Color> = when {
-    state.isCaptivePortal -> "Captive portal" to WidgetTheme.CAPTIVE_ORANGE
+private fun dnsStatus(state: WidgetState): Pair<String, ColorProvider> = when {
+    state.isCaptivePortal -> "Captive portal" to NetLensWidgetColors.warn
     state.isDnsLeaking ->
-        "DNS → ${state.primaryDns.ifEmpty { "?" }} · Leak!" to WidgetTheme.SCORE_AMBER
+        "DNS → ${state.primaryDns.ifEmpty { "?" }} · Leak!" to NetLensWidgetColors.warn
     state.vpnState is VpnState.FullTunnel ->
-        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.VPN_FULL_GREEN
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to NetLensWidgetColors.accent
     state.vpnState is VpnState.SplitTunnel ->
-        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.VPN_SPLIT_AMBER
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to NetLensWidgetColors.warn
     state.isConnected ->
-        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to WidgetTheme.TEXT_SECONDARY
-    else -> "Offline" to WidgetTheme.SCORE_RED
+        "DNS → ${state.primaryDns.ifEmpty { "?" }}" to NetLensWidgetColors.inkSoft
+    else -> "Offline" to NetLensWidgetColors.stamp
 }
-
