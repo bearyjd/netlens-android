@@ -16,6 +16,7 @@
     <string name="netlog_empty_monitoring">Waiting for network changes…</string>
     <string name="netlog_empty_paused">Tap the play button to start monitoring.</string>
     <string name="netlog_cd_export">Export events</string>
+    <string name="netlog_cd_more_actions">More actions</string>
     <string name="netlog_filter_date">Date range</string>
     <string name="netlog_filter_clear">Clear filters</string>
     <string name="netlog_date_confirm">OK</string>

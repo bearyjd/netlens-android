@@ -16,6 +16,7 @@ tasks.withType<Test>().configureEach {
 dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:data"))
+    implementation(project(":core:ui"))
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)

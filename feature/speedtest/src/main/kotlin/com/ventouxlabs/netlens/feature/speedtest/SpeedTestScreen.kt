@@ -48,6 +48,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.StatItem
+import com.ventouxlabs.netlens.core.ui.withTabularFigures
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestUiState
 
@@ -235,7 +237,7 @@ private fun SpeedGauge(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "%.1f".format(speed),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineLarge.withTabularFigures(),
                 fontWeight = FontWeight.Bold,
             )
             Text(
@@ -291,49 +293,31 @@ private fun ResultsCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
+                // Final results are this card's hero content — keep the
+                // pre-refactor titleLarge+Bold weight.
+                val resultValueStyle = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                )
                 StatItem(
                     label = stringResource(R.string.speedtest_label_download),
                     value = "%.1f".format(state.downloadMbps),
                     unit = stringResource(R.string.speedtest_unit_mbps),
+                    valueStyle = resultValueStyle,
                 )
                 StatItem(
                     label = stringResource(R.string.speedtest_label_upload),
                     value = "%.1f".format(state.uploadMbps),
                     unit = stringResource(R.string.speedtest_unit_mbps),
+                    valueStyle = resultValueStyle,
                 )
                 StatItem(
                     label = stringResource(R.string.speedtest_label_latency),
                     value = "${state.latencyMs}",
                     unit = stringResource(R.string.speedtest_unit_ms),
+                    valueStyle = resultValueStyle,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    unit: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = unit,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

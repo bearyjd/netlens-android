@@ -49,32 +49,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.network.VpnState
+import com.ventouxlabs.netlens.core.ui.LocalStatusColors
+import com.ventouxlabs.netlens.core.ui.Spacing
+import com.ventouxlabs.netlens.core.ui.StatusColors
 import com.ventouxlabs.netlens.feature.posture.model.FactorResult
 import com.ventouxlabs.netlens.feature.posture.model.PostureFactor
 import com.ventouxlabs.netlens.feature.posture.model.PostureScore
 import com.ventouxlabs.netlens.feature.posture.model.PostureUiState
 import com.ventouxlabs.netlens.feature.posture.model.Severity
 
-private val StatusGreen = Color(0xFF4CAF50)
-private val StatusLightGreen = Color(0xFF8BC34A)
-private val StatusAmber = Color(0xFFFFC107)
-private val StatusOrange = Color(0xFFFF9800)
-private val StatusRed = Color(0xFFF44336)
-private val StatusGray = Color(0xFF9E9E9E)
+@Composable
+fun gradeColor(grade: String): Color = gradeColor(grade, LocalStatusColors.current)
 
-fun gradeColor(grade: String): Color = when (grade) {
-    "A" -> StatusGreen
-    "B" -> StatusLightGreen
-    "C" -> StatusAmber
-    "D" -> StatusOrange
-    "F" -> StatusRed
-    else -> StatusGray
+private fun gradeColor(grade: String, statusColors: StatusColors): Color = when {
+    grade.startsWith("A") || grade.startsWith("B") -> statusColors.pass
+    grade.startsWith("C") || grade.startsWith("D") -> statusColors.warn
+    else -> statusColors.fail
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -192,24 +188,47 @@ fun PostureScreen(
 
 @Composable
 private fun VpnLockIndicator(state: VpnState, onClick: () -> Unit) {
-    val (color, icon, labelRes) = when (state) {
-        VpnState.FullTunnel -> Triple(Color(0xFF388E3C), Icons.Default.Lock, R.string.posture_vpn_label_full)
-        VpnState.SplitTunnel -> Triple(Color(0xFFF57C00), Icons.Default.Lock, R.string.posture_vpn_label_split)
-        VpnState.None -> Triple(Color(0xFFD32F2F), Icons.Default.LockOpen, R.string.posture_vpn_label_none)
+    val statusColors = LocalStatusColors.current
+    val (containerColor, contentColor, icon, labelRes) = when (state) {
+        VpnState.FullTunnel -> VpnIndicatorDisplay(
+            statusColors.passContainer,
+            statusColors.onPassContainer,
+            Icons.Default.Lock,
+            R.string.posture_vpn_label_full,
+        )
+        VpnState.SplitTunnel -> VpnIndicatorDisplay(
+            statusColors.warnContainer,
+            statusColors.onWarnContainer,
+            Icons.Default.Lock,
+            R.string.posture_vpn_label_split,
+        )
+        VpnState.None -> VpnIndicatorDisplay(
+            statusColors.failContainer,
+            statusColors.onFailContainer,
+            Icons.Default.LockOpen,
+            R.string.posture_vpn_label_none,
+        )
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(color)
+            .background(containerColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = Spacing.md, vertical = 6.dp),
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text = stringResource(labelRes), color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(labelRes), color = contentColor, fontWeight = FontWeight.Bold)
     }
 }
+
+private data class VpnIndicatorDisplay(
+    val containerColor: Color,
+    val contentColor: Color,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val labelRes: Int,
+)
 
 @Composable
 private fun ScoreHero(score: PostureScore) {
@@ -225,7 +244,12 @@ private fun ScoreHero(score: PostureScore) {
     ) {
         Text(
             text = score.grade,
-            fontSize = 64.sp,
+            // Hero exception: the grade letter is the screen's focal point and
+            // intentionally larger than the type scale's displayLarge (34sp).
+            style = MaterialTheme.typography.displayLarge.copy(
+                fontSize = 64.sp,
+                lineHeight = 72.sp,
+            ),
             fontWeight = FontWeight.Bold,
             color = color,
         )
@@ -312,10 +336,14 @@ private fun severityIcon(severity: Severity) = when (severity) {
     Severity.Unavailable -> Icons.Default.Info
 }
 
-private fun severityColor(severity: Severity) = when (severity) {
-    Severity.Good -> StatusGreen
-    Severity.Moderate -> StatusAmber
-    Severity.Poor -> StatusOrange
-    Severity.Critical -> StatusRed
-    Severity.Unavailable -> StatusGray
+@Composable
+private fun severityColor(severity: Severity): Color {
+    val statusColors = LocalStatusColors.current
+    return when (severity) {
+        Severity.Good -> statusColors.pass
+        Severity.Moderate -> statusColors.warn
+        Severity.Poor -> statusColors.warn
+        Severity.Critical -> statusColors.fail
+        Severity.Unavailable -> statusColors.muted
+    }
 }

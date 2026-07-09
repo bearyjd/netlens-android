@@ -1,21 +1,20 @@
 package com.ventouxlabs.netlens.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,41 +37,51 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.R
 import com.ventouxlabs.netlens.feature.posture.PostureViewModel
-import com.ventouxlabs.netlens.feature.posture.gradeColor
-import com.ventouxlabs.netlens.feature.posture.model.PostureUiState
 import com.ventouxlabs.netlens.navigation.ToolCategory
 import com.ventouxlabs.netlens.navigation.ToolDestination
-import com.ventouxlabs.netlens.ui.components.NetworkStatusCard
 import com.ventouxlabs.netlens.ui.components.SectionHeader
 import com.ventouxlabs.netlens.ui.components.ToolChip
 import com.ventouxlabs.netlens.ui.components.ToolGridCard
-import com.ventouxlabs.netlens.ui.home.latency.LatencyMonitorCard
+import com.ventouxlabs.netlens.ui.home.dashboard.MetricsRow
+import com.ventouxlabs.netlens.ui.home.dashboard.PostureHeroCard
+import com.ventouxlabs.netlens.ui.home.latency.LatencyDetailCard
 import com.ventouxlabs.netlens.ui.home.latency.LatencyMonitorViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onToolClick: (ToolDestination) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = hiltViewModel(),
     postureViewModel: PostureViewModel = hiltViewModel(),
+    latencyViewModel: LatencyMonitorViewModel = hiltViewModel(),
 ) {
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val postureState by postureViewModel.uiState.collectAsStateWithLifecycle()
+    val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
+
+    // Screen-level lifecycle wiring for the latency monitor. Deliberately NOT
+    // inside a lazy item: an observer scoped to an item detaches whenever the
+    // item scrolls out of composition.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> latencyViewModel.onResume()
+                Lifecycle.Event.ON_PAUSE -> latencyViewModel.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val handleToolClick = remember(homeViewModel, onToolClick) {
         { tool: ToolDestination ->
             homeViewModel.recordToolUsage(tool.route)
             onToolClick(tool)
         }
-    }
-
-    val disabledColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val (postureGrade, postureColor) = when (val p = postureState) {
-        is PostureUiState.Scored -> p.score.grade to gradeColor(p.score.grade)
-        is PostureUiState.Error -> "!" to MaterialTheme.colorScheme.error
-        PostureUiState.Disconnected -> "—" to disabledColor
-        PostureUiState.Loading -> "…" to disabledColor
     }
 
     val allGridTools = ToolDestination.entries.filter { it.isVisibleInGrid }
@@ -93,10 +102,21 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.app_name)) })
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings_title),
+                        )
+                    }
+                },
+            )
         },
     ) { innerPadding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 160.dp),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
@@ -104,48 +124,53 @@ fun HomeScreen(
                 start = 16.dp,
                 end = 16.dp,
             ),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item(key = "network_status") {
-                NetworkStatusCard(
+            item(key = "posture_hero", span = { GridItemSpan(maxLineSpan) }) {
+                PostureHeroCard(
+                    postureState = postureState,
                     isConnected = homeState.isConnected,
-                    ssid = homeState.interfaceLabel,
+                    interfaceLabel = homeState.interfaceLabel,
+                    onClick = { handleToolClick(ToolDestination.Posture) },
+                    onRetry = postureViewModel::refresh,
+                )
+            }
+
+            item(key = "metrics_row", span = { GridItemSpan(maxLineSpan) }) {
+                MetricsRow(
+                    latestLatencyMs = latencyState.dataPoints.lastOrNull { it.latencyMs != null }?.latencyMs,
+                    latencyEnabled = latencyState.isEnabled,
+                    alertThresholdMs = latencyState.alertThresholdMs,
+                    latencyDataPoints = latencyState.dataPoints,
+                    isVpnActive = homeState.isVpnActive,
                     localIp = homeState.localIp,
                     gatewayIp = homeState.gatewayIp,
-                    postureGrade = postureGrade,
-                    postureColor = postureColor,
-                    onClick = { handleToolClick(ToolDestination.Posture) },
-                )
-            }
-
-            item(key = "latency_monitor") {
-                val latencyViewModel: LatencyMonitorViewModel = hiltViewModel()
-                val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
-
-                val lifecycleOwner = LocalLifecycleOwner.current
-                DisposableEffect(lifecycleOwner) {
-                    val observer = LifecycleEventObserver { _, event ->
-                        when (event) {
-                            Lifecycle.Event.ON_RESUME -> latencyViewModel.onResume()
-                            Lifecycle.Event.ON_PAUSE -> latencyViewModel.onPause()
-                            else -> {}
+                    onLatencyClick = {
+                        if (latencyState.isEnabled) {
+                            latencyViewModel.toggleExpanded()
+                        } else {
+                            latencyViewModel.toggleEnabled()
                         }
-                    }
-                    lifecycleOwner.lifecycle.addObserver(observer)
-                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-                }
-
-                LatencyMonitorCard(
-                    state = latencyState,
-                    onToggleExpanded = latencyViewModel::toggleExpanded,
-                    onToggleEnabled = latencyViewModel::toggleEnabled,
-                    onConfigure = latencyViewModel::showConfig,
-                    onDismissConfig = latencyViewModel::dismissConfig,
-                    onSaveConfig = latencyViewModel::saveConfig,
+                    },
+                    onVpnClick = { handleToolClick(ToolDestination.VpnStatus) },
+                    onIpClick = { handleToolClick(ToolDestination.IpInfo) },
                 )
             }
 
-            item(key = "search") {
+            if (latencyState.isEnabled && latencyState.isExpanded) {
+                item(key = "latency_detail", span = { GridItemSpan(maxLineSpan) }) {
+                    LatencyDetailCard(
+                        state = latencyState,
+                        onToggleEnabled = latencyViewModel::toggleEnabled,
+                        onConfigure = latencyViewModel::showConfig,
+                        onDismissConfig = latencyViewModel::dismissConfig,
+                        onSaveConfig = latencyViewModel::saveConfig,
+                    )
+                }
+            }
+
+            item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
                 ToolSearchBar(
                     query = homeState.searchQuery,
                     onQueryChange = homeViewModel::onSearchQueryChanged,
@@ -155,7 +180,7 @@ fun HomeScreen(
 
             if (!isSearching) {
                 if (favoriteTools.isNotEmpty()) {
-                    item(key = "favorites_header") {
+                    item(key = "favorites_header", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
                             title = stringResource(R.string.home_favorites),
                             actionLabel = stringResource(
@@ -166,7 +191,7 @@ fun HomeScreen(
                             },
                         )
                     }
-                    item(key = "favorites_row") {
+                    item(key = "favorites_row", span = { GridItemSpan(maxLineSpan) }) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(favoriteTools, key = { it.route }) { tool ->
                                 ToolChip(
@@ -180,10 +205,10 @@ fun HomeScreen(
                 }
 
                 if (recentTools.isNotEmpty()) {
-                    item(key = "recents_header") {
+                    item(key = "recents_header", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(title = stringResource(R.string.home_recent))
                     }
-                    item(key = "recents_row") {
+                    item(key = "recents_row", span = { GridItemSpan(maxLineSpan) }) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(recentTools, key = { it.route }) { tool ->
                                 ToolChip(
@@ -199,24 +224,22 @@ fun HomeScreen(
                 ToolCategory.entries.forEach { category ->
                     val categoryTools = filteredTools.filter { it.category == category }
                     if (categoryTools.isNotEmpty()) {
-                        item(key = "cat_${category.name}") {
+                        item(key = "cat_${category.name}", span = { GridItemSpan(maxLineSpan) }) {
                             SectionHeader(title = category.label)
                         }
-                        val pairs = categoryTools.chunked(2)
-                        items(
-                            count = pairs.size,
-                            key = { "grid_${category.name}_$it" },
-                        ) { index ->
-                            ToolGridRow(
-                                tools = pairs[index],
-                                onToolClick = handleToolClick,
+                        items(categoryTools, key = { "tool_${it.route}" }) { tool ->
+                            ToolGridCard(
+                                icon = tool.icon,
+                                label = tool.label,
+                                description = tool.description,
+                                onClick = { handleToolClick(tool) },
                             )
                         }
                     }
                 }
             } else {
                 if (filteredTools.isEmpty()) {
-                    item(key = "no_results") {
+                    item(key = "no_results", span = { GridItemSpan(maxLineSpan) }) {
                         Text(
                             text = stringResource(R.string.home_no_results),
                             style = MaterialTheme.typography.bodyMedium,
@@ -225,14 +248,12 @@ fun HomeScreen(
                         )
                     }
                 } else {
-                    val pairs = filteredTools.chunked(2)
-                    items(
-                        count = pairs.size,
-                        key = { "search_$it" },
-                    ) { index ->
-                        ToolGridRow(
-                            tools = pairs[index],
-                            onToolClick = handleToolClick,
+                    items(filteredTools, key = { "search_${it.route}" }) { tool ->
+                        ToolGridCard(
+                            icon = tool.icon,
+                            label = tool.label,
+                            description = tool.description,
+                            onClick = { handleToolClick(tool) },
                         )
                     }
                 }
@@ -263,33 +284,4 @@ private fun ToolSearchBar(
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
     )
-}
-
-@Composable
-private fun ToolGridRow(
-    tools: List<ToolDestination>,
-    onToolClick: (ToolDestination) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        tools.forEach { tool ->
-            ToolGridCard(
-                icon = tool.icon,
-                label = tool.label,
-                description = tool.description,
-                onClick = { onToolClick(tool) },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-            )
-        }
-        if (tools.size == 1) {
-            Spacer(modifier = Modifier.weight(1f))
-        }
-    }
 }

@@ -33,6 +33,7 @@ import com.ventouxlabs.netlens.feature.wifiaudit.WifiAuditScreen
 import com.ventouxlabs.netlens.feature.celltower.CellTowerScreen
 import com.ventouxlabs.netlens.feature.wol.WolScreen
 import com.ventouxlabs.netlens.ui.home.HomeScreen
+import com.ventouxlabs.netlens.ui.settings.SettingsScreen
 
 @Composable
 fun NetLensNavHost(
@@ -53,6 +54,21 @@ fun NetLensNavHost(
             HomeScreen(
                 onToolClick = { tool ->
                     navController.navigate(tool.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onSettingsClick = {
+                    navController.navigate(ToolDestination.Settings.route) {
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable(ToolDestination.Settings.route) {
+            SettingsScreen(
+                onBack = navController::popBackStack,
+                onOpenWidgetSettings = {
+                    navController.navigate(ToolDestination.WidgetSettings.route) {
                         launchSingleTop = true
                     }
                 },

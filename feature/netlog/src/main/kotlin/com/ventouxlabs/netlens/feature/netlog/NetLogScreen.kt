@@ -19,12 +19,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -94,21 +97,6 @@ fun NetLogScreen(
                     }
                 },
                 actions = {
-                    if (uiState.events.isNotEmpty()) {
-                        val exportTitle = stringResource(R.string.netlog_export_title)
-                        IconButton(onClick = {
-                            ResultExporter.shareAsText(
-                                context,
-                                exportTitle,
-                                viewModel.buildExportJson(),
-                            )
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.netlog_cd_export),
-                            )
-                        }
-                    }
                     IconButton(
                         onClick = {
                             if (uiState.isMonitoring) viewModel.stopMonitoring()
@@ -125,10 +113,41 @@ fun NetLogScreen(
                         )
                     }
                     if (uiState.events.isNotEmpty()) {
-                        IconButton(onClick = viewModel::showClearConfirmation) {
+                        var showMenu by remember { mutableStateOf(false) }
+                        val exportTitle = stringResource(R.string.netlog_export_title)
+                        IconButton(onClick = { showMenu = true }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.netlog_cd_clear),
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.netlog_cd_more_actions),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.netlog_cd_export)) },
+                                leadingIcon = {
+                                    Icon(imageVector = Icons.Default.Share, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    ResultExporter.shareAsText(
+                                        context,
+                                        exportTitle,
+                                        viewModel.buildExportJson(),
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.netlog_cd_clear)) },
+                                leadingIcon = {
+                                    Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.showClearConfirmation()
+                                },
                             )
                         }
                     }

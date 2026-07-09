@@ -18,4 +18,6 @@
     <string name="monitor_detail_check_history">Check History</string>
     <string name="monitor_detail_no_checks">No checks yet. Tap refresh to check now.</string>
     <string name="monitor_status_error">ERR</string>
+    <string name="monitor_status_active">Active</string>
+    <string name="monitor_status_paused">Paused</string>
 </resources>

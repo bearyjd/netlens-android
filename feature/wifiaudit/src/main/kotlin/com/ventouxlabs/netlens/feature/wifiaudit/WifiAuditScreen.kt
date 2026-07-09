@@ -250,7 +250,7 @@ private fun FindingCard(
                     )
                 }
                 if (finding.severity != AuditSeverity.Critical) {
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.wifiaudit_cd_dismiss),

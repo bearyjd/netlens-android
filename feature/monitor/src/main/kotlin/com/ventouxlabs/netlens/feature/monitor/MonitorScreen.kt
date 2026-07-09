@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.data.model.EndpointCheck
 import com.ventouxlabs.netlens.core.data.model.MonitoredEndpoint
+import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.feature.monitor.model.MonitorUiState
 
 @Composable
@@ -246,24 +247,33 @@ private fun EndpointCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     ) {
+        val statusColors = LocalStatusColors.current
+        // isActive means "monitoring enabled", not reachability — so the
+        // paused state is muted, never alert red, and the label says so.
+        val statusColor = if (endpoint.isActive) statusColors.pass else statusColors.muted
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (endpoint.isActive) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(statusColor),
+                )
+                Text(
+                    text = stringResource(
+                        if (endpoint.isActive) R.string.monitor_status_active
+                        else R.string.monitor_status_paused,
                     ),
-            )
+                    style = MaterialTheme.typography.labelSmall,
+                    color = statusColor,
+                )
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -465,8 +475,9 @@ private fun CheckRow(
     check: EndpointCheck,
     modifier: Modifier = Modifier,
 ) {
+    val statusColors = LocalStatusColors.current
     val statusColor by animateColorAsState(
-        targetValue = if (check.isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+        targetValue = if (check.isSuccess) statusColors.pass else statusColors.fail,
         label = "statusColor",
     )
 

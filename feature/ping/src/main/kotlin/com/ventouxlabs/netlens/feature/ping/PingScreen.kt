@@ -61,6 +61,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.StatItem
+import com.ventouxlabs.netlens.core.ui.withTabularFigures
 import com.ventouxlabs.netlens.feature.ping.model.PingMode
 import com.ventouxlabs.netlens.feature.ping.model.PingResult
 import com.ventouxlabs.netlens.feature.ping.model.PingSummary
@@ -343,7 +345,7 @@ private fun LiveStatsBar(state: PingUiState, modifier: Modifier = Modifier) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = stringResource(R.string.ping_continuous_elapsed, formatElapsed(state.elapsedMs)),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.withTabularFigures(),
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
@@ -447,25 +449,6 @@ private fun SummaryCard(
                 StatItem(label = stringResource(R.string.ping_stat_jitter), value = "%.1f ms".format(summary.jitterMs))
             }
         }
-    }
-}
-
-@Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-        )
     }
 }
 
