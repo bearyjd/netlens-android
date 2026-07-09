@@ -519,7 +519,7 @@ private fun ReputationDetails(
     val status = LocalStatusColors.current
     val riskColor = when (reputation.riskLevel) {
         ReputationRisk.CLEAN -> status.pass
-        ReputationRisk.LOW -> status.info
+        ReputationRisk.LOW -> status.pass
         ReputationRisk.MEDIUM -> status.warn
         ReputationRisk.HIGH -> status.fail
     }

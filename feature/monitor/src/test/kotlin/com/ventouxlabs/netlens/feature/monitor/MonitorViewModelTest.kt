@@ -45,6 +45,7 @@ class MonitorViewModelTest {
         viewModel.state.test {
             val state = awaitItem()
             assertEquals(emptyList<MonitoredEndpoint>(), state.endpoints)
+            assertEquals(emptyMap<Long, EndpointCheck>(), state.latestChecksByEndpointId)
             assertNull(state.selectedEndpoint)
             assertEquals(emptyList<EndpointCheck>(), state.checks)
             assertFalse(state.isChecking)
@@ -223,6 +224,54 @@ class MonitorViewModelTest {
             val errorState = awaitItem()
             assertEquals("Private or loopback addresses are not allowed", errorState.error)
             assertTrue(errorState.endpoints.isEmpty())
+        }
+    }
+
+    @Test
+    fun `checkNow updates latestChecksByEndpointId with the newest check`() = runTest {
+        val checkResult = EndpointCheck(
+            endpointId = 0,
+            statusCode = 200,
+            latencyMs = 42,
+            isSuccess = true,
+        )
+        checker.result = checkResult
+
+        viewModel.state.test {
+            awaitItem() // initial
+
+            viewModel.addEndpoint("Example", "https://example.com")
+            val afterAdd = awaitItem()
+            val endpoint = afterAdd.endpoints[0]
+
+            viewModel.checkNow(endpoint)
+
+            val finalState = expectMostRecentItem()
+            assertEquals(1, finalState.latestChecksByEndpointId.size)
+            assertTrue(finalState.latestChecksByEndpointId[endpoint.id]?.isSuccess == true)
+        }
+    }
+
+    @Test
+    fun `latestChecksByEndpointId reflects the most recent check per endpoint`() = runTest {
+        viewModel.state.test {
+            awaitItem() // initial
+
+            viewModel.addEndpoint("Example", "https://example.com")
+            val afterAdd = awaitItem()
+            val endpoint = afterAdd.endpoints[0]
+
+            checker.result = EndpointCheck(endpointId = 0, statusCode = 500, latencyMs = 10, isSuccess = false)
+            viewModel.checkNow(endpoint)
+            expectMostRecentItem()
+
+            checker.result = EndpointCheck(endpointId = 0, statusCode = 200, latencyMs = 20, isSuccess = true)
+            viewModel.checkNow(endpoint)
+
+            val finalState = expectMostRecentItem()
+            assertEquals(1, finalState.latestChecksByEndpointId.size)
+            assertTrue(finalState.latestChecksByEndpointId[endpoint.id]?.isSuccess == true)
+            assertEquals(200, finalState.latestChecksByEndpointId[endpoint.id]?.statusCode)
         }
     }
 
