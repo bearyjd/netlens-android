@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glance's GlanceModifier.cornerRadius(dp) is a no-op below API 31, so this
+     shape drawable is the fallback for rounded widget corners on API 29/30.
+     Color mirrors NetLensWidgetColors.background (values-night variant applies
+     automatically via widget_initial_background). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <solid android:color="@color/widget_initial_background" />
+</shape>
