@@ -4,11 +4,17 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// Diagnostic status palette. Covers the five recurring inline-hex values found
-// across portscan / ipinfo / posture / vpnstatus / lanscan host detail screens
-// (50 sites total before consolidation). VPN/posture screens that need a deeper,
-// more "serious" variant of these colors keep their own inline values with a
-// comment explaining why.
+/**
+ * Three-state diagnostic status palette — the ONLY way to color status in
+ * NetLens. teal = normal/secure, amber = warning/attention, stamp red =
+ * active risk/alert. Provided theme-aware via [LocalStatusColors] (the app
+ * theme swaps [LightStatusColors]/[DarkStatusColors]); never hardcode status
+ * hex in a screen.
+ *
+ * [info] is retained for source compatibility with existing screens and maps
+ * to the teal family (informational == nothing is wrong). It will be folded
+ * into [pass] during the per-screen redesign passes.
+ */
 @Immutable
 data class StatusColors(
     val pass: Color,
@@ -16,14 +22,40 @@ data class StatusColors(
     val fail: Color,
     val info: Color,
     val muted: Color,
+    val passContainer: Color,
+    val warnContainer: Color,
+    val failContainer: Color,
+    val onPassContainer: Color,
+    val onWarnContainer: Color,
+    val onFailContainer: Color,
 )
 
-val NetLensStatusColors = StatusColors(
-    pass = Color(0xFF4CAF50),
-    warn = Color(0xFFF59E0B),
-    fail = Color(0xFFEF4444),
-    info = Color(0xFF3B82F6),
-    muted = Color(0xFF9E9E9E),
+val LightStatusColors = StatusColors(
+    pass = NetLensPalette.accent,
+    warn = NetLensPalette.warn,
+    fail = NetLensPalette.stamp,
+    info = NetLensPalette.accent,
+    muted = NetLensPalette.inkSoft,
+    passContainer = NetLensPalette.accentSoft,
+    warnContainer = NetLensPalette.warnSoft,
+    failContainer = NetLensPalette.stampSoft,
+    onPassContainer = NetLensPalette.accentInk,
+    onWarnContainer = NetLensPalette.warnInk,
+    onFailContainer = NetLensPalette.stampInk,
 )
 
-val LocalStatusColors = staticCompositionLocalOf { NetLensStatusColors }
+val DarkStatusColors = StatusColors(
+    pass = NetLensPalette.accentBright,
+    warn = NetLensPalette.warnBright,
+    fail = NetLensPalette.stampBright,
+    info = NetLensPalette.accentBright,
+    muted = NetLensPalette.inkSoftOnDark,
+    passContainer = NetLensPalette.accentSoftDark,
+    warnContainer = NetLensPalette.warnSoftDark,
+    failContainer = NetLensPalette.stampSoftDark,
+    onPassContainer = NetLensPalette.accentBright,
+    onWarnContainer = NetLensPalette.warnBright,
+    onFailContainer = NetLensPalette.stampBright,
+)
+
+val LocalStatusColors = staticCompositionLocalOf { LightStatusColors }

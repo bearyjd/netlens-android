@@ -48,6 +48,28 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `theme mode defaults to system`() = testScope.runTest {
+        assertEquals(UserPreferencesRepository.THEME_MODE_SYSTEM, repository.themeMode.first())
+    }
+
+    @Test
+    fun `setThemeMode round-trips light and dark`() = testScope.runTest {
+        repository.setThemeMode(UserPreferencesRepository.THEME_MODE_DARK)
+        assertEquals(UserPreferencesRepository.THEME_MODE_DARK, repository.themeMode.first())
+
+        repository.setThemeMode(UserPreferencesRepository.THEME_MODE_LIGHT)
+        assertEquals(UserPreferencesRepository.THEME_MODE_LIGHT, repository.themeMode.first())
+    }
+
+    @Test
+    fun `setThemeMode rejects unknown values`() = testScope.runTest {
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            repository.setThemeMode("sepia")
+        }
+        assertEquals(UserPreferencesRepository.THEME_MODE_SYSTEM, repository.themeMode.first())
+    }
+
+    @Test
     fun `default favorites are ping, lanscan, dns`() = testScope.runTest {
         val favorites = repository.favoriteToolRoutes.first()
         assertEquals(UserPreferencesRepository.DEFAULT_FAVORITES, favorites)

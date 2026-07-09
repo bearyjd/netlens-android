@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.GppGood
@@ -202,6 +203,14 @@ enum class ToolDestination(
         icon = Icons.Default.Widgets,
         label = "Widget Settings",
         description = "Customize home screen widget",
+        category = ToolCategory.Tools,
+        isVisibleInGrid = false,
+    ),
+    Settings(
+        route = "settings",
+        icon = Icons.Default.Settings,
+        label = "Settings",
+        description = "Theme & app preferences",
         category = ToolCategory.Tools,
         isVisibleInGrid = false,
     ),

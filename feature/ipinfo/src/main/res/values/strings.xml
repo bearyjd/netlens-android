@@ -7,8 +7,10 @@
     <string name="ipinfo_button_retry">Retry</string>
     <string name="ipinfo_label_public_ip">Public IP</string>
     <string name="ipinfo_cd_copy_ip">Copy IP address</string>
+    <string name="ipinfo_section_network">Network</string>
     <string name="ipinfo_label_organization">Organization</string>
     <string name="ipinfo_label_as_number">AS Number</string>
+    <string name="ipinfo_section_location">Location</string>
     <string name="ipinfo_label_country">Country</string>
     <string name="ipinfo_label_region">Region</string>
     <string name="ipinfo_label_city">City</string>

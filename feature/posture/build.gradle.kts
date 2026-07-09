@@ -12,6 +12,7 @@ android {
 dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:data"))
+    implementation(project(":core:ui"))
     implementation(libs.compose.material.icons)
 
     testImplementation(libs.datastore.preferences)

@@ -54,11 +54,16 @@ class DeepLinkRouterTest {
     }
 
     @Test
-    fun `resolveRoute maps unimplemented widget paths to fallbacks`() {
+    fun `resolveRoute maps widget paths to their real screens`() {
         assertEquals(ToolDestination.Posture.route, resolveRoute("netlens", "feature", "posture"))
-        assertEquals("home", resolveRoute("netlens", "feature", "wifiaudit"))
-        assertEquals("home", resolveRoute("netlens", "feature", "speedtest"))
-        assertEquals("home", resolveRoute("netlens", "feature", "scan"))
+        assertEquals(ToolDestination.WifiAudit.route, resolveRoute("netlens", "feature", "wifiaudit"))
+        assertEquals(ToolDestination.SpeedTest.route, resolveRoute("netlens", "feature", "speedtest"))
+        assertEquals(ToolDestination.LanScan.route, resolveRoute("netlens", "feature", "scan"))
+    }
+
+    @Test
+    fun `resolveRoute maps settings`() {
+        assertEquals(ToolDestination.Settings.route, resolveRoute("netlens", "feature", "settings"))
     }
 
     @Test

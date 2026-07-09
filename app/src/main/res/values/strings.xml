@@ -2,11 +2,7 @@
 <resources>
     <string name="app_name">NetLens</string>
 
-    <string name="posture_hero_title">Security Posture</string>
-    <string name="posture_hero_disconnected">No network connection</string>
-    <string name="posture_hero_loading">Evaluating…</string>
     <string name="posture_hero_score_subtitle">%1$d/100 — %2$d of %3$d factors scored</string>
-    <string name="posture_hero_error">Tap to retry</string>
 
     <string name="home_favorites">Favorites</string>
     <string name="home_recent">Recent</string>
@@ -14,13 +10,7 @@
     <string name="home_no_results">No tools match your search</string>
     <string name="home_edit">Edit</string>
     <string name="home_done">Done</string>
-    <string name="status_connected">Connected</string>
-    <string name="status_disconnected">Disconnected</string>
-    <string name="status_ip_label">IP</string>
-    <string name="status_gw_label">GW</string>
 
-    <string name="latency_monitor_title">Latency Monitor</string>
-    <string name="latency_monitor_enable">Enable Latency Monitor</string>
     <string name="latency_min">Min</string>
     <string name="latency_avg">Avg</string>
     <string name="latency_max">Max</string>
@@ -36,4 +26,35 @@
     <string name="latency_cancel">Cancel</string>
 
     <string name="tile_posture_label">Security Score</string>
+
+    <string name="dash_status_good">Network looks good</string>
+    <string name="dash_status_alert">Active risk detected</string>
+    <string name="dash_status_disconnected">No network connection</string>
+    <string name="dash_status_loading">Checking network…</string>
+    <string name="dash_status_error">Couldn\'t evaluate network</string>
+    <string name="dash_tap_retry">Tap to retry</string>
+    <string name="dash_chip_offline">Offline</string>
+    <string name="dash_chip_connected">Connected</string>
+    <plurals name="dash_status_attention">
+        <item quantity="one">%d thing needs attention</item>
+        <item quantity="other">%d things need attention</item>
+    </plurals>
+    <string name="metric_latency">Latency</string>
+    <string name="metric_latency_off">Off</string>
+    <string name="metric_vpn">VPN</string>
+    <string name="metric_vpn_active">Detected</string>
+    <string name="metric_vpn_none">None</string>
+    <string name="metric_local_ip">Local IP</string>
+    <string name="metric_gateway_format">GW %1$s</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_label">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_description">System follows your device’s light/dark setting.</string>
+    <string name="settings_widgets">Home screen widgets</string>
+    <string name="settings_widgets_description">Configure what your widgets show</string>
 </resources>

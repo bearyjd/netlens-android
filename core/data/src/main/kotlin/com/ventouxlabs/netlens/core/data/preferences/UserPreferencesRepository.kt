@@ -83,6 +83,19 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    // Stored as a plain string ("system"/"light"/"dark") so core:data stays free
+    // of UI-layer types; the app layer maps it to core:ui's ThemeMode enum.
+    val themeMode: Flow<String> = dataStore.data.map { prefs ->
+        prefs[THEME_MODE_KEY] ?: THEME_MODE_SYSTEM
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        require(mode in VALID_THEME_MODES) { "Unknown theme mode: $mode" }
+        dataStore.edit { prefs ->
+            prefs[THEME_MODE_KEY] = mode
+        }
+    }
+
     val ipInfoConsentGranted: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IPINFO_CONSENT_KEY] ?: false
     }
@@ -166,8 +179,13 @@ class UserPreferencesRepository @Inject constructor(
         private val POSTURE_ISSUE_COUNT = intPreferencesKey("posture_issue_count")
         private val POSTURE_TOP_ISSUE = stringPreferencesKey("posture_top_issue")
         private val POSTURE_TIMESTAMP = longPreferencesKey("posture_timestamp")
+        private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private const val RECENTS_SEPARATOR = ","
         private const val MAX_RECENTS = 5
         val DEFAULT_FAVORITES = setOf("ping", "lanscan", "dns")
+        const val THEME_MODE_SYSTEM = "system"
+        const val THEME_MODE_LIGHT = "light"
+        const val THEME_MODE_DARK = "dark"
+        val VALID_THEME_MODES = setOf(THEME_MODE_SYSTEM, THEME_MODE_LIGHT, THEME_MODE_DARK)
     }
 }

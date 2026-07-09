@@ -19,13 +19,13 @@ private val PATH_TO_ROUTE = mapOf(
     "monitor" to ToolDestination.Monitor.route,
     "netlog" to ToolDestination.NetLog.route,
     "widgetsettings" to ToolDestination.WidgetSettings.route,
-    // Widget deep links for screens that don't exist yet — fall back to home
+    "settings" to ToolDestination.Settings.route,
     "posture" to ToolDestination.Posture.route,
     "vpnstatus" to ToolDestination.VpnStatus.route,
-    "wifiaudit" to "home",
-    "speedtest" to "home",
+    "wifiaudit" to ToolDestination.WifiAudit.route,
+    "speedtest" to ToolDestination.SpeedTest.route,
     "latency" to ToolDestination.Ping.route,
-    "scan" to "home",
+    "scan" to ToolDestination.LanScan.route,
 )
 
 // Routes whose NavHost entry is declared as "<route>?query={query}". Only these

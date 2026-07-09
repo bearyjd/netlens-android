@@ -20,34 +20,45 @@ val MonoFontFamily = FontFamily(
     Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
 )
 
+// Display/headline family. Two static weights only (Medium, Bold) — keep to
+// a maximum of two weights per screen.
+val SpaceGroteskFontFamily = FontFamily(
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+// Tabular figures for live numerics: use core:ui's TextStyle.withTabularFigures().
+
+// Roles: display/headline/titleLarge = Space Grotesk (headers, hero numbers);
+// everything else = Inter; labelSmall = JetBrains Mono (technical strings).
 // displayLarge, headlineLarge, headlineMedium, titleLarge, and bodyLarge are
 // intentionally defined but seldom used (most screens reach for the small/medium
 // roles). Keeping them in place so Material 3 components that default to these
-// roles (TopAppBar uses titleLarge, etc.) inherit Inter rather than the system
-// fallback. See DESIGN.md → Typography for usage guidance.
+// roles (TopAppBar uses titleLarge, etc.) inherit the brand families rather
+// than the system fallback. See DESIGN.md → Typography for usage guidance.
 val NetLensTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = SpaceGroteskFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 34.sp,
         lineHeight = 40.sp,
         letterSpacing = (-0.25).sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = SpaceGroteskFontFamily,
+        fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 34.sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = SpaceGroteskFontFamily,
+        fontWeight = FontWeight.Medium,
         fontSize = 24.sp,
         lineHeight = 30.sp,
     ),
     titleLarge = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = SpaceGroteskFontFamily,
+        fontWeight = FontWeight.Medium,
         fontSize = 20.sp,
         lineHeight = 26.sp,
     ),

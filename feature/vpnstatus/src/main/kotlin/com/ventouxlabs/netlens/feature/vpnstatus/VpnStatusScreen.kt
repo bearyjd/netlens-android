@@ -33,16 +33,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.network.VpnState
+import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.feature.vpnstatus.model.VpnStatusUiState
-
-private val ColorProtected = Color(0xFF388E3C)
-private val ColorSplit = Color(0xFFF57C00)
-private val ColorNone = Color(0xFFD32F2F)
-private val ColorOffline = Color(0xFF9E9E9E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,27 +95,28 @@ private fun VpnStatusContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                val statusColors = LocalStatusColors.current
                 val (color, icon, labelRes, descRes) = when {
                     !state.isOnline -> StatusDisplay(
-                        color = ColorOffline,
+                        color = statusColors.muted,
                         icon = Icons.Default.SignalWifiOff,
                         labelRes = R.string.vpnstatus_state_offline,
                         descRes = R.string.vpnstatus_desc_offline,
                     )
                     state.vpnState == VpnState.FullTunnel -> StatusDisplay(
-                        color = ColorProtected,
+                        color = statusColors.pass,
                         icon = Icons.Default.Lock,
                         labelRes = R.string.vpnstatus_state_protected,
                         descRes = R.string.vpnstatus_desc_protected,
                     )
                     state.vpnState == VpnState.SplitTunnel -> StatusDisplay(
-                        color = ColorSplit,
+                        color = statusColors.warn,
                         icon = Icons.Default.Lock,
                         labelRes = R.string.vpnstatus_state_split,
                         descRes = R.string.vpnstatus_desc_split,
                     )
                     else -> StatusDisplay(
-                        color = ColorNone,
+                        color = statusColors.fail,
                         icon = Icons.Default.LockOpen,
                         labelRes = R.string.vpnstatus_state_none,
                         descRes = R.string.vpnstatus_desc_none,
@@ -136,7 +132,7 @@ private fun VpnStatusContent(
 
                 Text(
                     text = stringResource(labelRes),
-                    fontSize = 24.sp,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = color,
                 )

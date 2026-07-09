@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -276,8 +275,9 @@ private fun NeighborCellCard(tower: CellTowerInfo) {
                     if (tower.cellId.isNotEmpty()) {
                         Text(
                             text = "CID: ${tower.cellId}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -389,13 +389,16 @@ private fun MetricItem(
     Column(modifier = modifier) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
+            // This grid sits on a primaryContainer card, so the label must use
+            // that container's on-color, not onSurfaceVariant.
             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+            ),
             fontWeight = FontWeight.Medium,
             color = valueColor,
         )
@@ -412,8 +415,9 @@ private fun MetricLabel(label: String, value: String, valueColor: Color = Color.
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+            ),
             color = if (valueColor != Color.Unspecified) valueColor
             else MaterialTheme.colorScheme.onSurfaceVariant,
         )

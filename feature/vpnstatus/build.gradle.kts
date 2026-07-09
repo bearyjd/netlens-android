@@ -11,6 +11,7 @@ android {
 
 dependencies {
     implementation(project(":core:network"))
+    implementation(project(":core:ui"))
     implementation(libs.compose.material.icons)
 
     testImplementation(libs.junit5.api)

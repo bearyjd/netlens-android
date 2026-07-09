@@ -309,6 +309,10 @@ private fun SuccessContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                Text(
+                    text = stringResource(R.string.ipinfo_section_network),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 InfoRow(
                     label = stringResource(R.string.ipinfo_label_organization),
                     value = data.orgName.ifEmpty { stringResource(R.string.ipinfo_value_unknown) },
@@ -334,6 +338,10 @@ private fun SuccessContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                Text(
+                    text = stringResource(R.string.ipinfo_section_location),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 val coords = "${data.latitude}, ${data.longitude}"
                 InfoRow(
                     label = stringResource(R.string.ipinfo_label_country),
