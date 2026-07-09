@@ -37,6 +37,11 @@ class MonitorViewModel @Inject constructor(
                 _state.update { it.copy(endpoints = endpoints) }
             }
         }
+        viewModelScope.launch {
+            endpointDao.getLatestChecks().collect { latestChecks ->
+                _state.update { it.copy(latestChecksByEndpointId = latestChecks.associateBy { check -> check.endpointId }) }
+            }
+        }
     }
 
     fun addEndpoint(label: String, url: String, intervalSeconds: Int = 60) {

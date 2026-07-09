@@ -11,6 +11,7 @@ class FakeEndpointDao : EndpointDao {
     private val endpoints = MutableStateFlow<List<MonitoredEndpoint>>(emptyList())
     private val checks = MutableStateFlow<List<EndpointCheck>>(emptyList())
     private var nextId = 1L
+    private var nextCheckId = 1L
 
     override fun getAllEndpoints(): Flow<List<MonitoredEndpoint>> = endpoints
 
@@ -31,8 +32,11 @@ class FakeEndpointDao : EndpointDao {
     override fun getChecksForEndpoint(endpointId: Long, limit: Int): Flow<List<EndpointCheck>> =
         checks.map { list -> list.filter { it.endpointId == endpointId }.takeLast(limit) }
 
+    override fun getLatestChecks(): Flow<List<EndpointCheck>> =
+        checks.map { list -> list.groupBy { it.endpointId }.values.mapNotNull { it.maxByOrNull { check -> check.id } } }
+
     override suspend fun insertCheck(check: EndpointCheck) {
-        checks.value = checks.value + check
+        checks.value = checks.value + check.copy(id = nextCheckId++)
     }
 
     override suspend fun deleteChecksOlderThan(before: Long) {
