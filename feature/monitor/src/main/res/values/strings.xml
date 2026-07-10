@@ -19,7 +19,10 @@
     <string name="monitor_detail_no_checks">No checks yet. Tap refresh to check now.</string>
     <string name="monitor_status_error">ERR</string>
     <string name="monitor_status_up">Up</string>
+    <string name="monitor_status_slow">Slow</string>
     <string name="monitor_status_down">Down</string>
     <string name="monitor_status_no_data">No data</string>
     <string name="monitor_status_paused">Paused</string>
+    <string name="monitor_dialog_threshold">Slow response threshold (ms)</string>
+    <string name="monitor_dialog_threshold_hint">1000</string>
 </resources>

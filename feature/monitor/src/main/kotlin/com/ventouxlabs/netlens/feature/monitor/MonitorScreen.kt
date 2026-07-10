@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -52,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,7 +61,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.data.model.EndpointCheck
 import com.ventouxlabs.netlens.core.data.model.MonitoredEndpoint
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
+import com.ventouxlabs.netlens.core.ui.Spacing
+import com.ventouxlabs.netlens.feature.monitor.model.EndpointStatus
 import com.ventouxlabs.netlens.feature.monitor.model.MonitorUiState
+import com.ventouxlabs.netlens.feature.monitor.model.endpointStatus
 
 @Composable
 fun MonitorScreen(
@@ -86,7 +91,7 @@ fun MonitorScreen(
 @Composable
 private fun MonitorContent(
     state: MonitorUiState,
-    onAddEndpoint: (String, String, Int) -> Unit,
+    onAddEndpoint: (String, String, Int, Int) -> Unit,
     onRemoveEndpoint: (MonitoredEndpoint) -> Unit,
     onSelectEndpoint: (MonitoredEndpoint) -> Unit,
     onDeselectEndpoint: () -> Unit,
@@ -179,8 +184,8 @@ private fun MonitorContent(
     if (showAddDialog) {
         AddEndpointDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { label, url ->
-                onAddEndpoint(label, url, 60)
+            onConfirm = { label, url, latencyThresholdMs ->
+                onAddEndpoint(label, url, 60, latencyThresholdMs)
                 showAddDialog = false
             },
         )
@@ -253,13 +258,15 @@ private fun EndpointCard(
     ) {
         val statusColors = LocalStatusColors.current
         // The dot + label reflect actual reachability (latest check's
-        // isSuccess), not whether monitoring is enabled. isActive is shown
-        // separately as a muted "Paused" caption so the two concepts never
-        // collide in one indicator.
-        val (statusColor, statusLabel) = when {
-            latestCheck == null -> statusColors.muted to stringResource(R.string.monitor_status_no_data)
-            latestCheck.isSuccess -> statusColors.pass to stringResource(R.string.monitor_status_up)
-            else -> statusColors.fail to stringResource(R.string.monitor_status_down)
+        // isSuccess plus latency vs. the endpoint's threshold), not whether
+        // monitoring is enabled. isActive is shown separately as a muted
+        // "Paused" caption so the two concepts never collide in one indicator.
+        val status = endpointStatus(latestCheck, endpoint.latencyThresholdMs)
+        val (statusColor, statusLabel) = when (status) {
+            EndpointStatus.NoData -> statusColors.muted to stringResource(R.string.monitor_status_no_data)
+            EndpointStatus.Up -> statusColors.pass to stringResource(R.string.monitor_status_up)
+            EndpointStatus.Slow -> statusColors.warn to stringResource(R.string.monitor_status_slow)
+            EndpointStatus.Down -> statusColors.fail to stringResource(R.string.monitor_status_down)
         }
 
         Row(
@@ -321,16 +328,21 @@ private fun EndpointCard(
 @Composable
 private fun AddEndpointDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit,
+    onConfirm: (String, String, Int) -> Unit,
 ) {
     var label by rememberSaveable { mutableStateOf("") }
     var url by rememberSaveable { mutableStateOf("https://") }
+    var thresholdText by rememberSaveable {
+        mutableStateOf(MonitoredEndpoint.DEFAULT_LATENCY_THRESHOLD_MS.toString())
+    }
+    val thresholdMs = thresholdText.toIntOrNull()
+    val isThresholdValid = thresholdMs != null && thresholdMs >= 1
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.monitor_dialog_add_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
@@ -347,12 +359,22 @@ private fun AddEndpointDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                OutlinedTextField(
+                    value = thresholdText,
+                    onValueChange = { new -> thresholdText = new.filter { it.isDigit() } },
+                    label = { Text(stringResource(R.string.monitor_dialog_threshold)) },
+                    placeholder = { Text(stringResource(R.string.monitor_dialog_threshold_hint)) },
+                    singleLine = true,
+                    isError = !isThresholdValid,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(label, url) },
-                enabled = label.isNotBlank() && url.isNotBlank(),
+                onClick = { thresholdMs?.let { onConfirm(label, url, it) } },
+                enabled = label.isNotBlank() && url.isNotBlank() && isThresholdValid,
             ) {
                 Text(stringResource(R.string.monitor_dialog_add))
             }
@@ -442,7 +464,7 @@ private fun EndpointDetailView(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(checks, key = { it.id }) { check ->
-                    CheckRow(check = check)
+                    CheckRow(check = check, thresholdMs = endpoint.latencyThresholdMs)
                 }
             }
         }
@@ -487,11 +509,17 @@ private fun LatencyChart(
 @Composable
 private fun CheckRow(
     check: EndpointCheck,
+    thresholdMs: Int,
     modifier: Modifier = Modifier,
 ) {
     val statusColors = LocalStatusColors.current
+    val status = endpointStatus(check, thresholdMs)
     val statusColor by animateColorAsState(
-        targetValue = if (check.isSuccess) statusColors.pass else statusColors.fail,
+        targetValue = when (status) {
+            EndpointStatus.Up -> statusColors.pass
+            EndpointStatus.Slow -> statusColors.warn
+            EndpointStatus.Down, EndpointStatus.NoData -> statusColors.fail
+        },
         label = "statusColor",
     )
 

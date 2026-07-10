@@ -276,6 +276,30 @@ class MonitorViewModelTest {
     }
 
     @Test
+    fun `addEndpoint persists the given latency threshold`() = runTest {
+        viewModel.state.test {
+            awaitItem() // initial
+
+            viewModel.addEndpoint("Example", "https://example.com", 60, 2500)
+
+            val updated = awaitItem()
+            assertEquals(2500, updated.endpoints[0].latencyThresholdMs)
+        }
+    }
+
+    @Test
+    fun `addEndpoint applies the default latency threshold when omitted`() = runTest {
+        viewModel.state.test {
+            awaitItem() // initial
+
+            viewModel.addEndpoint("Example", "https://example.com")
+
+            val updated = awaitItem()
+            assertEquals(MonitoredEndpoint.DEFAULT_LATENCY_THRESHOLD_MS, updated.endpoints[0].latencyThresholdMs)
+        }
+    }
+
+    @Test
     fun `dismissError clears error`() = runTest {
         viewModel.state.test {
             awaitItem() // initial
