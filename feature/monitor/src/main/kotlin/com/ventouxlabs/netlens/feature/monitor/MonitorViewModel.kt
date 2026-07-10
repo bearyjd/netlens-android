@@ -44,7 +44,12 @@ class MonitorViewModel @Inject constructor(
         }
     }
 
-    fun addEndpoint(label: String, url: String, intervalSeconds: Int = 60) {
+    fun addEndpoint(
+        label: String,
+        url: String,
+        intervalSeconds: Int = 60,
+        latencyThresholdMs: Int = MonitoredEndpoint.DEFAULT_LATENCY_THRESHOLD_MS,
+    ) {
         val trimmedUrl = url.trim()
         val host: String
         try {
@@ -68,6 +73,7 @@ class MonitorViewModel @Inject constructor(
                 label = label.trim(),
                 url = trimmedUrl,
                 intervalSeconds = intervalSeconds,
+                latencyThresholdMs = latencyThresholdMs,
             )
             endpointDao.insertEndpoint(endpoint)
         }
