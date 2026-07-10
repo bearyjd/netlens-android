@@ -5,6 +5,7 @@ import com.ventouxlabs.netlens.core.data.model.MonitoredEndpoint
 
 data class MonitorUiState(
     val endpoints: List<MonitoredEndpoint> = emptyList(),
+    val latestChecksByEndpointId: Map<Long, EndpointCheck> = emptyMap(),
     val selectedEndpoint: MonitoredEndpoint? = null,
     val checks: List<EndpointCheck> = emptyList(),
     val isChecking: Boolean = false,

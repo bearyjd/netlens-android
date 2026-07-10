@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.ui.Spacing
@@ -130,6 +132,11 @@ private fun IpInfoConsentCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = onCheckedChange,
+                )
                 .padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -144,7 +151,7 @@ private fun IpInfoConsentCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(checked = checked, onCheckedChange = null)
         }
     }
 }

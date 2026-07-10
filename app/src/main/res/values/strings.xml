@@ -33,6 +33,8 @@
     <string name="dash_status_loading">Checking network…</string>
     <string name="dash_status_error">Couldn\'t evaluate network</string>
     <string name="dash_tap_retry">Tap to retry</string>
+    <string name="dash_hero_open">Open posture detail</string>
+    <string name="dash_hero_retry">Retry check</string>
     <string name="dash_chip_offline">Offline</string>
     <string name="dash_chip_connected">Connected</string>
     <plurals name="dash_status_attention">
