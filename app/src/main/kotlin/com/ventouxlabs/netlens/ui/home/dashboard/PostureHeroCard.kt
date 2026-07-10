@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.ui.home.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.R
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
@@ -46,9 +48,19 @@ fun PostureHeroCard(
     modifier: Modifier = Modifier,
 ) {
     val isError = postureState is PostureUiState.Error
+    val clickLabel = if (isError) {
+        stringResource(R.string.dash_hero_retry)
+    } else {
+        stringResource(R.string.dash_hero_open)
+    }
     Card(
-        onClick = if (isError) onRetry else onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                onClickLabel = clickLabel,
+                role = Role.Button,
+                onClick = if (isError) onRetry else onClick,
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),

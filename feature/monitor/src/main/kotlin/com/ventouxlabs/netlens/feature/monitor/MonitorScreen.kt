@@ -165,6 +165,7 @@ private fun MonitorContent(
                     items(state.endpoints, key = { it.id }) { endpoint ->
                         SwipeToDeleteEndpointCard(
                             endpoint = endpoint,
+                            latestCheck = state.latestChecksByEndpointId[endpoint.id],
                             onSelect = { onSelectEndpoint(endpoint) },
                             onDelete = { onRemoveEndpoint(endpoint) },
                             onCheckNow = { onCheckNow(endpoint) },
@@ -189,6 +190,7 @@ private fun MonitorContent(
 @Composable
 private fun SwipeToDeleteEndpointCard(
     endpoint: MonitoredEndpoint,
+    latestCheck: EndpointCheck?,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
     onCheckNow: () -> Unit,
@@ -226,6 +228,7 @@ private fun SwipeToDeleteEndpointCard(
     ) {
         EndpointCard(
             endpoint = endpoint,
+            latestCheck = latestCheck,
             onSelect = onSelect,
             onCheckNow = onCheckNow,
         )
@@ -235,6 +238,7 @@ private fun SwipeToDeleteEndpointCard(
 @Composable
 private fun EndpointCard(
     endpoint: MonitoredEndpoint,
+    latestCheck: EndpointCheck?,
     onSelect: () -> Unit,
     onCheckNow: () -> Unit,
     modifier: Modifier = Modifier,
@@ -248,9 +252,15 @@ private fun EndpointCard(
         ),
     ) {
         val statusColors = LocalStatusColors.current
-        // isActive means "monitoring enabled", not reachability — so the
-        // paused state is muted, never alert red, and the label says so.
-        val statusColor = if (endpoint.isActive) statusColors.pass else statusColors.muted
+        // The dot + label reflect actual reachability (latest check's
+        // isSuccess), not whether monitoring is enabled. isActive is shown
+        // separately as a muted "Paused" caption so the two concepts never
+        // collide in one indicator.
+        val (statusColor, statusLabel) = when {
+            latestCheck == null -> statusColors.muted to stringResource(R.string.monitor_status_no_data)
+            latestCheck.isSuccess -> statusColors.pass to stringResource(R.string.monitor_status_up)
+            else -> statusColors.fail to stringResource(R.string.monitor_status_down)
+        }
 
         Row(
             modifier = Modifier
@@ -266,13 +276,17 @@ private fun EndpointCard(
                         .background(statusColor),
                 )
                 Text(
-                    text = stringResource(
-                        if (endpoint.isActive) R.string.monitor_status_active
-                        else R.string.monitor_status_paused,
-                    ),
+                    text = statusLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = statusColor,
                 )
+                if (!endpoint.isActive) {
+                    Text(
+                        text = stringResource(R.string.monitor_status_paused),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColors.muted,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))

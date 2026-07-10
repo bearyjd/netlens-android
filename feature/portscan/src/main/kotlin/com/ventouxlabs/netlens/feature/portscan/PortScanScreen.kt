@@ -383,7 +383,7 @@ private fun RiskBadge(riskLevel: PortRiskLevel) {
 private fun riskColor(riskLevel: PortRiskLevel, status: StatusColors): Color = when (riskLevel) {
     PortRiskLevel.CRITICAL -> status.fail
     PortRiskLevel.WARNING -> status.warn
-    PortRiskLevel.INFO -> status.info
+    PortRiskLevel.INFO -> status.pass
     PortRiskLevel.CLOSED -> status.muted
 }
 

@@ -28,6 +28,12 @@ interface EndpointDao {
     )
     fun getChecksForEndpoint(endpointId: Long, limit: Int = 50): Flow<List<EndpointCheck>>
 
+    @Query(
+        "SELECT * FROM endpoint_checks WHERE id IN " +
+            "(SELECT MAX(id) FROM endpoint_checks GROUP BY endpointId)",
+    )
+    fun getLatestChecks(): Flow<List<EndpointCheck>>
+
     @Insert
     suspend fun insertCheck(check: EndpointCheck)
 
