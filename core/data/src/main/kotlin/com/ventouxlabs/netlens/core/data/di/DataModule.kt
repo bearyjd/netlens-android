@@ -104,6 +104,14 @@ object DataModule {
         }
     }
 
+    private val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE monitored_endpoints ADD COLUMN latencyThresholdMs INTEGER NOT NULL DEFAULT 1000",
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -112,7 +120,7 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
