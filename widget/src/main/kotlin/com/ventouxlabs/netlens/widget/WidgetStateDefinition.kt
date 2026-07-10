@@ -38,6 +38,7 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
     val SPEED_TIMESTAMP = longPreferencesKey("speed_timestamp")
 
     val LATENCY_MS = longPreferencesKey("latency_ms")
+    val LATENCY_HISTORY = stringPreferencesKey("latency_history")
     val DEVICE_COUNT = intPreferencesKey("device_count")
     val VPN_STATE = stringPreferencesKey("vpn_state")
 
@@ -98,6 +99,10 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
     speedLabel = this[WidgetStateDefinition.SPEED_LABEL].orEmpty(),
     speedTimestamp = this[WidgetStateDefinition.SPEED_TIMESTAMP] ?: 0L,
     latencyMs = this[WidgetStateDefinition.LATENCY_MS] ?: -1L,
+    latencyHistoryMs = this[WidgetStateDefinition.LATENCY_HISTORY]
+        ?.split(",")
+        ?.mapNotNull { it.toIntOrNull() }
+        .orEmpty(),
     deviceCount = this[WidgetStateDefinition.DEVICE_COUNT] ?: 0,
     vpnState = VpnState.deserialize(this[WidgetStateDefinition.VPN_STATE]),
     lastScanTimestamp = this[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] ?: 0L,
