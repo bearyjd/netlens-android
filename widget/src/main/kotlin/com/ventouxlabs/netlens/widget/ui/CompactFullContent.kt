@@ -39,8 +39,7 @@ fun CompactFullContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
-            .background(NetLensWidgetColors.background)
+            .widgetBackground()
             .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
         val rowModifier = GlanceModifier.fillMaxWidth().defaultWeight()

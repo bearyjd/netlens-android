@@ -1,7 +1,6 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
@@ -27,7 +26,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.widget.R
 import com.ventouxlabs.netlens.widget.WidgetState
@@ -106,7 +104,7 @@ fun DashboardWidgetContent(
                         Text(
                             text = "!",
                             style = TextStyle(
-                                color = ColorProvider(Color.White),
+                                color = NetLensWidgetColors.onAccentFill,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
