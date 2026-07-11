@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-09
+
+### Added
+- App Settings screen with a manual light/dark theme override (follows the system setting by default)
+- Redesigned dashboard home: a security-posture hero card with a plain-language status line, live metric tiles (latency with sparkline, VPN detection, local IP/gateway), and an expandable latency detail card
+- Per-endpoint latency threshold in Endpoint Monitor with a new amber "Slow" state; endpoint cards now show real reachability (Up/Slow/Down) from the latest check instead of only whether monitoring is enabled
+- 4×2 home-screen widget shows a latency sparkline built from the last 12 refresh samples
+
+### Changed
+- Complete visual redesign on a new "paper & ink" palette with Space Grotesk display typography and one consistent three-state status language (teal = normal, amber = attention, red = alert) across every screen and widget
+- All four home-screen widgets follow the system light/dark theme and share the app's palette; decorative emoji replaced with text labels
+- Wallpaper-based dynamic color removed — it silently overrode the app palette on Android 12+ and broke status-color consistency
+- Home tool grid is adaptive and shows more columns on wide screens
+- Widget settings simplified: the appearance options (color, opacity, text size, corner radius) had no effect on rendered widgets and were removed; the screen now offers the public-IP consent toggle and a manual refresh action
+- Dense technical screens reorganized: section titles on IP Info and Cell Tower cards, Network Log toolbar reduced to one primary action with an overflow menu, and tabular figures stop live numbers from jittering in Ping and Speed Test
+- Widget deep links to Wi-Fi Audit, Speed Test, and network scan open their real screens instead of falling back to home
+
+### Fixed
+- Wi-Fi Audit finding-dismiss button was below the minimum touch-target size
+- Endpoint Monitor status is no longer conveyed by color alone (visible Up/Slow/Down/Paused labels for screen readers and color-blind users)
+- Widgets render rounded corners on Android 10 and 11
+
+### Internal
+- Design tokens centralized in `core:ui` (single palette source, theme-aware status colors, shared stat/chip components); zero hardcoded colors outside the token layer
+- Room database v11 migration adding `monitored_endpoints.latencyThresholdMs`
+- New unit tests for widget color mapping and latency history, monitor status logic, widget settings, and theme preferences
+
 ## [1.1.3] - 2026-06-29
 
 ### Changed
