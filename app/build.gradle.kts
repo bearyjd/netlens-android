@@ -72,8 +72,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            val releaseSigning = signingConfigs.getByName("release")
-            if (releaseSigning.storeFile != null) {
+            // findByName, not getByName: F-Droid's reproducible-build tooling strips the
+            // entire signingConfigs block before building from source, so "release" may
+            // not exist at all (not just be unconfigured) on that build path.
+            val releaseSigning = signingConfigs.findByName("release")
+            if (releaseSigning?.storeFile != null) {
                 signingConfig = releaseSigning
             }
         }
