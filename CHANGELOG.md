@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-11
+
+### Fixed
+- Release build would fail under F-Droid's reproducible-build tooling, which strips signing configuration before building from source; the release build type now tolerates a missing signing config instead of throwing
+
 ## [1.2.0] - 2026-07-09
 
 ### Added

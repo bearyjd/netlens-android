@@ -1,0 +1,1 @@
+Fixes a release build issue that affected F-Droid's reproducible-build process. No user-facing changes.
