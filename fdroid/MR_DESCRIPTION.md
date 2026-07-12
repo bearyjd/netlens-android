@@ -51,4 +51,4 @@ All other tools (ping, DNS, port scan, WHOIS, etc.) either operate on user-suppl
 - [x] `fdroid lint com.ventouxlabs.netlens` passes
 - [x] `fdroid build` verified as far as possible without F-Droid's buildserver image (see above) — the actual `signingConfigs` failure mode is confirmed fixed
 - [ ] Full build (`assembleFossRelease` end-to-end) — will only be confirmed by F-Droid's own build server; happy to iterate if it surfaces anything the local check couldn't reach
-- [ ] Screenshots — `fastlane/metadata/android/en-US/images/phoneScreenshots/` has 4 screenshots + feature graphic + icons, but they predate the `v1.2.0`/`v1.2.1` UI redesign (new theme, dashboard, settings screen). Will refresh before/shortly after merge.
+- [x] Screenshots — `fastlane/metadata/android/en-US/images/phoneScreenshots/` refreshed on `v1.2.1`/`master`: dashboard (light + dark), the new Settings screen, and a Ping results screen, all captured on-device from the current build.
