@@ -21,16 +21,9 @@ RepoType: git
 Repo: https://github.com/bearyjd/netlens-android.git
 
 Builds:
-  - versionName: 1.2.1
-    versionCode: 8
-    commit: v1.2.1
-    subdir: app
-    gradle:
-      - foss
-
   - versionName: 1.2.2
     versionCode: 9
-    commit: v1.2.2
+    commit: 557d4ad3bddd387e0d23da2ad2b9deafa61e2af2
     subdir: app
     gradle:
       - foss
