@@ -1,7 +1,14 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: "Connects to third-party network services for optional, user-initiated\
+      \ lookups: ipinfo.io (IP Info screen and, if enabled, the home screen widget's\
+      \ public-IP display), ipwho.is (Traceroute hop geolocation), api.abuseipdb.com\
+      \ (IP reputation lookup, requires the user's own API key), and speed.cloudflare.com\
+      \ (Speed Test tool). All traffic is HTTPS; none of these run automatically without\
+      \ the user opening the relevant screen or enabling the relevant widget setting.\n"
 Categories:
   - Connectivity
   - System
-
 License: AGPL-3.0-only
 AuthorName: Ventoux Advisory Co
 AuthorEmail: privacy@ventouxadvisoryco.com
@@ -13,28 +20,6 @@ AutoName: NetLens
 RepoType: git
 Repo: https://github.com/bearyjd/netlens-android.git
 
-# This recipe covers only the com.ventouxlabs.netlens application ID. The app
-# was previously published under com.ventoux.netlens (and, before that,
-# us.beary.netlens) — those are different Android application IDs and a
-# different app as far as F-Droid/Play/existing installs are concerned, so
-# their version history does not carry over here.
-#
-# v1.1.3 and v1.2.0 (the first two tags under this application ID) are not
-# buildable by F-Droid's tooling: the release build type referenced its
-# signingConfig via signingConfigs.getByName("release"), which throws once
-# F-Droid's reproducible-build prep strips the signingConfigs block entirely.
-# Fixed in v1.2.1 (getByName -> findByName). Builds list starts there.
-AntiFeatures:
-  NonFreeNet:
-    en-US: >
-      Connects to third-party network services for optional, user-initiated
-      lookups: ipinfo.io (IP Info screen and, if enabled, the home screen
-      widget's public-IP display), ipwho.is (Traceroute hop geolocation),
-      api.abuseipdb.com (IP reputation lookup, requires the user's own API
-      key), and speed.cloudflare.com (Speed Test tool). All traffic is HTTPS;
-      none of these run automatically without the user opening the relevant
-      screen or enabling the relevant widget setting.
-
 Builds:
   - versionName: 1.2.1
     versionCode: 8
@@ -42,6 +27,7 @@ Builds:
     subdir: app
     gradle:
       - foss
+
   - versionName: 1.2.2
     versionCode: 9
     commit: v1.2.2
@@ -49,7 +35,8 @@ Builds:
     gradle:
       - foss
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+UpdateCheckData: gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
 CurrentVersion: 1.2.2
 CurrentVersionCode: 9
