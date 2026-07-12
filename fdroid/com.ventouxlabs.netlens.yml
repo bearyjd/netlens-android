@@ -1,11 +1,11 @@
 AntiFeatures:
   NonFreeNet:
-    en-US: "Connects to third-party network services for optional, user-initiated\
-      \ lookups: ipinfo.io (IP Info screen and, if enabled, the home screen widget's\
-      \ public-IP display), ipwho.is (Traceroute hop geolocation), api.abuseipdb.com\
-      \ (IP reputation lookup, requires the user's own API key), and speed.cloudflare.com\
-      \ (Speed Test tool). All traffic is HTTPS; none of these run automatically without\
-      \ the user opening the relevant screen or enabling the relevant widget setting.\n"
+    en-US: "Connects to third-party network services for optional, user-initiated
+      lookups: ipinfo.io (IP Info screen and, if enabled, the home screen widget's
+      public-IP display), ipwho.is (Traceroute hop geolocation), api.abuseipdb.com
+      (IP reputation lookup, requires the user's own API key), and speed.cloudflare.com
+      (Speed Test tool). All traffic is HTTPS; none of these run automatically without
+      the user opening the relevant screen or enabling the relevant widget setting.\n"
 Categories:
   - Connectivity
   - System
@@ -37,6 +37,7 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
-UpdateCheckData: gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
+UpdateCheckData: 
+  gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
 CurrentVersion: 1.2.2
 CurrentVersionCode: 9
