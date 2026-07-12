@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0F1318</color>
+    <!-- NetLensPalette.accent — mirrors the app's own solid-accent-fill/onPrimary
+         relationship (accent background, card/white content) used for primary
+         buttons throughout the app; see core/ui/NetLensPalette.kt. -->
+    <color name="ic_launcher_background">#2C6155</color>
 </resources>
