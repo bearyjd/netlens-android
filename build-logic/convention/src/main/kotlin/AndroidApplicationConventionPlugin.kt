@@ -3,6 +3,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -22,8 +23,17 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 }
             }
 
+            // No jvmToolchain() pin here: it would force Gradle to require an
+            // exact-match JDK and refuse to build otherwise. F-Droid's
+            // buildserver only has JDK 21 installed and disables toolchain
+            // auto-provisioning, so pinning 17 fails there even though our own
+            // CI/local dev use JDK 17. Compiling under whichever JDK launched
+            // Gradle while still targeting Java 17 bytecode (via
+            // compileOptions/jvmTarget above) works under both.
             extensions.configure<KotlinAndroidProjectExtension> {
-                jvmToolchain(17)
+                compilerOptions {
+                    jvmTarget.set(JvmTarget.JVM_17)
+                }
             }
         }
     }
