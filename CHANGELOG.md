@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-07-12
+
+### Fixed
+- Build no longer requires an exact JDK 17 installation. A pinned Gradle Java toolchain caused F-Droid's buildserver (which only has JDK 21 available and disables toolchain auto-provisioning) to fail with "Cannot find a Java installation... matching languageVersion=17"; the app still compiles to Java 17 bytecode, but Gradle now uses whichever JDK is already running it instead of requiring an exact match. No user-facing changes.
+
 ## [1.2.2] - 2026-07-11
 
 ### Changed

@@ -1,0 +1,1 @@
+Build infrastructure fix: no longer requires an exact JDK 17 installation to compile, which was blocking builds on some CI environments (including F-Droid's buildserver). No user-facing changes.
