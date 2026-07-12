@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-07-11
+
+### Changed
+- Launcher icon and Play Store feature graphic redesigned to match the app's paper & ink theme — both were still on the pre-redesign dark navy/teal-cyan branding. The launcher icon keeps its original magnifying-glass mark, recolored onto the app's accent-teal/card-white button styling; the feature graphic is rebuilt on the current palette and typography, including the app's signature stamp-chip motif.
+- Play Store screenshots refreshed to show the redesigned dashboard (light and dark), the new Settings screen, and a Ping results screen; also corrected to Play's required aspect ratio and format (previous captures would have failed upload validation).
+
 ## [1.2.1] - 2026-07-11
 
 ### Fixed

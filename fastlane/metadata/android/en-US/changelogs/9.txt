@@ -1,0 +1,1 @@
+New app icon and store graphics matching the redesigned paper-and-ink theme. No functional changes.
