@@ -70,6 +70,7 @@
     <string name="lanscan_inventory_no_results">No devices match your search</string>
     <string name="lanscan_inventory_first_seen">First: %1$s</string>
     <string name="lanscan_inventory_last_seen">Last: %1$s</string>
+    <string name="lanscan_inventory_mac_unknown">MAC unknown</string>
     <string name="lanscan_inventory_known">Known device</string>
     <string name="lanscan_inventory_unknown">Unknown device</string>
     <string name="lanscan_inventory_delete">Delete device</string>

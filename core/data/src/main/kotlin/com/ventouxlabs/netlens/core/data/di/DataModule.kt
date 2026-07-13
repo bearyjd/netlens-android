@@ -112,6 +112,29 @@ object DataModule {
         }
     }
 
+    // known_devices was keyed by macAddress, so any device the ARP-table
+    // enrichment couldn't resolve a MAC for (common for mDNS/SSDP-only
+    // devices, or devices absent from /proc/net/arp) was silently dropped
+    // and never persisted to inventory. Switches identity to an autoGenerate
+    // id with macAddress nullable, falling back to IP-based matching.
+    private val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `known_devices_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `macAddress` TEXT, `hostname` TEXT, `ip` TEXT NOT NULL, `vendor` TEXT, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, `isKnown` INTEGER NOT NULL DEFAULT 0, `deviceType` TEXT, `osGuess` TEXT)""",
+            )
+            db.execSQL(
+                """INSERT INTO `known_devices_new` (macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, deviceType, osGuess)
+                    SELECT macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, deviceType, osGuess FROM `known_devices`""",
+            )
+            db.execSQL("DROP TABLE `known_devices`")
+            db.execSQL("ALTER TABLE `known_devices_new` RENAME TO `known_devices`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_known_devices_lastSeen` ON `known_devices` (`lastSeen`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_known_devices_isKnown` ON `known_devices` (`isKnown`)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_known_devices_macAddress` ON `known_devices` (`macAddress`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_known_devices_ip` ON `known_devices` (`ip`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -120,7 +143,10 @@ object DataModule {
             NetLensDatabase::class.java,
             "netlens.db",
         )
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(
+                MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+                MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+            )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 

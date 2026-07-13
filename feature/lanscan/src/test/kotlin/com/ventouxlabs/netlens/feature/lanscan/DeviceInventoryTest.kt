@@ -89,7 +89,7 @@ class DeviceInventoryTest {
     }
 
     @Test
-    fun `device without MAC is not persisted`() = runTest {
+    fun `device without MAC is still persisted, keyed by IP`() = runTest {
         fakeSubnetScanner.devices = listOf(
             LanDevice(ip = "192.168.1.20", hostname = "no-mac-device", macAddress = null),
         )
@@ -98,7 +98,43 @@ class DeviceInventoryTest {
         viewModel.onCustomRangeChanged("192.168.1.0/24")
         viewModel.startScan()
 
-        assertTrue(fakeKnownDeviceDao.allDevices.isEmpty())
+        val stored = fakeKnownDeviceDao.getByIpWithoutMac("192.168.1.20")
+        assertNotNull(stored)
+        assertEquals("no-mac-device", stored?.hostname)
+        assertEquals(null, stored?.macAddress)
+    }
+
+    @Test
+    fun `re-scanning the same mac-less device updates it instead of duplicating`() = runTest {
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(ip = "192.168.1.21", hostname = "no-mac-device", macAddress = null),
+        )
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+        viewModel.startScan()
+
+        assertEquals(1, fakeKnownDeviceDao.allDevices.size)
+    }
+
+    @Test
+    fun `mac-less device upgrades in place once a MAC resolves for its IP`() = runTest {
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(ip = "192.168.1.22", hostname = "device", macAddress = null),
+        )
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(ip = "192.168.1.22", hostname = "device", macAddress = "AA:BB:CC:DD:EE:22"),
+        )
+        viewModel.startScan()
+
+        assertEquals(1, fakeKnownDeviceDao.allDevices.size)
+        val upgraded = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:22")
+        assertNotNull(upgraded)
+        assertEquals(null, fakeKnownDeviceDao.getByIpWithoutMac("192.168.1.22"))
     }
 
     @Test
@@ -168,13 +204,14 @@ class DeviceInventoryTest {
                 isKnown = false,
             ),
         )
+        val id = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:05")!!.id
 
-        viewModel.toggleKnown("AA:BB:CC:DD:EE:05")
+        viewModel.toggleKnown(id)
 
         val toggled = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:05")
         assertTrue(toggled?.isKnown == true)
 
-        viewModel.toggleKnown("AA:BB:CC:DD:EE:05")
+        viewModel.toggleKnown(id)
 
         val toggledBack = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:05")
         assertFalse(toggledBack?.isKnown == true)
@@ -190,8 +227,9 @@ class DeviceInventoryTest {
                 vendor = null,
             ),
         )
+        val id = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:06")!!.id
 
-        viewModel.deleteDevice("AA:BB:CC:DD:EE:06")
+        viewModel.deleteDevice(id)
 
         val deleted = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:06")
         assertEquals(null, deleted)
@@ -278,6 +316,7 @@ private class RecordingNewDeviceNotifier : NewDeviceNotifier {
 
 private class InMemoryKnownDeviceDao : KnownDeviceDao {
     val allDevices = mutableListOf<KnownDeviceEntity>()
+    private var nextId = 1L
     private val _flow = MutableStateFlow<List<KnownDeviceEntity>>(emptyList())
 
     override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = _flow
@@ -285,19 +324,22 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
     override suspend fun getByMac(mac: String): KnownDeviceEntity? =
         allDevices.find { it.macAddress == mac }
 
+    override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? =
+        allDevices.find { it.ip == ip && it.macAddress == null }
+
     override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> =
         flowOf(allDevices.filter { !it.isKnown })
 
     override suspend fun insertIfNew(device: KnownDeviceEntity): Long {
-        val existing = allDevices.find { it.macAddress == device.macAddress }
-        if (existing != null) return -1L
-        allDevices.add(device)
+        if (device.macAddress != null && allDevices.any { it.macAddress == device.macAddress }) return -1L
+        val withId = device.copy(id = nextId++)
+        allDevices.add(withId)
         _flow.update { allDevices.toList() }
-        return 1L
+        return withId.id
     }
 
     override suspend fun updateLastSeen(
-        mac: String,
+        id: Long,
         hostname: String?,
         ip: String,
         vendor: String?,
@@ -305,7 +347,7 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
         deviceType: String?,
         osGuess: String?,
     ) {
-        val index = allDevices.indexOfFirst { it.macAddress == mac }
+        val index = allDevices.indexOfFirst { it.id == id }
         if (index >= 0) {
             allDevices[index] = allDevices[index].copy(
                 hostname = hostname,
@@ -319,8 +361,16 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
         }
     }
 
-    override suspend fun setKnown(mac: String, isKnown: Boolean) {
-        val index = allDevices.indexOfFirst { it.macAddress == mac }
+    override suspend fun setMacAddress(id: Long, mac: String) {
+        val index = allDevices.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            allDevices[index] = allDevices[index].copy(macAddress = mac)
+            _flow.update { allDevices.toList() }
+        }
+    }
+
+    override suspend fun setKnown(id: Long, isKnown: Boolean) {
+        val index = allDevices.indexOfFirst { it.id == id }
         if (index >= 0) {
             allDevices[index] = allDevices[index].copy(isKnown = isKnown)
             _flow.update { allDevices.toList() }
@@ -330,8 +380,8 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
     override fun search(query: String): Flow<List<KnownDeviceEntity>> =
         flowOf(allDevices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })
 
-    override suspend fun delete(mac: String) {
-        allDevices.removeAll { it.macAddress == mac }
+    override suspend fun delete(id: Long) {
+        allDevices.removeAll { it.id == id }
         _flow.update { allDevices.toList() }
     }
 

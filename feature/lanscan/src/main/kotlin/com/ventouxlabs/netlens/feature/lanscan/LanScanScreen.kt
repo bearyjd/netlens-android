@@ -183,8 +183,8 @@ private fun LanScanContent(
     onCopyResults: () -> Unit = {},
     onShareResults: (() -> Unit)? = null,
     onShareJson: (() -> Unit)? = null,
-    onToggleKnown: (String) -> Unit = {},
-    onDeleteDevice: (String) -> Unit = {},
+    onToggleKnown: (Long) -> Unit = {},
+    onDeleteDevice: (Long) -> Unit = {},
     onClearInventory: () -> Unit = {},
     onInventorySearchChanged: (String) -> Unit = {},
     onInventorySortFieldChanged: (DeviceSortField) -> Unit = {},
@@ -519,8 +519,8 @@ private fun InventoryTabContent(
     onSearchChanged: (String) -> Unit,
     onSortFieldChanged: (DeviceSortField) -> Unit,
     onToggleSortOrder: () -> Unit,
-    onToggleKnown: (String) -> Unit,
-    onDeleteDevice: (String) -> Unit,
+    onToggleKnown: (Long) -> Unit,
+    onDeleteDevice: (Long) -> Unit,
     onClearInventory: () -> Unit,
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
@@ -618,12 +618,12 @@ private fun InventoryTabContent(
             ) {
                 items(
                     items = devices,
-                    key = { it.macAddress },
+                    key = { it.id },
                 ) { device ->
                     InventoryDeviceCard(
                         device = device,
-                        onToggleKnown = { onToggleKnown(device.macAddress) },
-                        onDelete = { onDeleteDevice(device.macAddress) },
+                        onToggleKnown = { onToggleKnown(device.id) },
+                        onDelete = { onDeleteDevice(device.id) },
                     )
                 }
                 item {
@@ -734,7 +734,7 @@ private fun InventoryDeviceCard(
                 }
 
                 Text(
-                    text = device.macAddress,
+                    text = device.macAddress ?: stringResource(R.string.lanscan_inventory_mac_unknown),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,

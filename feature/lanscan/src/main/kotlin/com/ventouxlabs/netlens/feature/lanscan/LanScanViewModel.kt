@@ -112,7 +112,7 @@ class LanScanViewModel @Inject constructor(
                         device.hostname?.contains(query, ignoreCase = true) == true ||
                             device.ip.contains(query, ignoreCase = true) ||
                             device.vendor?.contains(query, ignoreCase = true) == true ||
-                            device.macAddress.contains(query, ignoreCase = true)
+                            device.macAddress?.contains(query, ignoreCase = true) == true
                     }
                 }
                 val sorted = sortDevices(filtered, sortField, ascending)
@@ -298,11 +298,20 @@ class LanScanViewModel @Inject constructor(
     private suspend fun persistScanResults(devices: List<LanDevice>) {
         val now = System.currentTimeMillis()
         for (device in devices) {
-            val mac = device.macAddress ?: continue
-            val existing = knownDeviceDao.getByMac(mac)
+            val mac = device.macAddress
+            // Devices with no resolvable MAC (mDNS/SSDP-only, or absent from
+            // /proc/net/arp) still get an inventory row, keyed by IP instead —
+            // otherwise they'd never accumulate no matter how many times they're
+            // seen. If a MAC later resolves for that IP, upgrade the row instead
+            // of creating a duplicate.
+            val existing = mac?.let { knownDeviceDao.getByMac(it) }
+                ?: knownDeviceDao.getByIpWithoutMac(device.ip)
             if (existing != null) {
+                if (mac != null && existing.macAddress == null) {
+                    knownDeviceDao.setMacAddress(existing.id, mac)
+                }
                 knownDeviceDao.updateLastSeen(
-                    mac = mac,
+                    id = existing.id,
                     hostname = device.hostname ?: existing.hostname,
                     ip = device.ip,
                     vendor = device.vendor ?: existing.vendor,
@@ -324,22 +333,22 @@ class LanScanViewModel @Inject constructor(
                 )
                 val insertResult = knownDeviceDao.insertIfNew(entity)
                 if (insertResult != -1L) {
-                    newDeviceNotifier.notify(entity)
+                    newDeviceNotifier.notify(entity.copy(id = insertResult))
                 }
             }
         }
     }
 
-    fun toggleKnown(mac: String) {
+    fun toggleKnown(id: Long) {
         viewModelScope.launch {
-            val device = knownDeviceDao.getByMac(mac) ?: return@launch
-            knownDeviceDao.setKnown(mac, !device.isKnown)
+            val device = _uiState.value.knownDevices.find { it.id == id } ?: return@launch
+            knownDeviceDao.setKnown(id, !device.isKnown)
         }
     }
 
-    fun deleteDevice(mac: String) {
+    fun deleteDevice(id: Long) {
         viewModelScope.launch {
-            knownDeviceDao.delete(mac)
+            knownDeviceDao.delete(id)
         }
     }
 
@@ -576,7 +585,7 @@ private fun sortDevices(
         DeviceSortField.VENDOR -> compareBy(nullsLast()) { it.vendor?.lowercase() }
         DeviceSortField.FIRST_SEEN -> compareBy { it.firstSeen }
         DeviceSortField.LAST_SEEN -> compareBy { it.lastSeen }
-        DeviceSortField.MAC -> compareBy { it.macAddress }
+        DeviceSortField.MAC -> compareBy(nullsLast()) { it.macAddress }
     }
     return if (ascending) devices.sortedWith(comparator) else devices.sortedWith(comparator.reversed())
 }

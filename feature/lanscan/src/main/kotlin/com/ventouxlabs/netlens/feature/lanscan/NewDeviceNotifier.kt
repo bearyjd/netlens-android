@@ -56,7 +56,7 @@ class NewDeviceNotifierImpl @Inject constructor(
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(context)
-                .notify(device.macAddress.hashCode(), notification)
+                .notify(device.id.hashCode(), notification)
         }
     }
 

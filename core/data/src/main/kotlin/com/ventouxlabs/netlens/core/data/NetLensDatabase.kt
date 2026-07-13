@@ -58,7 +58,7 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         SpeedTestHistoryEntry::class,
         KnownDeviceEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {

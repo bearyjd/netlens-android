@@ -154,12 +154,14 @@ private class FakeLanScanHistoryDao : LanScanHistoryDao {
 private class FakeKnownDeviceDao : KnownDeviceDao {
     override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override suspend fun getByMac(mac: String): KnownDeviceEntity? = null
+    override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? = null
     override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override suspend fun insertIfNew(device: KnownDeviceEntity): Long = 1L
-    override suspend fun updateLastSeen(mac: String, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
-    override suspend fun setKnown(mac: String, isKnown: Boolean) {}
+    override suspend fun updateLastSeen(id: Long, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
+    override suspend fun setMacAddress(id: Long, mac: String) {}
+    override suspend fun setKnown(id: Long, isKnown: Boolean) {}
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun delete(mac: String) {}
+    override suspend fun delete(id: Long) {}
     override suspend fun deleteAll() {}
 }
 

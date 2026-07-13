@@ -6,10 +6,14 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "known_devices",
-    indices = [Index("lastSeen"), Index("isKnown")],
+    indices = [Index("lastSeen"), Index("isKnown"), Index(value = ["macAddress"], unique = true), Index("ip")],
 )
 data class KnownDeviceEntity(
-    @PrimaryKey val macAddress: String,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Nullable: many discovered devices never get a resolvable MAC (mDNS/SSDP-only
+    // devices that don't answer pings, or devices absent from /proc/net/arp). Identity
+    // then falls back to IP — see LanScanViewModel.persistScanResults.
+    val macAddress: String?,
     val hostname: String?,
     val ip: String,
     val vendor: String?,
