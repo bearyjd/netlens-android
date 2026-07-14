@@ -21,9 +21,9 @@ RepoType: git
 Repo: https://github.com/bearyjd/netlens-android.git
 
 Builds:
-  - versionName: 1.2.3
-    versionCode: 10
-    commit: fa0a16b37d621ee5896dc9e0b68382bdb0dee5a5
+  - versionName: 1.2.4
+    versionCode: 11
+    commit: 22835e6835f8905d9715ba6567986d615d770a98
     subdir: app
     gradle:
       - foss
@@ -32,5 +32,5 @@ AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
 UpdateCheckData: 
   gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
-CurrentVersion: 1.2.3
-CurrentVersionCode: 10
+CurrentVersion: 1.2.4
+CurrentVersionCode: 11
