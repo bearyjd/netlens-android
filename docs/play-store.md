@@ -100,8 +100,10 @@ first upload for `com.ventouxlabs.netlens`:
 - [ ] Fill console-only fields: category, contact email, **privacy policy URL**,
       content rating questionnaire, data safety form, countries/pricing (free)
 - [ ] Manually upload one AAB — `app-gplay-release.aab` from the
-      [v1.1.3 release](https://github.com/bearyjd/netlens-android/releases/tag/v1.1.3)
-      (listing copy + assets are ready in `fastlane/metadata/android/en-US/`)
+      [v1.2.4 release](https://github.com/bearyjd/netlens-android/releases/tag/v1.2.4)
+      (listing copy + assets are ready in `fastlane/metadata/android/en-US/`; use the
+      latest release at bootstrap time so the listing launches with current icon/UI,
+      not whatever version this doc last mentioned)
 
 **B. Service account + the missing secret:**
 - [ ] Google Cloud Console → create a **service account** → create a **JSON key**
