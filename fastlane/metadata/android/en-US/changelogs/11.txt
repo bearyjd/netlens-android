@@ -1,0 +1,1 @@
+Fixed a bug where LAN Scan's Inventory tab could silently fail to accumulate devices without a resolvable MAC address. Devices found via mDNS/SSDP, or missing from the device's ARP table, now persist correctly and upgrade automatically once a MAC address is resolved.

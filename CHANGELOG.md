@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-07-13
+
+### Fixed
+- LAN Scan's Inventory tab now correctly accumulates devices that don't have a resolvable MAC address, instead of silently dropping them every scan. Devices found only via mDNS/SSDP, or absent from the on-device ARP table, previously never persisted to inventory no matter how many times they were seen; they're now tracked by IP and upgraded automatically once a MAC address resolves.
+
 ## [1.2.3] - 2026-07-12
 
 ### Fixed
