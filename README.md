@@ -29,6 +29,7 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netlen
 
 ### Security & Web
 - **Wi-Fi Audit** — Security audit on join with WPS / weak-cipher detection
+- **VPN Status** — Tunnel state and leak check
 - **DNS Leak Test** — Detect DNS queries escaping the configured resolver
 - **TLS Inspector** — Inspect SSL/TLS certificates and cipher suites
 - **HTTP Tester** — Send custom HTTP requests and inspect responses
@@ -88,10 +89,11 @@ Multi-module Gradle project with convention plugins:
 
 ```
 app                  — Single Activity, navigation host, theme
-feature/*            — 22 self-contained feature modules
+feature/*            — 23 self-contained feature modules
 core/network         — Connectivity monitoring, SSRF guard, result export
 core/data            — Room database, DAOs, Hilt data module
 core/billing         — ProStatus interface (FOSS / Google Play flavors)
+core/ui              — Shared UI tokens (status colors, spacing)
 core/oui             — MAC address vendor lookup
 widget               — Glance home screen widget
 build-logic/         — Convention plugins (Android, Compose, Hilt)

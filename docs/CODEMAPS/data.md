@@ -1,10 +1,10 @@
-<!-- Generated: 2026-06-28 | Files scanned: 36 | Token estimate: ~750 -->
+<!-- Generated: 2026-07-16 | Files scanned: 36 | Token estimate: ~750 -->
 
 # Data Layer
 
 ## Database
 
-`NetLensDatabase` — Room, version 10, exportSchema = true
+`NetLensDatabase` — Room, version 12, exportSchema = true
 
 ```
 core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/

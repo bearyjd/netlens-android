@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~620 -->
+<!-- Generated: 2026-07-16 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~620 -->
 
 # Dependencies
 
@@ -52,4 +52,6 @@
 
 GitHub Actions: `.github/workflows/ci.yml`
 - Builds `foss` flavor (`assembleFossDebug`)
-- Tests: `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`
+- Tests: `testFossDebugUnitTest testDebugUnitTest` — covers every module with a `src/test` tree (flavored task for `:app`, unflavored for core/feature/widget)
+
+Release: `.github/workflows/release.yml` — decodes keystore from `RELEASE_KEYSTORE_BASE64` secret, verifies tag matches `gradle.properties` version, signs `assembleRelease`/`bundleRelease`.

@@ -1,24 +1,31 @@
-Codemap refresh — 2026-06-28
+Codemap refresh — 2026-07-16
 
-Trigger: package rename com.ventoux.netlens -> com.ventouxlabs.netlens + structural drift catch-up.
+Trigger: /update-codemaps (routine refresh; last scan 2026-06-28).
 
-Modules: 30 gradle projects (app, widget, 5 core, 23 feature).
+Modules: 30 gradle projects (app, widget, 5 core, 23 feature) — unchanged since last scan.
 
-Changes since last scan (2026-05-04):
-  + core:ui          NEW — shared UI tokens (StatusColors, Spacing)   [added to architecture.md]
-  + feature:vpnstatus NEW — VPN Status screen, Security category,
-                            "Tunnel state & leak check", no history DAO, no export
-                            [added to architecture.md + features.md]
-  ~ package coordinate renamed to com.ventouxlabs.netlens
-                            [data.md path auto-updated by rename sweep; package noted in architecture.md]
+Changes since last scan (2026-06-28):
+  ~ NetLensDatabase Room schema version 10 -> 12 (per-endpoint latency threshold
+    on MonitoredEndpoint + Jul widget/monitor work). Entity list (18) and DAO
+    count (16) unchanged.                                    [data.md version bumped]
+  ~ CI description in dependencies.md was stale (listed a fixed 4-module test
+    subset from 2026-05-04). Actual CI: assembleFossDebug + `testFossDebugUnitTest
+    testDebugUnitTest` covering every module with a src/test tree.
+                                                             [dependencies.md rewritten CI section]
+  + dependencies.md now also notes release.yml (keystore-from-secret signing,
+    tag-vs-gradle.properties version verification).
 
 Per-file:
-  architecture.md  MODIFIED  +core:ui, +feature:vpnstatus, +package line, header 22->30 modules, date bumped
-  features.md      MODIFIED  +feature:vpnstatus row (Security), header 22->23 feature modules, date bumped
-  data.md          MODIFIED  package path -> com/ventouxlabs/netlens (rename sweep), date bumped
-  dependencies.md  UNCHANGED no drift (no per-module list / no package literal); date left as last-verified
+  architecture.md  UNCHANGED  module graph, flavors, DI, nav all still accurate
+  features.md      UNCHANGED  23 feature modules, categories, DAO wiring verified
+  data.md          MODIFIED   Room version 10->12, date bumped
+  dependencies.md  MODIFIED   date bumped, CI section corrected, release workflow added
 
-New dependencies detected: none.
-Architecture changes: 2 new modules (core:ui, feature:vpnstatus); no new routes beyond vpnstatus; no DI/flavor changes.
+New dependencies detected: none. libs.versions.toml verified against table —
+all versions (AGP 8.9.0, Kotlin 2.1.0, Hilt 2.53, Room 2.6.1, Ktor 3.0.3, etc.)
+still match.
 
-Staleness warnings (>90 days): none after this refresh. dependencies.md last verified 2026-05-04 (~55 days) — still accurate.
+Architecture changes: none (no new modules, routes, or DI changes).
+Current app version: 1.2.4 (versionCode 11).
+
+Staleness warnings (>90 days): none.

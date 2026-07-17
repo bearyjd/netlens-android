@@ -41,14 +41,7 @@ Fully automated via CI:
 
 ### F-Droid
 
-**NetLens has not yet been submitted to F-Droid.** `fdroid/com.ventouxlabs.netlens.yml` in this repo is a local draft only — F-Droid does not watch this repository or its tags; nothing is published until someone opens a merge request against the separate [fdroiddata](https://gitlab.com/fdroid/fdroiddata) repo and it's reviewed. This has never been done (confirmed 2026-07-11: no `com.ventouxlabs.netlens`, `com.ventoux.netlens`, or `us.beary.netlens` recipe exists in fdroiddata, and no listing exists on f-droid.org under any of the app's three historical package IDs).
-
-First-time submission:
-1. Fork [fdroiddata](https://gitlab.com/fdroid/fdroiddata) on GitLab
-2. Copy `fdroid/com.ventouxlabs.netlens.yml` from this repo to `metadata/com.ventouxlabs.netlens.yml` in the fork
-3. Optionally run `fdroid lint com.ventouxlabs.netlens` and `fdroid build com.ventouxlabs.netlens` locally (via `fdroidserver`) to catch build/recipe issues before submitting
-4. Open a merge request against fdroiddata; expect review iteration (the note in the recipe about starting the `Builds:` list at 1.1.3, since the app renamed its application ID at that version, is the kind of thing reviewers will likely ask about)
-5. Once merged, F-Droid's build server takes over — allow 1-2 weeks for the first build to appear
+**First-time submission is in flight** (as of 2026-07-16): [fdroiddata MR #42628](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/42628) is open and CI-green (`fdroid build` passes on the real buildserver image), awaiting maintainer merge. The staging branch is `add-com.ventouxlabs.netlens` on the `selector4560/fdroiddata` fork. See `docs/HANDOFF.md` for the submission history. `fdroid/com.ventouxlabs.netlens.yml` in this repo is an informational copy — the recipe F-Droid actually builds from lives in fdroiddata. Once the MR merges, F-Droid's build server takes over; allow 1-2 weeks for the first build to appear, then switch to the routine-update flow below.
 
 Routine updates (once the recipe is merged and the app has a real F-Droid listing):
 1. Ensure the `v*` tag exists on GitHub (F-Droid's `UpdateCheckMode: Tags ...` picks it up automatically — this repo's `fdroid/` copy does NOT need to change for F-Droid itself to notice)
