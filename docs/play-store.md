@@ -97,13 +97,44 @@ All of these are done in Google consoles / GitHub settings, not in code.
 **A. Bootstrap the listing** — Google's API cannot create the app or perform the
 first upload for `com.ventouxlabs.netlens`:
 - [ ] Play Console → **Create app** → name `NetLens`, package `com.ventouxlabs.netlens`
-- [ ] Fill console-only fields: category, contact email, **privacy policy URL**,
-      content rating questionnaire, data safety form, countries/pricing (free)
+- [ ] Fill console-only fields: category, contact email, **privacy policy URL**
+      (`https://github.com/bearyjd/netlens-android/blob/master/docs/PRIVACY_POLICY.md`
+      — see `docs/PRIVACY_POLICY.md`), content rating questionnaire, data safety
+      form (see "Data safety form answers" below), countries/pricing (free)
 - [ ] Manually upload one AAB — `app-gplay-release.aab` from the
-      [v1.2.4 release](https://github.com/bearyjd/netlens-android/releases/tag/v1.2.4)
+      [latest release](https://github.com/bearyjd/netlens-android/releases/latest)
       (listing copy + assets are ready in `fastlane/metadata/android/en-US/`; use the
       latest release at bootstrap time so the listing launches with current icon/UI,
       not whatever version this doc last mentioned)
+
+### Data safety form answers
+
+Derived from a permissions/dependency audit (no analytics, crash reporting, or
+ads SDKs anywhere in the dependency graph) and the F-Droid recipe's
+`NonFreeNet` disclosure — see `docs/PRIVACY_POLICY.md` for the full reasoning.
+
+Master toggle: **"Yes, collects some data"** (not "No collection") — see the
+IP address item below for why a blanket "No" would understate what actually
+happens on the wire.
+
+| Category | Answer | Why |
+|---|---|---|
+| Location | Not collected | `ACCESS_FINE_LOCATION` is only requested because Android gates reading Wi-Fi SSID/BSSID (`feature/wifi`) and cell tower info (`feature/celltower`) behind it. Displayed on-device only, never transmitted. |
+| Personal info | Not collected | No accounts, no forms |
+| Financial info (purchase history) | Not collected *(defensible middle ground: declare "collected, not shared, purpose: app functionality" if you want zero ambiguity)* | gplay Pro entitlement is a local boolean flag in `EncryptedSharedPreferences`; Google Play Billing itself handles all payment processing under Google's own terms |
+| Health & fitness / Messages / Photos-videos-audio / Files-docs / Calendar / Contacts | Not collected | App doesn't touch any of these |
+| App activity | Not collected | Scan/history data (`core:data` Room DB) never leaves the device |
+| Web browsing history | Not collected | HTTP Tester sends only requests you compose; doesn't log external browsing |
+| App info & performance | Not collected | Confirmed no crash/analytics SDK in `libs.versions.toml` or anywhere in the dependency graph |
+| **Device or other IDs (IP address)** | **Collected, not shared for advertising, purpose: App functionality, user-initiated only** | IP Info, Traceroute, IP reputation lookup, and Speed Test send direct HTTP requests to `ipinfo.io`, `ipwho.is`, `api.abuseipdb.com`, `speed.cloudflare.com` — any HTTP request inherently exposes the device's IP to that server. Mirrors the F-Droid `NonFreeNet` anti-feature disclosure exactly; keeping both listings consistent. |
+
+Free-text justification for the IP-address item (paste as-is): *"IP address
+is exposed as an inherent side effect of user-initiated HTTP requests to
+third-party diagnostic services (IP lookup, traceroute geolocation, IP
+reputation check, speed test). No IP address or other data is collected,
+stored, or shared by the app's developer — requests go directly from the
+user's device to the third-party service. Not used for advertising or
+tracking."*
 
 **B. Service account + the missing secret:**
 - [ ] Google Cloud Console → create a **service account** → create a **JSON key**
