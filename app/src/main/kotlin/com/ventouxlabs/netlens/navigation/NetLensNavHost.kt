@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.ventouxlabs.netlens.feature.devices.DevicesScreen
 import com.ventouxlabs.netlens.feature.dns.DnsLookupScreen
 import com.ventouxlabs.netlens.feature.dnsleak.DnsLeakScreen
 import com.ventouxlabs.netlens.feature.history.HistoryScreen
@@ -104,6 +105,12 @@ fun NetLensNavHost(
             LanScanScreen(
                 onBack = navController::popBackStack,
                 initialCidr = entry.arguments?.getString("query")?.ifEmpty { null },
+                onNavigateToTool = navigateToTool,
+            )
+        }
+        composable(ToolDestination.Devices.route) {
+            DevicesScreen(
+                onBack = navController::popBackStack,
                 onNavigateToTool = navigateToTool,
             )
         }

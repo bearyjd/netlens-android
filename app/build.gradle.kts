@@ -91,6 +91,7 @@ dependencies {
     // Feature modules
     implementation(project(":feature:ipinfo"))
     implementation(project(":feature:lanscan"))
+    implementation(project(":feature:devices"))
     implementation(project(":feature:portscan"))
     implementation(project(":feature:dns"))
     implementation(project(":feature:ping"))

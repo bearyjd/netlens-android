@@ -10,6 +10,7 @@ private val PATH_TO_ROUTE = mapOf(
     "dns" to ToolDestination.Dns.route,
     "dnsleak" to ToolDestination.DnsLeak.route,
     "lanscan" to ToolDestination.LanScan.route,
+    "devices" to ToolDestination.Devices.route,
     "portscan" to ToolDestination.PortScan.route,
     "traceroute" to ToolDestination.Traceroute.route,
     "whois" to ToolDestination.Whois.route,

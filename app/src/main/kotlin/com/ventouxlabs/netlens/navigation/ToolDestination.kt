@@ -2,6 +2,7 @@ package com.ventouxlabs.netlens.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.AltRoute
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Http
@@ -98,6 +99,13 @@ enum class ToolDestination(
         icon = Icons.Default.Router,
         label = "LAN Scan",
         description = "Discover local devices",
+        category = ToolCategory.Discovery,
+    ),
+    Devices(
+        route = "devices",
+        icon = Icons.Default.Devices,
+        label = "Devices",
+        description = "Inventory & watch alerts",
         category = ToolCategory.Discovery,
     ),
     Mdns(
