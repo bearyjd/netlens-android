@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import com.ventouxlabs.netlens.feature.mdns.model.MdnsService
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,10 +60,15 @@ class MdnsScannerImpl @Inject constructor(
             }
         }
 
-        // Process resolves serially to avoid FAILURE_ALREADY_ACTIVE on API < 34
+        // Process resolves serially to avoid FAILURE_ALREADY_ACTIVE on API < 34.
+        // A dropped NsdManager resolve callback (a known Android bug) would otherwise
+        // stall this serial queue forever, so each resolve is bounded by a timeout and
+        // skipped on expiry so the queue keeps draining.
         launch {
             for (service in resolveQueue) {
-                val resolved = resolveServiceSuspending(service)
+                val resolved = withTimeoutOrNull(RESOLVE_TIMEOUT_MS) {
+                    resolveServiceSuspending(service)
+                }
                 resolved?.let { trySend(it) }
             }
         }
@@ -129,5 +135,9 @@ class MdnsScannerImpl @Inject constructor(
         } catch (_: IllegalArgumentException) {
             // Listener was not registered or already stopped
         }
+    }
+
+    private companion object {
+        const val RESOLVE_TIMEOUT_MS = 5_000L
     }
 }

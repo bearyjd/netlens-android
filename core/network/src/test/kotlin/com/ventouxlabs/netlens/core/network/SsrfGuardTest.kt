@@ -1,6 +1,9 @@
 package com.ventouxlabs.netlens.core.network
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -55,5 +58,30 @@ class SsrfGuardTest {
     @Test
     fun `link-local 169_254_1_1 returns true`() {
         assertTrue(SsrfGuard.isPrivateOrLoopback("169.254.1.1"))
+    }
+
+    @Test
+    fun `resolveIfPublic returns null for localhost`() {
+        assertNull(SsrfGuard.resolveIfPublic("localhost"))
+    }
+
+    @Test
+    fun `resolveIfPublic returns null for private addresses`() {
+        assertNull(SsrfGuard.resolveIfPublic("127.0.0.1"))
+        assertNull(SsrfGuard.resolveIfPublic("10.0.0.1"))
+        assertNull(SsrfGuard.resolveIfPublic("192.168.1.1"))
+        assertNull(SsrfGuard.resolveIfPublic("172.16.0.1"))
+    }
+
+    @Test
+    fun `resolveIfPublic returns null for unresolvable host`() {
+        assertNull(SsrfGuard.resolveIfPublic("this.host.does.not.exist.invalid"))
+    }
+
+    @Test
+    fun `resolveIfPublic returns resolved address for public IP`() {
+        val result = SsrfGuard.resolveIfPublic("8.8.8.8")
+        assertNotNull(result)
+        assertEquals("8.8.8.8", result?.first()?.hostAddress)
     }
 }

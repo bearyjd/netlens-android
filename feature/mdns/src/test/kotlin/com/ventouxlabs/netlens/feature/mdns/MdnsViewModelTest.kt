@@ -165,6 +165,41 @@ class MdnsViewModelTest {
     }
 
     @Test
+    fun `flow error resets isScanning so retry is allowed`() = runTest {
+        val retryScanner = object : com.ventouxlabs.netlens.feature.mdns.engine.MdnsScanner {
+            var shouldFail = true
+
+            override fun discoverServices(serviceType: String): Flow<MdnsService> {
+                return if (shouldFail) {
+                    kotlinx.coroutines.flow.flow { throw RuntimeException("Network error") }
+                } else {
+                    flowOf(
+                        MdnsService(
+                            serviceName = "Recovered",
+                            serviceType = "_http._tcp.",
+                            host = "1.1.1.1",
+                            port = 80,
+                        ),
+                    )
+                }
+            }
+
+            override fun stopDiscovery() {}
+        }
+        val retryViewModel = MdnsViewModel(retryScanner, FakeMdnsHistoryDao())
+
+        retryViewModel.startScan()
+        // The catch block must clear isScanning, otherwise the guard blocks any retry.
+        assertFalse(retryViewModel.uiState.value.isScanning)
+        assertEquals("Network error", retryViewModel.uiState.value.error)
+
+        // Retry succeeds now that the guard no longer blocks a fresh scan.
+        retryScanner.shouldFail = false
+        retryViewModel.startScan()
+        assertTrue(retryViewModel.uiState.value.services.isNotEmpty())
+    }
+
+    @Test
     fun `startScan while already scanning is ignored`() = runTest {
         viewModel.uiState.test {
             awaitItem() // initial state

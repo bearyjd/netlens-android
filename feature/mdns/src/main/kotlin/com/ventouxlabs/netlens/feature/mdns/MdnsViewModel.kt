@@ -45,8 +45,13 @@ class MdnsViewModel @Inject constructor(
                 launch {
                     mdnsScanner.discoverServices(serviceType)
                         .catch { e ->
+                            // Reset isScanning so the `if (isScanning) return` guard in
+                            // startScan() doesn't permanently block retry after a failure.
                             _uiState.update { state ->
-                                state.copy(error = e.message ?: "Discovery failed")
+                                state.copy(
+                                    error = e.message ?: "Discovery failed",
+                                    isScanning = false,
+                                )
                             }
                         }
                         .collect { service ->

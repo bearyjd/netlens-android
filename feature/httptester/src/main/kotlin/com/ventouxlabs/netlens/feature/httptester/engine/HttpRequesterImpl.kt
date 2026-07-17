@@ -38,6 +38,13 @@ class HttpRequesterImpl private constructor(
 
         val parsedUrl = URL(url)
         val host = parsedUrl.host
+        // SsrfGuard resolves every A/AAAA record and rejects the host if *any* record is
+        // private/loopback/link-local, which blocks the common DNS-rebinding payloads.
+        // Residual risk: the Ktor CIO engine re-resolves the hostname when it opens the
+        // connection, so a low-TTL record that flips to a private address in the window
+        // between this check and connect is not fully closed. True per-request IP pinning
+        // is not exposed by CIO in Ktor 3.0.3 without swapping the engine, which is out of
+        // scope here; the any-record-private rejection above is the mitigation.
         require(!SsrfGuard.isPrivateOrLoopback(host)) {
             "Requests to private or loopback network addresses are not allowed"
         }

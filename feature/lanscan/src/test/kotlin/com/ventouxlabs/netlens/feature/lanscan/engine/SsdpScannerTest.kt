@@ -79,4 +79,18 @@ class SsdpScannerTest {
         assertEquals("10.0.0.1", device.ip)
         assertNull(device.friendlyName)
     }
+
+    @Test
+    fun `readCapped returns full content when below cap`() {
+        val content = "<root><friendlyName>Router</friendlyName></root>"
+        val result = SsdpScannerImpl.readCapped(content.reader().buffered(), 1024)
+        assertEquals(content, result)
+    }
+
+    @Test
+    fun `readCapped truncates content that exceeds cap`() {
+        val content = "a".repeat(5000)
+        val result = SsdpScannerImpl.readCapped(content.reader().buffered(), 1000)
+        assertEquals(1000, result.length)
+    }
 }

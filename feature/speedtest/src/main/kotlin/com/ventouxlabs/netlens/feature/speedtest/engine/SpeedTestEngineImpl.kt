@@ -12,9 +12,11 @@ import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import javax.inject.Inject
 import kotlin.random.Random
@@ -53,7 +55,7 @@ class SpeedTestEngineImpl @Inject constructor() : SpeedTestEngine {
                 }
             }
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override fun measureUpload(): Flow<SpeedProgress> = flow {
         val url = "$BASE_URL/__up"
@@ -79,7 +81,7 @@ class SpeedTestEngineImpl @Inject constructor() : SpeedTestEngine {
                 )
             }
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override suspend fun measureLatency(): Long {
         val times = mutableListOf<Long>()

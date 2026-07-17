@@ -41,8 +41,8 @@ class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
                     semaphore.withPermit { ip to lookupSingle(ip) }
                 }
             }.awaitAll()
-                .filter { it.second != null }
-                .associate { it.first to it.second!! }
+                .mapNotNull { (ip, location) -> location?.let { ip to it } }
+                .toMap()
         }
     }
 
@@ -60,7 +60,19 @@ class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
             try {
                 if (conn.responseCode != 200) return@withContext null
 
-                val body = conn.inputStream.bufferedReader().readText()
+                // A legit ipwho.is response is well under 2 KB; cap the read so a hostile
+                // or misbehaving host cannot stream an unbounded body into memory.
+                val body = conn.inputStream.bufferedReader().use { reader ->
+                    val buffer = CharArray(8192)
+                    val sb = StringBuilder()
+                    while (sb.length < MAX_RESPONSE_BYTES) {
+                        val maxToRead = minOf(buffer.size, MAX_RESPONSE_BYTES - sb.length)
+                        val read = reader.read(buffer, 0, maxToRead)
+                        if (read == -1) break
+                        sb.append(buffer, 0, read)
+                    }
+                    sb.toString()
+                }
                 val obj = json.parseToJsonElement(body).jsonObject
 
                 val success = obj["success"]?.jsonPrimitive?.boolean ?: false
@@ -100,5 +112,6 @@ class HopGeolocatorImpl @Inject constructor() : HopGeolocator {
         const val BASE_URL = "https://ipwho.is"
         const val TIMEOUT_MS = 5_000
         const val MAX_CONCURRENT = 5
+        const val MAX_RESPONSE_BYTES = 64 * 1024
     }
 }

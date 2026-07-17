@@ -70,15 +70,20 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
     private fun fetchDeviceDescription(ip: String, locationUrl: String?): SsdpDevice? {
         if (locationUrl == null) return SsdpDevice(ip = ip)
         if (!isSafeLocationUrl(locationUrl)) return SsdpDevice(ip = ip)
+        var connection: HttpURLConnection? = null
         return try {
-            val connection = URL(locationUrl).openConnection() as HttpURLConnection
-            connection.connectTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
-            connection.readTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
-            val xml = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-            connection.disconnect()
+            connection = (URL(locationUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
+                readTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
+            }
+            val xml = connection.inputStream.bufferedReader().use { reader ->
+                readCapped(reader, MAX_DESCRIPTION_BYTES)
+            }
             parseDeviceXml(ip, xml)
         } catch (_: Exception) {
             SsdpDevice(ip = ip)
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -86,6 +91,23 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
         private const val MULTICAST_ADDRESS = "239.255.255.250"
         private const val SSDP_PORT = 1900
         private const val DESCRIPTION_TIMEOUT_MS = 2000L
+
+        // A hostile LAN device could stream an unbounded description body; cap the read
+        // so it cannot OOM the app. Legit UPnP descriptions are a few KB.
+        private const val MAX_DESCRIPTION_BYTES = 256 * 1024
+
+        /** Reads up to [cap] characters from [reader], discarding anything beyond the cap. */
+        internal fun readCapped(reader: BufferedReader, cap: Int): String {
+            val buffer = CharArray(8192)
+            val result = StringBuilder()
+            while (result.length < cap) {
+                val maxToRead = minOf(buffer.size, cap - result.length)
+                val read = reader.read(buffer, 0, maxToRead)
+                if (read == -1) break
+                result.append(buffer, 0, read)
+            }
+            return result.toString()
+        }
 
         internal fun isSafeLocationUrl(url: String): Boolean {
             val lower = url.lowercase()

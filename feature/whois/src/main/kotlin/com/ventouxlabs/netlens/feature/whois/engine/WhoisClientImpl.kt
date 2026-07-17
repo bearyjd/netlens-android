@@ -5,8 +5,10 @@ import kotlinx.coroutines.withContext
 import com.ventouxlabs.netlens.feature.whois.model.WhoisResult
 import com.ventouxlabs.netlens.core.network.SsrfGuard
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.net.InetSocketAddress
 import java.net.Socket
 import javax.inject.Inject
 
@@ -37,8 +39,14 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
     }
 
     private fun rawQuery(host: String, query: String): String {
-        return Socket(host, WHOIS_PORT).use { socket ->
+        // Resolve-once + pin: connect to a validated public address rather than letting
+        // Socket re-resolve the hostname, closing the DNS-rebinding (TOCTOU) window
+        // between the private/loopback check and the actual connect.
+        val validated = SsrfGuard.resolveIfPublic(host)?.firstOrNull()
+            ?: throw IOException("WHOIS host $host is unresolvable or resolves to a blocked address")
+        return Socket().use { socket ->
             socket.soTimeout = TIMEOUT_MS
+            socket.connect(InetSocketAddress(validated, WHOIS_PORT), CONNECT_TIMEOUT_MS)
             val writer = OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8)
             writer.write("$query\r\n")
             writer.flush()
@@ -114,6 +122,7 @@ class WhoisClientImpl @Inject constructor() : WhoisClient {
         const val IANA_HOST = "whois.iana.org"
         const val WHOIS_PORT = 43
         const val TIMEOUT_MS = 10_000
+        const val CONNECT_TIMEOUT_MS = 10_000
         const val MAX_RESPONSE_BYTES = 65_536
 
         val REFER_HOSTNAME_REGEX = Regex(
