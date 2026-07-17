@@ -22,4 +22,8 @@ data class KnownDeviceEntity(
     val isKnown: Boolean = false,
     val deviceType: String? = null,
     val osGuess: String? = null,
+    // User-supplied friendly name; display precedence is customName ?: hostname ?: vendor ?: ip.
+    val customName: String? = null,
+    // Watched-network this row was last tagged against (null = unwatched/legacy).
+    val networkId: Long? = null,
 )

@@ -25,6 +25,7 @@ import com.ventouxlabs.netlens.core.data.dao.TlsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.MdnsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import javax.inject.Singleton
 
@@ -135,6 +136,19 @@ object DataModule {
         }
     }
 
+    // v13: custom device names + watched-network identity (gateway MAC).
+    // Additive only — new columns are nullable, new table is independent.
+    private val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN customName TEXT")
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN networkId INTEGER")
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `watched_networks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `displayName` TEXT, `gatewayMac` TEXT NOT NULL, `subnet` TEXT NOT NULL, `watchEnabled` INTEGER NOT NULL DEFAULT 1, `addedAt` INTEGER NOT NULL)""",
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_watched_networks_gatewayMac` ON `watched_networks` (`gatewayMac`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -145,7 +159,7 @@ object DataModule {
         )
             .addMigrations(
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-                MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+                MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -213,4 +227,8 @@ object DataModule {
     @Provides
     fun provideKnownDeviceDao(database: NetLensDatabase): KnownDeviceDao =
         database.knownDeviceDao()
+
+    @Provides
+    fun provideWatchedNetworkDao(database: NetLensDatabase): WatchedNetworkDao =
+        database.watchedNetworkDao()
 }
