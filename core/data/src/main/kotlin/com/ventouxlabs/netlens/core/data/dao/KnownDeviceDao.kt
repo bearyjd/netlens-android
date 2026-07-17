@@ -58,6 +58,9 @@ interface KnownDeviceDao {
     @Query("UPDATE known_devices SET customName = :customName WHERE id = :id")
     suspend fun setCustomName(id: Long, customName: String?)
 
+    @Query("UPDATE known_devices SET networkId = :networkId WHERE id = :id")
+    suspend fun setNetworkId(id: Long, networkId: Long?)
+
     @Query("SELECT * FROM known_devices WHERE networkId = :networkId ORDER BY lastSeen DESC")
     fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>>
 

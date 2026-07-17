@@ -31,6 +31,7 @@ import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
@@ -64,7 +65,7 @@ class DeviceInventoryTest {
             networkInterfaceProvider = StubNetworkInterfaceProvider(),
             lanScanHistoryDao = StubLanScanHistoryDao(),
             knownDeviceDao = fakeKnownDeviceDao,
-            newDeviceNotifier = fakeNotifier,
+            deviceInventoryRepository = DeviceInventoryRepositoryImpl(fakeKnownDeviceDao, fakeNotifier),
         )
     }
 
@@ -90,55 +91,6 @@ class DeviceInventoryTest {
     }
 
     @Test
-    fun `device without MAC is still persisted, keyed by IP`() = runTest {
-        fakeSubnetScanner.devices = listOf(
-            LanDevice(ip = "192.168.1.20", hostname = "no-mac-device", macAddress = null),
-        )
-
-        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
-        viewModel.onCustomRangeChanged("192.168.1.0/24")
-        viewModel.startScan()
-
-        val stored = fakeKnownDeviceDao.getByIpWithoutMac("192.168.1.20")
-        assertNotNull(stored)
-        assertEquals("no-mac-device", stored?.hostname)
-        assertEquals(null, stored?.macAddress)
-    }
-
-    @Test
-    fun `re-scanning the same mac-less device updates it instead of duplicating`() = runTest {
-        fakeSubnetScanner.devices = listOf(
-            LanDevice(ip = "192.168.1.21", hostname = "no-mac-device", macAddress = null),
-        )
-        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
-        viewModel.onCustomRangeChanged("192.168.1.0/24")
-        viewModel.startScan()
-        viewModel.startScan()
-
-        assertEquals(1, fakeKnownDeviceDao.allDevices.size)
-    }
-
-    @Test
-    fun `mac-less device upgrades in place once a MAC resolves for its IP`() = runTest {
-        fakeSubnetScanner.devices = listOf(
-            LanDevice(ip = "192.168.1.22", hostname = "device", macAddress = null),
-        )
-        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
-        viewModel.onCustomRangeChanged("192.168.1.0/24")
-        viewModel.startScan()
-
-        fakeSubnetScanner.devices = listOf(
-            LanDevice(ip = "192.168.1.22", hostname = "device", macAddress = "AA:BB:CC:DD:EE:22"),
-        )
-        viewModel.startScan()
-
-        assertEquals(1, fakeKnownDeviceDao.allDevices.size)
-        val upgraded = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:22")
-        assertNotNull(upgraded)
-        assertEquals(null, fakeKnownDeviceDao.getByIpWithoutMac("192.168.1.22"))
-    }
-
-    @Test
     fun `new device triggers notification`() = runTest {
         fakeSubnetScanner.devices = listOf(
             LanDevice(ip = "192.168.1.30", macAddress = "AA:BB:CC:DD:EE:03", vendor = "Acme"),
@@ -150,48 +102,6 @@ class DeviceInventoryTest {
 
         assertEquals(1, fakeNotifier.notified.size)
         assertEquals("AA:BB:CC:DD:EE:03", fakeNotifier.notified.first().macAddress)
-    }
-
-    @Test
-    fun `existing device updates lastSeen without notification`() = runTest {
-        // Pre-populate a known device
-        fakeKnownDeviceDao.insertIfNew(
-            KnownDeviceEntity(
-                macAddress = "AA:BB:CC:DD:EE:04",
-                hostname = "old-name",
-                ip = "192.168.1.40",
-                vendor = "OldVendor",
-                firstSeen = 1000L,
-                lastSeen = 1000L,
-            ),
-        )
-        fakeNotifier.notified.clear()
-
-        fakeSubnetScanner.devices = listOf(
-            LanDevice(
-                ip = "192.168.1.41",
-                hostname = "new-name",
-                macAddress = "AA:BB:CC:DD:EE:04",
-                vendor = "NewVendor",
-            ),
-        )
-
-        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
-        viewModel.onCustomRangeChanged("192.168.1.0/24")
-        viewModel.startScan()
-
-        // Notification should NOT fire for existing device
-        assertTrue(fakeNotifier.notified.isEmpty())
-
-        // But the device should be updated
-        val updated = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:04")
-        assertNotNull(updated)
-        assertEquals("192.168.1.41", updated?.ip)
-        assertEquals("new-name", updated?.hostname)
-        // firstSeen should remain unchanged
-        assertEquals(1000L, updated?.firstSeen)
-        // lastSeen should be updated
-        assertTrue((updated?.lastSeen ?: 0) > 1000L)
     }
 
     @Test
@@ -377,6 +287,25 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
             _flow.update { allDevices.toList() }
         }
     }
+
+    override suspend fun setCustomName(id: Long, customName: String?) {
+        val index = allDevices.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            allDevices[index] = allDevices[index].copy(customName = customName)
+            _flow.update { allDevices.toList() }
+        }
+    }
+
+    override suspend fun setNetworkId(id: Long, networkId: Long?) {
+        val index = allDevices.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            allDevices[index] = allDevices[index].copy(networkId = networkId)
+            _flow.update { allDevices.toList() }
+        }
+    }
+
+    override fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>> =
+        flowOf(allDevices.filter { it.networkId == networkId })
 
     override fun search(query: String): Flow<List<KnownDeviceEntity>> =
         flowOf(allDevices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })

@@ -27,6 +27,7 @@ import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
@@ -56,7 +57,7 @@ class LanScanBuildExportTextTest {
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
-            newDeviceNotifier = FakeNewDeviceNotifier(),
+            deviceInventoryRepository = DeviceInventoryRepositoryImpl(FakeKnownDeviceDao(), FakeNewDeviceNotifier()),
         )
     }
 
@@ -161,6 +162,9 @@ private class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun updateLastSeen(id: Long, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
     override suspend fun setMacAddress(id: Long, mac: String) {}
     override suspend fun setKnown(id: Long, isKnown: Boolean) {}
+    override suspend fun setCustomName(id: Long, customName: String?) {}
+    override suspend fun setNetworkId(id: Long, networkId: Long?) {}
+    override fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override suspend fun delete(id: Long) {}
     override suspend fun deleteAll() {}

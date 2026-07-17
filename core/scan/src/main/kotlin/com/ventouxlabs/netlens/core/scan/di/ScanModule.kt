@@ -1,5 +1,7 @@
 package com.ventouxlabs.netlens.core.scan.di
 
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifierImpl
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
@@ -51,4 +53,10 @@ abstract class ScanModule {
     @Binds
     @Singleton
     abstract fun bindNewDeviceNotifier(impl: NewDeviceNotifierImpl): NewDeviceNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindDeviceInventoryRepository(
+        impl: DeviceInventoryRepositoryImpl,
+    ): DeviceInventoryRepository
 }

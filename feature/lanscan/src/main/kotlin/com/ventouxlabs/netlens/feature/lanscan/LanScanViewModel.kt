@@ -29,7 +29,7 @@ import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
-import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
@@ -60,7 +60,7 @@ class LanScanViewModel @Inject constructor(
     private val networkInterfaceProvider: NetworkInterfaceProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
     private val knownDeviceDao: KnownDeviceDao,
-    private val newDeviceNotifier: NewDeviceNotifier,
+    private val deviceInventoryRepository: DeviceInventoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -292,51 +292,7 @@ class LanScanViewModel @Inject constructor(
 
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
             saveToHistory()
-            persistScanResults(_uiState.value.devices)
-        }
-    }
-
-    private suspend fun persistScanResults(devices: List<LanDevice>) {
-        val now = System.currentTimeMillis()
-        for (device in devices) {
-            val mac = device.macAddress
-            // Devices with no resolvable MAC (mDNS/SSDP-only, or absent from
-            // /proc/net/arp) still get an inventory row, keyed by IP instead —
-            // otherwise they'd never accumulate no matter how many times they're
-            // seen. If a MAC later resolves for that IP, upgrade the row instead
-            // of creating a duplicate.
-            val existing = mac?.let { knownDeviceDao.getByMac(it) }
-                ?: knownDeviceDao.getByIpWithoutMac(device.ip)
-            if (existing != null) {
-                if (mac != null && existing.macAddress == null) {
-                    knownDeviceDao.setMacAddress(existing.id, mac)
-                }
-                knownDeviceDao.updateLastSeen(
-                    id = existing.id,
-                    hostname = device.hostname ?: existing.hostname,
-                    ip = device.ip,
-                    vendor = device.vendor ?: existing.vendor,
-                    lastSeen = now,
-                    deviceType = device.deviceType ?: existing.deviceType,
-                    osGuess = device.osGuess ?: existing.osGuess,
-                )
-            } else {
-                val entity = KnownDeviceEntity(
-                    macAddress = mac,
-                    hostname = device.hostname,
-                    ip = device.ip,
-                    vendor = device.vendor,
-                    firstSeen = now,
-                    lastSeen = now,
-                    isKnown = false,
-                    deviceType = device.deviceType,
-                    osGuess = device.osGuess,
-                )
-                val insertResult = knownDeviceDao.insertIfNew(entity)
-                if (insertResult != -1L) {
-                    newDeviceNotifier.notify(entity.copy(id = insertResult))
-                }
-            }
+            deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null)
         }
     }
 
