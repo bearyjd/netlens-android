@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.lanscan.model
 
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.scan.model.LanDevice
 
 data class LanScanUiState(
     val devices: List<LanDevice> = emptyList(),

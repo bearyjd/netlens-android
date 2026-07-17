@@ -83,9 +83,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
-import com.ventouxlabs.netlens.feature.lanscan.model.DiscoveryMethod
+import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
-import com.ventouxlabs.netlens.feature.lanscan.model.LanDevice
+import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanTab
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanUiState

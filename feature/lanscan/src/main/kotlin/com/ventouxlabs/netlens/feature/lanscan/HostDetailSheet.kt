@@ -46,7 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
-import com.ventouxlabs.netlens.feature.lanscan.model.DiscoveryMethod
+import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
 import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
