@@ -1,9 +1,16 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import app.cash.turbine.test
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
+import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -14,13 +21,20 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DevicesViewModelTest {
 
+    @TempDir
+    lateinit var tempDir: File
+
     private lateinit var knownDao: FakeKnownDeviceDao
     private lateinit var watchedDao: FakeWatchedNetworkDao
     private lateinit var identity: FakeNetworkIdentity
+    private lateinit var userPreferences: UserPreferencesRepository
+    private lateinit var scheduler: RecordingWatchScheduler
     private lateinit var viewModel: DevicesViewModel
 
     @BeforeEach
@@ -29,7 +43,20 @@ class DevicesViewModelTest {
         knownDao = FakeKnownDeviceDao()
         watchedDao = FakeWatchedNetworkDao()
         identity = FakeNetworkIdentity()
-        viewModel = DevicesViewModel(knownDao, watchedDao, identity)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+            produceFile = { File(tempDir, "test_prefs.preferences_pb") },
+        )
+        val fakeKeyValueStore = object : KeyValueStore {
+            private val map = mutableMapOf<String, String>()
+            override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
+            override fun putString(key: String, value: String?) {
+                if (value.isNullOrBlank()) map.remove(key) else map[key] = value
+            }
+        }
+        userPreferences = UserPreferencesRepository(dataStore, fakeKeyValueStore)
+        scheduler = RecordingWatchScheduler()
+        viewModel = DevicesViewModel(knownDao, watchedDao, identity, userPreferences, scheduler)
     }
 
     @AfterEach
@@ -84,5 +111,18 @@ class DevicesViewModelTest {
         identity.gatewayMac = null
         viewModel.watchCurrentNetwork()
         assertTrue(watchedDao.networks.isEmpty())
+    }
+
+    @Test
+    fun `setCadence persists the cadence`() = runTest {
+        viewModel.setCadence(WatchCadence.SIX_HOURS)
+        assertEquals(360, userPreferences.watchCadenceMinutes.first())
+    }
+
+    @Test
+    fun `applySchedule enqueues only when pro and master enabled`() = runTest {
+        viewModel.setMasterWatch(true)
+        viewModel.applySchedule(isPro = true)
+        assertTrue(scheduler.calls.any { it.isPro && it.masterEnabled })
     }
 }

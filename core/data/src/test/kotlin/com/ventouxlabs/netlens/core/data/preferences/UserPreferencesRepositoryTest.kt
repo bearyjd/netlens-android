@@ -134,4 +134,18 @@ class UserPreferencesRepositoryTest {
         assertEquals("f", recents.first())
         assertFalse("a" in recents)
     }
+
+    @Test
+    fun `watch cadence round-trips and defaults to 60`() = testScope.runTest {
+        assertEquals(60, repository.watchCadenceMinutes.first())
+        repository.setWatchCadenceMinutes(30)
+        assertEquals(30, repository.watchCadenceMinutes.first())
+    }
+
+    @Test
+    fun `watch master toggle round-trips and defaults to false`() = testScope.runTest {
+        assertEquals(false, repository.watchMasterEnabled.first())
+        repository.setWatchMasterEnabled(true)
+        assertEquals(true, repository.watchMasterEnabled.first())
+    }
 }

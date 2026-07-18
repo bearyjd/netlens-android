@@ -23,4 +23,15 @@
     <string name="devices_detail_close">Close</string>
     <string name="devices_cd_copy_results">Copy results</string>
     <string name="devices_cd_share">Share results</string>
+    <string name="devices_watch_section">Network Watch</string>
+    <string name="devices_watch_master">Background new-device alerts</string>
+    <string name="devices_watch_this_network">Watch this network</string>
+    <string name="devices_watch_cadence">Check every</string>
+    <string name="devices_watch_cadence_15">15 min</string>
+    <string name="devices_watch_cadence_30">30 min</string>
+    <string name="devices_watch_cadence_60">1 hour</string>
+    <string name="devices_watch_cadence_360">6 hours</string>
+    <string name="devices_watch_pro_upsell">Background watch is a Pro feature. Upgrade to get alerts when a new device joins your network.</string>
+    <string name="devices_watch_remove">Remove</string>
+    <string name="devices_watch_notif_prompt">Enable notifications to receive new-device alerts.</string>
 </resources>

@@ -14,4 +14,5 @@ dependencies {
     implementation(libs.work.runtime)
     implementation(libs.core.ktx)
     implementation(libs.compose.material.icons)
+    testImplementation(libs.datastore.preferences)
 }

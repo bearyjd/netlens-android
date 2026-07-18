@@ -163,6 +163,17 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    val watchCadenceMinutes: Flow<Int> = dataStore.data.map { it[WATCH_CADENCE_MINUTES] ?: DEFAULT_WATCH_CADENCE_MINUTES }
+    val watchMasterEnabled: Flow<Boolean> = dataStore.data.map { it[WATCH_MASTER_ENABLED] ?: false }
+
+    suspend fun setWatchCadenceMinutes(minutes: Int) {
+        dataStore.edit { it[WATCH_CADENCE_MINUTES] = minutes }
+    }
+
+    suspend fun setWatchMasterEnabled(enabled: Boolean) {
+        dataStore.edit { it[WATCH_MASTER_ENABLED] = enabled }
+    }
+
     companion object {
         private val FAVORITES_KEY = stringSetPreferencesKey("favorite_tools")
         private val RECENTS_KEY = stringPreferencesKey("recent_tools")
@@ -180,6 +191,9 @@ class UserPreferencesRepository @Inject constructor(
         private val POSTURE_TOP_ISSUE = stringPreferencesKey("posture_top_issue")
         private val POSTURE_TIMESTAMP = longPreferencesKey("posture_timestamp")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
+        private val WATCH_CADENCE_MINUTES = intPreferencesKey("watch_cadence_minutes")
+        private val WATCH_MASTER_ENABLED = booleanPreferencesKey("watch_master_enabled")
+        const val DEFAULT_WATCH_CADENCE_MINUTES = 60
         private const val RECENTS_SEPARATOR = ","
         private const val MAX_RECENTS = 5
         val DEFAULT_FAVORITES = setOf("ping", "lanscan", "dns")

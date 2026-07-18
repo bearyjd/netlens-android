@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
+import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +27,8 @@ class DevicesViewModel @Inject constructor(
     private val knownDeviceDao: KnownDeviceDao,
     private val watchedNetworkDao: WatchedNetworkDao,
     private val networkIdentity: NetworkIdentity,
+    private val userPreferences: UserPreferencesRepository,
+    private val watchScheduler: WatchScheduler,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -56,10 +60,20 @@ class DevicesViewModel @Inject constructor(
                     selectedDeviceId = selectedId,
                 )
             }.collect { next ->
-                // Preserve cadence/masterWatchEnabled, which Task G folds in from preferences.
+                // Preserve cadence/masterWatchEnabled, folded in below from preferences.
                 _uiState.update {
                     next.copy(cadence = it.cadence, masterWatchEnabled = it.masterWatchEnabled)
                 }
+            }
+        }
+        viewModelScope.launch {
+            combine(
+                userPreferences.watchCadenceMinutes,
+                userPreferences.watchMasterEnabled,
+            ) { minutes, master ->
+                WatchCadence.fromMinutes(minutes) to master
+            }.collect { (cadence, master) ->
+                _uiState.update { it.copy(cadence = cadence, masterWatchEnabled = master) }
             }
         }
     }
@@ -107,5 +121,17 @@ class DevicesViewModel @Inject constructor(
 
     fun removeWatchedNetwork(id: Long) {
         viewModelScope.launch { watchedNetworkDao.delete(id) }
+    }
+
+    fun setCadence(cadence: WatchCadence) {
+        viewModelScope.launch { userPreferences.setWatchCadenceMinutes(cadence.minutes) }
+    }
+
+    fun setMasterWatch(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setWatchMasterEnabled(enabled) }
+    }
+
+    fun applySchedule(isPro: Boolean) {
+        watchScheduler.apply(isPro, uiState.value.masterWatchEnabled, uiState.value.cadence)
     }
 }
