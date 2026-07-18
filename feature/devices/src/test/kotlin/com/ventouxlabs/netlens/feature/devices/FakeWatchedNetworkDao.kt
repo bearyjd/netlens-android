@@ -35,4 +35,9 @@ class FakeWatchedNetworkDao : WatchedNetworkDao {
         networks.removeAll { it.id == id }
         flow.value = networks.toList()
     }
+
+    /** Synchronous seeding helper for tests that don't need the upsert-replace semantics. */
+    fun upsertBlocking(network: WatchedNetworkEntity) {
+        networks.add(network)
+    }
 }
