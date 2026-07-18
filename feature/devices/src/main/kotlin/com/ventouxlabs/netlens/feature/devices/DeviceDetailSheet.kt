@@ -12,6 +12,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +23,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.feature.devices.model.displayName
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
+
+private val DETAIL_TIMESTAMP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
+
+private fun formatSeenTimestamp(epochMillis: Long): String =
+    DETAIL_TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(epochMillis))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +58,8 @@ fun DeviceDetailSheet(
             device.vendor?.let { Text(stringResource(R.string.devices_detail_vendor, it)) }
             device.deviceType?.let { Text(stringResource(R.string.devices_detail_type, it)) }
             device.osGuess?.let { Text(stringResource(R.string.devices_detail_os, it)) }
+            Text(stringResource(R.string.devices_first_seen, formatSeenTimestamp(device.firstSeen)))
+            Text(stringResource(R.string.devices_last_seen, formatSeenTimestamp(device.lastSeen)))
 
             OutlinedTextField(
                 value = name,
@@ -67,6 +83,11 @@ fun DeviceDetailSheet(
             }
             OutlinedButton(onClick = { onDelete(); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.devices_detail_delete))
+            }
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.devices_detail_close))
+                }
             }
         }
     }
