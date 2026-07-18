@@ -72,7 +72,7 @@ class SpeedTestViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 downloadMbps = progress.speedMbps,
-                                progress = progress.bytesTransferred.toFloat() / DOWNLOAD_TARGET,
+                                progress = windowProgress(progress.elapsedMs),
                             )
                         }
                     }
@@ -102,7 +102,7 @@ class SpeedTestViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 uploadMbps = progress.speedMbps,
-                                progress = progress.bytesTransferred.toFloat() / UPLOAD_TARGET,
+                                progress = windowProgress(progress.elapsedMs),
                             )
                         }
                     }
@@ -176,8 +176,10 @@ class SpeedTestViewModel @Inject constructor(
     }
 
     companion object {
-        private const val DOWNLOAD_TARGET = 25_000_000f
-        private const val UPLOAD_TARGET = 10_000_000f
         private const val SERVER_NAME = "Cloudflare"
+
+        /** Fraction of [SpeedTestEngine.MEASURE_WINDOW_MS] elapsed, clamped to 0f..1f for the progress gauge. */
+        internal fun windowProgress(elapsedMs: Long): Float =
+            (elapsedMs.toFloat() / SpeedTestEngine.MEASURE_WINDOW_MS).coerceIn(0f, 1f)
     }
 }

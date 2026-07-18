@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngine
+import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngine.Companion.MEASURE_WINDOW_MS
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedProgress
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestUiState
@@ -245,5 +246,27 @@ class SpeedTestViewModelTest {
             val finalState = expectMostRecentItem()
             assertEquals(133f, finalState.downloadMbps)
         }
+    }
+
+    // The ViewModel collapses every intermediate StateFlow update into the final value under
+    // UnconfinedTestDispatcher when the fake engine's flow never suspends (see the other tests in
+    // this file, which only ever assert on expectMostRecentItem()). That makes it impossible to
+    // observe a genuine mid-window progress emission through the full startTest() pipeline, so the
+    // elapsed-time-to-progress math (H1: time-bounded, not byte-bounded, progress) is verified
+    // directly against the pure function the ViewModel calls on every progress emission.
+    @Test
+    fun `windowProgress computes elapsed fraction of the measurement window`() {
+        assertEquals(0f, SpeedTestViewModel.windowProgress(0L))
+        assertEquals(0.5f, SpeedTestViewModel.windowProgress(MEASURE_WINDOW_MS / 2))
+        assertEquals(1f, SpeedTestViewModel.windowProgress(MEASURE_WINDOW_MS))
+    }
+
+    @Test
+    fun `windowProgress is independent of bytes transferred and clamps beyond the window`() {
+        // A fast link moves far more than any old byte-based target inside the window; the fix
+        // must track how much of MEASURE_WINDOW_MS has elapsed, not how many bytes moved, and
+        // must never report more than 100% even if elapsed slightly overruns the window.
+        assertEquals(1f, SpeedTestViewModel.windowProgress(MEASURE_WINDOW_MS + 500L))
+        assertEquals(0f, SpeedTestViewModel.windowProgress(-100L))
     }
 }

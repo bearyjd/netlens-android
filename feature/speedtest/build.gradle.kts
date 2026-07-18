@@ -13,4 +13,6 @@ dependencies {
     implementation(libs.compose.material.icons)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+
+    testImplementation(libs.ktor.client.mock)
 }
