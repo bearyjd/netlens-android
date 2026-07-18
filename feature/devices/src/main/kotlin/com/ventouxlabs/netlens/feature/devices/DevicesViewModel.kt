@@ -123,15 +123,24 @@ class DevicesViewModel @Inject constructor(
         viewModelScope.launch { watchedNetworkDao.delete(id) }
     }
 
-    fun setCadence(cadence: WatchCadence) {
-        viewModelScope.launch { userPreferences.setWatchCadenceMinutes(cadence.minutes) }
+    /**
+     * Persists the new cadence and reschedules with it directly, rather than re-reading
+     * [uiState] afterwards — the DataStore write and the state collector that mirrors it
+     * back into [uiState] are both async, so a caller-side re-read would race the persist
+     * and observe the previous cadence.
+     */
+    fun setCadence(cadence: WatchCadence, isPro: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setWatchCadenceMinutes(cadence.minutes)
+            watchScheduler.apply(isPro, uiState.value.masterWatchEnabled, cadence)
+        }
     }
 
-    fun setMasterWatch(enabled: Boolean) {
-        viewModelScope.launch { userPreferences.setWatchMasterEnabled(enabled) }
-    }
-
-    fun applySchedule(isPro: Boolean) {
-        watchScheduler.apply(isPro, uiState.value.masterWatchEnabled, uiState.value.cadence)
+    /** See [setCadence] for why the new value is threaded through instead of re-read from [uiState]. */
+    fun setMasterWatch(enabled: Boolean, isPro: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setWatchMasterEnabled(enabled)
+            watchScheduler.apply(isPro, enabled, uiState.value.cadence)
+        }
     }
 }

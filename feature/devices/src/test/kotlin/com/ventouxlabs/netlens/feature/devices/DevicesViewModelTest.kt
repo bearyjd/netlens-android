@@ -11,7 +11,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -115,14 +117,67 @@ class DevicesViewModelTest {
 
     @Test
     fun `setCadence persists the cadence`() = runTest {
-        viewModel.setCadence(WatchCadence.SIX_HOURS)
+        viewModel.setCadence(WatchCadence.SIX_HOURS, isPro = false)
         assertEquals(360, userPreferences.watchCadenceMinutes.first())
     }
 
     @Test
-    fun `applySchedule enqueues only when pro and master enabled`() = runTest {
-        viewModel.setMasterWatch(true)
-        viewModel.applySchedule(isPro = true)
+    fun `setMasterWatch enqueues only when pro and master enabled`() = runTest {
+        viewModel.setMasterWatch(enabled = true, isPro = true)
         assertTrue(scheduler.calls.any { it.isPro && it.masterEnabled })
+    }
+
+    @Test
+    fun `setMasterWatch schedules with the newly-set value, not a stale uiState read`() = runTest {
+        // A dispatcher that does NOT run launched coroutines inline (unlike UnconfinedTestDispatcher
+        // used by the other tests in this class) so the persist-then-schedule ordering is actually
+        // exercised, the same way it would run on a real Android main-thread dispatcher.
+        val (vm, standardScheduler) = buildViewModelOnStandardDispatcher()
+
+        vm.setMasterWatch(enabled = true, isPro = true)
+
+        // Nothing has run yet: proves the schedule call is not observable until the coroutine
+        // that persists AND schedules actually executes.
+        assertTrue(standardScheduler.calls.isEmpty())
+
+        advanceUntilIdle()
+
+        // The scheduler call must reflect the value just set (true), never a re-read of the
+        // pre-update uiState (which would still report false at this point).
+        assertEquals(1, standardScheduler.calls.size)
+        assertTrue(standardScheduler.calls.single().masterEnabled)
+    }
+
+    @Test
+    fun `setCadence schedules with the newly-set cadence, not a stale uiState read`() = runTest {
+        val (vm, standardScheduler) = buildViewModelOnStandardDispatcher()
+
+        vm.setCadence(WatchCadence.SIX_HOURS, isPro = true)
+        assertTrue(standardScheduler.calls.isEmpty())
+
+        advanceUntilIdle()
+
+        assertEquals(1, standardScheduler.calls.size)
+        assertEquals(WatchCadence.SIX_HOURS, standardScheduler.calls.single().cadence)
+    }
+
+    private fun kotlinx.coroutines.test.TestScope.buildViewModelOnStandardDispatcher():
+        Pair<DevicesViewModel, RecordingWatchScheduler> {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+            produceFile = { File(tempDir, "standard_prefs_${System.nanoTime()}.preferences_pb") },
+        )
+        val fakeKeyValueStore = object : KeyValueStore {
+            private val map = mutableMapOf<String, String>()
+            override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
+            override fun putString(key: String, value: String?) {
+                if (value.isNullOrBlank()) map.remove(key) else map[key] = value
+            }
+        }
+        val prefs = UserPreferencesRepository(dataStore, fakeKeyValueStore)
+        val standardScheduler = RecordingWatchScheduler()
+        val vm = DevicesViewModel(knownDao, watchedDao, identity, prefs, standardScheduler)
+        return vm to standardScheduler
     }
 }

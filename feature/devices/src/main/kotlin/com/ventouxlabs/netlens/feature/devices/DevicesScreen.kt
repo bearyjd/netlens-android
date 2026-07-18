@@ -84,14 +84,8 @@ fun DevicesScreen(
                 onWatchThisNetwork = viewModel::watchCurrentNetwork,
                 onToggleNetwork = viewModel::toggleNetworkWatch,
                 onRemoveNetwork = viewModel::removeWatchedNetwork,
-                onMasterToggle = { enabled ->
-                    viewModel.setMasterWatch(enabled)
-                    viewModel.applySchedule(isPro)
-                },
-                onCadenceChange = { cadence ->
-                    viewModel.setCadence(cadence)
-                    viewModel.applySchedule(isPro)
-                },
+                onMasterToggle = { enabled -> viewModel.setMasterWatch(enabled, isPro) },
+                onCadenceChange = { cadence -> viewModel.setCadence(cadence, isPro) },
             )
             OutlinedTextField(
                 value = uiState.searchQuery,
