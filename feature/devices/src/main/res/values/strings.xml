@@ -2,4 +2,25 @@
 <resources>
     <string name="devices_title">Devices</string>
     <string name="navigate_back">Back</string>
+    <string name="devices_search_placeholder">Search devices…</string>
+    <string name="devices_clear_search">Clear search</string>
+    <string name="devices_section_new">New</string>
+    <string name="devices_section_known">Known</string>
+    <string name="devices_empty">No devices yet.\nRun a LAN scan or enable watch to build your inventory.</string>
+    <string name="devices_no_results">No devices match your search</string>
+    <string name="devices_mac_unknown">MAC unknown</string>
+    <string name="devices_first_seen">First: %1$s</string>
+    <string name="devices_last_seen">Last: %1$s</string>
+    <string name="devices_detail_rename">Custom name</string>
+    <string name="devices_detail_rename_hint">Friendly name (optional)</string>
+    <string name="devices_detail_mark_known">Mark as known</string>
+    <string name="devices_detail_mark_unknown">Mark as unknown</string>
+    <string name="devices_detail_vendor">Vendor: %1$s</string>
+    <string name="devices_detail_type">Type: %1$s</string>
+    <string name="devices_detail_os">OS: %1$s</string>
+    <string name="devices_detail_delete">Delete device</string>
+    <string name="devices_detail_save">Save</string>
+    <string name="devices_detail_close">Close</string>
+    <string name="devices_cd_copy_results">Copy results</string>
+    <string name="devices_cd_share">Share results</string>
 </resources>
