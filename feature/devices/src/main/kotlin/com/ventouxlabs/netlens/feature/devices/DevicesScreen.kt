@@ -1,7 +1,9 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -220,7 +222,17 @@ private fun WatchSection(
                 onClick = {
                     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    context.startActivity(intent)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: ActivityNotFoundException) {
+                        // AOSP forks without a notification settings activity (rare).
+                        Log.w("DevicesScreen", "ACTION_APP_NOTIFICATION_SETTINGS not handled", e)
+                        context.startActivity(
+                            Intent(Settings.ACTION_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
                 },
                 label = { Text(stringResource(R.string.devices_watch_notif_prompt)) },
                 leadingIcon = { Icon(Icons.Default.NotificationsOff, null) },
