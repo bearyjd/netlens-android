@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -126,7 +127,7 @@ private fun DeviceRow(device: KnownDeviceEntity, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall,
             )
         },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        modifier = Modifier.clickable(onClick = onClick).fillMaxWidth().padding(horizontal = 4.dp),
     )
     HorizontalDivider()
 }
