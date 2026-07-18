@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -105,6 +107,24 @@ fun SpeedTestScreen(
             onStartTest = viewModel::startTest,
             onCancelTest = viewModel::cancelTest,
             modifier = Modifier.padding(innerPadding),
+        )
+    }
+
+    if (state.showMeteredWarning) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissMeteredWarning,
+            title = { Text(stringResource(R.string.speedtest_metered_title)) },
+            text = { Text(stringResource(R.string.speedtest_metered_body)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmMeteredAndStart) {
+                    Text(stringResource(R.string.speedtest_metered_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissMeteredWarning) {
+                    Text(stringResource(R.string.speedtest_metered_cancel))
+                }
+            },
         )
     }
 }

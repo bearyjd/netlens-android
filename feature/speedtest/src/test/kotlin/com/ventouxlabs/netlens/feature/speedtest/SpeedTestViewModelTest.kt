@@ -25,12 +25,14 @@ import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngine.Companio
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedProgress
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestUiState
+import com.ventouxlabs.netlens.feature.speedtest.network.MeteredNetworkChecker
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SpeedTestViewModelTest {
 
     private lateinit var fakeEngine: FakeSpeedTestEngine
     private lateinit var fakeHistoryDao: FakeSpeedTestHistoryDao
+    private lateinit var fakeMeteredNetworkChecker: FakeMeteredNetworkChecker
     private lateinit var viewModel: SpeedTestViewModel
 
     private class FakeSpeedTestEngine : SpeedTestEngine {
@@ -83,12 +85,17 @@ class SpeedTestViewModelTest {
         override suspend fun deleteAll() {}
     }
 
+    private class FakeMeteredNetworkChecker(var metered: Boolean = false) : MeteredNetworkChecker {
+        override fun isMetered(): Boolean = metered
+    }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeEngine = FakeSpeedTestEngine()
         fakeHistoryDao = FakeSpeedTestHistoryDao()
-        viewModel = SpeedTestViewModel(fakeEngine, fakeHistoryDao)
+        fakeMeteredNetworkChecker = FakeMeteredNetworkChecker()
+        viewModel = SpeedTestViewModel(fakeEngine, fakeHistoryDao, fakeMeteredNetworkChecker)
     }
 
     @AfterEach
@@ -268,5 +275,96 @@ class SpeedTestViewModelTest {
         // must never report more than 100% even if elapsed slightly overruns the window.
         assertEquals(1f, SpeedTestViewModel.windowProgress(MEASURE_WINDOW_MS + 500L))
         assertEquals(0f, SpeedTestViewModel.windowProgress(-100L))
+    }
+
+    @Test
+    fun `startTest on metered network shows warning and does not start engine`() = runTest {
+        fakeMeteredNetworkChecker.metered = true
+
+        viewModel.state.test {
+            awaitItem() // initial IDLE
+
+            viewModel.startTest()
+
+            val warningState = expectMostRecentItem()
+            assertTrue(warningState.showMeteredWarning)
+            assertEquals(SpeedTestPhase.IDLE, warningState.phase)
+            assertFalse(warningState.isRunning)
+        }
+        assertTrue(fakeHistoryDao.inserted.isEmpty())
+    }
+
+    @Test
+    fun `confirmMeteredAndStart clears warning and starts test`() = runTest {
+        fakeMeteredNetworkChecker.metered = true
+
+        viewModel.state.test {
+            awaitItem() // initial IDLE
+
+            viewModel.startTest()
+            assertTrue(expectMostRecentItem().showMeteredWarning)
+
+            viewModel.confirmMeteredAndStart()
+
+            val finalState = expectMostRecentItem()
+            assertFalse(finalState.showMeteredWarning)
+            assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
+            assertFalse(finalState.isRunning)
+        }
+    }
+
+    @Test
+    fun `confirmed metered warning does not re-prompt within the session`() = runTest {
+        fakeMeteredNetworkChecker.metered = true
+
+        viewModel.confirmMeteredAndStart()
+        assertEquals(1, fakeHistoryDao.inserted.size)
+
+        viewModel.state.test {
+            val stateBeforeSecondStart = awaitItem()
+            assertFalse(stateBeforeSecondStart.showMeteredWarning)
+
+            viewModel.startTest()
+
+            val finalState = expectMostRecentItem()
+            assertFalse(finalState.showMeteredWarning)
+            assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
+        }
+        assertEquals(2, fakeHistoryDao.inserted.size)
+    }
+
+    @Test
+    fun `dismissMeteredWarning clears the flag without starting`() = runTest {
+        fakeMeteredNetworkChecker.metered = true
+
+        viewModel.state.test {
+            awaitItem() // initial IDLE
+
+            viewModel.startTest()
+            assertTrue(expectMostRecentItem().showMeteredWarning)
+
+            viewModel.dismissMeteredWarning()
+
+            val finalState = expectMostRecentItem()
+            assertFalse(finalState.showMeteredWarning)
+            assertFalse(finalState.isRunning)
+        }
+        assertTrue(fakeHistoryDao.inserted.isEmpty())
+    }
+
+    @Test
+    fun `startTest on non-metered network starts immediately with no warning`() = runTest {
+        fakeMeteredNetworkChecker.metered = false
+
+        viewModel.state.test {
+            awaitItem() // initial IDLE
+
+            viewModel.startTest()
+
+            val finalState = expectMostRecentItem()
+            assertFalse(finalState.showMeteredWarning)
+            assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
+            assertFalse(finalState.isRunning)
+        }
     }
 }

@@ -8,4 +8,5 @@ data class SpeedTestUiState(
     val progress: Float = 0f,
     val error: String? = null,
     val isRunning: Boolean = false,
+    val showMeteredWarning: Boolean = false,
 )

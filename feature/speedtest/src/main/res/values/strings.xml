@@ -20,4 +20,8 @@
     <string name="speedtest_history_entry">↓ %.1f  ↑ %.1f Mbps  %d ms</string>
     <string name="speedtest_chart_download">Download</string>
     <string name="speedtest_chart_upload">Upload</string>
+    <string name="speedtest_metered_title">Run on metered connection?</string>
+    <string name="speedtest_metered_body">This connection is metered. The test can use a large amount of data on fast connections — up to a few hundred MB, transferring for about 8 seconds each direction.</string>
+    <string name="speedtest_metered_confirm">Start Test</string>
+    <string name="speedtest_metered_cancel">Cancel</string>
 </resources>

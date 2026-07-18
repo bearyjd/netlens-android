@@ -19,12 +19,14 @@ import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngine
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestUiState
+import com.ventouxlabs.netlens.feature.speedtest.network.MeteredNetworkChecker
 import javax.inject.Inject
 
 @HiltViewModel
 class SpeedTestViewModel @Inject constructor(
     private val engine: SpeedTestEngine,
     private val historyDao: SpeedTestHistoryDao,
+    private val meteredNetworkChecker: MeteredNetworkChecker,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SpeedTestUiState())
@@ -34,8 +36,26 @@ class SpeedTestViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private var testJob: Job? = null
+    private var meteredWarningConfirmed = false
 
     fun startTest() {
+        if (meteredNetworkChecker.isMetered() && !meteredWarningConfirmed) {
+            _state.update { it.copy(showMeteredWarning = true) }
+            return
+        }
+        beginTest()
+    }
+
+    fun confirmMeteredAndStart() {
+        meteredWarningConfirmed = true
+        beginTest()
+    }
+
+    fun dismissMeteredWarning() {
+        _state.update { it.copy(showMeteredWarning = false) }
+    }
+
+    private fun beginTest() {
         testJob?.cancel()
         _state.update {
             SpeedTestUiState(

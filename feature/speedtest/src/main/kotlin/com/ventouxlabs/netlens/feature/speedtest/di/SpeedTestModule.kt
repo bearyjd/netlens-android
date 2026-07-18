@@ -6,6 +6,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngine
 import com.ventouxlabs.netlens.feature.speedtest.engine.SpeedTestEngineImpl
+import com.ventouxlabs.netlens.feature.speedtest.network.ConnectivityManagerMeteredNetworkChecker
+import com.ventouxlabs.netlens.feature.speedtest.network.MeteredNetworkChecker
 import javax.inject.Singleton
 
 @Module
@@ -17,4 +19,7 @@ abstract class SpeedTestModule {
     @Binds
     @Singleton
     abstract fun bindSpeedTestEngine(impl: SpeedTestEngineImpl): SpeedTestEngine
+
+    @Binds
+    abstract fun bindMeteredNetworkChecker(impl: ConnectivityManagerMeteredNetworkChecker): MeteredNetworkChecker
 }
