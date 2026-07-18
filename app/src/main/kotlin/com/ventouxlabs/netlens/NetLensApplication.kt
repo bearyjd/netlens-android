@@ -1,11 +1,28 @@
 package com.ventouxlabs.netlens
 
 import android.app.Application
+import com.ventouxlabs.netlens.core.billing.ProStatus
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.feature.devices.WatchScheduler
+import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.widget.enqueuePeriodicWidgetRefresh
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltAndroidApp
 class NetLensApplication : Application() {
+
+    @Inject lateinit var watchScheduler: WatchScheduler
+    @Inject lateinit var userPreferences: UserPreferencesRepository
+    @Inject lateinit var proStatus: ProStatus
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         // Belt-and-suspenders for users who already have widgets placed:
@@ -13,5 +30,13 @@ class NetLensApplication : Application() {
         // periodic refresh would only schedule after a fresh widget add.
         // ExistingPeriodicWorkPolicy.KEEP makes repeat calls idempotent.
         enqueuePeriodicWidgetRefresh(this)
+
+        // Reconcile the background watch at start: WatchSchedulerImpl enqueues only when
+        // Pro AND the master toggle is on, and cancels otherwise (e.g. Pro lost).
+        appScope.launch {
+            val masterEnabled = userPreferences.watchMasterEnabled.first()
+            val cadence = WatchCadence.fromMinutes(userPreferences.watchCadenceMinutes.first())
+            watchScheduler.apply(proStatus.isPro.value, masterEnabled, cadence)
+        }
     }
 }
