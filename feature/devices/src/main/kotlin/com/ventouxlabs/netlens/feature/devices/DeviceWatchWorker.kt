@@ -35,7 +35,8 @@ class DeviceWatchWorker(
             throw e
         } catch (_: Exception) {
             // Transient failure: back off, WorkManager caps attempts; give up after 3.
-            if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+            // runAttemptCount is 0-indexed (0, 1, 2 = 3 attempts), so use MAX_ATTEMPTS - 1
+            if (runAttemptCount < MAX_ATTEMPTS - 1) Result.retry() else Result.success()
         }
     }
 
