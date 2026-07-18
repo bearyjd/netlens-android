@@ -143,4 +143,17 @@ class DevicesViewModel @Inject constructor(
             watchScheduler.apply(isPro, enabled, uiState.value.cadence)
         }
     }
+
+    fun buildExportText(): String {
+        val current = uiState.value
+        val sb = StringBuilder()
+        sb.appendLine("Device inventory (${current.devices.size} devices):")
+        current.devices.forEach { device ->
+            val mac = device.macAddress ?: "no-mac"
+            val vendor = device.vendor?.let { "  Vendor=$it" } ?: ""
+            val status = if (device.isKnown) "known" else "new"
+            sb.appendLine("${device.displayName()}  ${device.ip}  $mac  [$status]$vendor")
+        }
+        return sb.toString().trimEnd()
+    }
 }

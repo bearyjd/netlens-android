@@ -3,8 +3,11 @@ package com.ventouxlabs.netlens.core.scan
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -43,11 +46,22 @@ class NewDeviceNotifierImpl @Inject constructor(
             device.hostname ?: device.ip,
             device.vendor ?: context.getString(R.string.lanscan_notification_unknown_vendor),
         )
+        val deepLink = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("netlens://feature/devices"),
+        ).setPackage(context.packageName)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            device.id.hashCode(),
+            deepLink,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_new_device_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
             .build()
 
         if (ActivityCompat.checkSelfPermission(

@@ -12,7 +12,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -38,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
+import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 
@@ -63,6 +67,8 @@ fun DevicesScreen(
         )
     }
 
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -70,6 +76,20 @@ fun DevicesScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        ResultExporter.copyToClipboard(context, "Devices", viewModel.buildExportText())
+                    }) {
+                        Icon(Icons.Default.ContentCopy, stringResource(R.string.devices_cd_copy_results))
+                    }
+                    if (isPro) {
+                        IconButton(onClick = {
+                            ResultExporter.shareAsText(context, "Device Inventory", viewModel.buildExportText())
+                        }) {
+                            Icon(Icons.Default.Share, stringResource(R.string.devices_cd_share))
+                        }
                     }
                 },
             )
