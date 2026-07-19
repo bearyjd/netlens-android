@@ -4,7 +4,7 @@ import com.ventouxlabs.netlens.feature.speedtest.model.SpeedProgress
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.preparePost
@@ -31,6 +31,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -59,7 +60,16 @@ class SpeedTestEngineImpl private constructor(
 ) : SpeedTestEngine {
 
     @Inject constructor() : this(
-        HttpClient(CIO) { engine { requestTimeout = TIMEOUT_MS } },
+        HttpClient(OkHttp) {
+            engine {
+                // OkHttp's connection pool (default: keep-alive, reused across the 4 parallel
+                // streams) is the whole point of this engine swap over CIO — see KTOR-6503.
+                // callTimeout covers connect+write+read for the whole call, matching CIO's
+                // requestTimeout semantics; a stream is allowed to live the full measurement
+                // window (MEASURE_WINDOW_MS) plus margin.
+                config { callTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS) }
+            }
+        },
         Dispatchers.IO,
         System::currentTimeMillis,
     )

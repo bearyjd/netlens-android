@@ -12,7 +12,7 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.compose.material.icons)
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.okhttp)
 
     testImplementation(libs.ktor.client.mock)
 }
