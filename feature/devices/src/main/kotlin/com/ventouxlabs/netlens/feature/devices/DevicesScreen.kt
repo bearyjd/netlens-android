@@ -135,8 +135,11 @@ fun DevicesScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
 
-            val newDevices = uiState.devices.filter { !it.isKnown }
-            val knownDevices = uiState.devices.filter { it.isKnown }
+            // Partition once per device-list change rather than on every recomposition
+            // (every search keystroke, selection, and isPro emission re-filtered twice).
+            val (newDevices, knownDevices) = remember(uiState.devices) {
+                uiState.devices.partition { !it.isKnown }
+            }
 
             if (uiState.devices.isEmpty()) {
                 Text(

@@ -44,6 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -154,9 +155,15 @@ fun WifiScreen(
                 modifier = Modifier.padding(innerPadding),
             )
         } else {
+            // Recompute the band filter only when the network set or selected band changes,
+            // not on every recomposition — an unremembered new List forced ChannelGraph's
+            // heavy Canvas redraw even when the data was identical.
+            val filteredNetworks = remember(state.networks, state.selectedBand) {
+                viewModel.filteredNetworks()
+            }
             WifiContent(
                 state = state,
-                filteredNetworks = viewModel.filteredNetworks(),
+                filteredNetworks = filteredNetworks,
                 onBandSelected = viewModel::onBandSelected,
                 isPro = isPro,
                 modifier = Modifier.padding(innerPadding),
