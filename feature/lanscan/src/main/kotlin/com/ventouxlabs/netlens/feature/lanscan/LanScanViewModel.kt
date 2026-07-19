@@ -5,6 +5,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +18,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
@@ -220,11 +225,32 @@ class LanScanViewModel @Inject constructor(
         }
 
         scanJob = viewModelScope.launch {
+            // Three scanners discover hosts concurrently. Rather than copy + re-sort the whole
+            // device list and emit a new _uiState on every single discovery (an O(n^2 log n)
+            // storm over a /24 sweep), merges accumulate into this map and a periodic emitter
+            // flushes one sorted snapshot at a bounded cadence, plus a final flush at completion.
+            // Mirrors the batched port-scan emissions in scanHostPorts().
+            val discovered = LinkedHashMap<String, LanDevice>()
+            val discoveredLock = Mutex()
+
+            suspend fun flushDiscovered() {
+                val sorted = discoveredLock.withLock {
+                    discovered.values.sortedWith(_sortOrder.value.comparator())
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        devices = sorted,
+                        deviceCount = sorted.size,
+                        progress = (sorted.size.toFloat() / expectedHosts).coerceAtMost(0.95f),
+                    )
+                }
+            }
+
             suspend fun mergeDevice(device: LanDevice) {
                 val fingerprinted = fingerprinter.fingerprint(device)
-                _uiState.update { state ->
-                    val existing = state.devices.find { it.ip == fingerprinted.ip }
-                    val merged = if (existing != null) {
+                discoveredLock.withLock {
+                    val existing = discovered[fingerprinted.ip]
+                    discovered[fingerprinted.ip] = if (existing != null) {
                         existing.copy(
                             hostname = existing.hostname ?: fingerprinted.hostname,
                             discoveryMethod = DiscoveryMethod.MULTIPLE,
@@ -238,17 +264,13 @@ class LanScanViewModel @Inject constructor(
                     } else {
                         fingerprinted
                     }
-                    val updatedDevices = if (existing != null) {
-                        state.devices.map { if (it.ip == merged.ip) merged else it }
-                    } else {
-                        state.devices + merged
-                    }.sortedWith(_sortOrder.value.comparator())
-                    val newCount = updatedDevices.size
-                    state.copy(
-                        devices = updatedDevices,
-                        deviceCount = newCount,
-                        progress = (newCount.toFloat() / expectedHosts).coerceAtMost(0.95f),
-                    )
+                }
+            }
+
+            val emitterJob = launch {
+                while (isActive) {
+                    delay(DISCOVERY_EMIT_INTERVAL_MS)
+                    flushDiscovered()
                 }
             }
 
@@ -287,6 +309,9 @@ class LanScanViewModel @Inject constructor(
             pingJob.join()
             mdnsJob.join()
             ssdpJob.join()
+
+            emitterJob.cancelAndJoin()
+            flushDiscovered()
 
             enrichWithArpAndNetBios()
 
@@ -505,6 +530,9 @@ class LanScanViewModel @Inject constructor(
     }
 
     companion object {
+        // Bounded cadence for flushing accumulated LAN-scan discoveries to the UI.
+        private const val DISCOVERY_EMIT_INTERVAL_MS = 200L
+
         internal fun parseCidr(cidr: String): Pair<String, Int>? {
             val trimmed = cidr.trim()
             val parts = trimmed.split("/")
