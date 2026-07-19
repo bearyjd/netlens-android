@@ -149,4 +149,56 @@ class SpeedTestEngineImplTest {
 
         writer.cancel()
     }
+
+    @Test
+    fun `measureLatency discards the first sample and returns the median of the rest`() = runTest {
+        // 6 samples requested (LATENCY_SAMPLES + 1 = 5 + 1). Sample 0 is always discarded
+        // regardless of its value, so a wildly different first value must not affect the result.
+        val values = listOf(9_999L, 30L, 10L, 20L, 40L, 15L)
+        val calls = AtomicInteger(0)
+        val impl = SpeedTestEngineImpl(
+            engine = MockEngine { respond(content = "") },
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            connectProbe = { values[calls.getAndIncrement()] },
+        )
+
+        // Remaining after discarding index 0: [30, 10, 20, 40, 15] -> sorted [10, 15, 20, 30, 40].
+        assertEquals(20L, impl.measureLatency())
+    }
+
+    @Test
+    fun `measureLatency skips failed connects and medians the survivors`() = runTest {
+        val calls = AtomicInteger(0)
+        val impl = SpeedTestEngineImpl(
+            engine = MockEngine { respond(content = "") },
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            connectProbe = { address ->
+                when (calls.getAndIncrement()) {
+                    0 -> throw IOException("cold warm-up sample fails too, still discarded")
+                    1 -> throw IOException("dropped connection")
+                    2 -> 10L
+                    3 -> 20L
+                    4 -> 30L
+                    else -> 40L
+                }
+            },
+        )
+
+        // Attempt 0 discarded regardless; attempt 1 failed and is skipped; survivors [10, 20, 30, 40]
+        // sorted, median at index size/2=2 -> 30.
+        assertEquals(30L, impl.measureLatency())
+    }
+
+    @Test
+    fun `measureLatency throws IOException when every post-warmup connect fails`() = runTest {
+        val impl = SpeedTestEngineImpl(
+            engine = MockEngine { respond(content = "") },
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            connectProbe = { throw IOException("connect refused") },
+        )
+
+        val error = runCatching { impl.measureLatency() }.exceptionOrNull()
+
+        assertTrue(error is IOException, "should propagate an IOException when every sample fails")
+    }
 }

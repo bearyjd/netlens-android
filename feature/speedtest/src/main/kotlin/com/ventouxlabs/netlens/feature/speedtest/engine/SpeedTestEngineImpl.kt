@@ -5,7 +5,6 @@ import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
@@ -31,6 +30,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.URI
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -57,6 +60,7 @@ class SpeedTestEngineImpl private constructor(
     private val client: HttpClient,
     private val ioDispatcher: CoroutineDispatcher,
     private val timeSource: () -> Long,
+    private val connectProbe: suspend (InetSocketAddress) -> Long,
 ) : SpeedTestEngine {
 
     @Inject constructor() : this(
@@ -72,18 +76,21 @@ class SpeedTestEngineImpl private constructor(
         },
         Dispatchers.IO,
         System::currentTimeMillis,
+        defaultConnectProbe(System::currentTimeMillis),
     )
 
     /**
      * Visible for testing: swap in a [io.ktor.client.engine.mock.MockEngine], a test dispatcher
-     * backed by the coroutines-test scheduler, and a virtual-time [timeSource] so the warm-up
-     * and window arithmetic is deterministic.
+     * backed by the coroutines-test scheduler, a virtual-time [timeSource] so the warm-up and
+     * window arithmetic is deterministic, and a [connectProbe] so [measureLatency] samples don't
+     * require real sockets.
      */
     internal constructor(
         engine: HttpClientEngine,
         ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
         timeSource: () -> Long = System::currentTimeMillis,
-    ) : this(HttpClient(engine), ioDispatcher, timeSource)
+        connectProbe: suspend (InetSocketAddress) -> Long = defaultConnectProbe(timeSource),
+    ) : this(HttpClient(engine), ioDispatcher, timeSource, connectProbe)
 
     override fun measureDownload(): Flow<SpeedProgress> =
         measureThroughput(SpeedTestPhase.DOWNLOAD) { counter, markFirstByte ->
@@ -95,14 +102,27 @@ class SpeedTestEngineImpl private constructor(
             uploadStream(counter, markFirstByte)
         }
 
+    /**
+     * Reports idle TCP connect RTT to [BASE_URL], not full HTTPS request time. Commercial speed
+     * tests (e.g. Google's) report latency this way — the time to open a bare TCP connection —
+     * so this is the figure comparable to them; a full HEAD request (the old approach) pays TLS
+     * handshake and response wait on top, which read ~25x higher than the browser reference on
+     * the same link.
+     *
+     * Samples [LATENCY_SAMPLES] + 1 raw connects to port [HTTPS_PORT]. The first is always
+     * discarded regardless of outcome (ARP/route-cache warm-up, not representative of
+     * steady-state RTT); the reported value is the median of the remaining successful samples.
+     * An individual failed connect is skipped; if every post-warm-up sample fails, [IOException]
+     * is thrown.
+     */
     override suspend fun measureLatency(): Long = withContext(ioDispatcher) {
-        val times = mutableListOf<Long>()
-        repeat(LATENCY_SAMPLES) {
-            val start = timeSource()
-            client.head("$BASE_URL/__down?bytes=0")
-            times.add(timeSource() - start)
+        val address = InetSocketAddress(InetAddress.getByName(URI(BASE_URL).host), HTTPS_PORT)
+        val samples = (0..LATENCY_SAMPLES).mapNotNull { attempt ->
+            val elapsed = runCatching { connectProbe(address) }.getOrNull()
+            if (attempt == 0) null else elapsed
         }
-        if (times.isNotEmpty()) times.sorted().let { it[it.size / 2] } else 0L
+        if (samples.isEmpty()) throw IOException("All TCP connect probes to $BASE_URL failed")
+        samples.sorted().let { it[it.size / 2] }
     }
 
     /**
@@ -239,10 +259,24 @@ class SpeedTestEngineImpl private constructor(
         private const val CHUNK_SIZE = 65_536
         private const val TIMEOUT_MS = 30_000L
         private const val LATENCY_SAMPLES = 5
+        private const val HTTPS_PORT = 443
+        private const val CONNECT_TIMEOUT_MS = 5_000
 
         /** Bits transferred over the elapsed window, expressed in Mbps. */
         internal fun throughputMbps(bytes: Long, elapsedMs: Long): Float =
             if (elapsedMs > 0L) bytes * 8f / (elapsedMs * 1000f) else 0f
+
+        /**
+         * Real [measureLatency] sample: times a raw TCP connect with no HTTP involved. Takes
+         * [timeSource] as a parameter (rather than closing over the instance) so both the
+         * production and test-facing constructors can build it before `this` exists.
+         */
+        private fun defaultConnectProbe(timeSource: () -> Long): suspend (InetSocketAddress) -> Long =
+            { address ->
+                val start = timeSource()
+                Socket().use { it.connect(address, CONNECT_TIMEOUT_MS) }
+                timeSource() - start
+            }
 
         /**
          * Post-warm-up steady-state rate once warm-up has completed; before that, the
