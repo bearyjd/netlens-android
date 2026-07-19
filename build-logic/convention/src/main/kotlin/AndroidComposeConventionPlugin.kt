@@ -2,6 +2,7 @@ import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension
 
 class AndroidComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -16,6 +17,14 @@ class AndroidComposeConventionPlugin : Plugin<Project> {
                 buildFeatures {
                     compose = true
                 }
+            }
+
+            // Treat first-party UI-state/domain model classes as stable so composables
+            // receiving them can skip recomposition when the instance is unchanged.
+            extensions.configure(ComposeCompilerGradlePluginExtension::class.java) {
+                stabilityConfigurationFiles.add(
+                    rootProject.layout.projectDirectory.file("compose_stability.conf")
+                )
             }
 
             dependencies {
