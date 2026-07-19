@@ -1,9 +1,12 @@
 package com.ventouxlabs.netlens.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -59,7 +62,6 @@ fun HomeScreen(
 ) {
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val postureState by postureViewModel.uiState.collectAsStateWithLifecycle()
-    val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
 
     // Screen-level lifecycle wiring for the latency monitor. Deliberately NOT
     // inside a lazy item: an observer scoped to an item detaches whenever the
@@ -84,20 +86,26 @@ fun HomeScreen(
         }
     }
 
-    val allGridTools = ToolDestination.entries.filter { it.isVisibleInGrid }
+    val allGridTools = remember { ToolDestination.entries.filter { it.isVisibleInGrid } }
     val isSearching = homeState.searchQuery.isNotBlank()
-    val filteredTools = if (isSearching) {
-        allGridTools.filter {
-            it.label.contains(homeState.searchQuery, ignoreCase = true) ||
-                it.description.contains(homeState.searchQuery, ignoreCase = true)
+    val filteredTools = remember(homeState.searchQuery, allGridTools) {
+        if (homeState.searchQuery.isNotBlank()) {
+            allGridTools.filter {
+                it.label.contains(homeState.searchQuery, ignoreCase = true) ||
+                    it.description.contains(homeState.searchQuery, ignoreCase = true)
+            }
+        } else {
+            allGridTools
         }
-    } else {
-        allGridTools
     }
-    val favoriteTools = homeState.favoriteRoutes
-        .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
-    val recentTools = homeState.recentRoutes
-        .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    val favoriteTools = remember(homeState.favoriteRoutes) {
+        homeState.favoriteRoutes
+            .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    }
+    val recentTools = remember(homeState.recentRoutes) {
+        homeState.recentRoutes
+            .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -138,36 +146,17 @@ fun HomeScreen(
             }
 
             item(key = "metrics_row", span = { GridItemSpan(maxLineSpan) }) {
-                MetricsRow(
-                    latestLatencyMs = latencyState.dataPoints.lastOrNull { it.latencyMs != null }?.latencyMs,
-                    latencyEnabled = latencyState.isEnabled,
-                    alertThresholdMs = latencyState.alertThresholdMs,
-                    latencyDataPoints = latencyState.dataPoints,
+                // latencyState is collected inside this child, not in HomeScreen's body, so
+                // the ~1Hz latency tick recomposes only this section and not the whole grid
+                // (which would otherwise re-run every tool derivation once per second).
+                HomeMetricsSection(
+                    latencyViewModel = latencyViewModel,
                     isVpnActive = homeState.isVpnActive,
                     localIp = homeState.localIp,
                     gatewayIp = homeState.gatewayIp,
-                    onLatencyClick = {
-                        if (latencyState.isEnabled) {
-                            latencyViewModel.toggleExpanded()
-                        } else {
-                            latencyViewModel.toggleEnabled()
-                        }
-                    },
                     onVpnClick = { handleToolClick(ToolDestination.VpnStatus) },
                     onIpClick = { handleToolClick(ToolDestination.IpInfo) },
                 )
-            }
-
-            if (latencyState.isEnabled && latencyState.isExpanded) {
-                item(key = "latency_detail", span = { GridItemSpan(maxLineSpan) }) {
-                    LatencyDetailCard(
-                        state = latencyState,
-                        onToggleEnabled = latencyViewModel::toggleEnabled,
-                        onConfigure = latencyViewModel::showConfig,
-                        onDismissConfig = latencyViewModel::dismissConfig,
-                        onSaveConfig = latencyViewModel::saveConfig,
-                    )
-                }
             }
 
             item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
@@ -258,6 +247,50 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeMetricsSection(
+    latencyViewModel: LatencyMonitorViewModel,
+    isVpnActive: Boolean,
+    localIp: String?,
+    gatewayIp: String?,
+    onVpnClick: () -> Unit,
+    onIpClick: () -> Unit,
+) {
+    val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
+
+    Column {
+        MetricsRow(
+            latestLatencyMs = latencyState.dataPoints.lastOrNull { it.latencyMs != null }?.latencyMs,
+            latencyEnabled = latencyState.isEnabled,
+            alertThresholdMs = latencyState.alertThresholdMs,
+            latencyDataPoints = latencyState.dataPoints,
+            isVpnActive = isVpnActive,
+            localIp = localIp,
+            gatewayIp = gatewayIp,
+            onLatencyClick = {
+                if (latencyState.isEnabled) {
+                    latencyViewModel.toggleExpanded()
+                } else {
+                    latencyViewModel.toggleEnabled()
+                }
+            },
+            onVpnClick = onVpnClick,
+            onIpClick = onIpClick,
+        )
+
+        if (latencyState.isEnabled && latencyState.isExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LatencyDetailCard(
+                state = latencyState,
+                onToggleEnabled = latencyViewModel::toggleEnabled,
+                onConfigure = latencyViewModel::showConfig,
+                onDismissConfig = latencyViewModel::dismissConfig,
+                onSaveConfig = latencyViewModel::saveConfig,
+            )
         }
     }
 }
