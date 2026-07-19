@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -160,6 +162,7 @@ class SpeedTestEngineImplTest {
             engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             connectProbe = { values[calls.getAndIncrement()] },
+            resolveAddresses = { listOf(InetAddress.getLoopbackAddress()) },
         )
 
         // Remaining after discarding index 0: [30, 10, 20, 40, 15] -> sorted [10, 15, 20, 30, 40].
@@ -182,6 +185,7 @@ class SpeedTestEngineImplTest {
                     else -> 40L
                 }
             },
+            resolveAddresses = { listOf(InetAddress.getLoopbackAddress()) },
         )
 
         // Attempt 0 discarded regardless; attempt 1 failed and is skipped; survivors [10, 20, 30, 40]
@@ -195,10 +199,35 @@ class SpeedTestEngineImplTest {
             engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             connectProbe = { throw IOException("connect refused") },
+            resolveAddresses = { listOf(InetAddress.getLoopbackAddress()) },
         )
 
         val error = runCatching { impl.measureLatency() }.exceptionOrNull()
 
         assertTrue(error is IOException, "should propagate an IOException when every sample fails")
+    }
+
+    @Test
+    fun `measureLatency falls back to a second address when the first family fails`() = runTest {
+        // Simulates a v6 primary that never connects and a v4 fallback that does. Every sample must
+        // try v6 first (and fail), then succeed on v4, so the median is the v4 RTT.
+        val v6 = InetSocketAddress(InetAddress.getByName("::1"), 443)
+        val v4 = InetSocketAddress(InetAddress.getByName("127.0.0.1"), 443)
+        val v6Attempts = AtomicInteger(0)
+        val impl = SpeedTestEngineImpl(
+            engine = MockEngine { respond(content = "") },
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            connectProbe = { address ->
+                when (address.address) {
+                    v6.address -> { v6Attempts.incrementAndGet(); throw IOException("v6 unreachable") }
+                    else -> 25L
+                }
+            },
+            resolveAddresses = { listOf(v6.address, v4.address) },
+        )
+
+        assertEquals(25L, impl.measureLatency())
+        // 6 samples requested, each exhausts the failing v6 primary before falling back to v4.
+        assertEquals(6, v6Attempts.get())
     }
 }

@@ -61,6 +61,7 @@ class SpeedTestEngineImpl private constructor(
     private val ioDispatcher: CoroutineDispatcher,
     private val timeSource: () -> Long,
     private val connectProbe: suspend (InetSocketAddress) -> Long,
+    private val resolveAddresses: (String) -> List<InetAddress>,
 ) : SpeedTestEngine {
 
     @Inject constructor() : this(
@@ -77,20 +78,23 @@ class SpeedTestEngineImpl private constructor(
         Dispatchers.IO,
         System::currentTimeMillis,
         defaultConnectProbe(System::currentTimeMillis),
+        defaultResolveAddresses(),
     )
 
     /**
      * Visible for testing: swap in a [io.ktor.client.engine.mock.MockEngine], a test dispatcher
      * backed by the coroutines-test scheduler, a virtual-time [timeSource] so the warm-up and
-     * window arithmetic is deterministic, and a [connectProbe] so [measureLatency] samples don't
-     * require real sockets.
+     * window arithmetic is deterministic, a [connectProbe] so [measureLatency] samples don't
+     * require real sockets, and a [resolveAddresses] so the resolve step is deterministic and the
+     * address-family fallback can be exercised without real DNS.
      */
     internal constructor(
         engine: HttpClientEngine,
         ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
         timeSource: () -> Long = System::currentTimeMillis,
         connectProbe: suspend (InetSocketAddress) -> Long = defaultConnectProbe(timeSource),
-    ) : this(HttpClient(engine), ioDispatcher, timeSource, connectProbe)
+        resolveAddresses: (String) -> List<InetAddress> = defaultResolveAddresses(),
+    ) : this(HttpClient(engine), ioDispatcher, timeSource, connectProbe, resolveAddresses)
 
     override fun measureDownload(): Flow<SpeedProgress> =
         measureThroughput(SpeedTestPhase.DOWNLOAD) { counter, markFirstByte ->
@@ -114,17 +118,35 @@ class SpeedTestEngineImpl private constructor(
      * steady-state RTT); the reported value is the median of the remaining successful samples.
      * An individual failed connect is skipped; if every post-warm-up sample fails, [IOException]
      * is thrown.
+     *
+     * The host is resolved once (all address families) before sampling. Each sample tries the
+     * resolved addresses in order, so a v6 address that is unreachable on a v4-only path falls
+     * back to the next candidate rather than failing the whole sample.
      */
     override suspend fun measureLatency(): Long = withContext(ioDispatcher) {
-        val address = InetSocketAddress(InetAddress.getByName(URI(BASE_URL).host), HTTPS_PORT)
+        val host = URI(BASE_URL).host
+        val candidates = resolveAddresses(host).map { InetSocketAddress(it, HTTPS_PORT) }
+        if (candidates.isEmpty()) throw IOException("No addresses resolved for $BASE_URL")
         val samples = (0..LATENCY_SAMPLES).mapNotNull { attempt ->
-            val elapsed = runCatching { connectProbe(address) }
-                .onFailure { if (it is CancellationException) throw it }
-                .getOrNull()
+            val elapsed = probeWithFallback(candidates)
             if (attempt == 0) null else elapsed
         }
         if (samples.isEmpty()) throw IOException("All TCP connect probes to $BASE_URL failed")
         samples.sorted().let { it[it.size / 2] }
+    }
+
+    /**
+     * Times a single connect, trying each resolved address in turn until one succeeds. Returns the
+     * RTT of the first successful connect, or null if every candidate failed for this sample.
+     */
+    private suspend fun probeWithFallback(candidates: List<InetSocketAddress>): Long? {
+        for (address in candidates) {
+            val elapsed = runCatching { connectProbe(address) }
+                .onFailure { if (it is CancellationException) throw it }
+                .getOrNull()
+            if (elapsed != null) return elapsed
+        }
+        return null
     }
 
     /**
@@ -279,6 +301,10 @@ class SpeedTestEngineImpl private constructor(
                 Socket().use { it.connect(address, CONNECT_TIMEOUT_MS) }
                 timeSource() - start
             }
+
+        /** Resolves every address family once so [measureLatency] can fall back between them. */
+        private fun defaultResolveAddresses(): (String) -> List<InetAddress> =
+            { host -> InetAddress.getAllByName(host).toList() }
 
         /**
          * Post-warm-up steady-state rate once warm-up has completed; before that, the
