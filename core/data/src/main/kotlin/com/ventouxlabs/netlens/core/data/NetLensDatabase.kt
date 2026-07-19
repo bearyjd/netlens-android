@@ -61,7 +61,7 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         KnownDeviceEntity::class,
         WatchedNetworkEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {

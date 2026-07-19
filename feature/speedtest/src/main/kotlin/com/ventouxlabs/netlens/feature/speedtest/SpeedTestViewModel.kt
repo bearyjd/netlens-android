@@ -186,6 +186,7 @@ class SpeedTestViewModel @Inject constructor(
                 uploadMbps = current.uploadMbps,
                 latencyMs = current.latencyMs,
                 serverName = SERVER_NAME,
+                latencyMethod = SpeedTestHistoryEntry.LATENCY_METHOD_TCP_CONNECT,
             ),
         )
     }

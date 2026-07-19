@@ -149,6 +149,15 @@ object DataModule {
         }
     }
 
+    // Latency methodology changed in v14: old rows timed a full HTTPS HEAD, new rows time a raw
+    // TCP connect. The DEFAULT tags every pre-existing row as LEGACY_HTTP; Room writes the explicit
+    // TCP_CONNECT value on all inserts after this migration.
+    private val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE history_speedtest ADD COLUMN latencyMethod TEXT NOT NULL DEFAULT 'LEGACY_HTTP'")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -160,6 +169,7 @@ object DataModule {
             .addMigrations(
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                 MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+                MIGRATION_13_14,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
