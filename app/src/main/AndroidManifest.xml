@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -82,6 +83,21 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_4x2_info" />
         </receiver>
+
+        <!-- Remove WorkManager's default App Startup initializer so WorkManager is not
+             initialized (and its Room database not opened synchronously on the main
+             thread) at process start. NetLensApplication implements Configuration.Provider,
+             so WorkManager initializes on demand at first use instead. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <service
             android:name=".tile.PostureTileService"

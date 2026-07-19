@@ -119,6 +119,7 @@ dependencies {
 
     // Core modules
     implementation(project(":core:network"))
+    implementation(libs.work.runtime)
     implementation(project(":core:data"))
     implementation(project(":core:oui"))
     implementation(project(":core:billing"))

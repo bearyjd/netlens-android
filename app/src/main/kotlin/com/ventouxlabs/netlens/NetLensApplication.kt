@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens
 
 import android.app.Application
+import androidx.work.Configuration
 import com.ventouxlabs.netlens.core.billing.ProStatus
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.feature.devices.WatchScheduler
@@ -15,13 +16,23 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class NetLensApplication : Application() {
+class NetLensApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var watchScheduler: WatchScheduler
     @Inject lateinit var userPreferences: UserPreferencesRepository
     @Inject lateinit var proStatus: ProStatus
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // Providing the WorkManager configuration here (paired with removing the default
+    // androidx.startup initializer in the manifest) defers WorkManager initialization —
+    // and the synchronous open of its Room database — from process start to first use.
+    // The default WorkerFactory is sufficient: workers self-inject via Hilt EntryPoints
+    // (DeviceWatchWorker/WidgetRefreshWorker), so no HiltWorkerFactory is needed.
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .build()
 
     override fun onCreate() {
         super.onCreate()
