@@ -35,17 +35,22 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     // AbuseIPDB key is stored in EncryptedKeyValueStore. A MutableStateFlow bridges the
     // encrypted store (which doesn't natively emit) to the Flow-based API consumers expect.
-    // The init block migrates any previously stored plaintext key from DataStore on first run.
-    private val _abuseIpDbApiKeyFlow = MutableStateFlow(
-        encryptedStore.getString(ABUSEIPDB_ENCRYPTED_KEY) ?: "",
-    )
+    // It starts empty and is populated asynchronously in the init block below: reading the
+    // encrypted store opens EncryptedSharedPreferences (Android Keystore + disk I/O), which
+    // is too costly to run on the main thread during Hilt's app-init field injection.
+    private val _abuseIpDbApiKeyFlow = MutableStateFlow("")
 
     init {
-        // One-shot migration: if DataStore has a plaintext AbuseIPDB key from a prior install,
-        // copy it to the encrypted store and remove it from DataStore.
         CoroutineScope(Dispatchers.IO).launch {
+            // Hydrate the key off the main thread.
+            val storedKey = encryptedStore.getString(ABUSEIPDB_ENCRYPTED_KEY)
+            if (!storedKey.isNullOrBlank()) {
+                _abuseIpDbApiKeyFlow.value = storedKey
+            }
+            // One-shot migration: if DataStore has a plaintext AbuseIPDB key from a prior install,
+            // copy it to the encrypted store and remove it from DataStore.
             val plaintextKey = dataStore.data.first()[ABUSEIPDB_API_KEY]
-            if (!plaintextKey.isNullOrBlank() && encryptedStore.getString(ABUSEIPDB_ENCRYPTED_KEY).isNullOrBlank()) {
+            if (!plaintextKey.isNullOrBlank() && storedKey.isNullOrBlank()) {
                 encryptedStore.putString(ABUSEIPDB_ENCRYPTED_KEY, plaintextKey)
                 _abuseIpDbApiKeyFlow.value = plaintextKey
             }
