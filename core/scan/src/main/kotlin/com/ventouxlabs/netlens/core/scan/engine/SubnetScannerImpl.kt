@@ -60,7 +60,7 @@ class SubnetScannerImpl @Inject constructor() : SubnetScanner {
     companion object {
         private const val PING_TIMEOUT_MS = 200
 
-        fun calculateIpRange(subnet: String, prefixLength: Int): List<String> {
+        internal fun calculateIpRange(subnet: String, prefixLength: Int): List<String> {
             val parts = subnet.split(".")
             if (parts.size != 4) return emptyList()
 
