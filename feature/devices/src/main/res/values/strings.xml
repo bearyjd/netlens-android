@@ -34,4 +34,5 @@
     <string name="devices_watch_pro_upsell">Background watch is a Pro feature. Upgrade to get alerts when a new device joins your network.</string>
     <string name="devices_watch_remove">Remove</string>
     <string name="devices_watch_notif_prompt">Enable notifications to receive new-device alerts.</string>
+    <string name="devices_watch_unresolved">Can\'t watch this network — connect to Wi-Fi and try again.</string>
 </resources>

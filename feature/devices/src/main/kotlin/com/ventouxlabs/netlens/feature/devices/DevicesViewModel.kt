@@ -60,9 +60,14 @@ class DevicesViewModel @Inject constructor(
                     selectedDeviceId = selectedId,
                 )
             }.collect { next ->
-                // Preserve cadence/masterWatchEnabled, folded in below from preferences.
+                // Preserve cadence/masterWatchEnabled (folded in below from preferences) and the
+                // transient watchError, which is set by user actions rather than these flows.
                 _uiState.update {
-                    next.copy(cadence = it.cadence, masterWatchEnabled = it.masterWatchEnabled)
+                    next.copy(
+                        cadence = it.cadence,
+                        masterWatchEnabled = it.masterWatchEnabled,
+                        watchError = it.watchError,
+                    )
                 }
             }
         }
@@ -102,8 +107,12 @@ class DevicesViewModel @Inject constructor(
 
     fun watchCurrentNetwork() {
         viewModelScope.launch {
-            val gatewayMac = networkIdentity.currentGatewayMac() ?: return@launch
-            val subnet = networkIdentity.currentSubnet() ?: return@launch
+            val gatewayMac = networkIdentity.currentGatewayMac()
+            val subnet = networkIdentity.currentSubnet()
+            if (gatewayMac == null || subnet == null) {
+                _uiState.update { it.copy(watchError = R.string.devices_watch_unresolved) }
+                return@launch
+            }
             watchedNetworkDao.upsert(
                 WatchedNetworkEntity(
                     displayName = networkIdentity.currentSsid(),
@@ -113,6 +122,10 @@ class DevicesViewModel @Inject constructor(
                 ),
             )
         }
+    }
+
+    fun clearWatchError() {
+        _uiState.update { it.copy(watchError = null) }
     }
 
     fun toggleNetworkWatch(id: Long, enabled: Boolean) {

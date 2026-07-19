@@ -116,6 +116,28 @@ class DevicesViewModelTest {
     }
 
     @Test
+    fun `watchCurrentNetwork surfaces an error when network is unresolvable`() = runTest {
+        identity.gatewayMac = null
+        identity.subnet = null
+        viewModel.watchCurrentNetwork()
+        advanceUntilIdle()
+        assertEquals(R.string.devices_watch_unresolved, viewModel.uiState.value.watchError)
+        assertTrue(watchedDao.networks.isEmpty())
+    }
+
+    @Test
+    fun `clearWatchError resets the transient error`() = runTest {
+        identity.gatewayMac = null
+        identity.subnet = null
+        viewModel.watchCurrentNetwork()
+        advanceUntilIdle()
+        assertEquals(R.string.devices_watch_unresolved, viewModel.uiState.value.watchError)
+        viewModel.clearWatchError()
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.watchError)
+    }
+
+    @Test
     fun `setCadence persists the cadence`() = runTest {
         viewModel.setCadence(WatchCadence.SIX_HOURS, isPro = false)
         assertEquals(360, userPreferences.watchCadenceMinutes.first())
