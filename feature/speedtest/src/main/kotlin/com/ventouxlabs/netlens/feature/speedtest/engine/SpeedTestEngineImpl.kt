@@ -118,7 +118,9 @@ class SpeedTestEngineImpl private constructor(
     override suspend fun measureLatency(): Long = withContext(ioDispatcher) {
         val address = InetSocketAddress(InetAddress.getByName(URI(BASE_URL).host), HTTPS_PORT)
         val samples = (0..LATENCY_SAMPLES).mapNotNull { attempt ->
-            val elapsed = runCatching { connectProbe(address) }.getOrNull()
+            val elapsed = runCatching { connectProbe(address) }
+                .onFailure { if (it is CancellationException) throw it }
+                .getOrNull()
             if (attempt == 0) null else elapsed
         }
         if (samples.isEmpty()) throw IOException("All TCP connect probes to $BASE_URL failed")
