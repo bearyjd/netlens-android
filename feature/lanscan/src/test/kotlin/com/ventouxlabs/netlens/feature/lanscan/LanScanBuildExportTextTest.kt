@@ -164,7 +164,6 @@ private class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun setKnown(id: Long, isKnown: Boolean) {}
     override suspend fun setCustomName(id: Long, customName: String?) {}
     override suspend fun setNetworkId(id: Long, networkId: Long?) {}
-    override fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override suspend fun delete(id: Long) {}
     override suspend fun deleteAll() {}

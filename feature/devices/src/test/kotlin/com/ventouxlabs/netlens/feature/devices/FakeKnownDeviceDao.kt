@@ -23,7 +23,6 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun setKnown(id: Long, isKnown: Boolean) { update(id) { it.copy(isKnown = isKnown) } }
     override suspend fun setCustomName(id: Long, customName: String?) { update(id) { it.copy(customName = customName) } }
     override suspend fun setNetworkId(id: Long, networkId: Long?) { update(id) { it.copy(networkId = networkId) } }
-    override fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>> = flowOf(devices.filter { it.networkId == networkId })
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(devices)
     override suspend fun delete(id: Long) { devices.removeAll { it.id == id }; flow.value = devices.toList() }
     override suspend fun deleteAll() { devices.clear(); flow.value = emptyList() }

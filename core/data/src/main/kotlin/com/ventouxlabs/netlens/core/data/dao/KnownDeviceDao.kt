@@ -61,9 +61,6 @@ interface KnownDeviceDao {
     @Query("UPDATE known_devices SET networkId = :networkId WHERE id = :id")
     suspend fun setNetworkId(id: Long, networkId: Long?)
 
-    @Query("SELECT * FROM known_devices WHERE networkId = :networkId ORDER BY lastSeen DESC")
-    fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>>
-
     @Query("DELETE FROM known_devices WHERE id = :id")
     suspend fun delete(id: Long)
 

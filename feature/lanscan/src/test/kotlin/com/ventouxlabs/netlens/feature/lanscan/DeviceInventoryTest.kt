@@ -304,9 +304,6 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
         }
     }
 
-    override fun getDevicesForNetwork(networkId: Long): Flow<List<KnownDeviceEntity>> =
-        flowOf(allDevices.filter { it.networkId == networkId })
-
     override fun search(query: String): Flow<List<KnownDeviceEntity>> =
         flowOf(allDevices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })
 
