@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-16 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~620 -->
+<!-- Generated: 2026-07-20 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~640 -->
 
 # Dependencies
 
@@ -10,7 +10,7 @@
 | DI | Hilt | 2.53 |
 | Navigation | Navigation Compose | 2.8.5 |
 | Database | Room | 2.6.1 |
-| HTTP | Ktor (CIO engine) | 3.0.3 |
+| HTTP | Ktor — CIO engine (most features), OkHttp engine (speedtest only) | 3.0.3 |
 | DNS | dnsjava | 3.6.2 |
 | Widget | Glance | 1.1.1 |
 | Serialization | kotlinx.serialization | 1.7.3 |

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-28 | Files scanned: 30 modules | Token estimate: ~950 -->
+<!-- Generated: 2026-07-20 | Files scanned: 32 modules | Token estimate: ~980 -->
 
 # Architecture
 
@@ -10,6 +10,7 @@ Package: `com.ventouxlabs.netlens`
 app (single Activity)
 ├── feature:ipinfo      ─┐
 ├── feature:lanscan      │
+├── feature:devices      │  (device inventory + Pro background watch)
 ├── feature:portscan     │
 ├── feature:dns          │
 ├── feature:ping         │
@@ -34,10 +35,17 @@ app (single Activity)
 ├── widget              (Glance home screen widget)
 ├── core:network        (connectivity, SSRF guard, export)
 ├── core:data           (Room DB, DAOs, entities)
+├── core:scan           (LAN scan engines + DeviceInventoryRepository + NewDeviceNotifier;
+│                        shared by feature:lanscan and feature:devices)
 ├── core:billing        (ProStatus interface, LocalProStatus)
 ├── core:ui             (shared UI tokens: StatusColors, Spacing)
 └── core:oui            (MAC vendor lookup)
 ```
+
+feature:lanscan and feature:devices both depend on core:scan; the feature graph stays
+flat (feature:* depend only on core:*). A :baselineprofile Macrobenchmark module exists on
+branch `perf/baseline-profile` (draft PR #108), not on master — generation is blocked on
+Android 17 tooling.
 
 ## Entry Points
 

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-28 | Files scanned: 23 feature modules | Token estimate: ~970 -->
+<!-- Generated: 2026-07-20 | Files scanned: 24 feature modules | Token estimate: ~1000 -->
 
 # Feature Modules
 
@@ -20,6 +20,7 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 | feature:traceroute | TracerouteScreen | Connectivity | yes | TracerouteHistoryDao |
 | feature:speedtest | SpeedTestScreen | Connectivity | no | SpeedTestHistoryDao |
 | feature:lanscan | LanScanScreen | Discovery | yes | LanScanHistoryDao |
+| feature:devices | DevicesScreen | Discovery | no | KnownDeviceDao, WatchedNetworkDao |
 | feature:mdns | MdnsScreen | Discovery | no | MdnsHistoryDao |
 | feature:wifi | WifiScreen | Discovery | no | — |
 | feature:portscan | PortScanScreen | Discovery | yes | PortScanHistoryDao |

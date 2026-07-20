@@ -23,6 +23,7 @@ Download the latest APK from [GitHub Releases](https://github.com/bearyjd/netlen
 
 ### Discovery
 - **LAN Scan** — Discover devices on your local network with MAC vendor lookup
+- **Devices** — Persistent device inventory with custom names and Pro background watch that alerts when a new device joins a watched network
 - **mDNS Browser** — Find Bonjour / .local services on the network
 - **Port Scanner** — Scan for open TCP ports with risk severity badges
 - **WiFi Analyzer** — View nearby networks, signal strength, and channel usage graph
@@ -89,9 +90,10 @@ Multi-module Gradle project with convention plugins:
 
 ```
 app                  — Single Activity, navigation host, theme
-feature/*            — 23 self-contained feature modules
+feature/*            — 24 self-contained feature modules
 core/network         — Connectivity monitoring, SSRF guard, result export
 core/data            — Room database, DAOs, Hilt data module
+core/scan            — LAN scan engines + device-inventory repository (shared by lanscan & devices)
 core/billing         — ProStatus interface (FOSS / Google Play flavors)
 core/ui              — Shared UI tokens (status colors, spacing)
 core/oui             — MAC address vendor lookup

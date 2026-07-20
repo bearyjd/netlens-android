@@ -1,15 +1,19 @@
-<!-- Generated: 2026-07-16 | Files scanned: 36 | Token estimate: ~750 -->
+<!-- Generated: 2026-07-20 | Files scanned: 37 | Token estimate: ~780 -->
 
 # Data Layer
 
 ## Database
 
-`NetLensDatabase` — Room, version 12, exportSchema = true
+`NetLensDatabase` — Room, version 14, exportSchema = true
+
+Migrations: additive throughout. v13 = device inventory (`WatchedNetworkEntity`,
+`KnownDeviceEntity.customName/networkId`); v14 = `SpeedTestHistoryEntry.latencyMethod`
+(distinguishes old full-HTTPS latency rows from new TCP-connect-RTT rows).
 
 ```
 core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
-├── NetLensDatabase.kt              (RoomDatabase, 18 entities)
-├── dao/                            (16 DAOs)
+├── NetLensDatabase.kt              (RoomDatabase, 19 entities)
+├── dao/                            (17 DAOs)
 ├── model/                          (entity + UI projection classes)
 └── di/
     ├── DataModule.kt               (Room provider, SingletonComponent)
@@ -36,8 +40,9 @@ core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 | HttpTesterHistoryEntry | HttpTesterHistoryDao | HttpTester, History |
 | MdnsHistoryEntry | MdnsHistoryDao | mDNS, History |
 | WolHistoryEntry | WolHistoryDao | WoL, History |
-| SpeedTestHistoryEntry | SpeedTestHistoryDao | SpeedTest, History |
-| KnownDeviceEntity | KnownDeviceDao | LanScan (devices inventory + new-device alerts) |
+| SpeedTestHistoryEntry | SpeedTestHistoryDao | SpeedTest, History (+ latencyMethod tag) |
+| KnownDeviceEntity | KnownDeviceDao | LanScan + Devices (inventory, custom names, new-device alerts) |
+| WatchedNetworkEntity | WatchedNetworkDao | Devices (Pro background watch; identity = gateway MAC) |
 
 ## Data Flow
 

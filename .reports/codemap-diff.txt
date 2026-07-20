@@ -1,31 +1,44 @@
-Codemap refresh — 2026-07-16
+Codemap + docs refresh — 2026-07-20
 
-Trigger: /update-codemaps (routine refresh; last scan 2026-06-28).
+Trigger: /update-codemaps + /update-docs after the device-inventory feature,
+speed-test rework, and perf batch landed on master this session.
 
-Modules: 30 gradle projects (app, widget, 5 core, 23 feature) — unchanged since last scan.
+Modules: 32 gradle projects (was 30): app, widget, 6 core, 24 feature.
+  + core:scan        NEW — LAN scan engines + DeviceInventoryRepository +
+                          NewDeviceNotifier, extracted from feature:lanscan and
+                          shared with feature:devices. [architecture.md, README]
+  + feature:devices  NEW — device inventory tool (custom names, first/last seen)
+                          + Pro background watch (gateway-MAC identity, WorkManager).
+                          [architecture.md, features.md, data.md, README]
+  (a :baselineprofile module exists on branch perf/baseline-profile / draft PR
+   #108 only — NOT on master; generation blocked on Android 17 tooling.)
 
-Changes since last scan (2026-06-28):
-  ~ NetLensDatabase Room schema version 10 -> 12 (per-endpoint latency threshold
-    on MonitoredEndpoint + Jul widget/monitor work). Entity list (18) and DAO
-    count (16) unchanged.                                    [data.md version bumped]
-  ~ CI description in dependencies.md was stale (listed a fixed 4-module test
-    subset from 2026-05-04). Actual CI: assembleFossDebug + `testFossDebugUnitTest
-    testDebugUnitTest` covering every module with a src/test tree.
-                                                             [dependencies.md rewritten CI section]
-  + dependencies.md now also notes release.yml (keystore-from-secret signing,
-    tag-vs-gradle.properties version verification).
+Data layer: Room version 12 -> 14.
+  + WatchedNetworkEntity + WatchedNetworkDao (v13) — Pro background watch.
+  + KnownDeviceEntity.customName / networkId (v13).
+  + SpeedTestHistoryEntry.latencyMethod (v14) — tags old full-HTTPS latency rows
+    vs new TCP-connect-RTT rows. 19 entities, 17 DAOs.
+
+Dependencies: + ktor-client-okhttp — speed test swapped from CIO to OkHttp engine
+  (connection reuse + HTTP/2; KTOR-6503). Other HTTP features still use CIO.
 
 Per-file:
-  architecture.md  UNCHANGED  module graph, flavors, DI, nav all still accurate
-  features.md      UNCHANGED  23 feature modules, categories, DAO wiring verified
-  data.md          MODIFIED   Room version 10->12, date bumped
-  dependencies.md  MODIFIED   date bumped, CI section corrected, release workflow added
+  architecture.md  MODIFIED  +core:scan, +feature:devices, flat-graph note,
+                             baselineprofile branch note, header 30->32 modules
+  data.md          MODIFIED  Room 12->14, +WatchedNetworkEntity/Dao, migration notes,
+                             19 entities / 17 DAOs, latencyMethod tag
+  dependencies.md  MODIFIED  HTTP row notes OkHttp engine for speedtest
+  features.md      MODIFIED  +feature:devices row (Discovery), header 23->24
+  README.md        MODIFIED  +Devices feature (Discovery), +core/scan, 24 feature modules
+  backend.md/frontend.md  N/A (Android app; no backend/route or web-frontend codemaps)
 
-New dependencies detected: none. libs.versions.toml verified against table —
-all versions (AGP 8.9.0, Kotlin 2.1.0, Hilt 2.53, Room 2.6.1, Ktor 3.0.3, etc.)
-still match.
+Docs (/update-docs): no package.json/.env/openapi — sources of truth are Gradle +
+  CLAUDE.md. docs/CONTRIBUTING.md (created 2026-07-16) still accurate; docs/RELEASING.md
+  current. No new script/env docs needed.
 
-Architecture changes: none (no new modules, routes, or DI changes).
-Current app version: 1.2.4 (versionCode 11).
+Architecture changes: 2 new modules; no new nav route categories beyond Devices;
+  DI unchanged (Hilt); no flavor changes. Current app version: 1.2.4 (versionCode 11),
+  CHANGELOG [Unreleased] holds this session's work (device inventory, speed-test
+  fixes, perf batch, follow-ups) pending a v1.2.5 release cut.
 
 Staleness warnings (>90 days): none.
