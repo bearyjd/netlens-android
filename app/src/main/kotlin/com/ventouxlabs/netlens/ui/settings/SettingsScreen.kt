@@ -25,8 +25,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +82,41 @@ fun SettingsScreen(
 
             SectionHeader(title = stringResource(R.string.settings_widgets))
             WidgetSettingsCard(onClick = onOpenWidgetSettings)
+
+            SectionHeader(title = stringResource(R.string.settings_about))
+            AboutCard()
+        }
+    }
+}
+
+@Composable
+private fun AboutCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    // Read the installed build's version at runtime so it always matches the APK,
+    // without needing BuildConfig generation enabled for the module.
+    val version = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            context.getString(R.string.settings_version_format, info.versionName, info.longVersionCode)
+        }.getOrDefault("")
+    }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = version,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
         }
     }
 }
