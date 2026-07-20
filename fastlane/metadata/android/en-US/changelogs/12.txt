@@ -1,0 +1,7 @@
+New in 1.2.5:
+
+- Devices: a persistent inventory of everything on your network, with custom names and first/last-seen times.
+- Background network watch (Pro): get notified when a new device joins a network you've marked as watched.
+- Speed test fixed: download, upload, and latency now match a browser-based speed test on the same link (download had been reporting 0 on fast connections).
+- Smoother scrolling and faster startup across the app.
+- App version now shown in Settings > About.

@@ -7,13 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-07-20
+
 ### Added
 - **Devices** — a new tool that keeps a persistent inventory of everything seen on your network. Devices you've identified can be given custom names, marked known, and browsed or searched long after a scan finishes, instead of the results disappearing when you leave LAN Scan. First-seen and last-seen times are shown per device.
 - **Background network watch** (Pro) — mark your home Wi-Fi as watched and NetLens periodically re-scans it in the background, sending a notification when a new device joins, even while the app is closed. A network is identified by its gateway's MAC address (not its name), so the watch only runs on the networks you chose and never needs background location access. Scan frequency is configurable (15 minutes to 6 hours). If notifications are turned off, the watch settings surface a prompt so alerts don't silently fail.
 - **Speed test data-use warning** — on a metered/cellular connection the speed test now confirms before running, since the improved test can move a significant amount of data on fast links.
+- **App version in Settings** — Settings now has an About section showing the installed version and build number.
 
 ### Fixed
-- **Speed test accuracy** — download and upload results were reading far below reality (roughly one-third of a browser-based test on the same connection). The test now runs multiple parallel connections over a fixed time window and measures steady-state throughput after warm-up, matching how browser and commercial speed tests work, and uses a faster network stack (connection reuse and HTTP/2). Reported latency was also wildly overstated (hundreds of milliseconds vs. single digits) because it timed a full HTTPS request; it now measures the round-trip time to open a connection, the same figure other speed tests report.
+- **Speed test accuracy** — results were far below reality on fast connections. Download reported 0 because each stream requested more data than the test server allows in one request; upload and latency read roughly one-third and many times too high. The test now runs multiple parallel connections over a fixed time window and measures steady-state throughput after warm-up (matching browser and commercial speed tests) over a faster network stack with connection reuse and HTTP/2, and reports latency as the time to open a connection rather than a full HTTPS request. Download, upload, and latency now track a browser-based reference on the same link.
 - **General responsiveness** — several sources of UI jank were removed: LAN Scan no longer rebuilds and re-sorts the whole device list on every single discovery during a sweep, the home screen no longer redraws entirely once a second while the latency monitor is running, and Wi-Fi and Devices screens avoid recomputing their lists on unrelated updates. App startup was also unblocked from doing encrypted-storage and background-work setup on the main thread, and screens can now skip redundant redraws.
 
 ## [1.2.4] - 2026-07-13
