@@ -10,6 +10,7 @@ import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
+import io.ktor.http.isSuccess
 import io.ktor.http.content.OutgoingContent
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.readAvailable
@@ -48,9 +49,9 @@ import kotlin.random.Random
  *  - **Parallel streams.** [STREAMS] concurrent connections are needed to saturate a fast or
  *    lossy path; one connection stalls in TCP flow control / loss recovery and reads a fraction
  *    of the real capacity.
- *  - **Time-bounded, not size-bounded.** Each stream requests far more than it will transfer
- *    ([PER_STREAM_BYTES]); the run is bounded by [SpeedTestEngine.MEASURE_WINDOW_MS] and the streams are
- *    cancelled at the end, so data use is capped by duration, not by a fixed download size.
+ *  - **Time-bounded, not size-bounded.** Each stream requests a large body ([PER_REQUEST_BYTES]);
+ *    the run is bounded by [SpeedTestEngine.MEASURE_WINDOW_MS] and the streams are cancelled at the
+ *    end, so data use is capped by duration, not by a fixed download size.
  *  - **Warm-up exclusion, clock from first byte.** The rate clock starts when the first byte
  *    arrives (TTFB excluded) and the first [WARMUP_MS] — TCP slow-start ramp — are discarded so
  *    the reported figure is steady-state throughput rather than an average dragged down by the
@@ -234,7 +235,7 @@ class SpeedTestEngineImpl private constructor(
                     SpeedProgress(
                         bytesTransferred = total,
                         elapsedMs = now - startedAt,
-                        speedMbps = currentSpeed(total, warmupBytes, now, warmupTime, startedAt, warmupDone),
+                        speedMbps = finalSpeed(total, warmupBytes, now, warmupTime, startedAt, warmupDone),
                         phase = phase,
                     ),
                 )
@@ -245,15 +246,24 @@ class SpeedTestEngineImpl private constructor(
     }.flowOn(ioDispatcher)
 
     private suspend fun downloadStream(counter: AtomicLong, markFirstByte: () -> Unit) {
-        val url = "$BASE_URL/__down?bytes=$PER_STREAM_BYTES"
+        // Cloudflare's /__down rejects a `bytes` param over ~100 MB with HTTP 403 + a ~1-byte body
+        // (the cause of the "download reads 0" bug: an over-cap request transferred nothing). We
+        // request a safely-capped size, and fail loudly on any non-2xx so a future endpoint change
+        // surfaces as an error instead of a silent zero.
+        val url = "$BASE_URL/__down?bytes=$PER_REQUEST_BYTES"
         val buffer = ByteArray(BUFFER_SIZE)
         client.prepareGet(url).execute { response ->
+            if (!response.status.isSuccess()) {
+                throw IOException("Download request failed: HTTP ${response.status.value}")
+            }
             val channel = response.bodyAsChannel()
             while (currentCoroutineContext().isActive && !channel.isClosedForRead) {
                 val read = channel.readAvailable(buffer)
-                if (read <= 0) break
-                markFirstByte()
-                counter.addAndGet(read.toLong())
+                if (read < 0) break
+                if (read > 0) {
+                    markFirstByte()
+                    counter.addAndGet(read.toLong())
+                }
             }
         }
     }
@@ -276,7 +286,14 @@ class SpeedTestEngineImpl private constructor(
         private const val STREAMS = 4
         // Deliberately far larger than any stream will transfer inside the window; the run is
         // time-bounded and streams are cancelled at the end, so this only sets an upper bound.
-        private const val PER_STREAM_BYTES = 120_000_000L
+        // Cloudflare /__down rejects a bytes param over ~100 MB with HTTP 403 (probed: 90 MB ok,
+        // 100 MB rejected), so this stays safely under that cap. Each download stream issues ONE
+        // request of this size; it fills the MEASURE_WINDOW_MS window as long as a stream's rate
+        // stays under PER_REQUEST_BYTES/window (~75 Mbps/stream, ~300 Mbps aggregate). Above that a
+        // stream finishes early and idles for the rest of the window, shortening the steady-state
+        // sample. A future re-request loop (like uploadStream) would remove that ceiling — see the
+        // speedtest download-loop follow-up.
+        private const val PER_REQUEST_BYTES = 75_000_000L
         private const val WARMUP_MS = 1_500L
         private const val EMIT_INTERVAL_MS = 200L
         private const val BUFFER_SIZE = 65_536
@@ -321,6 +338,30 @@ class SpeedTestEngineImpl private constructor(
             throughputMbps(total - warmupBytes, now - warmupTime)
         } else {
             throughputMbps(total, now - startedAt)
+        }
+
+        /**
+         * Speed for the FINAL emission (the value the UI and history keep). Uses the post-warm-up
+         * steady-state rate when that slice is substantial, but falls back to the since-first-byte
+         * cumulative rate when it is degenerate. A finite transfer (download) can complete just
+         * after the warm-up mark on a fast link, leaving the steady-state window near-empty
+         * (`total - warmupBytes` ≈ 0), which would otherwise report 0 Mbps even though data clearly
+         * transferred. Upload streams run until the window cancels them, so they never hit this.
+         */
+        private fun finalSpeed(
+            total: Long,
+            warmupBytes: Long,
+            now: Long,
+            warmupTime: Long,
+            startedAt: Long,
+            warmupDone: Boolean,
+        ): Float {
+            val cumulative = throughputMbps(total, now - startedAt)
+            if (!warmupDone) return cumulative
+            val steadyMs = now - warmupTime
+            val steadyBytes = total - warmupBytes
+            val steadyReliable = steadyMs >= EMIT_INTERVAL_MS && steadyBytes > 0L
+            return if (steadyReliable) throughputMbps(steadyBytes, steadyMs) else cumulative
         }
 
         /**

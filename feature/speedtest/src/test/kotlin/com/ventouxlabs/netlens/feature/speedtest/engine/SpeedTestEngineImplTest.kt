@@ -2,6 +2,8 @@ package com.ventouxlabs.netlens.feature.speedtest.engine
 
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.respondError
+import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
@@ -88,6 +90,58 @@ class SpeedTestEngineImplTest {
             "steady-state speed (${finalItem.speedMbps}) should exceed the warm-up-inclusive " +
                 "average ($naiveCumulative) because the slow ramp is discarded",
         )
+    }
+
+    @Test
+    fun `final download speed is non-zero when the transfer completes right after warm-up`() = runTest {
+        // Reproduces the on-device "download reads 0 at the end" bug: on a fast link the whole
+        // download can arrive during the warm-up window, then the streams sit idle until they
+        // close just after the warm-up boundary. That leaves the post-warm-up steady slice empty
+        // (total == warmupBytes), so the steady-state figure alone would report 0 Mbps even though
+        // data clearly transferred. The final value must fall back to the cumulative rate.
+        val allBytes = 3_000_000
+        val channels = List(4) { ByteChannel(autoFlush = true) }
+        channels.forEach { ch ->
+            launch {
+                ch.writeFully(ByteArray(allBytes)) // all bytes land during warm-up
+                ch.flush()
+                delay(2_000L) // idle past the 1_500 ms warm-up boundary, no further bytes
+                ch.flushAndClose()
+            }
+        }
+        val next = AtomicInteger(0)
+        val engine = MockEngine { respond(content = channels[next.getAndIncrement()]) }
+        val impl = SpeedTestEngineImpl(
+            engine = engine,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            timeSource = { testScheduler.currentTime },
+        )
+
+        val finalItem = impl.measureDownload().toList().last()
+
+        assertEquals(4L * allBytes, finalItem.bytesTransferred)
+        assertTrue(
+            finalItem.speedMbps > 0f,
+            "final speed must not be 0 when ${finalItem.bytesTransferred} bytes transferred " +
+                "(steady-state slice was empty; expected cumulative fallback)",
+        )
+    }
+
+    @Test
+    fun `download surfaces a non-2xx response as an error instead of silently reading zero`() = runTest {
+        // Regression for the on-device bug: Cloudflare's /__down returns 403 + a ~1-byte body for
+        // an over-cap `bytes` param. The old loop counted that 1-byte error body and reported ~0
+        // Mbps. A non-2xx must now fail the stream so an endpoint break is loud, not a silent zero.
+        val engine = MockEngine { respondError(HttpStatusCode.Forbidden) }
+        val impl = SpeedTestEngineImpl(
+            engine = engine,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            timeSource = { testScheduler.currentTime },
+        )
+
+        val error = runCatching { impl.measureDownload().toList() }.exceptionOrNull()
+
+        assertNotNull(error, "all streams getting 403 must propagate an error, not emit ~0 Mbps")
     }
 
     @Test
