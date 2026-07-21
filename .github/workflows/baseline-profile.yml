@@ -2,7 +2,7 @@ name: Generate Baseline Profile
 
 # Manually dispatched: runs the :baselineprofile Macrobenchmark journey on an
 # API 34 emulator (GitHub-hosted runners have KVM), then commits the generated
-# app/src/foss/generated/baselineProfiles/baseline-prof.txt back to the branch
+# app/src/fossRelease/generated/baselineProfiles/baseline-prof.txt back to the branch
 # the workflow was dispatched from.
 #
 # Exists because neither local option works: both test phones run Android 17
@@ -17,7 +17,7 @@ on:
   push:
     branches: [perf/baseline-profile]
     paths-ignore:
-      - "app/src/foss/generated/baselineProfiles/**"
+      - "app/src/fossRelease/generated/baselineProfiles/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -62,19 +62,19 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: baseline-profile
-          path: app/src/foss/generated/baselineProfiles/
+          path: app/src/fossRelease/generated/baselineProfiles/
           retention-days: 30
           if-no-files-found: error
 
       - name: Commit profile to branch
         run: |
-          if [ ! -s app/src/foss/generated/baselineProfiles/baseline-prof.txt ]; then
+          if [ ! -s app/src/fossRelease/generated/baselineProfiles/baseline-prof.txt ]; then
             echo "::error::baseline-prof.txt missing or empty — not committing"
             exit 1
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/foss/generated/baselineProfiles/
+          git add app/src/fossRelease/generated/baselineProfiles/
           if git diff --cached --quiet; then
             echo "Profile unchanged — nothing to commit"
             exit 0
