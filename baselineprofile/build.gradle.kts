@@ -36,8 +36,10 @@ android {
     targetProjectPath = ":app"
 }
 
-// Run generation on the connected physical device (Pixel 10 Pro Fold, API 37) rather
-// than a Gradle Managed Virtual Device.
+// Run generation on whatever device adb sees rather than a Gradle Managed Virtual
+// Device. In practice that's the API 34 emulator booted by the baseline-profile.yml
+// CI workflow — the test phones are Android 17 (ART returns an empty profile) and
+// the dev machine can't run the emulator (QEMU segfaults on its kernel).
 baselineProfile {
     useConnectedDevices = true
 }
