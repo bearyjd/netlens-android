@@ -17,6 +17,11 @@ work = "2.10.0"
 billing = "6.2.1"
 junit5 = "5.11.4"
 turbine = "1.2.0"
+baselineprofile = "1.4.0"
+profileinstaller = "1.4.1"
+uiautomator = "2.3.0"
+androidx-test-ext-junit = "1.2.1"
+espresso = "3.6.1"
 
 [libraries]
 # Compose
@@ -86,6 +91,13 @@ security-crypto = { group = "androidx.security", name = "security-crypto", versi
 # DNS
 dnsjava = { group = "dnsjava", name = "dnsjava", version.ref = "dnsjava" }
 
+# Baseline Profile / Macrobenchmark
+benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "baselineprofile" }
+profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+
 # Core Android
 core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.15.0" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.9.3" }
@@ -106,3 +118,5 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }

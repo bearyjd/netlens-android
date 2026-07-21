@@ -5,6 +5,7 @@ plugins {
     id("netlens.android.application")
     id("netlens.android.compose")
     id("netlens.hilt")
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -113,6 +114,10 @@ dependencies {
     implementation(project(":feature:wifiaudit"))
     implementation(project(":feature:celltower"))
     implementation(project(":feature:vpnstatus"))
+
+    // Baseline Profile: consume the generated profile and honor it at runtime.
+    baselineProfile(project(":baselineprofile"))
+    implementation(libs.profileinstaller)
 
     // Widget
     implementation(project(":widget"))
