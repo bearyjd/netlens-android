@@ -4,7 +4,7 @@ Supersedes the previous handoff doc (redesign/releases/initial F-Droid submissio
 
 ## TL;DR — where things stand right now
 
-- **Latest shipped version: v1.2.4** (versionCode 11), on GitHub Releases with signed FOSS/GPlay APK+AAB.
+- **Latest shipped version: v1.2.5** (versionCode 12), on GitHub Releases with signed FOSS/GPlay APK+AAB. (v1.2.5 adds the Devices tool + background watch, the speed-test fixes, a perf batch, and the in-app version display.)
 - **F-Droid MR #42628 is CI-green** — `fdroid build` passes on the real buildserver image now (was red the entire previous session). Purely waiting on maintainer `licaon-kter` to merge; nothing left on our side.
 - **Play Store bootstrap**: listing copy, assets, and privacy policy are all ready. What's left is manual Google Console work — see `docs/play-store.md` (now includes a full Data Safety form answer key).
 - **Widget picker preview images**: shipped and verified on-device (v1.2.2-era fix, confirmed still correct this session).
