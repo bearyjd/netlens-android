@@ -11,6 +11,13 @@ name: Generate Baseline Profile
 
 on:
   workflow_dispatch:
+  # workflow_dispatch only registers once the file reaches the default branch, so
+  # also trigger on pushes to the feature branch itself. paths-ignore stops the
+  # bot's own profile commit from retriggering generation.
+  push:
+    branches: [perf/baseline-profile]
+    paths-ignore:
+      - "app/src/foss/generated/baselineProfiles/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
