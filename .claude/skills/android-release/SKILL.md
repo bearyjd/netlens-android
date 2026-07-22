@@ -43,7 +43,8 @@ Run all of these and report a green/red per check before doing anything mutating
    - Verify `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` are set in the env. If `local.properties` lacks `release.*` and env vars are unset, refuse with a one-line note pointing at `app/build.gradle.kts:25-42`.
    - Run `./gradlew clean assembleRelease bundleRelease`. Refuse on failure.
    - Confirm artifacts: `app/build/outputs/apk/foss/release/app-foss-release.apk`, `app/build/outputs/apk/gplay/release/app-gplay-release.apk`, `app/build/outputs/bundle/fossRelease/app-foss-release.aab`, `app/build/outputs/bundle/gplayRelease/app-gplay-release.aab` — all four exist, none ends in `-unsigned.apk`.
-7. **Cert continuity.**
+7. **Baseline profile freshness (warn, don't refuse).** Check the last commit touching `app/src/main/generated/baselineProfiles/` (`git log -1 --format=%cs -- app/src/main/generated/baselineProfiles/`). If it's more than one release old (predates the previous release tag), tell the user: "Baseline profile is stale — consider re-dispatching `baseline-profile.yml` from a branch and merging before tagging." Stale profiles degrade gracefully (unmatched rules are ignored), so this warns rather than blocks.
+8. **Cert continuity.**
    - Run `apksigner verify --print-certs app/build/outputs/apk/gplay/release/app-gplay-release.apk` and capture the `Signer #1 certificate SHA-256 digest`.
    - Print the SHA-256 to the user with: "New cert SHA-256: `<digest>`. Confirm this matches the cert that signed the previous release before continuing." Wait for explicit user OK. Cert mismatch means the user is signing with a different keystore than the published release — that breaks in-place updates for every existing user.
 

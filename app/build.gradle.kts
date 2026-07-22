@@ -88,6 +88,14 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
+baselineProfile {
+    // Land the generated profile in src/main/generated/baselineProfiles/ so BOTH
+    // flavors consume it. Generation runs against foss only (the :baselineprofile
+    // module pins the flavor via missingDimensionStrategy) — the flavors differ
+    // only in billing code, so the foss-derived profile covers gplay's hot paths.
+    mergeIntoMain = true
+}
+
 dependencies {
     // Feature modules
     implementation(project(":feature:ipinfo"))
