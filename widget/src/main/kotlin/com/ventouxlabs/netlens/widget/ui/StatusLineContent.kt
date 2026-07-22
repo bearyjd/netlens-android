@@ -2,7 +2,6 @@ package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -47,7 +46,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             text = statusText,
             style = TextStyle(
                 color = statusColor,
-                fontSize = 14.sp,
+                fontSize = widgetSp(14f),
             ),
             maxLines = 1,
         )
@@ -60,7 +59,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
                 text = "Scanned $elapsed",
                 style = TextStyle(
                     color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
-                    fontSize = 11.sp,
+                    fontSize = widgetSp(11f),
                 ),
             )
         }

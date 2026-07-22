@@ -2,7 +2,6 @@ package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.action.Action
 import androidx.glance.action.actionParametersOf
@@ -101,7 +100,7 @@ private fun ToolChip(
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .clickable(action),
         style = TextStyle(
-            fontSize = 14.sp,
+            fontSize = widgetSp(14f),
             color = onBackground,
         ),
         maxLines = 1,
