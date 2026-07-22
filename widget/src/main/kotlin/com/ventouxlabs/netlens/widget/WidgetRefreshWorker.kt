@@ -10,7 +10,6 @@ import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.core.network.detectVpnState
 import com.ventouxlabs.netlens.core.network.getPhysicalNetwork
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
@@ -242,10 +241,7 @@ class WidgetRefreshWorker(
                 prefs[WidgetStateDefinition.LAST_REFRESH_MS] = System.currentTimeMillis()
             }
 
-            CompactWidget().updateAll(appContext)
-            StandardWidget().updateAll(appContext)
-            DashboardWidget().updateAll(appContext)
-            FourByTwoWidget().updateAll(appContext)
+            refreshAllWidgets(appContext)
 
             Result.success()
         } catch (e: kotlinx.coroutines.CancellationException) {
