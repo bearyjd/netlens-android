@@ -29,8 +29,13 @@ class BaselineProfileGenerator {
     @get:Rule
     val baselineProfileRule = BaselineProfileRule()
 
+    /**
+     * Startup-only pass. Kept separate from [generateJourney] so the startup profile —
+     * which drives dex layout — contains only genuine cold-start methods, not
+     * scroll-warm ones.
+     */
     @Test
-    fun generate() {
+    fun generateStartup() {
         baselineProfileRule.collect(
             packageName = PACKAGE_NAME,
             includeInStartupProfile = true,
@@ -41,6 +46,16 @@ class BaselineProfileGenerator {
             pressHome()
             startActivityAndWait()
             device.waitForIdle()
+        }
+    }
+
+    /** Baseline-only pass: launch plus the home-grid scroll journey. */
+    @Test
+    fun generateJourney() {
+        baselineProfileRule.collect(packageName = PACKAGE_NAME) {
+            pressHome()
+            startActivityAndWait()
+            device.waitForIdle()
 
             scrollGrid()
         }
@@ -48,7 +63,11 @@ class BaselineProfileGenerator {
 
     /** Flings the home grid down a few times to warm grid composition, then back to top. */
     private fun MacrobenchmarkScope.scrollGrid() {
-        val grid = device.findObject(By.scrollable(true)) ?: return
+        // Fail loudly: a silent selector miss would quietly ship a launch-only profile
+        // (the workflow's non-empty guard can't tell the difference).
+        val grid = checkNotNull(device.findObject(By.scrollable(true))) {
+            "Home grid not found — journey degraded to launch-only; refusing to emit a thin profile"
+        }
         grid.setGestureMargin(device.displayWidth / 5)
         repeat(3) {
             grid.fling(Direction.DOWN)

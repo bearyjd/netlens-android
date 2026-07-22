@@ -1,6 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    // Deliberately NOT alias(libs.plugins.android.test): AGP is already on the
+    // classpath via build-logic, and a version-carrying alias fails with
+    // "plugin is already on the classpath with an unknown version".
     id("com.android.test")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.baselineprofile)
