@@ -42,7 +42,7 @@ class SpeedTestEngineImplTest {
         val engine = MockEngine { respond(content = ByteArray(perStream)) }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
@@ -74,7 +74,7 @@ class SpeedTestEngineImplTest {
         val engine = MockEngine { respond(content = channels[next.getAndIncrement()]) }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
@@ -113,7 +113,7 @@ class SpeedTestEngineImplTest {
         val engine = MockEngine { respond(content = channels[next.getAndIncrement()]) }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
@@ -135,7 +135,7 @@ class SpeedTestEngineImplTest {
         val engine = MockEngine { respondError(HttpStatusCode.Forbidden) }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
@@ -154,7 +154,7 @@ class SpeedTestEngineImplTest {
         }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
@@ -170,7 +170,7 @@ class SpeedTestEngineImplTest {
         val engine = MockEngine { throw IOException("everything is down") }
         val impl = SpeedTestEngineImpl(
             engine = engine,
-            ioDispatcher = StandardTestDispatcher(testScheduler),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
         )
 
