@@ -52,11 +52,10 @@ Supersedes the earlier 2026-07-21/22 handoffs. The three widget issues (cross-re
 - **Screencap gotchas:** folds report multiple displays; screencap to a file on-device and `adb pull` (don't mix `exec-out` with stdout). ALWAYS confirm the launcher is frontmost (`dumpsys activity activities | grep topResumedActivity`) before capturing — the user's private apps can be foreground.
 - appwidget ids/providers: `adb -s <serial> shell dumpsys appwidget`. `min=(WxH)` values are TypedValue-complex-encoded dp (e.g. `28161`→110dp, `64001`→250dp).
 
-All this session's widget + speedtest work is shipped and **verified on-device** (enriched 4x2 fit confirmed; IP-info consent granted on the Pixel 10 2026-07-23 → WAN + ISP now populate). Remaining items are all user-only / external:
+All this session's widget + speedtest work is shipped and **verified on-device** (enriched 4x2 fit confirmed; IP-info consent granted on the Pixel 10 2026-07-23 → WAN + ISP now populate). Keystore password rotation is **done** (user confirmed 2026-07-23) — do not re-flag it. Remaining items are user-only / external:
 
-1. **Rotate release keystore passwords** — the one real security to-do (exposed in a July terminal session; user-only).
-2. **Play Console bootstrap** — manual; checklist in `docs/play-store.md`.
-3. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
+1. **Play Console bootstrap** — manual; checklist in `docs/play-store.md`.
+2. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
 
 ## Quick reference
 
