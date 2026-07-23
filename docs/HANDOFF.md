@@ -1,13 +1,22 @@
-# Session Handoff — Widget Cross-Render Bug Root-Caused & Fixed (2026-07-21, late)
+# Session Handoff — Widget Bugs Fixed + 4x2 Enriched (2026-07-22)
 
-Supersedes the earlier 2026-07-21 handoff (baseline profile landed, widget bug mid-investigation). That investigation is now **resolved** — see below.
+Supersedes the earlier 2026-07-21 handoffs. All three widget issues (cross-render, fontScale overflow, 4x1/4x2 sameness) are now **shipped to master**; two device-side follow-ups remain — see below.
 
 ## TL;DR — where things stand right now
 
-- **PR #108 merged** — baseline profile module + CI-generated profile on master.
-- **PR #109 merged** (`de33d32`) — all 9 devil's-advocate follow-ups from #108 review. Both flavors carry the profile now.
-- **PR #110 OPEN** (`fix/widget-cross-render-mapping`) — **fixes the widget wrong-layout bug**. Root cause found, fix implemented, **verified on both physical phones** (install -r over v1.2.5). Watching CI at handoff time. Merge is the remaining step.
+- **PR #108 / #109 merged** — baseline profile module + CI profile + the 9 review follow-ups. Both flavors carry the profile.
+- **PR #110 merged** (`2a8113b`) — **widget cross-render fix** (widgets drew the wrong layout). Verified on both phones.
+- **PR #111 merged** (`79f2ab8`) — **4x2 fontScale-overflow fix + 4x2 enrichment** (two commits). Font pin verified on-device; enrichment CI-green but its on-device visual fit was NOT captured (phone asleep) — see follow-ups.
+- **Open PRs #112/#113** — Dependabot GitHub-Actions bumps, unrelated.
 - **This machine cannot run the Android emulator** (QEMU segfaults on kernel 6.19.11-ogc1.1; every emulator/config). Emulator-bound work goes through the `baseline-profile.yml` CI pattern. Memory file: `no-local-android-emulator.md`.
+
+## RESOLVED: fontScale overflow + 4x2 enrichment (PR #111)
+
+**fontScale fix** (`5609573`): widget text was fixed `sp`, which Glance multiplies by the user's `font_scale`; at 1.3 the 4x2 overflowed (VPN label clipped, sections fell off). New `widgetSp()` helper (`widget/ui/WidgetTextScaling.kt`) divides design sp by the live fontScale to **pin rendered text to design pixel size** (like system clock/weather widgets); `maxScale` clamp (default `1f`) allows partial growth later. Applied to the four **4x2-only** composables (`DashboardWidgetContent`, `StatusLineContent`, `ToolChipsRow`, `WidgetHeaderRow`). **Verified fitting** on Pixel 10 at 1.3.
+
+**4x2 enrichment** (`7d6e6af`): the 4x2 read too much like the 4x1, so it now surfaces data the worker already computes — a new `FourByTwoHeader` leading with the security grade (A–F, color-coded) + top issue (→ posture screen); ISP/carrier under the WAN IP (behind IP-info consent gate); device count + WiFi encryption on the status line's second row (replacing the redundant "Scanned" line — timestamp moved to header). All 4x2-only; 2x1/2x2/4x1 untouched.
+
+**Verification GAP (do this):** the enrichment's on-device visual fit was never captured — the Pixel 10 was asleep/in-use the whole session (watcher timed out 3×). If the added security row overflows the 110dp card, the ready lever is **dropping the LatencySparkline** (lowest-value element) from `FourByTwoWidgetContent` to reclaim ~16dp. Screenshots to date: `before-fontscale-*`, `after-fontscale-*` (font pin confirmed); no `enriched-*` capture yet.
 
 ## RESOLVED: widget rendering bug (PR #110)
 
@@ -21,7 +30,7 @@ Supersedes the earlier 2026-07-21 handoff (baseline profile landed, widget bug m
 
 **Honest caveat:** `install -r` also repopulated Glance's map to healthy, so the device test proves the new path *works*; the *robustness* claim (immune to future degradation) rests on the code change — dispatch now keys off `ComponentName`, which is authoritative and cannot cross-map.
 
-**Still open (separate concern):** the fontScale-1.3 sizing/overflow ("font doesn't fit the 4x2") originally reported is NOT addressed by #110 — that's a real secondary issue (fixed-sp/dp text, single `SizeMode.Responsive` bucket, no fontScale compensation). Plan if picked up: fontScale-compensated text helper + real size buckets + drop-sections-when-short for 4x2.
+**Note:** the fontScale overflow this section originally listed as open was fixed in PR #111 (above).
 
 ## How to work the widgets (device notes)
 
@@ -32,12 +41,11 @@ Supersedes the earlier 2026-07-21 handoff (baseline profile landed, widget bug m
 
 ## Open items
 
-1. **Merge PR #110** (widget fix; user's call once CI green).
-2. **Widget sizing/fontScale overflow** — separate open bug (above).
-3. **Speedtest test hardening** — `SpeedTestEngineImplTest` "download aggregates bytes across four parallel streams" and "final download speed excludes warm-up bytes" flaked once on a loaded runner; timing-sensitive. `test-engineer` + fake-clock/deterministic scheduling.
-4. **Play Console bootstrap** — unchanged (manual; checklist in `docs/play-store.md`).
-5. **Rotate release keystore passwords** — still outstanding (exposed in a July terminal session; user-only).
-6. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
+1. **Verify enriched 4x2 fit on device** (PR #111 already merged) — capture the Pixel 10 4x2 on its home screen; if the security row overflows, drop the sparkline (see the fit-gap note above). Also **grant IP-info consent on the Pixel 10** (NetLens → IP Info) so WAN + ISP populate there — until then those two fields are blank by design (`ipInfoConsentGranted` defaults false; gates `fetchIpInfo()` in `WidgetRefreshWorker`).
+2. **Speedtest test hardening** — `SpeedTestEngineImplTest` "download aggregates bytes across four parallel streams" and "final download speed excludes warm-up bytes" flaked once on a loaded runner; timing-sensitive. `test-engineer` + fake-clock/deterministic scheduling.
+3. **Play Console bootstrap** — unchanged (manual; checklist in `docs/play-store.md`).
+4. **Rotate release keystore passwords** — still outstanding (exposed in a July terminal session; user-only).
+5. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
 
 ## Quick reference
 
