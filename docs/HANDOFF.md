@@ -17,7 +17,7 @@ Supersedes the earlier 2026-07-21/22 handoffs. The three widget issues (cross-re
 
 **4x2 enrichment** (`7d6e6af`): the 4x2 read too much like the 4x1, so it now surfaces data the worker already computes — a new `FourByTwoHeader` leading with the security grade (A–F, color-coded) + top issue (→ posture screen); ISP/carrier under the WAN IP (behind IP-info consent gate); device count + WiFi encryption on the status line's second row (replacing the redundant "Scanned" line — timestamp moved to header). All 4x2-only; 2x1/2x2/4x1 untouched.
 
-**Verification GAP (do this):** the enrichment's on-device visual fit was never captured — the Pixel 10 was asleep/in-use the whole session (watcher timed out 3×). If the added security row overflows the 110dp card, the ready lever is **dropping the LatencySparkline** (lowest-value element) from `FourByTwoWidgetContent` to reclaim ~16dp. Screenshots to date: `before-fontscale-*`, `after-fontscale-*` (font pin confirmed); no `enriched-*` capture yet.
+**Enrichment fit — VERIFIED (2026-07-23):** captured on the Pixel 10 4x2 (`enriched-final-*` in scratchpad). Grade badge ("D" amber) + top issue ("Weak or no encryption"), VPN "Split Tunnel" label, device count ("0 devices"), sparkline, and fuller "DNS → … · Split" status all render **within the card with room to spare** — no clipping, no overflow. Sparkline-drop fallback NOT needed. WAN + ISP remained blank (IP-info consent still ungranted on that device — expected).
 
 ## RESOLVED: widget rendering bug (PR #110)
 
@@ -52,13 +52,11 @@ Supersedes the earlier 2026-07-21/22 handoffs. The three widget issues (cross-re
 - **Screencap gotchas:** folds report multiple displays; screencap to a file on-device and `adb pull` (don't mix `exec-out` with stdout). ALWAYS confirm the launcher is frontmost (`dumpsys activity activities | grep topResumedActivity`) before capturing — the user's private apps can be foreground.
 - appwidget ids/providers: `adb -s <serial> shell dumpsys appwidget`. `min=(WxH)` values are TypedValue-complex-encoded dp (e.g. `28161`→110dp, `64001`→250dp).
 
-## Open items
+All this session's widget + speedtest work is shipped and **verified on-device** (enriched 4x2 fit confirmed; IP-info consent granted on the Pixel 10 2026-07-23 → WAN + ISP now populate). Remaining items are all user-only / external:
 
-1. **Verify enriched 4x2 fit on device** (PR #111 already merged) — capture the Pixel 10 4x2 on its home screen; if the security row overflows, drop the sparkline (see the fit-gap note above). Also **grant IP-info consent on the Pixel 10** (NetLens → IP Info) so WAN + ISP populate there — until then those two fields are blank by design (`ipInfoConsentGranted` defaults false; gates `fetchIpInfo()` in `WidgetRefreshWorker`).
-2. **Merge or close Dependabot PRs #112/#113** — GitHub-Actions version bumps (setup-java 5.5→5.6, checkout 7.0.0→7.0.1); trivial, just need a glance.
-3. **Play Console bootstrap** — unchanged (manual; checklist in `docs/play-store.md`).
-4. **Rotate release keystore passwords** — still outstanding (exposed in a July terminal session; user-only).
-5. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
+1. **Rotate release keystore passwords** — the one real security to-do (exposed in a July terminal session; user-only).
+2. **Play Console bootstrap** — manual; checklist in `docs/play-store.md`.
+3. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
 
 ## Quick reference
 
