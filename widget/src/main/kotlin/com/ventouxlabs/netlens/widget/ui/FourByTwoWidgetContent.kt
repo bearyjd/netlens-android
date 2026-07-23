@@ -26,9 +26,9 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             .fillMaxSize()
             .widgetBackground(),
     ) {
-        WidgetHeaderRow(
+        FourByTwoHeader(
             state = state,
-            modifier = GlanceModifier.padding(horizontal = 10.dp),
+            modifier = GlanceModifier.padding(horizontal = 10.dp, vertical = 2.dp),
         )
 
         Spacer(

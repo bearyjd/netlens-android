@@ -3,7 +3,6 @@ package com.ventouxlabs.netlens.widget.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -53,7 +52,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
                 text = "Scanned $elapsed",
                 style = TextStyle(
                     color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
-                    fontSize = 11.sp,
+                    fontSize = widgetSp(11f),
                 ),
                 maxLines = 1,
             )

@@ -2,7 +2,6 @@ package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
@@ -80,7 +79,7 @@ fun DashboardWidgetContent(
             ) {
                 Text(
                     text = state.countryFlag.ifEmpty { "—" },
-                    style = TextStyle(fontSize = 40.sp),
+                    style = TextStyle(fontSize = widgetSp(40f)),
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 val (backdropColor, lockDrawable, vpnLabel) = when (state.vpnState) {
@@ -105,7 +104,7 @@ fun DashboardWidgetContent(
                             text = "!",
                             style = TextStyle(
                                 color = NetLensWidgetColors.onAccentFill,
-                                fontSize = 10.sp,
+                                fontSize = widgetSp(10f),
                                 fontWeight = FontWeight.Bold,
                             ),
                             modifier = GlanceModifier.padding(start = 14.dp, bottom = 14.dp),
@@ -117,7 +116,7 @@ fun DashboardWidgetContent(
                     text = vpnLabel,
                     style = TextStyle(
                         color = backdropColor,
-                        fontSize = 10.sp,
+                        fontSize = widgetSp(10f),
                         fontWeight = FontWeight.Bold,
                     ),
                     maxLines = 1,
@@ -127,7 +126,7 @@ fun DashboardWidgetContent(
                         text = "●",
                         style = TextStyle(
                             color = NetLensWidgetColors.accent,
-                            fontSize = 10.sp,
+                            fontSize = widgetSp(10f),
                         ),
                     )
                 }
@@ -151,7 +150,7 @@ fun DashboardWidgetContent(
                     text = "WAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 13.sp,
+                        fontSize = widgetSp(13f),
                     ),
                 )
                 Text(
@@ -159,9 +158,19 @@ fun DashboardWidgetContent(
                     style = TextStyle(
                         color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = widgetSp(18f),
                     ),
                 )
+                if (state.ispName.isNotEmpty()) {
+                    Text(
+                        text = state.ispName,
+                        style = TextStyle(
+                            color = NetLensWidgetColors.inkSoft,
+                            fontSize = widgetSp(10f),
+                        ),
+                        maxLines = 1,
+                    )
+                }
             }
 
             Spacer(modifier = GlanceModifier.width(6.dp))
@@ -183,7 +192,7 @@ fun DashboardWidgetContent(
                     text = "LAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 13.sp,
+                        fontSize = widgetSp(13f),
                     ),
                 )
                 Text(
@@ -191,7 +200,7 @@ fun DashboardWidgetContent(
                     style = TextStyle(
                         color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = widgetSp(18f),
                     ),
                 )
             }
@@ -217,7 +226,7 @@ fun DashboardWidgetContent(
                     text = speedLabel,
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 14.sp,
+                        fontSize = widgetSp(14f),
                     ),
                 )
                 Spacer(modifier = GlanceModifier.width(4.dp))
@@ -226,7 +235,7 @@ fun DashboardWidgetContent(
                 text = bottomLabel,
                 style = TextStyle(
                     color = NetLensWidgetColors.inkSoft,
-                    fontSize = 14.sp,
+                    fontSize = widgetSp(14f),
                 ),
                 modifier = GlanceModifier.defaultWeight(),
             )
@@ -235,7 +244,7 @@ fun DashboardWidgetContent(
                     text = "${state.rssi}",
                     style = TextStyle(
                         color = rssiColor,
-                        fontSize = 14.sp,
+                        fontSize = widgetSp(14f),
                         fontWeight = FontWeight.Bold,
                     ),
                 )
@@ -246,7 +255,7 @@ fun DashboardWidgetContent(
                     text = "Portal",
                     style = TextStyle(
                         color = NetLensWidgetColors.warn,
-                        fontSize = 14.sp,
+                        fontSize = widgetSp(14f),
                     ),
                 )
             }
