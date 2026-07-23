@@ -5,8 +5,6 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.ByteChannel
-import io.ktor.utils.io.readAvailable
-import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
@@ -38,12 +36,17 @@ class SpeedTestEngineImplTest {
 
     @Test
     fun `download aggregates bytes across four parallel streams`() = runTest {
-        val perStream = 1_000_000
-        val engine = MockEngine { respond(content = ByteArray(perStream)) }
+        // Deterministic byte source (no Ktor): each of the 4 streams contributes `perStream`
+        // bytes on the virtual scheduler, so the aggregate is exact regardless of host load.
+        val perStream = 1_000_000L
         val impl = SpeedTestEngineImpl(
-            engine = engine,
+            engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
+            downloadStreamOverride = { counter, markFirstByte ->
+                markFirstByte()
+                counter.addAndGet(perStream)
+            },
         )
 
         val items = impl.measureDownload().toList()
@@ -58,24 +61,20 @@ class SpeedTestEngineImplTest {
         // Each stream trickles a little during the warm-up window, then bursts once warm-up is
         // over. The steady-state figure must reflect the post-warm-up burst, so it is strictly
         // faster than the naive since-first-byte average that folds the slow ramp back in.
-        val warmBytes = 100_000
-        val fastBytes = 2_000_000
-        val channels = List(4) { ByteChannel(autoFlush = true) }
-        channels.forEach { ch ->
-            launch {
-                ch.writeFully(ByteArray(warmBytes))
-                ch.flush()
-                delay(2_000L) // cross the 1_500 ms warm-up boundary
-                ch.writeFully(ByteArray(fastBytes))
-                ch.flushAndClose()
-            }
-        }
-        val next = AtomicInteger(0)
-        val engine = MockEngine { respond(content = channels[next.getAndIncrement()]) }
+        val warmBytes = 100_000L
+        val fastBytes = 2_000_000L
+        // Each stream trickles `warmBytes` at once, waits past the warm-up boundary, then bursts
+        // `fastBytes`. Runs entirely on the virtual scheduler, so the warm-up split is exact.
         val impl = SpeedTestEngineImpl(
-            engine = engine,
+            engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
+            downloadStreamOverride = { counter, markFirstByte ->
+                markFirstByte()
+                counter.addAndGet(warmBytes)
+                delay(2_000L) // cross the 1_500 ms warm-up boundary
+                counter.addAndGet(fastBytes)
+            },
         )
 
         val items = impl.measureDownload().toList()
@@ -99,22 +98,18 @@ class SpeedTestEngineImplTest {
         // close just after the warm-up boundary. That leaves the post-warm-up steady slice empty
         // (total == warmupBytes), so the steady-state figure alone would report 0 Mbps even though
         // data clearly transferred. The final value must fall back to the cumulative rate.
-        val allBytes = 3_000_000
-        val channels = List(4) { ByteChannel(autoFlush = true) }
-        channels.forEach { ch ->
-            launch {
-                ch.writeFully(ByteArray(allBytes)) // all bytes land during warm-up
-                ch.flush()
-                delay(2_000L) // idle past the 1_500 ms warm-up boundary, no further bytes
-                ch.flushAndClose()
-            }
-        }
-        val next = AtomicInteger(0)
-        val engine = MockEngine { respond(content = channels[next.getAndIncrement()]) }
+        val allBytes = 3_000_000L
+        // All bytes land during warm-up, then each stream idles past the boundary and closes with
+        // nothing more — the steady-state slice is empty, exercising the cumulative fallback.
         val impl = SpeedTestEngineImpl(
-            engine = engine,
+            engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
+            downloadStreamOverride = { counter, markFirstByte ->
+                markFirstByte()
+                counter.addAndGet(allBytes) // all bytes land during warm-up
+                delay(2_000L) // idle past the 1_500 ms warm-up boundary, no further bytes
+            },
         )
 
         val finalItem = impl.measureDownload().toList().last()
@@ -146,16 +141,18 @@ class SpeedTestEngineImplTest {
 
     @Test
     fun `one failing stream does not fail the flow`() = runTest {
-        val perStream = 1_000_000
+        val perStream = 1_000_000L
         val calls = AtomicInteger(0)
-        val engine = MockEngine {
-            if (calls.getAndIncrement() == 0) throw IOException("one stream down")
-            respond(content = ByteArray(perStream))
-        }
+        // First stream to run throws; the SupervisorJob must keep the other three aggregating.
         val impl = SpeedTestEngineImpl(
-            engine = engine,
+            engine = MockEngine { respond(content = "") },
             ioDispatcher = StandardTestDispatcher(testScheduler),
             timeSource = { testScheduler.currentTime },
+            downloadStreamOverride = { counter, markFirstByte ->
+                if (calls.getAndIncrement() == 0) throw IOException("one stream down")
+                markFirstByte()
+                counter.addAndGet(perStream)
+            },
         )
 
         val items = impl.measureDownload().toList()
