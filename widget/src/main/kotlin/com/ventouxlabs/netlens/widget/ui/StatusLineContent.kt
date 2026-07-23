@@ -8,6 +8,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
@@ -17,7 +18,6 @@ import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
-import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
 @Composable
 fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
@@ -51,17 +51,27 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             maxLines = 1,
         )
 
-        val elapsed = relativeTimeLabel(state.lastRefreshMs)
-        if (elapsed.isNotEmpty()) {
-            val stale = state.lastRefreshMs > 0L &&
-                System.currentTimeMillis() - state.lastRefreshMs > WidgetState.STALE_ALERT_THRESHOLD_MS
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val deviceText = "${state.deviceCount} device${if (state.deviceCount != 1) "s" else ""}"
             Text(
-                text = "Scanned $elapsed",
+                text = deviceText,
                 style = TextStyle(
-                    color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
+                    color = NetLensWidgetColors.inkSoft,
                     fontSize = widgetSp(11f),
                 ),
+                maxLines = 1,
             )
+            if (state.encryptionType.isNotEmpty()) {
+                val secure = state.isEncryptionSecure
+                Text(
+                    text = " · ${state.encryptionType}",
+                    style = TextStyle(
+                        color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
+                        fontSize = widgetSp(11f),
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

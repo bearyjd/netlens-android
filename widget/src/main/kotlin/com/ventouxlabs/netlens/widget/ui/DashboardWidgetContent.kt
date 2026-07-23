@@ -161,6 +161,16 @@ fun DashboardWidgetContent(
                         fontSize = widgetSp(18f),
                     ),
                 )
+                if (state.ispName.isNotEmpty()) {
+                    Text(
+                        text = state.ispName,
+                        style = TextStyle(
+                            color = NetLensWidgetColors.inkSoft,
+                            fontSize = widgetSp(10f),
+                        ),
+                        maxLines = 1,
+                    )
+                }
             }
 
             Spacer(modifier = GlanceModifier.width(6.dp))
