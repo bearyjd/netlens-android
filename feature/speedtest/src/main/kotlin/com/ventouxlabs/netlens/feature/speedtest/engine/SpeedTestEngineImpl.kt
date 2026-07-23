@@ -63,6 +63,11 @@ class SpeedTestEngineImpl private constructor(
     private val timeSource: () -> Long,
     private val connectProbe: suspend (InetSocketAddress) -> Long,
     private val resolveAddresses: (String) -> List<InetAddress>,
+    // Visible for testing: replaces the per-stream download body with a caller-supplied one.
+    // Tests inject a pure-coroutine byte source so the whole run stays on the virtual test
+    // scheduler — real Ktor reads hop to a real dispatcher, which raced the virtual-time
+    // sampling loop under CI load and made the throughput tests flaky. null in production.
+    private val downloadStreamOverride: (suspend (AtomicLong, () -> Unit) -> Unit)? = null,
 ) : SpeedTestEngine {
 
     @Inject constructor() : this(
@@ -95,11 +100,19 @@ class SpeedTestEngineImpl private constructor(
         timeSource: () -> Long = System::currentTimeMillis,
         connectProbe: suspend (InetSocketAddress) -> Long = defaultConnectProbe(timeSource),
         resolveAddresses: (String) -> List<InetAddress> = defaultResolveAddresses(),
-    ) : this(HttpClient(engine), ioDispatcher, timeSource, connectProbe, resolveAddresses)
+        downloadStreamOverride: (suspend (AtomicLong, () -> Unit) -> Unit)? = null,
+    ) : this(
+        HttpClient(engine),
+        ioDispatcher,
+        timeSource,
+        connectProbe,
+        resolveAddresses,
+        downloadStreamOverride,
+    )
 
     override fun measureDownload(): Flow<SpeedProgress> =
         measureThroughput(SpeedTestPhase.DOWNLOAD) { counter, markFirstByte ->
-            downloadStream(counter, markFirstByte)
+            (downloadStreamOverride ?: { c, m -> downloadStream(c, m) })(counter, markFirstByte)
         }
 
     override fun measureUpload(): Flow<SpeedProgress> =
