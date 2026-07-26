@@ -28,6 +28,7 @@ import com.ventouxlabs.netlens.core.data.model.WifiSurveyPointEntity
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.feature.wifi.R
 import com.ventouxlabs.netlens.feature.wifi.model.SignalQuality
+import com.ventouxlabs.netlens.feature.wifi.model.apShortName
 
 /**
  * The coverage map: one bar per measured spot, length and colour by average signal.
@@ -124,13 +125,6 @@ private fun CoverageBar(
         )
     }
 }
-
-/**
- * Last two octets of a BSSID. In a mesh the APs differ only in the tail, and the full MAC
- * crowds out the label it sits next to.
- */
-internal fun apShortName(bssid: String): String =
-    bssid.split(':').takeLast(2).joinToString(":").ifEmpty { bssid }
 
 /** Signal banding mapped onto the app's three-state status palette. */
 @Composable
