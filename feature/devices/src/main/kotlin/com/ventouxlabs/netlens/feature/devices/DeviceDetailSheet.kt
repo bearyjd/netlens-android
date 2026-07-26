@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
+import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_LOCATION_LENGTH
+import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NOTES_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 import java.time.Instant
@@ -84,9 +86,11 @@ fun DeviceDetailSheet(
             Text(stringResource(R.string.devices_first_seen, formatSeenTimestamp(device.firstSeen)))
             Text(stringResource(R.string.devices_last_seen, formatSeenTimestamp(device.lastSeen)))
 
+            // Capped here rather than only in normalized(): truncating at save time drops
+            // characters the user can still see on screen, with no hint that it happened.
             OutlinedTextField(
                 value = edit.customName,
-                onValueChange = { edit = edit.copy(customName = it) },
+                onValueChange = { edit = edit.copy(customName = it.take(MAX_DEVICE_NAME_LENGTH)) },
                 label = { Text(stringResource(R.string.devices_detail_rename)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_rename_hint)) },
                 singleLine = true,
@@ -95,24 +99,36 @@ fun DeviceDetailSheet(
 
             OutlinedTextField(
                 value = edit.location,
-                onValueChange = { edit = edit.copy(location = it) },
+                onValueChange = { edit = edit.copy(location = it.take(MAX_DEVICE_LOCATION_LENGTH)) },
                 label = { Text(stringResource(R.string.devices_detail_location)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_location_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            val tagsAtCapacity = enteredTags.size >= DeviceTags.MAX_TAGS
             OutlinedTextField(
                 value = edit.tagsInput,
                 onValueChange = { edit = edit.copy(tagsInput = it) },
                 label = { Text(stringResource(R.string.devices_detail_tags)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_tags_hint)) },
-                supportingText = { Text(stringResource(R.string.devices_detail_tags_help)) },
+                supportingText = {
+                    // format() keeps the *first* MAX_TAGS, so silently over-filling would discard
+                    // the tag just added rather than the oldest — say so instead.
+                    Text(
+                        if (tagsAtCapacity) {
+                            stringResource(R.string.devices_detail_tags_full, DeviceTags.MAX_TAGS)
+                        } else {
+                            stringResource(R.string.devices_detail_tags_help)
+                        },
+                    )
+                },
+                isError = tagsAtCapacity,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            if (suggestions.isNotEmpty()) {
+            if (suggestions.isNotEmpty() && !tagsAtCapacity) {
                 Text(
                     stringResource(R.string.devices_detail_tag_suggestions),
                     style = MaterialTheme.typography.labelMedium,
@@ -124,6 +140,7 @@ fun DeviceDetailSheet(
                                 edit = edit.copy(
                                     tagsInput = DeviceTags.parse(edit.tagsInput)
                                         .plus(tag)
+                                        .take(DeviceTags.MAX_TAGS)
                                         .joinToString(", "),
                                 )
                             },

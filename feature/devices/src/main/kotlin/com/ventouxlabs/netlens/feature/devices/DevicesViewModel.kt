@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
+import com.ventouxlabs.netlens.core.data.di.DefaultDispatcher
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
@@ -14,10 +15,12 @@ import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +32,7 @@ class DevicesViewModel @Inject constructor(
     private val networkIdentity: NetworkIdentity,
     private val userPreferences: UserPreferencesRepository,
     private val watchScheduler: WatchScheduler,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -67,7 +71,12 @@ class DevicesViewModel @Inject constructor(
                     availableTags = available,
                     activeTags = liveTags,
                 )
-            }.collect { next ->
+            }
+                // Off the main thread: every keystroke re-parses the tag column of every device
+                // (allTags, then matches and matchesAnyTag per row, each running a regex per tag).
+                // On a large inventory that is enough work per character to drop frames.
+                .flowOn(defaultDispatcher)
+                .collect { next ->
                 // Preserve cadence/masterWatchEnabled (folded in below from preferences) and the
                 // transient watchError, which is set by user actions rather than these flows.
                 _uiState.update {

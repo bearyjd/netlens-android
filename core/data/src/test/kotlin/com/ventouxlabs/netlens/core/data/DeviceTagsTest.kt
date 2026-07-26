@@ -47,6 +47,19 @@ class DeviceTagsTest {
     }
 
     @Test
+    fun `the cap keeps the first tags, so callers must refuse input rather than over-fill`() {
+        // Documents *which* tags survive. take(MAX_TAGS) keeps the head, so a UI that let the
+        // user append past the cap would silently discard the tag they just added — the newest,
+        // not the oldest. DeviceDetailSheet stops at the cap instead; if that ever regresses,
+        // this test explains what the user would lose.
+        val overfull = (1..DeviceTags.MAX_TAGS).map { "keep$it" } + "dropped"
+        val kept = DeviceTags.parse(DeviceTags.format(overfull))
+        assertEquals(DeviceTags.MAX_TAGS, kept.size)
+        assertTrue("dropped" !in kept)
+        assertTrue("keep1" in kept)
+    }
+
+    @Test
     fun `normalize strips the separator so a tag cannot split itself in storage`() {
         val stored = DeviceTags.formatFromInput("living,room")
         // Two comma-separated entries, not one tag containing a comma.
