@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.devices
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
@@ -10,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -39,6 +41,18 @@ class DevicesViewModelTest {
     private lateinit var scheduler: RecordingWatchScheduler
     private lateinit var viewModel: DevicesViewModel
 
+    private val viewModelStore = ViewModelStore()
+    private val dataStoreScopes = mutableListOf<CoroutineScope>()
+
+    /**
+     * A DataStore keeps a collector alive on whatever scope it was built with, and this scope
+     * captures the *delegating* `Dispatchers.Main`. Left uncancelled, that collector resumes on a
+     * later test's dispatcher and any failure surfaces there as "uncaught exceptions before the
+     * test started" — a flake in a test that did nothing wrong. Tracked so tearDown can close it.
+     */
+    private fun trackedDataStoreScope(): CoroutineScope =
+        CoroutineScope(Dispatchers.Main + SupervisorJob()).also { dataStoreScopes += it }
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -46,7 +60,7 @@ class DevicesViewModelTest {
         watchedDao = FakeWatchedNetworkDao()
         identity = FakeNetworkIdentity()
         val dataStore = PreferenceDataStoreFactory.create(
-            scope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+            scope = trackedDataStoreScope(),
             produceFile = { File(tempDir, "test_prefs.preferences_pb") },
         )
         val fakeKeyValueStore = object : KeyValueStore {
@@ -58,11 +72,22 @@ class DevicesViewModelTest {
         }
         userPreferences = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         scheduler = RecordingWatchScheduler()
-        viewModel = DevicesViewModel(knownDao, watchedDao, identity, userPreferences, scheduler)
+        viewModel = DevicesViewModel(
+            knownDao, watchedDao, identity, userPreferences, scheduler,
+            UnconfinedTestDispatcher(),
+        )
+        viewModelStore.put("devices", viewModel)
     }
 
     @AfterEach
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        // Order matters: cancel while Main is still this test's dispatcher, so the collectors
+        // wind down here instead of in whichever test runs next.
+        viewModelStore.clear()
+        dataStoreScopes.forEach { it.cancel() }
+        dataStoreScopes.clear()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `search filters by display name`() = runTest {
@@ -187,7 +212,7 @@ class DevicesViewModelTest {
         Pair<DevicesViewModel, RecordingWatchScheduler> {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val dataStore = PreferenceDataStoreFactory.create(
-            scope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+            scope = trackedDataStoreScope(),
             produceFile = { File(tempDir, "standard_prefs_${System.nanoTime()}.preferences_pb") },
         )
         val fakeKeyValueStore = object : KeyValueStore {
@@ -199,7 +224,11 @@ class DevicesViewModelTest {
         }
         val prefs = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         val standardScheduler = RecordingWatchScheduler()
-        val vm = DevicesViewModel(knownDao, watchedDao, identity, prefs, standardScheduler)
+        val vm = DevicesViewModel(
+            knownDao, watchedDao, identity, prefs, standardScheduler,
+            StandardTestDispatcher(testScheduler),
+        )
+        viewModelStore.put("devices-standard", vm)
         return vm to standardScheduler
     }
 }
