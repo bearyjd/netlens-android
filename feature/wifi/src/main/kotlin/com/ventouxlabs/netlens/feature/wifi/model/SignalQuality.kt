@@ -19,7 +19,10 @@ enum class SignalQuality(val minRssi: Int) {
     val isWeakSpot: Boolean get() = this == WEAK || this == UNUSABLE
 
     companion object {
-        fun forRssi(rssi: Int): SignalQuality = entries.first { rssi >= it.minRssi }
+        // Declaration order is the contract here: the first band whose floor the reading
+        // clears is the answer, and UNUSABLE's Int.MIN_VALUE floor makes the list total.
+        fun forRssi(rssi: Int): SignalQuality =
+            SignalQuality.entries.first { rssi >= it.minRssi }
 
         /**
          * Maps an RSSI onto 0f..1f for bar/graph rendering, clamped to the -95..-30 dBm window
