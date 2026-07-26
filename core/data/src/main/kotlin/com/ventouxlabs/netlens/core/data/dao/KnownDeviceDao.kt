@@ -58,6 +58,24 @@ interface KnownDeviceDao {
     @Query("UPDATE known_devices SET customName = :customName WHERE id = :id")
     suspend fun setCustomName(id: Long, customName: String?)
 
+    @Query("SELECT * FROM known_devices WHERE id = :id")
+    suspend fun getById(id: Long): KnownDeviceEntity?
+
+    // Writes the whole user-editable block in one statement so a save can't half-apply.
+    // Deliberately excludes the scan-derived columns (hostname/ip/vendor/deviceType/osGuess),
+    // which updateLastSeen owns — a re-scan must never clobber what the user typed.
+    @Query(
+        "UPDATE known_devices SET customName = :customName, tags = :tags, notes = :notes, " +
+            "location = :location WHERE id = :id",
+    )
+    suspend fun updateUserDetails(
+        id: Long,
+        customName: String?,
+        tags: String?,
+        notes: String?,
+        location: String?,
+    )
+
     @Query("UPDATE known_devices SET networkId = :networkId WHERE id = :id")
     suspend fun setNetworkId(id: Long, networkId: Long?)
 

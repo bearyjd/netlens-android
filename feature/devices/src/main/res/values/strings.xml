@@ -18,6 +18,17 @@
     <string name="devices_detail_vendor">Vendor: %1$s</string>
     <string name="devices_detail_type">Type: %1$s</string>
     <string name="devices_detail_os">OS: %1$s</string>
+    <string name="devices_detail_location">Location</string>
+    <string name="devices_detail_location_hint">Where it lives (e.g. Garage)</string>
+    <string name="devices_detail_tags">Tags</string>
+    <string name="devices_detail_tags_hint">printer, kids, iot</string>
+    <string name="devices_detail_tags_help">Separate tags with commas</string>
+    <string name="devices_detail_tag_suggestions">Used elsewhere</string>
+    <string name="devices_detail_notes">Notes</string>
+    <string name="devices_detail_notes_hint">Anything worth remembering about this device</string>
+    <string name="devices_filter_by_tag">Filter by tag</string>
+    <string name="devices_filter_clear">Clear</string>
+    <string name="devices_row_location">Location: %1$s</string>
     <string name="devices_detail_delete">Delete device</string>
     <string name="devices_detail_save">Save</string>
     <string name="devices_detail_close">Close</string>

@@ -1,0 +1,95 @@
+package com.ventouxlabs.netlens.feature.portscan.model
+
+/** What kind of app a discovered service hands off to, which drives the button's wording. */
+enum class ServiceLaunchKind {
+    /** Opens in a browser. */
+    WEB,
+
+    /** Hands off to a terminal/remote-desktop client (ssh, telnet, vnc, rdp). */
+    REMOTE,
+
+    /** Hands off to a file client (ftp, smb). */
+    FILES,
+}
+
+/**
+ * A tappable action for an open port: the URI to fire as an `ACTION_VIEW` intent plus enough
+ * context for the UI to label the button. Deliberately plain data with no Android types so the
+ * port→URI mapping stays unit-testable; building and firing the intent is the caller's job.
+ */
+data class ServiceLaunch(
+    val uri: String,
+    val kind: ServiceLaunchKind,
+    /** Human label for the target, e.g. "HTTP" or "Plex". */
+    val serviceLabel: String,
+)
+
+/**
+ * Maps an open port to something the phone can actually open.
+ *
+ * Only ports whose protocol has a registered URI scheme are listed — a database or a metrics
+ * exporter has nothing useful to hand off to, so those stay non-tappable rather than opening a
+ * browser at a port that will never speak HTTP. Non-web schemes (ssh, vnc, rdp, smb, ftp) are
+ * offered even though no handler may be installed: the caller catches the failure and says so,
+ * which is friendlier than hiding an action that works fine for anyone with a client app.
+ */
+object ServiceLauncher {
+
+    private val WEB_PORTS: Map<Int, String> = mapOf(
+        80 to "HTTP",
+        81 to "HTTP",
+        591 to "HTTP",
+        3000 to "Grafana / dev server",
+        5601 to "Kibana",
+        8000 to "HTTP",
+        8008 to "HTTP",
+        8080 to "HTTP alt",
+        8081 to "HTTP alt",
+        8123 to "Home Assistant",
+        8888 to "HTTP proxy / Jupyter",
+        9090 to "Prometheus",
+        9200 to "Elasticsearch",
+        32400 to "Plex",
+    )
+
+    private val SECURE_WEB_PORTS: Map<Int, String> = mapOf(
+        443 to "HTTPS",
+        8006 to "Proxmox",
+        8443 to "HTTPS alt",
+        9443 to "HTTPS alt",
+        6443 to "Kubernetes API",
+    )
+
+    // 631 is IPP: the daemon serves its admin UI over plain HTTP on the same port.
+    private const val IPP_PORT = 631
+
+    fun forPort(host: String, port: Int): ServiceLaunch? {
+        val authority = authority(host, port)
+        WEB_PORTS[port]?.let { label ->
+            return ServiceLaunch("http://$authority", ServiceLaunchKind.WEB, label)
+        }
+        SECURE_WEB_PORTS[port]?.let { label ->
+            return ServiceLaunch("https://$authority", ServiceLaunchKind.WEB, label)
+        }
+        return when (port) {
+            IPP_PORT -> ServiceLaunch("http://$authority", ServiceLaunchKind.WEB, "Printer admin")
+            22 -> ServiceLaunch("ssh://${bare(host)}", ServiceLaunchKind.REMOTE, "SSH")
+            23 -> ServiceLaunch("telnet://${bare(host)}", ServiceLaunchKind.REMOTE, "Telnet")
+            3389 -> ServiceLaunch("rdp://${bare(host)}", ServiceLaunchKind.REMOTE, "RDP")
+            5900 -> ServiceLaunch("vnc://${bare(host)}", ServiceLaunchKind.REMOTE, "VNC")
+            21 -> ServiceLaunch("ftp://${bare(host)}", ServiceLaunchKind.FILES, "FTP")
+            139, 445 -> ServiceLaunch("smb://${bare(host)}", ServiceLaunchKind.FILES, "SMB share")
+            else -> null
+        }
+    }
+
+    /** Host plus an explicit port, omitting the port when it is the scheme's default. */
+    private fun authority(host: String, port: Int): String {
+        val bare = bare(host)
+        return if (port == 80 || port == 443) bare else "$bare:$port"
+    }
+
+    /** IPv6 literals need bracketing before they can go in a URI authority. */
+    private fun bare(host: String): String =
+        if (host.contains(':') && !host.startsWith("[")) "[$host]" else host
+}

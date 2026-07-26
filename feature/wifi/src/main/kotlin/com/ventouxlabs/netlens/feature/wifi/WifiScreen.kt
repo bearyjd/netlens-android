@@ -39,6 +39,8 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -60,6 +62,7 @@ import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.feature.wifi.model.ConnectedWifiInfo
 import com.ventouxlabs.netlens.feature.wifi.model.WifiBand
 import com.ventouxlabs.netlens.feature.wifi.model.WifiNetwork
+import com.ventouxlabs.netlens.feature.wifi.model.WifiTab
 import com.ventouxlabs.netlens.feature.wifi.model.WifiUiState
 import com.ventouxlabs.netlens.feature.wifi.ui.ChannelGraph
 
@@ -68,8 +71,10 @@ import com.ventouxlabs.netlens.feature.wifi.ui.ChannelGraph
 fun WifiScreen(
     onBack: () -> Unit = {},
     viewModel: WifiViewModel = hiltViewModel(),
+    surveyViewModel: WifiSurveyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val surveyState by surveyViewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
@@ -103,11 +108,23 @@ fun WifiScreen(
                     }
                 },
                 actions = {
-                    if (state.networks.isNotEmpty()) {
+                    // Each tab exports what it is showing, so the copy/share buttons act on the
+                    // survey when the survey is on screen rather than always on the scan list.
+                    val exportable = when (state.selectedTab) {
+                        WifiTab.NETWORKS -> state.networks.isNotEmpty()
+                        WifiTab.SURVEY -> surveyState.points.isNotEmpty()
+                    }
+                    val exportTitle = when (state.selectedTab) {
+                        WifiTab.NETWORKS -> "WiFi Analyzer"
+                        WifiTab.SURVEY -> "WiFi Survey"
+                    }
+                    val buildExport: () -> String = when (state.selectedTab) {
+                        WifiTab.NETWORKS -> viewModel::buildExportText
+                        WifiTab.SURVEY -> surveyViewModel::buildExportText
+                    }
+                    if (exportable) {
                         IconButton(onClick = {
-                            ResultExporter.copyToClipboard(
-                                context, "WiFi Analyzer", viewModel.buildExportText(),
-                            )
+                            ResultExporter.copyToClipboard(context, exportTitle, buildExport())
                         }) {
                             Icon(
                                 Icons.Default.ContentCopy,
@@ -116,9 +133,7 @@ fun WifiScreen(
                         }
                         if (isPro) {
                             IconButton(onClick = {
-                                ResultExporter.shareAsText(
-                                    context, "WiFi Analyzer Results", viewModel.buildExportText(),
-                                )
+                                ResultExporter.shareAsText(context, "$exportTitle Results", buildExport())
                             }) {
                                 Icon(
                                     Icons.Default.Share,
@@ -131,7 +146,9 @@ fun WifiScreen(
             )
         },
         floatingActionButton = {
-            if (state.permissionGranted) {
+            // The survey drives its own sampling loop; a scan FAB there would be a second,
+            // conflicting way to start measuring.
+            if (state.permissionGranted && state.selectedTab == WifiTab.NETWORKS) {
                 FloatingActionButton(
                     onClick = { viewModel.startScan() },
                 ) {
@@ -155,19 +172,48 @@ fun WifiScreen(
                 modifier = Modifier.padding(innerPadding),
             )
         } else {
-            // Recompute the band filter only when the network set or selected band changes,
-            // not on every recomposition — an unremembered new List forced ChannelGraph's
-            // heavy Canvas redraw even when the data was identical.
-            val filteredNetworks = remember(state.networks, state.selectedBand) {
-                viewModel.filteredNetworks()
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                TabRow(selectedTabIndex = state.selectedTab.ordinal) {
+                    Tab(
+                        selected = state.selectedTab == WifiTab.NETWORKS,
+                        onClick = { viewModel.onTabSelected(WifiTab.NETWORKS) },
+                        text = { Text(stringResource(R.string.wifi_tab_networks)) },
+                    )
+                    Tab(
+                        selected = state.selectedTab == WifiTab.SURVEY,
+                        onClick = { viewModel.onTabSelected(WifiTab.SURVEY) },
+                        text = { Text(stringResource(R.string.wifi_tab_survey)) },
+                    )
+                }
+                when (state.selectedTab) {
+                    WifiTab.NETWORKS -> {
+                        // Recompute the band filter only when the network set or selected band
+                        // changes, not on every recomposition — an unremembered new List forced
+                        // ChannelGraph's heavy Canvas redraw even when the data was identical.
+                        val filteredNetworks = remember(state.networks, state.selectedBand) {
+                            viewModel.filteredNetworks()
+                        }
+                        WifiContent(
+                            state = state,
+                            filteredNetworks = filteredNetworks,
+                            onBandSelected = viewModel::onBandSelected,
+                            isPro = isPro,
+                        )
+                    }
+                    WifiTab.SURVEY -> WifiSurveyTab(
+                        state = surveyState,
+                        onStartSurvey = surveyViewModel::startSurvey,
+                        onStopSurvey = surveyViewModel::stopSurvey,
+                        onLabelChanged = surveyViewModel::onLabelChanged,
+                        onCapturePoint = surveyViewModel::capturePoint,
+                        onCancelCapture = surveyViewModel::cancelCapture,
+                        onDeletePoint = surveyViewModel::deletePoint,
+                        onSelectSession = surveyViewModel::selectSession,
+                        onDeleteSession = surveyViewModel::deleteSession,
+                        onToggleSort = surveyViewModel::toggleSortWorstFirst,
+                    )
+                }
             }
-            WifiContent(
-                state = state,
-                filteredNetworks = filteredNetworks,
-                onBandSelected = viewModel::onBandSelected,
-                isPro = isPro,
-                modifier = Modifier.padding(innerPadding),
-            )
         }
     }
 }

@@ -24,4 +24,8 @@
     <string name="portscan_export_label_clipboard">Port Scan</string>
     <string name="portscan_export_label_share">Port Scan Results</string>
     <string name="portscan_error_scan_failed">Scan failed</string>
+    <string name="portscan_action_open_web">Open %1$s</string>
+    <string name="portscan_action_connect">Connect via %1$s</string>
+    <string name="portscan_action_browse">Browse %1$s</string>
+    <string name="portscan_service_no_handler">No installed app can open %1$s</string>
 </resources>

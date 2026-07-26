@@ -2,6 +2,7 @@ package com.ventouxlabs.netlens.feature.lanscan
 
 import android.Manifest
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Verified
@@ -81,7 +83,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.ui.StampChip
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
@@ -90,6 +94,8 @@ import com.ventouxlabs.netlens.feature.lanscan.model.LanScanTab
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanUiState
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventouxlabs.netlens.feature.portscan.engine.ServiceIntentLauncher
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +144,17 @@ fun LanScanScreen(
         onScanWithCidr = viewModel::startScanWithCidr,
         onClearHistory = viewModel::clearHistory,
         onNavigateToTool = onNavigateToTool,
+        onOpenService = { launch ->
+            // Toast rather than a snackbar: the host sheet covers the Scaffold, so a snackbar
+            // would land behind it.
+            if (!ServiceIntentLauncher.launch(context, launch)) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.lanscan_service_no_handler, launch.uri),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        },
         onCopyResults = {
             ResultExporter.copyToClipboard(context, "LAN Scan", viewModel.buildExportText())
         },
@@ -180,6 +197,7 @@ private fun LanScanContent(
     onScanWithCidr: (String) -> Unit,
     onClearHistory: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
+    onOpenService: (ServiceLaunch) -> Unit = {},
     onCopyResults: () -> Unit = {},
     onShareResults: (() -> Unit)? = null,
     onShareJson: (() -> Unit)? = null,
@@ -201,6 +219,7 @@ private fun LanScanContent(
             onCancelScan = onCancelHostScan,
             onNavigateToTool = onNavigateToTool,
             onShareJson = onShareJson,
+            onOpenService = onOpenService,
         )
     }
 
@@ -325,6 +344,11 @@ private fun LanScanContent(
                     onClearHistory = onClearHistory,
                 )
                 LanScanTab.INVENTORY -> InventoryTabContent(
+                    onEditDeviceDetails = { device ->
+                        // The full tag/notes editor lives in the Devices tool; jump there with
+                        // the device's IP pre-filled rather than maintaining two editors.
+                        onNavigateToTool("devices", device.ip)
+                    },
                     devices = uiState.knownDevices,
                     searchQuery = uiState.inventorySearchQuery,
                     sortField = uiState.inventorySortField,
@@ -522,6 +546,7 @@ private fun InventoryTabContent(
     onToggleKnown: (Long) -> Unit,
     onDeleteDevice: (Long) -> Unit,
     onClearInventory: () -> Unit,
+    onEditDeviceDetails: (KnownDeviceEntity) -> Unit,
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
 
@@ -624,6 +649,7 @@ private fun InventoryTabContent(
                         device = device,
                         onToggleKnown = { onToggleKnown(device.id) },
                         onDelete = { onDeleteDevice(device.id) },
+                        onEditDetails = { onEditDeviceDetails(device) },
                     )
                 }
                 item {
@@ -639,14 +665,16 @@ private fun InventoryTabContent(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun InventoryDeviceCard(
     device: KnownDeviceEntity,
     onToggleKnown: () -> Unit,
     onDelete: () -> Unit,
+    onEditDetails: () -> Unit,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val tags = remember(device.tags) { DeviceTags.parse(device.tags) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -716,12 +744,24 @@ private fun InventoryDeviceCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = device.hostname ?: device.ip,
+                    // Matches the Devices screen's precedence: a name the user typed always
+                    // wins over whatever the scanner resolved.
+                    text = device.customName ?: device.hostname ?: device.ip,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                device.location?.let { location ->
+                    Text(
+                        text = stringResource(R.string.lanscan_inventory_location, location),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
                 device.vendor?.let { vendor ->
                     Text(
@@ -740,13 +780,20 @@ private fun InventoryDeviceCard(
                     maxLines = 1,
                 )
 
-                if (device.hostname != null) {
+                if (device.customName != null || device.hostname != null) {
                     Text(
                         text = device.ip,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 1,
                     )
+                }
+
+                if (tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        tags.forEach { tag -> StampChip(text = tag) }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -766,6 +813,15 @@ private fun InventoryDeviceCard(
             }
 
             Spacer(modifier = Modifier.width(4.dp))
+
+            IconButton(onClick = onEditDetails) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.lanscan_inventory_edit_details),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
 
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(

@@ -25,6 +25,7 @@ import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
@@ -111,16 +112,10 @@ class LanScanViewModel @Inject constructor(
                 _inventorySortField,
                 _inventorySortAscending,
             ) { allDevices, query, sortField, ascending ->
-                val filtered = if (query.isBlank()) {
-                    allDevices
-                } else {
-                    allDevices.filter { device ->
-                        device.hostname?.contains(query, ignoreCase = true) == true ||
-                            device.ip.contains(query, ignoreCase = true) ||
-                            device.vendor?.contains(query, ignoreCase = true) == true ||
-                            device.macAddress?.contains(query, ignoreCase = true) == true
-                    }
-                }
+                // Shared with the Devices screen so one search box doesn't quietly cover
+                // fewer fields than the other — this one now also reaches tags, notes,
+                // location and custom names.
+                val filtered = allDevices.filter { KnownDeviceSearch.matches(it, query) }
                 val sorted = sortDevices(filtered, sortField, ascending)
                 Triple(sorted, query, sortField to ascending)
             }.collect { (devices, query, sortPair) ->
@@ -563,7 +558,11 @@ private fun sortDevices(
     ascending: Boolean,
 ): List<KnownDeviceEntity> {
     val comparator: Comparator<KnownDeviceEntity> = when (sortField) {
-        DeviceSortField.HOSTNAME -> compareBy(nullsLast()) { it.hostname?.lowercase() }
+        // Sorts on what the card actually shows, so a renamed device lands where the user
+        // reads it rather than under the hostname the scanner happened to resolve.
+        DeviceSortField.HOSTNAME -> compareBy(nullsLast()) {
+            (it.customName ?: it.hostname)?.lowercase()
+        }
         DeviceSortField.IP -> compareBy {
             it.ip.split(".").fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
         }

@@ -16,9 +16,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +53,9 @@ import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
 import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunchKind
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLauncher
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -60,6 +66,7 @@ internal fun HostDetailSheet(
     onCancelScan: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
     onShareJson: (() -> Unit)?,
+    onOpenService: (ServiceLaunch) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -282,7 +289,15 @@ internal fun HostDetailSheet(
                         )
                     }
                     items(results, key = { "${riskLevel.name}_${it.port}" }) { result ->
-                        PortResultRow(result = result)
+                        PortResultRow(
+                            result = result,
+                            launch = if (result.isOpen) {
+                                ServiceLauncher.forPort(state.device.ip, result.port)
+                            } else {
+                                null
+                            },
+                            onOpenService = onOpenService,
+                        )
                     }
                 }
             } else if (!state.isScanning && state.portResults.isEmpty() && state.error == null) {
@@ -371,7 +386,11 @@ private fun RiskGroupHeader(
 }
 
 @Composable
-private fun PortResultRow(result: HostPortResult) {
+private fun PortResultRow(
+    result: HostPortResult,
+    launch: ServiceLaunch?,
+    onOpenService: (ServiceLaunch) -> Unit,
+) {
     val riskColor = result.riskLevel.toColor()
     Column(
         modifier = Modifier
@@ -426,6 +445,36 @@ private fun PortResultRow(result: HostPortResult) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 24.dp, top = 1.dp),
+            )
+        }
+        if (launch != null) {
+            AssistChip(
+                onClick = { onOpenService(launch) },
+                label = {
+                    Text(
+                        text = when (launch.kind) {
+                            ServiceLaunchKind.WEB ->
+                                stringResource(R.string.lanscan_service_open_web, launch.serviceLabel)
+                            ServiceLaunchKind.REMOTE ->
+                                stringResource(R.string.lanscan_service_connect, launch.serviceLabel)
+                            ServiceLaunchKind.FILES ->
+                                stringResource(R.string.lanscan_service_browse, launch.serviceLabel)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = when (launch.kind) {
+                            ServiceLaunchKind.WEB -> Icons.Default.Public
+                            ServiceLaunchKind.REMOTE -> Icons.Default.Terminal
+                            ServiceLaunchKind.FILES -> Icons.Default.Folder
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
+                modifier = Modifier.padding(start = 24.dp, top = 4.dp),
             )
         }
     }

@@ -8,4 +8,7 @@ data class WifiUiState(
     val selectedBand: WifiBand = WifiBand.ALL,
     val lastScanTimestamp: Long? = null,
     val permissionGranted: Boolean = false,
+    val selectedTab: WifiTab = WifiTab.NETWORKS,
 )
+
+enum class WifiTab { NETWORKS, SURVEY }

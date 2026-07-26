@@ -14,6 +14,7 @@ import com.ventouxlabs.netlens.feature.wifi.engine.ChannelCalculator
 import com.ventouxlabs.netlens.feature.wifi.engine.WifiScanner
 import com.ventouxlabs.netlens.feature.wifi.model.WifiBand
 import com.ventouxlabs.netlens.feature.wifi.model.WifiNetwork
+import com.ventouxlabs.netlens.feature.wifi.model.WifiTab
 import com.ventouxlabs.netlens.feature.wifi.model.WifiUiState
 import javax.inject.Inject
 
@@ -70,6 +71,10 @@ class WifiViewModel @Inject constructor(
 
     fun onBandSelected(band: WifiBand) {
         _state.update { it.copy(selectedBand = band) }
+    }
+
+    fun onTabSelected(tab: WifiTab) {
+        _state.update { it.copy(selectedTab = tab) }
     }
 
     fun onPermissionResult(granted: Boolean) {

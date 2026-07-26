@@ -26,4 +26,12 @@ data class KnownDeviceEntity(
     val customName: String? = null,
     // Watched-network this row was last tagged against (null = unwatched/legacy).
     val networkId: Long? = null,
+    // User-supplied labels, comma-separated. Always read/written through DeviceTags so the
+    // stored form stays normalised (trimmed, de-duplicated, no embedded commas).
+    val tags: String? = null,
+    // Free-form user note about the device.
+    val notes: String? = null,
+    // Where the device physically lives ("Garage", "Kids' room"). Kept separate from tags so
+    // it can be shown as a distinct field and sorted on.
+    val location: String? = null,
 )

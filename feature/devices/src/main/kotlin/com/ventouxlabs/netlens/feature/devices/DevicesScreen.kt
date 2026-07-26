@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,9 +56,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.StampChip
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 
@@ -64,9 +68,14 @@ import com.ventouxlabs.netlens.feature.devices.model.displayName
 @Composable
 fun DevicesScreen(
     onBack: () -> Unit = {},
+    /** Pre-fills the search box — how "Tag this host" from a LAN scan lands on one device. */
+    initialQuery: String? = null,
     onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     viewModel: DevicesViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialQuery) {
+        if (initialQuery != null) viewModel.setSearchQuery(initialQuery)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selected = uiState.devices.find { it.id == uiState.selectedDeviceId }
     val proStatus = LocalProStatus.current
@@ -76,9 +85,10 @@ fun DevicesScreen(
         DeviceDetailSheet(
             device = selected,
             onDismiss = { viewModel.selectDevice(null) },
-            onRename = { viewModel.rename(selected.id, it) },
+            onSaveDetails = { viewModel.saveDetails(selected.id, it) },
             onToggleKnown = { viewModel.toggleKnown(selected.id) },
             onDelete = { viewModel.delete(selected.id) },
+            knownTags = uiState.availableTags,
         )
     }
 
@@ -148,6 +158,13 @@ fun DevicesScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
 
+            TagFilterRow(
+                availableTags = uiState.availableTags,
+                activeTags = uiState.activeTags,
+                onToggleTag = viewModel::toggleTagFilter,
+                onClearTags = viewModel::clearTagFilters,
+            )
+
             // Partition once per device-list change rather than on every recomposition
             // (every search keystroke, selection, and isPro emission re-filtered twice).
             val (newDevices, knownDevices) = remember(uiState.devices) {
@@ -187,16 +204,72 @@ private fun SectionHeader(text: String) {
     HorizontalDivider()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagFilterRow(
+    availableTags: List<String>,
+    activeTags: Set<String>,
+    onToggleTag: (String) -> Unit,
+    onClearTags: () -> Unit,
+) {
+    if (availableTags.isEmpty()) return
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.devices_filter_by_tag),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            if (activeTags.isNotEmpty()) {
+                TextButton(onClick = onClearTags) {
+                    Text(stringResource(R.string.devices_filter_clear))
+                }
+            }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            availableTags.forEach { tag ->
+                FilterChip(
+                    selected = activeTags.any { it.equals(tag, ignoreCase = true) },
+                    onClick = { onToggleTag(tag) },
+                    label = { Text(tag) },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceRow(device: KnownDeviceEntity, onClick: () -> Unit) {
+    val tags = remember(device.tags) { DeviceTags.parse(device.tags) }
     ListItem(
         headlineContent = { Text(device.displayName()) },
         supportingContent = {
-            Text(
-                "${device.ip}  ·  ${device.macAddress ?: stringResource(R.string.devices_mac_unknown)}",
-                style = MaterialTheme.typography.labelSmall,
-            )
+            Column {
+                Text(
+                    "${device.ip}  ·  ${device.macAddress ?: stringResource(R.string.devices_mac_unknown)}",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                device.location?.let { location ->
+                    Text(
+                        stringResource(R.string.devices_row_location, location),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (tags.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 4.dp),
+                    ) {
+                        tags.forEach { tag ->
+                            StampChip(text = tag)
+                        }
+                    }
+                }
+            }
         },
         modifier = Modifier.clickable(onClick = onClick).fillMaxWidth().padding(horizontal = 4.dp),
     )

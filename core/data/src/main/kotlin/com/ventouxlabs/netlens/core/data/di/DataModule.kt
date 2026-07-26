@@ -26,6 +26,7 @@ import com.ventouxlabs.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.MdnsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
+import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import javax.inject.Singleton
 
@@ -158,6 +159,28 @@ object DataModule {
         }
     }
 
+    // v15: user-authored device details (tags/notes/location) + Wi-Fi survey storage.
+    // Additive only — the new known_devices columns are nullable so existing rows keep their
+    // scan-derived values untouched, and the two survey tables are independent of everything else.
+    private val MIGRATION_14_15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN tags TEXT")
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN notes TEXT")
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN location TEXT")
+
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `wifi_survey_sessions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `ssid` TEXT, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER)""",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_wifi_survey_sessions_startedAt` ON `wifi_survey_sessions` (`startedAt`)")
+
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `wifi_survey_points` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `label` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `avgRssi` INTEGER NOT NULL, `minRssi` INTEGER NOT NULL, `maxRssi` INTEGER NOT NULL, `sampleCount` INTEGER NOT NULL, `bssid` TEXT, `frequency` INTEGER NOT NULL, `channel` INTEGER NOT NULL, `linkSpeedMbps` INTEGER NOT NULL, FOREIGN KEY(`sessionId`) REFERENCES `wifi_survey_sessions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )""",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_wifi_survey_points_sessionId` ON `wifi_survey_points` (`sessionId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_wifi_survey_points_capturedAt` ON `wifi_survey_points` (`capturedAt`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -169,7 +192,7 @@ object DataModule {
             .addMigrations(
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                 MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
-                MIGRATION_13_14,
+                MIGRATION_13_14, MIGRATION_14_15,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -241,4 +264,8 @@ object DataModule {
     @Provides
     fun provideWatchedNetworkDao(database: NetLensDatabase): WatchedNetworkDao =
         database.watchedNetworkDao()
+
+    @Provides
+    fun provideWifiSurveyDao(database: NetLensDatabase): WifiSurveyDao =
+        database.wifiSurveyDao()
 }
