@@ -1,8 +1,12 @@
 package com.ventouxlabs.netlens.feature.wifi
 
+import androidx.lifecycle.ViewModelStore
 import com.ventouxlabs.netlens.feature.wifi.model.SurveyError
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -25,16 +29,24 @@ class WifiSurveyViewModelTest {
 
     private val captureTarget = WifiSurveyViewModel.CAPTURE_SAMPLE_TARGET
 
+    private lateinit var appScope: CoroutineScope
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         sampler = FakeWifiSignalSampler()
         dao = InMemoryWifiSurveyDao()
-        viewModel = WifiSurveyViewModel(sampler, dao)
+        // Stands in for the process-lifetime scope, so onCleared's write still runs after
+        // viewModelScope is cancelled — exactly as it does in production.
+        appScope = CoroutineScope(UnconfinedTestDispatcher() + SupervisorJob())
+        viewModel = WifiSurveyViewModel(sampler, dao, appScope)
     }
 
     @AfterEach
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        appScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     private suspend fun startSurvey(name: String = "Home") {
         // The ViewModel takes one reading up front to confirm the phone is associated, so the
@@ -260,6 +272,60 @@ class WifiSurveyViewModelTest {
         assertTrue(text.contains("Points: 2"))
         assertTrue(text.contains("Weak spots (1): Garage"))
         assertTrue(text.contains("Kitchen  -55 dBm"))
+    }
+
+    @Test
+    fun `export shortens the BSSID to its last two octets`() = runTest {
+        startSurvey("Home")
+        viewModel.onLabelChanged("Kitchen")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget, rssi = -55, bssid = "aa:bb:cc:dd:ee:01")
+
+        val text = viewModel.buildExportText()
+        // An export leaves the device, and a full BSSID resolves to a street address.
+        assertTrue(text.contains("AP ee:01"), "expected the short form, got: $text")
+        assertFalse(text.contains("aa:bb:cc:dd:ee:01"), "full BSSID leaked into the export")
+    }
+
+    @Test
+    fun `a second start tap before the first reading opens only one session`() = runTest {
+        // Nothing buffered, so the first call is parked inside firstSampleOrNull — the window
+        // in which isSurveying is still false and used to let a second tap through.
+        viewModel.startSurvey("Home")
+        viewModel.startSurvey("Home")
+
+        sampler.emit(-50)
+
+        assertEquals(1, dao.sessions.value.size)
+        assertTrue(viewModel.state.value.isSurveying)
+    }
+
+    @Test
+    fun `a failed start releases the guard so the next tap can retry`() = runTest {
+        sampler.connected = false
+        viewModel.startSurvey("Home")
+        assertEquals(SurveyError.NOT_CONNECTED, viewModel.state.value.error)
+
+        sampler.connected = true
+        startSurvey("Home")
+
+        assertTrue(viewModel.state.value.isSurveying)
+        assertEquals(1, dao.sessions.value.size)
+    }
+
+    @Test
+    fun `navigating away closes the abandoned session`() = runTest {
+        startSurvey("Home")
+        val sessionId = requireNotNull(viewModel.state.value.activeSessionId)
+
+        // Clearing the store is what the nav host does when the Wi-Fi entry leaves the back
+        // stack; it cancels viewModelScope before onCleared runs.
+        ViewModelStore().apply { put("survey", viewModel) }.clear()
+
+        assertNotNull(
+            dao.sessions.value.single { it.id == sessionId }.endedAt,
+            "session was left open, so it can never be finished from the UI",
+        )
     }
 
     private suspend fun capture(label: String, rssi: Int) {

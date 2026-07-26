@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.feature.wifi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
+import com.ventouxlabs.netlens.core.data.di.ApplicationScope
 import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionEntity
 import com.ventouxlabs.netlens.feature.wifi.engine.SurveyAggregator
 import com.ventouxlabs.netlens.feature.wifi.engine.WifiSignalSampler
@@ -10,7 +11,9 @@ import com.ventouxlabs.netlens.feature.wifi.model.CaptureProgress
 import com.ventouxlabs.netlens.feature.wifi.model.SurveyError
 import com.ventouxlabs.netlens.feature.wifi.model.WifiSignalSample
 import com.ventouxlabs.netlens.feature.wifi.model.WifiSurveyUiState
+import com.ventouxlabs.netlens.feature.wifi.model.apShortName
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +38,7 @@ import javax.inject.Inject
 class WifiSurveyViewModel @Inject constructor(
     private val sampler: WifiSignalSampler,
     private val surveyDao: WifiSurveyDao,
+    @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WifiSurveyUiState())
@@ -43,6 +47,9 @@ class WifiSurveyViewModel @Inject constructor(
     private val viewedSessionId = MutableStateFlow<Long?>(null)
 
     private var samplingJob: Job? = null
+
+    /** Set between the Start tap and the first reading, while `isSurveying` is still false. */
+    private var starting = false
 
     /** Samples collected since the current capture started; empty when not capturing. */
     private val captureBuffer = mutableListOf<WifiSignalSample>()
@@ -81,39 +88,48 @@ class WifiSurveyViewModel @Inject constructor(
      * case needs no typing at all.
      */
     fun startSurvey(name: String) {
-        if (_state.value.isSurveying) return
+        // `isSurveying` is only set once the first reading lands, which is up to
+        // START_SAMPLE_TIMEOUT_MS away — so it cannot be the guard against a second tap in the
+        // meantime. This flag is read and written on the caller's thread with no suspension in
+        // between, so two taps can never both get past it and open two sessions.
+        if (_state.value.isSurveying || starting) return
+        starting = true
         viewModelScope.launch {
-            val firstSample = sampler.samples(SAMPLE_INTERVAL_MS).firstSampleOrNull()
-            if (firstSample == null) {
-                _state.update { it.copy(error = SurveyError.NOT_CONNECTED) }
-                return@launch
-            }
-            val resolvedName = name.trim().take(MAX_SESSION_NAME_LENGTH).ifBlank {
-                firstSample.ssid ?: DEFAULT_SESSION_NAME
-            }
-            val sessionId = surveyDao.insertSession(
-                WifiSurveySessionEntity(
-                    name = resolvedName,
-                    ssid = firstSample.ssid,
-                    startedAt = firstSample.timestampMs,
-                ),
-            )
-            viewedSessionId.value = sessionId
-            captureBuffer.clear()
-            _state.update {
-                it.copy(
-                    isSurveying = true,
-                    activeSessionId = sessionId,
-                    viewedSessionId = sessionId,
-                    viewedSessionName = resolvedName,
-                    liveSample = firstSample,
-                    trail = listOf(firstSample.rssi),
-                    points = emptyList(),
-                    capture = null,
-                    error = null,
+            try {
+                val firstSample = sampler.samples(SAMPLE_INTERVAL_MS).firstSampleOrNull()
+                if (firstSample == null) {
+                    _state.update { it.copy(error = SurveyError.NOT_CONNECTED) }
+                    return@launch
+                }
+                val resolvedName = name.trim().take(MAX_SESSION_NAME_LENGTH).ifBlank {
+                    firstSample.ssid ?: DEFAULT_SESSION_NAME
+                }
+                val sessionId = surveyDao.insertSession(
+                    WifiSurveySessionEntity(
+                        name = resolvedName,
+                        ssid = firstSample.ssid,
+                        startedAt = firstSample.timestampMs,
+                    ),
                 )
+                viewedSessionId.value = sessionId
+                captureBuffer.clear()
+                _state.update {
+                    it.copy(
+                        isSurveying = true,
+                        activeSessionId = sessionId,
+                        viewedSessionId = sessionId,
+                        viewedSessionName = resolvedName,
+                        liveSample = firstSample,
+                        trail = listOf(firstSample.rssi),
+                        points = emptyList(),
+                        capture = null,
+                        error = null,
+                    )
+                }
+                startSampling()
+            } finally {
+                starting = false
             }
-            startSampling()
         }
     }
 
@@ -207,7 +223,9 @@ class WifiSurveyViewModel @Inject constructor(
                 "${point.label}  ${point.avgRssi} dBm  " +
                     "(min ${point.minRssi} / max ${point.maxRssi}, ${point.sampleCount} samples)  " +
                     "Ch ${point.channel}  ${point.linkSpeedMbps} Mbps" +
-                    (point.bssid?.let { "  AP $it" } ?: ""),
+                    // Short form only: the full BSSID is an AP MAC, and public wardriving
+                    // databases turn one into a street address. An export leaves the device.
+                    (point.bssid?.let { "  AP ${apShortName(it)}" } ?: ""),
             )
         }
         return sb.toString().trimEnd()
@@ -216,6 +234,14 @@ class WifiSurveyViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         samplingJob?.cancel()
+        // Navigating away abandons the survey, so close its session rather than leaving a row
+        // with a null endedAt that nothing can ever finish — the UI offers no way back into a
+        // session it no longer considers active. viewModelScope is already cancelled here, so
+        // this has to run on a scope that outlives the ViewModel.
+        val sessionId = _state.value.activeSessionId
+        if (sessionId != null) {
+            appScope.launch { surveyDao.endSession(sessionId, System.currentTimeMillis()) }
+        }
     }
 
     private fun startSampling() {
