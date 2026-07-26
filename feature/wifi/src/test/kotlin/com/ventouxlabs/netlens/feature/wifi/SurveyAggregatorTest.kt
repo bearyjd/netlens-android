@@ -52,9 +52,11 @@ class SurveyAggregatorTest {
 
     @Test
     fun `aggregate rounds the average rather than truncating toward zero`() {
-        // -60 and -65 average to -62.5; truncation would report a better signal than measured.
-        val point = SurveyAggregator.aggregate(1, "Hall", listOf(sample(-60), sample(-65)), 0)!!
-        assertEquals(-63, point.avgRssi)
+        // -60, -65 and -66 average to -63.67. Truncating would report -63 — a better signal
+        // than was actually measured. (An exact .5 average breaks upward, per roundToInt;
+        // half a dB either way is well inside the noise of a real reading.)
+        val samples = listOf(sample(-60), sample(-65), sample(-66))
+        assertEquals(-64, SurveyAggregator.aggregate(1, "Hall", samples, 0)!!.avgRssi)
     }
 
     @Test
