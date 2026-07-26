@@ -62,4 +62,44 @@ class ServiceLauncherTest {
     fun `printer admin port serves plain http on the same port`() {
         assertEquals("http://192.168.1.42:631", ServiceLauncher.forPort(host, 631)?.uri)
     }
+
+    @Test
+    fun `a host that would escape the authority is refused`() {
+        // A device on the LAN chooses its own mDNS/NetBIOS name, and a DNS lookup result can be
+        // routed into the port scanner — so these are attacker-supplied strings, not typos.
+        // Each of these would otherwise send the user somewhere other than the scanned host.
+        listOf(
+            "192.168.1.1@evil.example",  // userinfo — browser loads evil.example
+            "evil.example/x#",           // path + fragment swallows the ":8080"
+            "evil.example?a=b",          // query
+            "evil.example\\@x",          // backslash, which some parsers fold to '/'
+            "192.168.1.1 evil.example",  // whitespace
+            "javascript:alert(1)",       // scheme-ish input
+            "",
+            "   ",
+        ).forEach { hostile ->
+            assertNull(ServiceLauncher.forPort(hostile, 8080), "should refuse: $hostile")
+            assertNull(ServiceLauncher.forPort(hostile, 22), "should refuse: $hostile")
+        }
+    }
+
+    @Test
+    fun `ordinary hostnames and ipv4 literals are still accepted`() {
+        assertEquals("http://nas.local:8080", ServiceLauncher.forPort("nas.local", 8080)?.uri)
+        assertEquals("http://NAS-01:8080", ServiceLauncher.forPort("NAS-01", 8080)?.uri)
+        assertEquals("http://host.example.com.:8080", ServiceLauncher.forPort("host.example.com.", 8080)?.uri)
+        assertEquals("http://192.168.1.42:8080", ServiceLauncher.forPort(host, 8080)?.uri)
+    }
+
+    @Test
+    fun `an ipv6 scope id is dropped rather than left to break the uri`() {
+        // "%wlan0" is an invalid percent-escape in an authority, and the scope means nothing to
+        // whichever app handles the intent.
+        assertEquals("ssh://[fe80::1]", ServiceLauncher.forPort("fe80::1%wlan0", 22)?.uri)
+    }
+
+    @Test
+    fun `an already-bracketed ipv6 literal is not double-bracketed`() {
+        assertEquals("http://[fe80::1]:8080", ServiceLauncher.forPort("[fe80::1]", 8080)?.uri)
+    }
 }
