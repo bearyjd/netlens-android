@@ -21,21 +21,24 @@ class WifiSignalSamplerImpl @Inject constructor(
     private val wifiScanner: WifiScanner,
 ) : WifiSignalSampler {
 
-    override fun samples(intervalMs: Long): Flow<WifiSignalSample> = flow {
+    override fun samples(intervalMs: Long): Flow<WifiSignalSample?> = flow {
         while (currentCoroutineContext().isActive) {
             val info = wifiScanner.observeConnected().firstOrNull()
-            if (info != null) {
-                emit(
+            // Emit null rather than skipping the tick: dropping the association mid-capture has
+            // to reach the collector, or the capture waits forever for a sample that is not
+            // coming and the live meter keeps showing the last good reading as if still connected.
+            emit(
+                info?.let {
                     WifiSignalSample(
                         timestampMs = System.currentTimeMillis(),
-                        rssi = info.rssi,
-                        ssid = info.ssid,
-                        bssid = info.bssid.ifEmpty { null },
-                        frequency = info.frequency,
-                        linkSpeedMbps = info.linkSpeedMbps,
-                    ),
-                )
-            }
+                        rssi = it.rssi,
+                        ssid = it.ssid,
+                        bssid = it.bssid.ifEmpty { null },
+                        frequency = it.frequency,
+                        linkSpeedMbps = it.linkSpeedMbps,
+                    )
+                },
+            )
             delay(intervalMs)
         }
     }

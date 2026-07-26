@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -253,7 +254,11 @@ class WifiSurveyViewModel @Inject constructor(
         }
     }
 
-    private suspend fun onSample(sample: WifiSignalSample) {
+    private suspend fun onSample(sample: WifiSignalSample?) {
+        if (sample == null) {
+            onSignalLost()
+            return
+        }
         val capture = _state.value.capture
         if (capture != null) {
             captureBuffer.add(sample)
@@ -269,6 +274,24 @@ class WifiSurveyViewModel @Inject constructor(
             it.copy(
                 liveSample = sample,
                 trail = (it.trail + sample.rssi).takeLast(TRAIL_LENGTH),
+            )
+        }
+    }
+
+    /**
+     * The association dropped. Abandon any capture in progress rather than leaving it waiting for
+     * samples that cannot arrive, and blank the live meter — the last good reading is not what the
+     * user is standing in, and this happens exactly where they most want the truth: a dead corner.
+     * The survey itself stays open, so walking back into range resumes it.
+     */
+    private fun onSignalLost() {
+        val hadCapture = _state.value.capture != null
+        captureBuffer.clear()
+        _state.update {
+            it.copy(
+                capture = null,
+                liveSample = null,
+                error = if (hadCapture) SurveyError.SIGNAL_LOST else it.error,
             )
         }
     }
@@ -316,6 +339,11 @@ class WifiSurveyViewModel @Inject constructor(
     }
 }
 
-/** One sample if the sampler can produce one, without leaving a collector running. */
-private suspend fun Flow<WifiSignalSample>.firstSampleOrNull(): WifiSignalSample? =
-    withTimeoutOrNull(WifiSurveyViewModel.START_SAMPLE_TIMEOUT_MS) { firstOrNull() }
+/**
+ * The first real reading, without leaving a collector running.
+ *
+ * The sampler emits null on every tick while unassociated, so this has to wait for a non-null
+ * one; the timeout is what distinguishes "not on Wi-Fi" from "about to report".
+ */
+private suspend fun Flow<WifiSignalSample?>.firstSampleOrNull(): WifiSignalSample? =
+    withTimeoutOrNull(WifiSurveyViewModel.START_SAMPLE_TIMEOUT_MS) { filterNotNull().firstOrNull() }

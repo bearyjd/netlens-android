@@ -46,7 +46,7 @@ import com.ventouxlabs.netlens.feature.wifi.engine.SurveyAggregator
 import com.ventouxlabs.netlens.feature.wifi.model.SignalQuality
 import com.ventouxlabs.netlens.feature.wifi.model.SurveyError
 import com.ventouxlabs.netlens.feature.wifi.model.WifiSurveyUiState
-import com.ventouxlabs.netlens.feature.wifi.ui.CoverageMap
+import com.ventouxlabs.netlens.feature.wifi.ui.CoverageBar
 import com.ventouxlabs.netlens.feature.wifi.ui.SignalTrail
 import com.ventouxlabs.netlens.feature.wifi.ui.color
 
@@ -143,8 +143,11 @@ fun WifiSurveyTab(
                 }
             }
 
-            item {
-                CoverageMap(points = orderedPoints, onDeletePoint = onDeletePoint)
+            // One lazy item per bar, not one item holding every bar: a thorough survey of a large
+            // house runs to dozens of spots, and wrapping them in a single item would compose and
+            // measure all of them on every emission — including at the live meter's 1.4 Hz tick.
+            items(orderedPoints, key = { it.id }) { point ->
+                CoverageBar(point = point, onDelete = { onDeletePoint(point.id) })
             }
         } else if (!state.isSurveying) {
             item {
@@ -392,6 +395,7 @@ private fun SurveyError.messageRes(): Int = when (this) {
     SurveyError.NOT_CONNECTED -> R.string.wifi_survey_error_not_connected
     SurveyError.LABEL_REQUIRED -> R.string.wifi_survey_error_label_required
     SurveyError.NO_SAMPLES -> R.string.wifi_survey_error_no_samples
+    SurveyError.SIGNAL_LOST -> R.string.wifi_survey_error_signal_lost
 }
 
 @StringRes

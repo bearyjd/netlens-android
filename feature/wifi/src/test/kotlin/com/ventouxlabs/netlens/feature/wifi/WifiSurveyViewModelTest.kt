@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -87,13 +88,46 @@ class WifiSurveyViewModelTest {
 
     @Test
     fun `starting while disconnected reports the error and opens no session`() = runTest {
+        // The sampler keeps polling and emitting nulls, exactly as it does on a phone that is not
+        // associated — so only START_SAMPLE_TIMEOUT_MS elapsing ends this. Deleting the timeout
+        // makes this test hang rather than pass, which is the point.
         sampler.connected = false
 
         viewModel.startSurvey("Home")
+        advanceUntilIdle()
 
         assertEquals(SurveyError.NOT_CONNECTED, viewModel.state.value.error)
         assertFalse(viewModel.state.value.isSurveying)
         assertTrue(dao.sessions.value.isEmpty())
+    }
+
+    @Test
+    fun `losing the signal mid-capture abandons the burst instead of stalling`() = runTest {
+        startSurvey()
+        viewModel.onLabelChanged("Garage")
+        viewModel.capturePoint()
+        // Part of a burst lands, then the phone walks out of range.
+        sampler.emitBurst(captureTarget - 3, rssi = -80)
+        assertNotNull(viewModel.state.value.capture)
+
+        sampler.emitDisconnected()
+
+        val state = viewModel.state.value
+        assertNull(state.capture, "capture should not sit half-collected waiting for the radio")
+        assertEquals(SurveyError.SIGNAL_LOST, state.error)
+        assertNull(state.liveSample, "the meter must not keep showing the last good reading")
+        assertTrue(state.isSurveying, "the survey stays open so walking back into range resumes it")
+        assertTrue(dao.points.value.isEmpty(), "a partial burst must not be stored as a spot")
+    }
+
+    @Test
+    fun `a dropped tick outside a capture blanks the meter without raising an error`() = runTest {
+        startSurvey()
+
+        sampler.emitDisconnected()
+
+        assertNull(viewModel.state.value.liveSample)
+        assertNull(viewModel.state.value.error)
     }
 
     @Test
@@ -304,6 +338,7 @@ class WifiSurveyViewModelTest {
     fun `a failed start releases the guard so the next tap can retry`() = runTest {
         sampler.connected = false
         viewModel.startSurvey("Home")
+        advanceUntilIdle()
         assertEquals(SurveyError.NOT_CONNECTED, viewModel.state.value.error)
 
         sampler.connected = true

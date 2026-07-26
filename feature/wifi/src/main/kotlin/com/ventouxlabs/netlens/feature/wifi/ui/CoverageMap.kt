@@ -31,30 +31,15 @@ import com.ventouxlabs.netlens.feature.wifi.model.SignalQuality
 import com.ventouxlabs.netlens.feature.wifi.model.apShortName
 
 /**
- * The coverage map: one bar per measured spot, length and colour by average signal.
+ * One bar of the coverage map: a measured spot, its length and colour set by average signal.
  *
- * A ranked bar chart rather than a floor plan — the phone has no indoor position fix, so the
- * honest representation of "walk around and measure" is a list of named spots, not a heat map
- * drawn over a room outline the app would have to invent.
+ * The map is a ranked bar chart rather than a floor plan — the phone has no indoor position fix,
+ * so the honest representation of "walk around and measure" is a list of named spots, not a heat
+ * map drawn over a room outline the app would have to invent. The caller emits these straight
+ * into its `LazyColumn` so only the visible spots are composed.
  */
 @Composable
-fun CoverageMap(
-    points: List<WifiSurveyPointEntity>,
-    onDeletePoint: (Long) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        points.forEach { point ->
-            CoverageBar(point = point, onDelete = { onDeletePoint(point.id) })
-        }
-    }
-}
-
-@Composable
-private fun CoverageBar(
+fun CoverageBar(
     point: WifiSurveyPointEntity,
     onDelete: () -> Unit,
 ) {

@@ -38,4 +38,7 @@ enum class SurveyError {
     NOT_CONNECTED,
     LABEL_REQUIRED,
     NO_SAMPLES,
+
+    /** The association dropped part-way through a capture, so the burst is incomplete. */
+    SIGNAL_LOST,
 }

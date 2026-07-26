@@ -51,6 +51,7 @@
     <string name="wifi_survey_error_not_connected">Connect to a Wi-Fi network before starting a survey.</string>
     <string name="wifi_survey_error_label_required">Name the spot before capturing it.</string>
     <string name="wifi_survey_error_no_samples">No readings were captured — check you are still connected.</string>
+    <string name="wifi_survey_error_signal_lost">Wi-Fi dropped part-way through — move back into range and capture this spot again.</string>
     <string name="wifi_quality_excellent">Excellent</string>
     <string name="wifi_quality_good">Good</string>
     <string name="wifi_quality_fair">Fair</string>
