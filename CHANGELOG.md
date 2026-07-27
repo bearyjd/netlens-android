@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Wi-Fi coverage survey** — a Coverage tab in the Wi-Fi Analyzer for walking the house and finding dead spots. It samples the live connection continuously (not the throttled Wi-Fi scan, so readings keep up with walking pace), shows a live signal meter with a trail of recent readings, and captures a named spot from a short burst of samples so a room is judged on several seconds of signal rather than one twitchy reading. Captured spots are drawn as a ranked coverage map with the weak ones called out, each spot recording which access point served it — useful for spotting a room being held by the wrong mesh node. Surveys are saved so you can re-walk after moving a router and compare.
 - **Open discovered services** — open ports that map to something the phone can actually launch are now tappable in the LAN Scan host sheet and the Port Scan results. A web server opens in the browser, SSH/Telnet/VNC/RDP hand off to a terminal or remote-desktop app, and SMB/FTP to a file client. Ports with nothing to hand off to (databases, caches) stay non-tappable, and if no app is installed for a scheme NetLens says so rather than failing silently.
 
+## [1.2.6] - 2026-07-27
+
+### Added
+- **Richer 4x2 widget** — the largest widget now leads with your security grade and its top issue, shows your ISP or carrier under the WAN IP (when IP info is enabled), and reports device count and Wi-Fi encryption. It previously repeated what the 4x1 already showed at a larger size.
+
+### Changed
+- **Faster app startup** — a baseline profile is now bundled with the app, so the code paths used during launch are compiled ahead of time instead of being interpreted on first run.
+
+### Fixed
+- **Widgets drawing the wrong layout** — a home screen widget could render a different size's content (a 4x2 showing the compact 2x1 layout), and a 4x1 could drift into the same state over time. Refreshes were dispatched by widget class through a mapping Android keeps internally, which degrades for widgets placed under earlier builds; they are now dispatched per widget provider, which cannot cross-map. Affected widgets repair themselves on their next refresh — no need to remove and re-place them.
+- **Widget text overflowing at large font sizes** — with the system display size turned up, the 4x2 widget clipped labels and pushed whole sections off the card. Widget text is now pinned to its design size, matching how the system clock and weather widgets behave.
+
 ## [1.2.5] - 2026-07-20
 
 ### Added
