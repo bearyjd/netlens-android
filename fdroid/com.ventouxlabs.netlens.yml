@@ -35,9 +35,16 @@ Builds:
     gradle:
       - foss
 
+  - versionName: 1.2.6
+    versionCode: 13
+    commit: 27404f279a4539bd9e4dabff053faee99970a776
+    subdir: app
+    gradle:
+      - foss
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
 UpdateCheckData:
   gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
-CurrentVersion: 1.2.5
-CurrentVersionCode: 12
+CurrentVersion: 1.2.6
+CurrentVersionCode: 13
