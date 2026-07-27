@@ -1,0 +1,6 @@
+New in 1.2.6:
+
+- Fixed home screen widgets drawing the wrong layout — a 4x2 could show the compact 2x1 content, and a 4x1 could drift into it over time. Affected widgets repair themselves on the next refresh.
+- Fixed widget text overflowing at large system font sizes, which clipped labels and pushed sections off the 4x2 card.
+- The 4x2 widget now shows your security grade and top issue, ISP/carrier, device count and Wi-Fi encryption.
+- Faster app startup.
