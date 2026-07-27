@@ -1,66 +1,148 @@
-# Session Handoff — Widgets Fixed/Enriched + Speedtest Deflaked (2026-07-23)
+# Session Handoff — v1.2.6 shipped; PR #116 reviewed, fixed, and green (2026-07-27)
 
-Supersedes the earlier 2026-07-21/22 handoffs. The three widget issues (cross-render, fontScale overflow, 4x1/4x2 sameness) and the speedtest flake are all **shipped to master**; two device-side follow-ups remain — see below.
+Supersedes the 2026-07-23 handoff (widgets + speedtest), all of which is released. Two
+things happened this session: **v1.2.6 was released from master**, and **PR #116 went
+through a full review pass** with every finding fixed. Two long-standing beliefs were
+also corrected by evidence — read those before acting on either.
 
-## TL;DR — where things stand right now
+## TL;DR — where things stand
 
-- **PR #108 / #109 merged** — baseline profile module + CI profile + the 9 review follow-ups. Both flavors carry the profile.
-- **PR #110 merged** (`2a8113b`) — **widget cross-render fix** (widgets drew the wrong layout). Verified on both phones.
-- **PR #111 merged** (`79f2ab8`) — **4x2 fontScale-overflow fix + 4x2 enrichment** (two commits). Font pin verified on-device; enrichment CI-green but its on-device visual fit was NOT captured (phone asleep) — see follow-ups.
-- **PR #115 merged** (`e876973`) — **speedtest test deflake** via a deterministic byte-source seam. CI green; 42/42 local. **PR #114 was closed** — its `UnconfinedTestDispatcher` approach was wrong (~35% fail locally); see the RESOLVED section.
-- **Open PRs #112/#113** — Dependabot GitHub-Actions bumps, unrelated.
-- **This machine cannot run the Android emulator** (QEMU segfaults on kernel 6.19.11-ogc1.1; every emulator/config). Emulator-bound work goes through the `baseline-profile.yml` CI pattern. Memory file: `no-local-android-emulator.md`.
+- **v1.2.6 is published** — https://github.com/bearyjd/netlens-android/releases/tag/v1.2.6
+  (widget cross-render fix, 4x2 fontScale fix + enrichment, baseline profile). All four
+  artifacts attached. The *published* APK was downloaded and verified: cert
+  `8fdfc928…`, `versionCode='13' versionName='1.2.6'`.
+- **PR #116** (device tagging, Wi-Fi coverage survey, launchable services) — open, ready
+  for review, merged up to master, **CI green on `1481d26`**, 746 tests. Not merged:
+  no human review yet, and the survey capture burst is still unverified on hardware.
+- **F-Droid MR #42628 is two releases stale** — see below. This was previously recorded
+  as "synced to 1.2.5/12"; that was only the in-repo copy.
+- **Release signing is fine** — the "GitHub secrets may be stale after the July 23
+  rotation" worry was **disproven**. See below.
 
-## RESOLVED: fontScale overflow + 4x2 enrichment (PR #111)
+## CORRECTED: release signing secrets are valid (don't re-flag)
 
-**fontScale fix** (`5609573`): widget text was fixed `sp`, which Glance multiplies by the user's `font_scale`; at 1.3 the 4x2 overflowed (VPN label clipped, sections fell off). New `widgetSp()` helper (`widget/ui/WidgetTextScaling.kt`) divides design sp by the live fontScale to **pin rendered text to design pixel size** (like system clock/weather widgets); `maxScale` clamp (default `1f`) allows partial growth later. Applied to the four **4x2-only** composables (`DashboardWidgetContent`, `StatusLineContent`, `ToolChipsRow`, `WidgetHeaderRow`). **Verified fitting** on Pixel 10 at 1.3.
+The concern was that `gh secret list` shows all four `RELEASE_*` secrets last updated
+**2026-05-07**, while the keystore passwords were rotated **2026-07-23** — implying CI
+would fail at signing on the next tag.
 
-**4x2 enrichment** (`7d6e6af`): the 4x2 read too much like the 4x1, so it now surfaces data the worker already computes — a new `FourByTwoHeader` leading with the security grade (A–F, color-coded) + top issue (→ posture screen); ISP/carrier under the WAN IP (behind IP-info consent gate); device count + WiFi encryption on the status line's second row (replacing the redundant "Scanned" line — timestamp moved to header). All 4x2-only; 2x1/2x2/4x1 untouched.
+**Disproven by a `workflow_dispatch` dry run of `release.yml`** (safe: every publishing
+step is gated on `startsWith(github.ref, 'refs/tags/v')`, so a branch dispatch validates
+and builds but publishes nothing). `Decode and validate release keystore` succeeded and
+printed `SHA256: 8F:DF:C9:28:…:B4`. The rotation evidently did not change the store/key
+passwords, so the May 7 secrets still authenticate.
 
-**Enrichment fit — VERIFIED (2026-07-23):** captured on the Pixel 10 4x2 (`enriched-final-*` in scratchpad). Grade badge ("D" amber) + top issue ("Weak or no encryption"), VPN "Split Tunnel" label, device count ("0 devices"), sparkline, and fuller "DNS → … · Split" status all render **within the card with room to spare** — no clipping, no overflow. Sparkline-drop fallback NOT needed. WAN + ISP remained blank (IP-info consent still ungranted on that device — expected).
+Cert continuity confirmed **four** independent ways: local FOSS build, CI keystore in the
+dry run, local gplay build, and the published release APK — all
+`8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`.
 
-## RESOLVED: widget rendering bug (PR #110)
+**Reusable technique:** dispatching `release.yml` on a branch is a zero-risk way to prove
+the signing path before tagging. Do this before any release where signing is in doubt.
 
-**Symptom:** home-screen widgets render the wrong layout. Pixel 10 **4x2** (`FourByTwoWidgetReceiver`, appwidget **id=2**) drew `CompactFullContent` (two `defaultWeight()` rows — flag+lock+WAN over signal+LAN, stretched with a big gap). The **4x1 drifted the same way over time** (user-confirmed). The prior handoff guessed "stale receiver→widget mapping for one instance" — right neighborhood, but it's the **refresh dispatch**, and it degrades across *multiple* instances.
+## F-Droid MR #42628 — stale, prepared, NOT pushed
 
-**Root cause (confirmed):** `refreshAllWidgets` / `WidgetRefreshWorker` updated widgets **by class** via `GlanceAppWidget.updateAll()`. `updateAll` resolves ids through Glance's persisted `providerToReceiver` DataStore map. That map degrades for instances placed under earlier builds; when stale, `CompactWidget().updateAll()` resolves a FourByTwo id and pushes compact `RemoteViews` onto it. Static wiring (manifest receivers, `glanceAppWidget` overrides, content composables) was always correct — only the dynamic dispatch trusted a corruptible map. Confirmed by fresh screenshots: id=2's layout is `CompactFullContent`'s exact two-weighted-row shape (`DashboardWidgetContent` would put WAN+LAN side-by-side; it doesn't), and only the older low-id instances were affected.
+The MR (fdroiddata, from fork `selector4560:add-com.ventouxlabs.netlens`) is still on
+**1.2.4 / versionCode 11**. It was never updated when 1.2.5 shipped. Open, no conflicts,
+no maintainer activity since 2026-07-14.
 
-**Fix:** dispatch per receiver via `AppWidgetManager.getAppWidgetIds(ComponentName(context, receiver))`, pairing each id with the widget class its receiver declares (authoritative `WIDGET_RECEIVERS` list in `widget/.../WidgetRefresh.kt`). A corrupt Glance map can no longer cross-render; the next refresh self-heals affected instances. `WidgetRefreshWorker` now delegates to the shared `refreshAllWidgets` helper. Files: `WidgetRefresh.kt`, `WidgetRefreshWorker.kt`.
+- The **in-repo** copy `fdroid/com.ventouxlabs.netlens.yml` **is** current — synced to
+  1.2.6/13 in `79b83cd`. Don't confuse the two; only the upstream MR gates F-Droid.
+- A prepared update for the MR exists: replace the single 1.2.4 build entry with
+  **1.2.6 / 13 @ `27404f27`** and move `CurrentVersion`/`CurrentVersionCode` to match.
+  YAML validated. Deliberately **one** build entry — a new-app MR with one build gives
+  the reviewer a single build to verify, and `AutoUpdateMode: Version` +
+  `UpdateCheckMode: Tags` picks up later releases automatically. Stacking 1.2.4/1.2.5
+  would make F-Droid build obsolete versions whose failure could block the merge.
+- `glab` is authenticated as `selector4560`, so pushing to the fork branch is possible —
+  it updates a public MR and pings reviewers, so it was left for the user to approve.
+- **The MR discussion could not be read**: `notes` API returns 401 without auth on
+  project 36528. Check the thread manually for maintainer review comments before pushing.
+- Merging is a maintainer action. There is no lever on our side that speeds it up.
 
-**Verification:** `:widget:compileDebugKotlin` + `testFossDebugUnitTest testDebugUnitTest` green. Signed FOSS release, cert continuity `8fdfc928…`, `adb install -r` over v1.2.5 on **Pixel 9 + Pixel 10** (state preserved). Pixel 10 4x2 (id=2 — Compact minutes earlier) now renders full 4x2 (header/sparkline/status/chips); header "Scanned just now" proves the **new** worker path repainted it. Both 4x1s correct. Screenshots in the session scratchpad (`before-*`, `postinstall-*`).
+## PR #116 — what the review found and fixed
 
-**Honest caveat:** `install -r` also repopulated Glance's map to healthy, so the device test proves the new path *works*; the *robustness* claim (immune to future degradation) rests on the code change — dispatch now keys off `ComponentName`, which is authoritative and cannot cross-map.
+Reviewed in two lanes (quality + security). 0 critical, 2 HIGH, 2 security, 7 MEDIUM,
+9 LOW — **all fixed**, plus a pre-existing flake. Highlights worth knowing:
 
-**Note:** the fontScale overflow this section originally listed as open was fixed in PR #111 (above).
+- **Double-start race** — `startSurvey`'s `isSurveying` guard was checked *before* a
+  suspension of up to 3s, so two taps opened two sessions. Now a `starting` flag set
+  synchronously before the launch.
+- **Abandoned session** — `onCleared` never ended the session. Fixing it required a new
+  `@ApplicationScope` singleton `CoroutineScope` in `core:data`, because `viewModelScope`
+  is already cancelled in `onCleared` and a `launch` there is silently dropped.
+- **BSSID in exports** — the UI truncated to the last two octets but `buildExportText`
+  emitted the full AP MAC, which public wardriving databases resolve to a street address.
+  Now shares the same `apShortName` helper.
+- **Host validation** — `ServiceLauncher.forPort` concatenated an unvalidated host into a
+  URI; `192.168.1.1@evil.example` escaped the authority. Not exploitable as shipped (the
+  scheme is always a hardcoded literal, and both call sites pass safe values) but one line
+  away from being so — fixing `PortScanScreen.kt:151`'s prefill bug would route DNS lookup
+  results into it. **That prefill bug is still open** and now safe to fix.
+- **Sampler contract changed**: `WifiSignalSampler.samples()` now emits
+  `Flow<WifiSignalSample?>`, where null means "polled, not associated". Skipping the tick
+  was indistinguishable from "still working", which left a capture waiting forever for
+  samples that could not arrive. Null makes the stall impossible by construction.
 
-## RESOLVED: speedtest test flake (PR #115)
+**Two tests that were passing for the wrong reason** (worth internalising):
 
-**Symptom:** `SpeedTestEngineImplTest` "download aggregates bytes across four parallel streams" and "final download speed excludes warm-up bytes and time" flaked once on a loaded CI runner (passed on rerun; identical code passed 15 min prior).
+1. `FakeWifiSignalSampler` returned `emptyFlow()` when disconnected — which *completes* —
+   so the start-timeout test never exercised `withTimeoutOrNull`. Deleting the timeout
+   kept it green while the real app would hang on Start forever. The fake now polls and
+   emits nulls like production; with the timeout removed that test **hangs** instead.
+2. `DevicesViewModelTest` failed ~1 run in 10 with "uncaught exceptions before the test
+   started" — leaked DataStore/ViewModel collectors resuming on a *later* test's Main
+   dispatcher. Measured 1/10 before, 0/20 after. `tearDown` now clears ViewModels via a
+   `ViewModelStore` and cancels the DataStore scopes before `resetMain`.
 
-**Root cause:** the download tests fed bytes through Ktor `MockEngine`, whose reads hop off the coroutines-test **virtual clock** onto a real dispatcher. Under CI load a read can still be pending while `runTest` auto-advances virtual time through the sampling loop's `delay(EMIT_INTERVAL_MS)` steps; the engine breaks that loop on `now - startedAt >= MEASURE_WINDOW_MS` (`now` = virtual `timeSource`), so virtual time races past the window before bytes are counted → truncated `bytesTransferred` → assertion fail. Load-sensitive by construction.
+Both HIGH fixes were verified by **reverting each and confirming the new test fails**.
 
-**Dead end (recorded so nobody retries it):** swapping the download tests to `UnconfinedTestDispatcher` is WRONG — measured ~35% failures locally (7/20, no load); it reshuffles the emit/read interleaving instead of removing the real-async hop. That was PR #114, now closed.
+## Room migration 14→15 — validated without a device
 
-**Fix:** a test-only `downloadStreamOverride` seam on `SpeedTestEngineImpl` (defaults `null`; production unchanged). The four byte-counting tests inject a **pure-coroutine byte source** that lives entirely on the virtual scheduler — no Ktor, no real async → deterministic by construction. Warm-up/steady-state/aggregation logic still exercised; the real Ktor read + error paths stay covered by the untouched non-2xx and all-streams-failing tests (still `MockEngine`). Files: `SpeedTestEngineImpl.kt`, `SpeedTestEngineImplTest.kt`.
+`MIGRATION_14_15` is exercised by no automated test (Room only validates at runtime), so
+it was checked by building a real v14 SQLite database from `14.json`, seeding a row,
+applying the migration SQL parsed out of `DataModule.kt`, and comparing against a fresh
+v15 database via `PRAGMA` — the same way Room does. **Zero differences across 21 tables**
+(columns, types, NOT NULL, defaults, PKs, FKs, indices); the seeded row kept `customName`
+with new columns NULL.
 
-**Verification:** 30/30 no-load + 12/12 full-module (`SpeedTestViewModelTest` included) under 22 CPU burners; CI green on #115. The flake itself was never reproducible locally (once on CI) — but a fully-virtual test cannot have a real-clock race, so the fix is sound by construction, not just by sampling. **Lesson: don't stress-test with >1× cores of CPU burners — 2× oversubscription produces Gradle build-infra failures that masquerade as flakes.**
+Caveat on method: comparing raw `sqlite_master` SQL text gives a **false** mismatch —
+`ALTER TABLE ADD COLUMN` records the column name unquoted. Compare `PRAGMA table_info`.
 
-## How to work the widgets (device notes)
+## Device state — READ BEFORE INSTALLING ANYTHING
 
-- **Cannot `am broadcast APPWIDGET_UPDATE` from adb** on these Android builds — `SecurityException: unknown caller`. Trigger refreshes via the widget's refresh button, a network toggle (fires the receiver's network callback → `enqueueWidgetRefresh` → worker), or `install -r` (package replace re-broadcasts update to providers).
-- Installed app is **release-signed** → no `run-as`, can't inspect the Glance DataStore on-device. Don't `adb uninstall` a device that reproduces a widget bug — that destroys the on-device state that IS the repro.
-- **Screencap gotchas:** folds report multiple displays; screencap to a file on-device and `adb pull` (don't mix `exec-out` with stdout). ALWAYS confirm the launcher is frontmost (`dumpsys activity activities | grep topResumedActivity`) before capturing — the user's private apps can be foreground.
-- appwidget ids/providers: `adb -s <serial> shell dumpsys appwidget`. `min=(WxH)` values are TypedValue-complex-encoded dp (e.g. `28161`→110dp, `64001`→250dp).
+Both Pixels currently run a **local build of the PR branch**, signed with the real cert,
+reporting 1.2.5 / code 12. Their NetLens database is at **schema v15**.
 
-All this session's widget + speedtest work is shipped and **verified on-device** (enriched 4x2 fit confirmed; IP-info consent granted on the Pixel 10 2026-07-23 → WAN + ISP now populate). Keystore password rotation is **done** (user confirmed 2026-07-23) — do not re-flag it. Remaining items are user-only / external:
+- **Do not install v1.2.6 over them.** 1.2.6 is schema **v14**; `provideDatabase` has
+  `fallbackToDestructiveMigrationOnDowngrade`, so Room will **wipe the database**.
+- Installing a build of the #116 branch is fine (also v15).
+- On-device UI automation on these phones is unreliable — GrapheneOS app updates, Settings
+  and the user's own apps repeatedly stole foreground mid-sequence. A capture guarded on
+  `topResumedActivity` is **not sufficient**: the notification shade overlays the app
+  without changing it, and one capture caught personal notifications (deleted immediately).
+  Prefer having the user drive the UI; the survey needs someone walking the house anyway.
 
-1. **Play Console bootstrap** — manual; checklist in `docs/play-store.md`.
-2. **F-Droid MR #42628** — awaiting maintainer merge; recipe synced to 1.2.5/12.
+## Open items
+
+1. **PR #116** — needs human review, then merge. Target 1.3.0 (feature release, not a
+   bugfix). Its `[Unreleased]` CHANGELOG block is written and the merge conflict with the
+   shipped `[1.2.6]` section is resolved.
+2. **Survey capture burst** — unverified on hardware. Walk a survey, capture a spot,
+   confirm signal-loss and backgrounding paths.
+3. **F-Droid MR** — push the prepared update once the thread has been read.
+4. **Play Console** — manual; the v1.2.6 gplay AAB is attached to the GitHub release.
+   Checklist in `docs/play-store.md`.
+5. **`PortScanScreen.kt:151` prefill bug** — `var host by rememberSaveable { mutableStateOf("") }`
+   never syncs with `initialHost`, so "scan this host" from another tool silently does
+   nothing. Now safe to fix (host validation landed in #116).
 
 ## Quick reference
 
-- Version: 1.2.5 / versionCode 12. Cert SHA-256 `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4` (continuity confirmed through v1.2.5; the local signed FOSS release built this session matches).
-- Devices: Pixel 9 Pro Fold `4A111FDKD0000C` (has the 4x1, outer screen), Pixel 10 Pro Fold `57211FDCG0023C` (4x2 id=2 + 4x1 id=3). Both Android "17" pre-release, font_scale 1.3. Signed local builds `adb install -r` over the installed release without data loss.
-- Widgets: 4 receivers → 4 GlanceAppWidget classes → content composables. Compact(2x1, 110×40)→`CompactFullContent`; Standard(2x2, 110×110)→`StandardWidgetContent`; Dashboard(4x1, 250×50)→`DashboardFullContent`; FourByTwo(4x2, 250×110)→`FourByTwoWidgetContent` (which embeds `DashboardWidgetContent` at `showHeader=false`). All updates flow through `refreshAllWidgets`.
-- No Robolectric/instrumentation in the repo — widget rendering has no automated test; physical-device verification is the only path.
-- Emulator: DO NOT attempt locally (segfault, diagnosed exhaustively). Baseline profile regen: dispatch `baseline-profile.yml` from a BRANCH (refuses master); bot-commit CI runs land as `action_required` → `gh api -X POST repos/bearyjd/netlens-android/actions/runs/<id>/approve`.
+- Version 1.2.6 / code 13. Cert `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`.
+- Devices: Pixel 9 Pro Fold `4A111FDKD0000C`, Pixel 10 Pro Fold `57211FDCG0023C`.
+- Emulator: DO NOT attempt locally (QEMU segfaults on this kernel). Emulator-bound work
+  goes through the `baseline-profile.yml` CI pattern.
+- No Robolectric, no instrumentation, no screenshot tests anywhere in the repo. Anything
+  touching `Context`, `WifiManager`, `TelephonyManager`, or a live Room/DataStore instance
+  is unverifiable without a physical device — say so rather than assuming a test can be
+  added the way it can elsewhere. Known-untested invariants are listed in
+  `.agent_native/agent_roadmap.md` under the `core:data` Room testing backlog item.
