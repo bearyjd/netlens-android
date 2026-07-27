@@ -83,16 +83,6 @@ class SurveyAggregatorTest {
     }
 
     @Test
-    fun `roam detection flags a BSSID change mid-capture`() {
-        assertFalse(SurveyAggregator.roamedDuringCapture(listOf(sample(-60), sample(-61))))
-        assertTrue(
-            SurveyAggregator.roamedDuringCapture(
-                listOf(sample(-60, bssid = "a"), sample(-61, bssid = "b")),
-            ),
-        )
-    }
-
-    @Test
     fun `weak spots are the weak-or-worse points, worst first`() {
         val points = listOf(
             point("Kitchen", -55),

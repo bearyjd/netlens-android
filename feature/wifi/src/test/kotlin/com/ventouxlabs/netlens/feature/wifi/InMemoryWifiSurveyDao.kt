@@ -27,10 +27,6 @@ class InMemoryWifiSurveyDao : WifiSurveyDao {
         sessions.value = sessions.value.map { if (it.id == id) it.copy(endedAt = endedAt) else it }
     }
 
-    override suspend fun renameSession(id: Long, name: String) {
-        sessions.value = sessions.value.map { if (it.id == id) it.copy(name = name) else it }
-    }
-
     override suspend fun getSession(id: Long): WifiSurveySessionEntity? =
         sessions.value.find { it.id == id }
 
@@ -57,11 +53,6 @@ class InMemoryWifiSurveyDao : WifiSurveyDao {
     override suspend fun deleteSession(id: Long) {
         sessions.value = sessions.value.filterNot { it.id == id }
         points.value = points.value.filterNot { it.sessionId == id }
-    }
-
-    override suspend fun deleteAllSessions() {
-        sessions.value = emptyList()
-        points.value = emptyList()
     }
 
     override suspend fun insertPoint(point: WifiSurveyPointEntity): Long {

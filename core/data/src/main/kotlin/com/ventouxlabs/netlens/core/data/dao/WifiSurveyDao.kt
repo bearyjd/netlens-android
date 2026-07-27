@@ -17,9 +17,6 @@ interface WifiSurveyDao {
     @Query("UPDATE wifi_survey_sessions SET endedAt = :endedAt WHERE id = :id")
     suspend fun endSession(id: Long, endedAt: Long)
 
-    @Query("UPDATE wifi_survey_sessions SET name = :name WHERE id = :id")
-    suspend fun renameSession(id: Long, name: String)
-
     @Query("SELECT * FROM wifi_survey_sessions WHERE id = :id")
     suspend fun getSession(id: Long): WifiSurveySessionEntity?
 
@@ -35,9 +32,6 @@ interface WifiSurveyDao {
 
     @Query("DELETE FROM wifi_survey_sessions WHERE id = :id")
     suspend fun deleteSession(id: Long)
-
-    @Query("DELETE FROM wifi_survey_sessions")
-    suspend fun deleteAllSessions()
 
     @Insert
     suspend fun insertPoint(point: WifiSurveyPointEntity): Long

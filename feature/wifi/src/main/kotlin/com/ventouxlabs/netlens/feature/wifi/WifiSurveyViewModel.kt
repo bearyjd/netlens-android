@@ -134,6 +134,30 @@ class WifiSurveyViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The survey screen left the foreground. `viewModelScope` is not lifecycle-aware, so without
+     * this the sampler keeps waking the radio every SAMPLE_INTERVAL_MS for as long as the entry
+     * stays on the back stack — a background battery drain the user cannot see or stop.
+     *
+     * The session stays open so returning resumes the same walk. Any capture in progress is
+     * abandoned rather than paused: a burst split across a backgrounded gap is not five seconds
+     * of standing in one spot, which is the only thing a captured point is allowed to mean.
+     */
+    fun onScreenStopped() {
+        samplingJob?.cancel()
+        samplingJob = null
+        if (_state.value.capture != null) {
+            captureBuffer.clear()
+            _state.update { it.copy(capture = null, error = SurveyError.CAPTURE_INTERRUPTED) }
+        }
+        _state.update { it.copy(liveSample = null) }
+    }
+
+    /** Back in the foreground: pick the walk up again if a survey is still open. */
+    fun onScreenStarted() {
+        if (_state.value.isSurveying && samplingJob == null) startSampling()
+    }
+
     fun stopSurvey() {
         val sessionId = _state.value.activeSessionId
         samplingJob?.cancel()

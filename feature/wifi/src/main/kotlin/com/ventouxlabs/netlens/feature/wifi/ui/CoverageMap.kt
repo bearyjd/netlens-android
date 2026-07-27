@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -65,7 +66,9 @@ fun CoverageBar(
                 fontWeight = FontWeight.Bold,
                 color = color,
             )
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+            // The glyph stays small, but the touch target keeps the 48dp minimum: this deletes a
+            // measurement, and it gets tapped one-handed while walking around a house.
+            IconButton(onClick = onDelete, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(R.string.wifi_survey_delete_point),

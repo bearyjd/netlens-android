@@ -138,23 +138,6 @@ class DevicesViewModel @Inject constructor(
         }
     }
 
-    /** Adds one tag to a device without disturbing its other details. */
-    fun addTag(id: Long, tag: String) {
-        val normalized = DeviceTags.normalize(tag) ?: return
-        viewModelScope.launch {
-            val device = knownDeviceDao.getById(id) ?: return@launch
-            val existing = DeviceTags.parse(device.tags)
-            if (existing.any { it.equals(normalized, ignoreCase = true) }) return@launch
-            knownDeviceDao.updateUserDetails(
-                id = id,
-                customName = device.customName,
-                tags = DeviceTags.format(existing + normalized),
-                notes = device.notes,
-                location = device.location,
-            )
-        }
-    }
-
     fun toggleKnown(id: Long) {
         viewModelScope.launch {
             val device = uiState.value.devices.find { it.id == id } ?: return@launch

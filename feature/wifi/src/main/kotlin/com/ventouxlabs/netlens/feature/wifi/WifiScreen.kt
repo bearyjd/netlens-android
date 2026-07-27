@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
@@ -75,6 +76,13 @@ fun WifiScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val surveyState by surveyViewModel.state.collectAsStateWithLifecycle()
+
+    // Sampling follows the screen, not the ViewModel: viewModelScope survives backgrounding, so
+    // without this the survey keeps polling the radio while the user is in another app.
+    LifecycleStartEffect(surveyViewModel) {
+        surveyViewModel.onScreenStarted()
+        onStopOrDispose { surveyViewModel.onScreenStopped() }
+    }
     val context = LocalContext.current
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()

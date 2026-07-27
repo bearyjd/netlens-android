@@ -363,6 +363,46 @@ class WifiSurveyViewModelTest {
         )
     }
 
+    @Test
+    fun `backgrounding stops sampling but keeps the session open`() = runTest {
+        startSurvey()
+        val sessionId = requireNotNull(viewModel.state.value.activeSessionId)
+
+        viewModel.onScreenStopped()
+        sampler.emit(-70)
+
+        assertNull(viewModel.state.value.liveSample, "the radio should no longer be feeding the UI")
+        assertTrue(viewModel.state.value.isSurveying)
+        assertNull(dao.sessions.value.single { it.id == sessionId }.endedAt)
+
+        viewModel.onScreenStarted()
+        sampler.emit(-65)
+        assertEquals(-65, viewModel.state.value.liveSample?.rssi, "returning resumes the walk")
+    }
+
+    @Test
+    fun `backgrounding mid-capture abandons the burst rather than splitting it`() = runTest {
+        startSurvey()
+        viewModel.onLabelChanged("Landing")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget - 2, rssi = -70)
+
+        viewModel.onScreenStopped()
+
+        assertNull(viewModel.state.value.capture)
+        assertEquals(SurveyError.CAPTURE_INTERRUPTED, viewModel.state.value.error)
+        assertTrue(dao.points.value.isEmpty(), "a burst spanning a background gap is not one spot")
+
+        // And the abandoned samples must not be folded into the next capture.
+        viewModel.onScreenStarted()
+        viewModel.onLabelChanged("Landing")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget, rssi = -50)
+        assertEquals(1, dao.points.value.size)
+        assertEquals(-50, dao.points.value.single().avgRssi)
+        assertEquals(captureTarget, dao.points.value.single().sampleCount)
+    }
+
     private suspend fun capture(label: String, rssi: Int) {
         viewModel.onLabelChanged(label)
         viewModel.capturePoint()

@@ -45,10 +45,6 @@ object SurveyAggregator {
         )
     }
 
-    /** True when the phone changed AP during the burst — worth surfacing in a mesh house. */
-    fun roamedDuringCapture(samples: List<WifiSignalSample>): Boolean =
-        samples.mapNotNull { it.bssid }.distinct().size > 1
-
     /** Points whose average sits at [SignalQuality.WEAK] or worse, worst first. */
     fun weakSpots(points: List<WifiSurveyPointEntity>): List<WifiSurveyPointEntity> =
         points.filter { SignalQuality.forRssi(it.avgRssi).isWeakSpot }

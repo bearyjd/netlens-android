@@ -78,8 +78,10 @@ fun WifiSurveyTab(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            state.error?.let { error ->
+        // Conditional around the item, not inside it: an always-present item still takes a slot
+        // in the 12dp spacedBy arrangement, leaving a permanent gap in the no-error case.
+        state.error?.let { error ->
+            item {
                 Text(
                     text = stringResource(error.messageRes()),
                     color = MaterialTheme.colorScheme.error,
@@ -396,6 +398,7 @@ private fun SurveyError.messageRes(): Int = when (this) {
     SurveyError.LABEL_REQUIRED -> R.string.wifi_survey_error_label_required
     SurveyError.NO_SAMPLES -> R.string.wifi_survey_error_no_samples
     SurveyError.SIGNAL_LOST -> R.string.wifi_survey_error_signal_lost
+    SurveyError.CAPTURE_INTERRUPTED -> R.string.wifi_survey_error_capture_interrupted
 }
 
 @StringRes

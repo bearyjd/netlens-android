@@ -141,29 +141,6 @@ class DeviceTaggingTest {
     }
 
     @Test
-    fun `addTag appends without disturbing the other details`() = runTest {
-        seed(1, tags = "printer", location = "Study")
-        knownDao.seed(
-            KnownDeviceEntity(id = 2, macAddress = "M2", hostname = null, ip = "1.1.1.1", vendor = null),
-        )
-
-        viewModel.addTag(1, "paper")
-
-        val saved = knownDao.byId(1)!!
-        assertEquals("printer,paper", saved.tags)
-        assertEquals("Study", saved.location)
-    }
-
-    @Test
-    fun `addTag is a no-op when the device already carries the tag`() = runTest {
-        seed(1, tags = "Printer")
-
-        viewModel.addTag(1, "printer")
-
-        assertEquals("Printer", knownDao.byId(1)!!.tags)
-    }
-
-    @Test
     fun `available tags come from the whole inventory`() = runTest {
         seed(1, tags = "printer,iot")
         seed(2, tags = "camera")

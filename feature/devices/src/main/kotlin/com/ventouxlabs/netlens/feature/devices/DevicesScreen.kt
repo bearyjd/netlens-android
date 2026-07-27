@@ -44,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,8 +74,15 @@ fun DevicesScreen(
     onNavigateToTool: (String, String) -> Unit = { _, _ -> },
     viewModel: DevicesViewModel = hiltViewModel(),
 ) {
+    // Applied once, not on every recomposition: the key is a constant nav argument, so without
+    // the flag a rotation re-imposes the incoming filter over whatever the user has since typed
+    // (or cleared) — the ViewModel outlives the composition, the effect does not.
+    var queryApplied by rememberSaveable(initialQuery) { mutableStateOf(false) }
     LaunchedEffect(initialQuery) {
-        if (initialQuery != null) viewModel.setSearchQuery(initialQuery)
+        if (initialQuery != null && !queryApplied) {
+            viewModel.setSearchQuery(initialQuery)
+            queryApplied = true
+        }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selected = uiState.devices.find { it.id == uiState.selectedDeviceId }

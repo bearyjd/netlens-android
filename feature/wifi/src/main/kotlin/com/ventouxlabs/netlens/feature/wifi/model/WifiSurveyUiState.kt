@@ -41,4 +41,7 @@ enum class SurveyError {
 
     /** The association dropped part-way through a capture, so the burst is incomplete. */
     SIGNAL_LOST,
+
+    /** The screen was backgrounded mid-capture, so the burst no longer means "one spot". */
+    CAPTURE_INTERRUPTED,
 }

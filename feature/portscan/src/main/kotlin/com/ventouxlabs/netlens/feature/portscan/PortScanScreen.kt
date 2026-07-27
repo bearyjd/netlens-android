@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -118,7 +119,6 @@ fun PortScanScreen(
             )
         },
     ) { padding ->
-        val noHandlerTemplate = stringResource(R.string.portscan_service_no_handler)
         PortScanContent(
             state = uiState,
             onScan = { host, ports -> viewModel.scan(host, ports) },
@@ -128,7 +128,10 @@ fun PortScanScreen(
                 if (!ServiceIntentLauncher.launch(context, launch)) {
                     Toast.makeText(
                         context,
-                        noHandlerTemplate.format(launch.uri),
+                        // getString rather than String.format on a pre-resolved template: the
+                        // latter formats in the default locale, bypassing the resource path the
+                        // rest of the codebase uses.
+                        context.getString(R.string.portscan_service_no_handler, launch.uri),
                         Toast.LENGTH_LONG,
                     ).show()
                 }
@@ -362,7 +365,11 @@ private fun PortResultRow(
                 )
             }
         }
-        val launch = if (result.isOpen) ServiceLauncher.forPort(host, result.port) else null
+        // Remembered so an active scan doesn't rebuild a ServiceLaunch for every open-port row on
+        // every recomposition; the mapping only depends on these two values.
+        val launch = remember(host, result.port, result.isOpen) {
+            if (result.isOpen) ServiceLauncher.forPort(host, result.port) else null
+        }
         if (result.isOpen && (result.port in HTTP_PORTS || launch != null)) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

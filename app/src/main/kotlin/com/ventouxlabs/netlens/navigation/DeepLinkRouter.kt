@@ -42,6 +42,7 @@ private val ROUTES_WITH_QUERY = setOf(
     ToolDestination.Whois.route,
     ToolDestination.HttpTester.route,
     ToolDestination.IpCalc.route,
+    ToolDestination.Devices.route,
 )
 
 internal fun resolveRoute(
