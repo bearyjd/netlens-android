@@ -16,6 +16,7 @@ import com.ventouxlabs.netlens.feature.wifi.model.apShortName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -52,19 +53,35 @@ class WifiSurveyViewModel @Inject constructor(
 
     private val viewedSessionId = MutableStateFlow<Long?>(null)
 
-    private var samplingJob: Job? = null
-
-    /** Set between the Start tap and the first reading, while `isSurveying` is still false. */
-    private var starting = false
-
-    private var startJob: Job? = null
-
     /**
-     * The id of a session row that has been written but not yet closed. Tracked separately from
-     * `activeSessionId` because that field is only set once the start coroutine completes — if the
-     * start is cancelled after the insert, this is the only remaining handle on the open row.
+     * The survey's lifecycle, as one value rather than a set of booleans and nullable jobs whose
+     * legal combinations existed only in comments. Every transition is a single assignment, so
+     * "starting with a row already written" is a state the compiler knows about instead of an
+     * invariant a reader has to reconstruct.
      */
-    private var openSessionId: Long? = null
+    private sealed interface SurveyPhase {
+        data object Idle : SurveyPhase
+
+        /**
+         * Start tapped, waiting for the first reading — up to [START_SAMPLE_TIMEOUT_MS] away.
+         * [sessionId] becomes non-null the instant the row is written, which is what lets a stop
+         * arriving in this window know there is something to close.
+         */
+        data class Starting(val job: Job, val sessionId: Long? = null) : SurveyPhase
+
+        /** Walking. [samplingJob] is null while the screen is stopped; the session stays open. */
+        data class Running(val sessionId: Long, val samplingJob: Job? = null) : SurveyPhase
+    }
+
+    private var phase: SurveyPhase = SurveyPhase.Idle
+
+    /** The open session row, whichever phase holds it. */
+    private val SurveyPhase.sessionId: Long?
+        get() = when (this) {
+            SurveyPhase.Idle -> null
+            is SurveyPhase.Starting -> sessionId
+            is SurveyPhase.Running -> sessionId
+        }
 
     /**
      * Wall-clock reader, overridable in tests. The capture gap below is measured in real time, not
@@ -112,13 +129,18 @@ class WifiSurveyViewModel @Inject constructor(
      * case needs no typing at all.
      */
     fun startSurvey(name: String) {
-        // `isSurveying` is only set once the first reading lands, which is up to
-        // START_SAMPLE_TIMEOUT_MS away — so it cannot be the guard against a second tap in the
-        // meantime. This flag is read and written on the caller's thread with no suspension in
-        // between, so two taps can never both get past it and open two sessions.
-        if (_state.value.isSurveying || starting) return
-        starting = true
-        startJob = viewModelScope.launch {
+        // Idle is the only state a start may begin from, which subsumes the old pair of checks:
+        // Starting covers the window before the first reading lands, Running everything after.
+        // Read and assigned on the caller's thread with no suspension between, so two taps cannot
+        // both get past it.
+        if (phase !is SurveyPhase.Idle) return
+        // The row this start writes, if it gets that far. Deliberately a local rather than shared
+        // state: it belongs to this one start, so a stop that resets `phase` cannot strand it.
+        var writtenSessionId: Long? = null
+        // LAZY so the phase is published before the body can run: on an unconfined dispatcher an
+        // eagerly-started coroutine can finish before launch() returns, and assigning Starting
+        // afterwards would clobber the Running it had already set.
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
                 val firstSample = sampler.samples(SAMPLE_INTERVAL_MS).firstSampleOrNull()
                 if (firstSample == null) {
@@ -128,10 +150,9 @@ class WifiSurveyViewModel @Inject constructor(
                 val resolvedName = name.trim().take(MAX_SESSION_NAME_LENGTH).ifBlank {
                     firstSample.ssid ?: DEFAULT_SESSION_NAME
                 }
-                // NonCancellable so the row's id is always recorded in openSessionId. Cancelling
-                // *at* the insert suspension point would otherwise leave the row written and its
-                // id known to nobody — an endedAt=null session the UI can never finish, which is
-                // the exact leak onCleared exists to prevent.
+                // NonCancellable so the id is always captured. Cancelling *at* the insert
+                // suspension point would otherwise leave the row written and its id known to
+                // nobody — an endedAt=null session the UI can never finish.
                 val sessionId = withContext(NonCancellable) {
                     val id = surveyDao.insertSession(
                         WifiSurveySessionEntity(
@@ -140,13 +161,15 @@ class WifiSurveyViewModel @Inject constructor(
                             startedAt = firstSample.timestampMs,
                         ),
                     )
-                    openSessionId = id
+                    writtenSessionId = id
+                    (phase as? SurveyPhase.Starting)?.let { phase = it.copy(sessionId = id) }
                     id
                 }
                 // Nothing after the NonCancellable block suspends, so without this an already
                 // cancelled start would run to completion — publishing state on a dead ViewModel
                 // and never reaching the catch that closes the row it just wrote.
                 ensureActive()
+                phase = SurveyPhase.Running(sessionId)
                 viewedSessionId.value = sessionId
                 captureBuffer.clear()
                 _state.update {
@@ -164,23 +187,19 @@ class WifiSurveyViewModel @Inject constructor(
                 }
                 startSampling()
             } catch (cancellation: CancellationException) {
-                // The start was cancelled after its row was written. onCleared cannot clean this
-                // up — it may already have run, reading both ids as null while the insert was
-                // still in flight — so the cancelled start closes its own row, on a scope that
-                // outlives the ViewModel. Rethrown so cancellation still propagates normally.
-                closeOpenSessionOnAppScope()
+                // A cancelled start closes its own row — and is the *only* closer for one, so no
+                // caller has to remember to. onCleared cannot do it: it may already have run while
+                // the insert was still in flight. Uses appScope, which outlives the ViewModel.
+                writtenSessionId?.let { endSessionOnAppScope(it) }
                 throw cancellation
             } finally {
-                starting = false
+                // Only if this start is still the current phase — on success it is Running by now,
+                // and a stop may already have moved it to Idle.
+                if (phase is SurveyPhase.Starting) phase = SurveyPhase.Idle
             }
         }
-    }
-
-    /** Closes the open session row, if any, on a scope that survives ViewModel cancellation. */
-    private fun closeOpenSessionOnAppScope() {
-        val sessionId = openSessionId ?: return
-        openSessionId = null
-        endSessionOnAppScope(sessionId)
+        phase = SurveyPhase.Starting(job)
+        job.start()
     }
 
     /**
@@ -210,21 +229,21 @@ class WifiSurveyViewModel @Inject constructor(
      * The session stays open either way, so returning resumes the same walk.
      */
     fun onScreenStopped(isConfigurationChange: Boolean = false) {
-        // Cancel the start too, not just sampling: within START_SAMPLE_TIMEOUT_MS the sampling job
-        // does not exist yet, so cancelling only samplingJob would let the start coroutine resume
-        // after this returns and begin polling the radio with the screen stopped — reinstating the
-        // drain this method exists to stop. Cancelling runs startSurvey's finally, clearing
-        // `starting` so the next tap is not swallowed.
-        startJob?.cancel()
-        startJob = null
-        samplingJob?.cancel()
-        samplingJob = null
-
-        // A start cancelled after its row was written leaves a session nothing will ever close.
-        val abortedSessionId = openSessionId?.takeIf { !_state.value.isSurveying }
-        if (abortedSessionId != null) {
-            openSessionId = null
-            endSessionOnAppScope(abortedSessionId)
+        when (val current = phase) {
+            // A start in flight is abandoned, not left to resume: within START_SAMPLE_TIMEOUT_MS
+            // there is no sampling job yet, so letting it complete would begin polling the radio
+            // with the screen stopped — the drain this method exists to stop. Its cancellation
+            // handler closes any row it had already written.
+            is SurveyPhase.Starting -> {
+                current.job.cancel()
+                phase = SurveyPhase.Idle
+            }
+            // Sampling pauses; the session stays open so returning resumes the same walk.
+            is SurveyPhase.Running -> {
+                current.samplingJob?.cancel()
+                phase = current.copy(samplingJob = null)
+            }
+            SurveyPhase.Idle -> Unit
         }
 
         if (_state.value.capture != null) {
@@ -258,24 +277,27 @@ class WifiSurveyViewModel @Inject constructor(
                 abandonCapture(SurveyError.CAPTURE_INTERRUPTED)
             }
         }
-        if (_state.value.isSurveying && samplingJob == null) startSampling()
+        val running = phase as? SurveyPhase.Running ?: return
+        if (running.samplingJob == null) startSampling()
     }
 
     fun stopSurvey() {
-        val sessionId = _state.value.activeSessionId ?: openSessionId
-        startJob?.cancel()
-        startJob = null
-        samplingJob?.cancel()
-        samplingJob = null
-        openSessionId = null
+        // Only a Running session is closed here. A Starting one is closed by its own cancellation
+        // handler, which is the single owner of that case.
+        val runningSessionId = (phase as? SurveyPhase.Running)?.sessionId
+        when (val current = phase) {
+            is SurveyPhase.Starting -> current.job.cancel()
+            is SurveyPhase.Running -> current.samplingJob?.cancel()
+            SurveyPhase.Idle -> Unit
+        }
+        phase = SurveyPhase.Idle
         captureBuffer.clear()
+        captureSuspendedAtMs = null
         _state.update {
             it.copy(isSurveying = false, activeSessionId = null, capture = null, liveSample = null, trail = emptyList())
         }
-        if (sessionId != null) {
-            viewModelScope.launch {
-                surveyDao.endSession(sessionId, System.currentTimeMillis())
-            }
+        if (runningSessionId != null) {
+            viewModelScope.launch { surveyDao.endSession(runningSessionId, nowMs()) }
         }
     }
 
@@ -328,8 +350,7 @@ class WifiSurveyViewModel @Inject constructor(
     fun deleteSession(sessionId: Long) {
         // A deleted session can't keep recording into itself — stop first, then delete, so no
         // capture lands on a row that is about to disappear.
-        if (_state.value.activeSessionId == sessionId) stopSurvey()
-        if (openSessionId == sessionId) openSessionId = null
+        if (phase.sessionId == sessionId) stopSurvey()
         viewModelScope.launch {
             surveyDao.deleteSession(sessionId)
             if (viewedSessionId.value == sessionId) {
@@ -365,27 +386,31 @@ class WifiSurveyViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        samplingJob?.cancel()
         // Navigating away abandons the survey, so close its session rather than leaving a row
         // with a null endedAt that nothing can ever finish — the UI offers no way back into a
         // session it no longer considers active. viewModelScope is already cancelled here, so
         // this has to run on a scope that outlives the ViewModel.
-        // openSessionId covers the window where the row exists but the start coroutine had not
-        // yet published activeSessionId — cancellation there used to orphan the row silently.
-        val sessionId = _state.value.activeSessionId ?: openSessionId
-        if (sessionId != null) {
-            openSessionId = null
-            endSessionOnAppScope(sessionId)
-        }
+        //
+        // Only Running is handled here. A Starting row is closed by the start's own cancellation
+        // handler, which covers the window where the insert was still in flight when this ran.
+        val running = phase as? SurveyPhase.Running ?: return
+        phase = SurveyPhase.Idle
+        running.samplingJob?.cancel()
+        endSessionOnAppScope(running.sessionId)
     }
 
     private fun startSampling() {
-        samplingJob?.cancel()
-        samplingJob = viewModelScope.launch {
+        val running = phase as? SurveyPhase.Running ?: return
+        running.samplingJob?.cancel()
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             sampler.samples(SAMPLE_INTERVAL_MS).collect { sample ->
                 onSample(sample)
             }
         }
+        // Published before starting, for the same reason as the start job: an unconfined
+        // dispatcher would otherwise deliver samples before the phase records the collector.
+        phase = running.copy(samplingJob = job)
+        job.start()
     }
 
     private suspend fun onSample(sample: WifiSignalSample?) {
@@ -431,7 +456,7 @@ class WifiSurveyViewModel @Inject constructor(
     }
 
     private suspend fun finishCapture(label: String) {
-        val sessionId = _state.value.activeSessionId
+        val sessionId = (phase as? SurveyPhase.Running)?.sessionId
         val samples = captureBuffer.toList()
         captureBuffer.clear()
         val point = sessionId?.let {
@@ -439,7 +464,7 @@ class WifiSurveyViewModel @Inject constructor(
                 sessionId = it,
                 label = label,
                 samples = samples,
-                capturedAt = samples.lastOrNull()?.timestampMs ?: System.currentTimeMillis(),
+                capturedAt = samples.lastOrNull()?.timestampMs ?: nowMs(),
             )
         }
         if (point == null) {
