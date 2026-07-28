@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.app.Activity
+import android.util.Log
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -89,8 +90,16 @@ fun WifiScreen(
             // ON_STOP also fires for a rotation, a fold, or a font-size change, which are not
             // departures — isChangingConfigurations is how the platform tells them apart. Getting
             // this wrong destroys an in-progress capture on the commonest gesture on a foldable.
+            val activity = context.findActivity()
+            if (activity == null) {
+                // Defaulting to "the user left" discards the burst, which is the safe direction —
+                // a retained burst that spans two rooms is a false measurement, a dropped one is
+                // just five seconds. Logged because it should never happen, and if it does it
+                // would otherwise look like captures failing at random.
+                Log.w("WifiSurvey", "no host Activity for the survey screen; treating stop as a departure")
+            }
             surveyViewModel.onScreenStopped(
-                isConfigurationChange = context.findActivity()?.isChangingConfigurations == true,
+                isConfigurationChange = activity?.isChangingConfigurations == true,
             )
         }
     }

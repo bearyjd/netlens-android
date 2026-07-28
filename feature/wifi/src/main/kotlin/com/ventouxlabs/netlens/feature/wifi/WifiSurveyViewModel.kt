@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.wifi
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
@@ -64,6 +65,15 @@ class WifiSurveyViewModel @Inject constructor(
      * start is cancelled after the insert, this is the only remaining handle on the open row.
      */
     private var openSessionId: Long? = null
+
+    /**
+     * Wall-clock reader, overridable in tests. The capture gap below is measured in real time, not
+     * on the coroutine test scheduler, so a test cannot advance it with virtual time.
+     */
+    internal var nowMs: () -> Long = System::currentTimeMillis
+
+    /** When a capture was paused by a configuration change; null when not paused. */
+    private var captureSuspendedAtMs: Long? = null
 
     /** Samples collected since the current capture started; empty when not capturing. */
     private val captureBuffer = mutableListOf<WifiSignalSample>()
@@ -170,7 +180,19 @@ class WifiSurveyViewModel @Inject constructor(
     private fun closeOpenSessionOnAppScope() {
         val sessionId = openSessionId ?: return
         openSessionId = null
-        appScope.launch { surveyDao.endSession(sessionId, System.currentTimeMillis()) }
+        endSessionOnAppScope(sessionId)
+    }
+
+    /**
+     * The only path that closes a session off `viewModelScope`. Failures are logged rather than
+     * swallowed: this runs where nothing is watching, so an exception here would otherwise leave a
+     * permanently open row with no trace of why.
+     */
+    private fun endSessionOnAppScope(sessionId: Long) {
+        appScope.launch {
+            runCatching { surveyDao.endSession(sessionId, nowMs()) }
+                .onFailure { Log.w(TAG, "failed to close survey session $sessionId", it) }
+        }
     }
 
     /**
@@ -202,18 +224,40 @@ class WifiSurveyViewModel @Inject constructor(
         val abortedSessionId = openSessionId?.takeIf { !_state.value.isSurveying }
         if (abortedSessionId != null) {
             openSessionId = null
-            appScope.launch { surveyDao.endSession(abortedSessionId, System.currentTimeMillis()) }
+            endSessionOnAppScope(abortedSessionId)
         }
 
-        if (!isConfigurationChange && _state.value.capture != null) {
-            captureBuffer.clear()
-            _state.update { it.copy(capture = null, error = SurveyError.CAPTURE_INTERRUPTED) }
+        if (_state.value.capture != null) {
+            if (isConfigurationChange) {
+                // Held, not abandoned — but only for as long as a recreation plausibly takes.
+                // onScreenStarted enforces the bound; see MAX_CAPTURE_GAP_MS.
+                captureSuspendedAtMs = nowMs()
+            } else {
+                abandonCapture(SurveyError.CAPTURE_INTERRUPTED)
+            }
         }
         _state.update { it.copy(liveSample = null) }
     }
 
+    /** Drops the in-progress burst and reports [error]; the survey itself stays open. */
+    private fun abandonCapture(error: SurveyError) {
+        captureBuffer.clear()
+        captureSuspendedAtMs = null
+        _state.update { it.copy(capture = null, error = error) }
+    }
+
     /** Back in the foreground: pick the walk up again if a survey is still open. */
     fun onScreenStarted() {
+        // A configuration change holds the burst rather than dropping it, but nothing bounds how
+        // long the activity stays stopped — fold the phone and pocket it and the "spot" would end
+        // up spanning two rooms. A captured point may only ever mean one place, so past this gap
+        // the burst is discarded like any other interruption.
+        captureSuspendedAtMs?.let { suspendedAt ->
+            captureSuspendedAtMs = null
+            if (nowMs() - suspendedAt > MAX_CAPTURE_GAP_MS && _state.value.capture != null) {
+                abandonCapture(SurveyError.CAPTURE_INTERRUPTED)
+            }
+        }
         if (_state.value.isSurveying && samplingJob == null) startSampling()
     }
 
@@ -331,7 +375,7 @@ class WifiSurveyViewModel @Inject constructor(
         val sessionId = _state.value.activeSessionId ?: openSessionId
         if (sessionId != null) {
             openSessionId = null
-            appScope.launch { surveyDao.endSession(sessionId, System.currentTimeMillis()) }
+            endSessionOnAppScope(sessionId)
         }
     }
 
@@ -409,6 +453,8 @@ class WifiSurveyViewModel @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "WifiSurvey"
+
         /** ~1.4 readings/second: fast enough to feel live while walking, cheap enough to hold. */
         const val SAMPLE_INTERVAL_MS = 700L
 
@@ -426,6 +472,13 @@ class WifiSurveyViewModel @Inject constructor(
          * only way to tell "not on Wi-Fi" from "about to report".
          */
         const val START_SAMPLE_TIMEOUT_MS = 3_000L
+
+        /**
+         * How long a capture may stay paused across a configuration change before it is discarded.
+         * An activity recreation is sub-second; anything beyond this is the user having gone away
+         * with the phone, and a burst either side of that is not one spot.
+         */
+        const val MAX_CAPTURE_GAP_MS = 3_000L
     }
 }
 

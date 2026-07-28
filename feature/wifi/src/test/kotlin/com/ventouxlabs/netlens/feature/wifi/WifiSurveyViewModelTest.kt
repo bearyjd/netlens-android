@@ -425,6 +425,36 @@ class WifiSurveyViewModelTest {
     }
 
     @Test
+    fun `a capture held across a long stop is discarded rather than spanning two rooms`() = runTest {
+        var clock = 10_000L
+        viewModel.nowMs = { clock }
+        startSurvey()
+        viewModel.onLabelChanged("Landing")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget - 2, rssi = -70)
+
+        // Folded — held, as a recreation is sub-second.
+        viewModel.onScreenStopped(isConfigurationChange = true)
+        assertNotNull(viewModel.state.value.capture)
+
+        // ...but the phone went in a pocket and came back out somewhere else.
+        clock += WifiSurveyViewModel.MAX_CAPTURE_GAP_MS + 1
+        viewModel.onScreenStarted()
+
+        assertNull(viewModel.state.value.capture, "a burst may not span an unbounded gap")
+        assertEquals(SurveyError.CAPTURE_INTERRUPTED, viewModel.state.value.error)
+        assertTrue(dao.points.value.isEmpty(), "no spot may be recorded from a split burst")
+
+        // And the discarded samples are not folded into the next capture.
+        viewModel.onLabelChanged("Landing")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget, rssi = -50)
+        assertEquals(1, dao.points.value.size)
+        assertEquals(-50, dao.points.value.single().avgRssi)
+        assertEquals(captureTarget, dao.points.value.single().sampleCount)
+    }
+
+    @Test
     fun `backgrounding during the start window cancels the start instead of leaving it polling`() =
         runTest {
             // Nothing buffered: the start is parked waiting for its first reading.
@@ -438,6 +468,13 @@ class WifiSurveyViewModelTest {
             assertFalse(
                 viewModel.state.value.isSurveying,
                 "a start cancelled by backgrounding must not come back and begin sampling",
+            )
+            // The defect was a *poll* that kept running, so assert on the collector itself and not
+            // only on the state it would have produced.
+            assertEquals(
+                1,
+                sampler.requestedIntervals.size,
+                "a cancelled start must not have opened a second sampling collector",
             )
             assertNull(viewModel.state.value.liveSample)
             // And the guard is released, so returning and tapping Start still works.
