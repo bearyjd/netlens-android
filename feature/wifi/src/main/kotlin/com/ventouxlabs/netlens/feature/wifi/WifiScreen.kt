@@ -56,6 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
@@ -79,11 +82,18 @@ fun WifiScreen(
 
     // Sampling follows the screen, not the ViewModel: viewModelScope survives backgrounding, so
     // without this the survey keeps polling the radio while the user is in another app.
-    LifecycleStartEffect(surveyViewModel) {
-        surveyViewModel.onScreenStarted()
-        onStopOrDispose { surveyViewModel.onScreenStopped() }
-    }
     val context = LocalContext.current
+    LifecycleStartEffect(surveyViewModel, context) {
+        surveyViewModel.onScreenStarted()
+        onStopOrDispose {
+            // ON_STOP also fires for a rotation, a fold, or a font-size change, which are not
+            // departures — isChangingConfigurations is how the platform tells them apart. Getting
+            // this wrong destroys an in-progress capture on the commonest gesture on a foldable.
+            surveyViewModel.onScreenStopped(
+                isConfigurationChange = context.findActivity()?.isChangingConfigurations == true,
+            )
+        }
+    }
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
 
@@ -559,4 +569,14 @@ private fun formatElapsed(ms: Long): String {
         totalSeconds < 3600 -> "${totalSeconds / 60}m"
         else -> "${totalSeconds / 3600}h"
     }
+}
+
+/** Unwraps the Compose context to its hosting Activity; `LocalActivity` needs activity-compose 1.10+. */
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

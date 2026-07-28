@@ -2,6 +2,7 @@ package com.ventouxlabs.netlens.feature.wifi
 
 import androidx.lifecycle.ViewModelStore
 import com.ventouxlabs.netlens.feature.wifi.model.SurveyError
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -401,6 +402,71 @@ class WifiSurveyViewModelTest {
         assertEquals(1, dao.points.value.size)
         assertEquals(-50, dao.points.value.single().avgRssi)
         assertEquals(captureTarget, dao.points.value.single().sampleCount)
+    }
+
+    @Test
+    fun `a configuration change keeps the capture instead of blaming the background`() = runTest {
+        startSurvey()
+        viewModel.onLabelChanged("Landing")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget - 2, rssi = -70)
+
+        // Rotation, fold or font-size change: ON_STOP fires, but the user never left.
+        viewModel.onScreenStopped(isConfigurationChange = true)
+
+        assertNotNull(viewModel.state.value.capture, "a fold must not destroy an in-progress burst")
+        assertNull(viewModel.state.value.error)
+
+        // The recreated screen resumes and the same burst completes into one point.
+        viewModel.onScreenStarted()
+        sampler.emitBurst(2, rssi = -70)
+        assertEquals(1, dao.points.value.size)
+        assertEquals("Landing", dao.points.value.single().label)
+    }
+
+    @Test
+    fun `backgrounding during the start window cancels the start instead of leaving it polling`() =
+        runTest {
+            // Nothing buffered: the start is parked waiting for its first reading.
+            viewModel.startSurvey("Home")
+            viewModel.onScreenStopped()
+
+            // The reading the start was waiting for now arrives.
+            sampler.emit(-50)
+            advanceUntilIdle()
+
+            assertFalse(
+                viewModel.state.value.isSurveying,
+                "a start cancelled by backgrounding must not come back and begin sampling",
+            )
+            assertNull(viewModel.state.value.liveSample)
+            // And the guard is released, so returning and tapping Start still works.
+            startSurvey("Home")
+            assertTrue(viewModel.state.value.isSurveying)
+        }
+
+    @Test
+    fun `a row written while the start is cancelled mid-insert is still closed`() = runTest {
+        // Hold the coroutine *inside* insertSession. This is the window that orphaned rows:
+        // activeSessionId is not published yet, so onCleared has nothing to close.
+        val gate = CompletableDeferred<Unit>()
+        dao.blockInsert = gate
+        sampler.emit(-50)
+        viewModel.startSurvey("Home")
+        advanceUntilIdle()
+        assertTrue(dao.sessions.value.isEmpty(), "insert should still be in flight")
+
+        // The ViewModel dies while the insert is parked.
+        ViewModelStore().apply { put("survey", viewModel) }.clear()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val session = dao.sessions.value.singleOrNull()
+        assertNotNull(session, "the insert completes even though the coroutine was cancelled")
+        assertNotNull(
+            session!!.endedAt,
+            "a row written by a cancelled start must not be left with a null endedAt",
+        )
     }
 
     private suspend fun capture(label: String, rssi: Int) {

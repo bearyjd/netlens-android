@@ -4,6 +4,7 @@ import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
 import com.ventouxlabs.netlens.core.data.model.WifiSurveyPointEntity
 import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionEntity
 import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionSummary
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -14,10 +15,17 @@ class InMemoryWifiSurveyDao : WifiSurveyDao {
     val sessions = MutableStateFlow<List<WifiSurveySessionEntity>>(emptyList())
     val points = MutableStateFlow<List<WifiSurveyPointEntity>>(emptyList())
 
+    /**
+     * When set, insertSession suspends on this before returning — lets a test hold the coroutine
+     * inside the insert and cancel it there, which is the window that used to orphan a row.
+     */
+    var blockInsert: CompletableDeferred<Unit>? = null
+
     private var nextSessionId = 1L
     private var nextPointId = 1L
 
     override suspend fun insertSession(session: WifiSurveySessionEntity): Long {
+        blockInsert?.await()
         val id = nextSessionId++
         sessions.value = sessions.value + session.copy(id = id)
         return id

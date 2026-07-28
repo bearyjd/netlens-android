@@ -109,7 +109,16 @@ fun DeviceDetailSheet(
             val tagsAtCapacity = enteredTags.size >= DeviceTags.MAX_TAGS
             OutlinedTextField(
                 value = edit.tagsInput,
-                onValueChange = { edit = edit.copy(tagsInput = it) },
+                onValueChange = { next ->
+                    // Refuse input that would exceed the cap rather than accepting it and letting
+                    // format() drop it at save — format keeps the FIRST MAX_TAGS, so the tag just
+                    // typed is the one that would vanish. Shrinking edits always go through, so a
+                    // row that somehow holds more than the cap can still be edited down.
+                    val withinCap = DeviceTags.parse(next).size <= DeviceTags.MAX_TAGS
+                    if (withinCap || next.length < edit.tagsInput.length) {
+                        edit = edit.copy(tagsInput = next)
+                    }
+                },
                 label = { Text(stringResource(R.string.devices_detail_tags)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_tags_hint)) },
                 supportingText = {
