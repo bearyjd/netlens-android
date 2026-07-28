@@ -22,6 +22,10 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun setMacAddress(id: Long, mac: String) {}
     override suspend fun setKnown(id: Long, isKnown: Boolean) { update(id) { it.copy(isKnown = isKnown) } }
     override suspend fun setCustomName(id: Long, customName: String?) { update(id) { it.copy(customName = customName) } }
+    override suspend fun getById(id: Long): KnownDeviceEntity? = byId(id)
+    override suspend fun updateUserDetails(id: Long, customName: String?, tags: String?, notes: String?, location: String?) {
+        update(id) { it.copy(customName = customName, tags = tags, notes = notes, location = location) }
+    }
     override suspend fun setNetworkId(id: Long, networkId: Long?) { update(id) { it.copy(networkId = networkId) } }
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(devices)
     override suspend fun delete(id: Long) { devices.removeAll { it.id == id }; flow.value = devices.toList() }

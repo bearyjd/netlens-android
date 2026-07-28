@@ -60,6 +60,20 @@ class InMemoryKnownDeviceDao : KnownDeviceDao {
         if (i >= 0) { allDevices[i] = allDevices[i].copy(customName = customName); flow.update { allDevices.toList() } }
     }
 
+    override suspend fun getById(id: Long): KnownDeviceEntity? = allDevices.find { it.id == id }
+
+    override suspend fun updateUserDetails(
+        id: Long, customName: String?, tags: String?, notes: String?, location: String?,
+    ) {
+        val i = allDevices.indexOfFirst { it.id == id }
+        if (i >= 0) {
+            allDevices[i] = allDevices[i].copy(
+                customName = customName, tags = tags, notes = notes, location = location,
+            )
+            flow.update { allDevices.toList() }
+        }
+    }
+
     override suspend fun setNetworkId(id: Long, networkId: Long?) {
         val i = allDevices.indexOfFirst { it.id == id }
         if (i >= 0) { allDevices[i] = allDevices[i].copy(networkId = networkId); flow.update { allDevices.toList() } }

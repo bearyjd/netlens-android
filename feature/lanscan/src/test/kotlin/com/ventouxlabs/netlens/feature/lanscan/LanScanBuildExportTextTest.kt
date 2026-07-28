@@ -163,6 +163,14 @@ private class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun setMacAddress(id: Long, mac: String) {}
     override suspend fun setKnown(id: Long, isKnown: Boolean) {}
     override suspend fun setCustomName(id: Long, customName: String?) {}
+    override suspend fun getById(id: Long): KnownDeviceEntity? = null
+    override suspend fun updateUserDetails(
+        id: Long,
+        customName: String?,
+        tags: String?,
+        notes: String?,
+        location: String?,
+    ) {}
     override suspend fun setNetworkId(id: Long, networkId: Long?) {}
     override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
     override suspend fun delete(id: Long) {}

@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.portscan
 
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,7 +59,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.feature.portscan.model.PortResult
 import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
+import com.ventouxlabs.netlens.feature.portscan.engine.ServiceIntentLauncher
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunchKind
+import com.ventouxlabs.netlens.feature.portscan.model.ServiceLauncher
 import com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts
 
 private const val PRESET_COMMON = 0
@@ -118,6 +124,18 @@ fun PortScanScreen(
             onScan = { host, ports -> viewModel.scan(host, ports) },
             onCancel = viewModel::cancelScan,
             onNavigateToTool = onNavigateToTool,
+            onOpenService = { launch ->
+                if (!ServiceIntentLauncher.launch(context, launch)) {
+                    Toast.makeText(
+                        context,
+                        // getString rather than String.format on a pre-resolved template: the
+                        // latter formats in the default locale, bypassing the resource path the
+                        // rest of the codebase uses.
+                        context.getString(R.string.portscan_service_no_handler, launch.uri),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            },
             modifier = Modifier.padding(padding),
         )
     }
@@ -130,6 +148,7 @@ private fun PortScanContent(
     onScan: (String, List<Int>) -> Unit,
     onCancel: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
+    onOpenService: (ServiceLaunch) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var host by rememberSaveable { mutableStateOf("") }
@@ -233,7 +252,12 @@ private fun PortScanContent(
                 compareBy<PortResult> { it.riskLevel.sortOrder }.thenBy { it.port },
             )
             items(sortedResults, key = { it.port }) { result ->
-                PortResultRow(result = result, host = host.trim(), onNavigateToTool = onNavigateToTool)
+                PortResultRow(
+                    result = result,
+                    host = host.trim(),
+                    onNavigateToTool = onNavigateToTool,
+                    onOpenService = onOpenService,
+                )
             }
         }
     }
@@ -275,6 +299,7 @@ private fun PortResultRow(
     result: PortResult,
     host: String,
     onNavigateToTool: (String, String) -> Unit,
+    onOpenService: (ServiceLaunch) -> Unit,
 ) {
     val status = LocalStatusColors.current
     val iconColor by animateColorAsState(
@@ -340,22 +365,48 @@ private fun PortResultRow(
                 )
             }
         }
-        if (result.isOpen && result.port in HTTP_PORTS) {
+        // Remembered so an active scan doesn't rebuild a ServiceLaunch for every open-port row on
+        // every recomposition; the mapping only depends on these two values.
+        val launch = remember(host, result.port, result.isOpen) {
+            if (result.isOpen) ServiceLauncher.forPort(host, result.port) else null
+        }
+        if (result.isOpen && (result.port in HTTP_PORTS || launch != null)) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(start = 32.dp, top = 2.dp),
             ) {
-                val scheme = if (result.port in TLS_PORTS) "https" else "http"
-                val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
-                AssistChip(
-                    onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
-                    label = { Text(stringResource(R.string.portscan_action_http_test)) },
-                )
-                if (result.port in TLS_PORTS) {
+                // Hands the service to whatever app owns its scheme — a browser for a web
+                // server, a terminal for SSH — rather than only offering NetLens's own tools.
+                launch?.let { target ->
                     AssistChip(
-                        onClick = { onNavigateToTool("tls", host) },
-                        label = { Text(stringResource(R.string.portscan_action_tls_inspect)) },
+                        onClick = { onOpenService(target) },
+                        label = {
+                            Text(
+                                when (target.kind) {
+                                    ServiceLaunchKind.WEB ->
+                                        stringResource(R.string.portscan_action_open_web, target.serviceLabel)
+                                    ServiceLaunchKind.REMOTE ->
+                                        stringResource(R.string.portscan_action_connect, target.serviceLabel)
+                                    ServiceLaunchKind.FILES ->
+                                        stringResource(R.string.portscan_action_browse, target.serviceLabel)
+                                },
+                            )
+                        },
                     )
+                }
+                if (result.port in HTTP_PORTS) {
+                    val scheme = if (result.port in TLS_PORTS) "https" else "http"
+                    val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
+                    AssistChip(
+                        onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
+                        label = { Text(stringResource(R.string.portscan_action_http_test)) },
+                    )
+                    if (result.port in TLS_PORTS) {
+                        AssistChip(
+                            onClick = { onNavigateToTool("tls", host) },
+                            label = { Text(stringResource(R.string.portscan_action_tls_inspect)) },
+                        )
+                    }
                 }
             }
         }

@@ -304,6 +304,27 @@ private class InMemoryKnownDeviceDao : KnownDeviceDao {
         }
     }
 
+    override suspend fun getById(id: Long): KnownDeviceEntity? = allDevices.find { it.id == id }
+
+    override suspend fun updateUserDetails(
+        id: Long,
+        customName: String?,
+        tags: String?,
+        notes: String?,
+        location: String?,
+    ) {
+        val index = allDevices.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            allDevices[index] = allDevices[index].copy(
+                customName = customName,
+                tags = tags,
+                notes = notes,
+                location = location,
+            )
+            _flow.update { allDevices.toList() }
+        }
+    }
+
     override fun search(query: String): Flow<List<KnownDeviceEntity>> =
         flowOf(allDevices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })
 

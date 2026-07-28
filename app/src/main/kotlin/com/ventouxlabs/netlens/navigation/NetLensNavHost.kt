@@ -108,9 +108,13 @@ fun NetLensNavHost(
                 onNavigateToTool = navigateToTool,
             )
         }
-        composable(ToolDestination.Devices.route) {
+        composable(
+            route = "${ToolDestination.Devices.route}?query={query}",
+            arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
             DevicesScreen(
                 onBack = navController::popBackStack,
+                initialQuery = entry.arguments?.getString("query")?.ifEmpty { null },
                 onNavigateToTool = navigateToTool,
             )
         }

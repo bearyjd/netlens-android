@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.devices
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.ViewModelStore
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
@@ -8,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,12 +30,18 @@ class DevicesBuildExportTextTest {
     private lateinit var knownDao: FakeKnownDeviceDao
     private lateinit var viewModel: DevicesViewModel
 
+    private val viewModelStore = ViewModelStore()
+    private lateinit var dataStoreScope: CoroutineScope
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         knownDao = FakeKnownDeviceDao()
+        // Cancelled in tearDown: a DataStore collector left running here resumes on a later
+        // test's Main dispatcher and fails there instead, as an unexplained flake.
+        dataStoreScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         val dataStore = PreferenceDataStoreFactory.create(
-            scope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+            scope = dataStoreScope,
             produceFile = { File(tempDir, "test_prefs.preferences_pb") },
         )
         val fakeKeyValueStore = object : KeyValueStore {
@@ -50,11 +58,17 @@ class DevicesBuildExportTextTest {
             FakeNetworkIdentity(),
             userPreferences,
             RecordingWatchScheduler(),
+            UnconfinedTestDispatcher(),
         )
+        viewModelStore.put("devices", viewModel)
     }
 
     @AfterEach
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        viewModelStore.clear()
+        dataStoreScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `export lists each device with custom name precedence`() = runTest {

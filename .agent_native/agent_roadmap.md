@@ -242,6 +242,20 @@ their `HttpClient(MockEngine)` test setup through the same shared helper.
   no DAO-level tests use an in-memory Room database (would need Robolectric or
   `Room.inMemoryDatabaseBuilder` against a JVM-only test config — confirm which is
   wired before assuming either works today).
+  - **Concrete consequence, worth knowing before you trust a green suite:** the
+    `known_devices` write-path split is a *correctness invariant* with no automated
+    guard. Scan-derived columns (`hostname`, `ip`, `vendor`, `deviceType`, `osGuess`)
+    are written only by `KnownDeviceDao.updateLastSeen`; user-authored ones
+    (`customName`, `tags`, `notes`, `location`) only by `updateUserDetails`. A re-scan
+    must never clobber what the user typed. `DeviceTaggingTest` asserts this against
+    `FakeKnownDeviceDao`, whose implementation copies exactly the four fields — so it
+    verifies the fake, not the `@Query`. Adding `hostname = :hostname` to the real
+    statement would ship with CI fully green. Same for `MIGRATION_14_15`: Room only
+    validates a migration against the schema at *runtime*, so a mismatch is a
+    first-launch crash for upgrading users that no JVM test can catch. Both were
+    checked by hand (2026-07-26, PR #116) by diffing the migration DDL against the
+    generated `15.json`. Re-check by hand after any edit to either, until an
+    in-memory-Room test exists.
 
 ## Not a gap (verified, don't re-litigate)
 

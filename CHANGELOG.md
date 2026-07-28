@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Device tags and details** — inventoried hosts can now carry your own labels, a location and free-form notes alongside a custom name. Tags appear on the device rows in both Devices and LAN Scan's Inventory tab, a filter-chip row narrows the inventory to a tag, and search now covers tags, notes, location and custom names instead of just hostname and IP. Tagging a host from a scan jumps straight to it in Devices. Everything you type is stored separately from what the scanner discovers, so a later scan refreshes hostname/IP/vendor without touching your notes.
+- **Wi-Fi coverage survey** — a Coverage tab in the Wi-Fi Analyzer for walking the house and finding dead spots. It samples the live connection continuously (not the throttled Wi-Fi scan, so readings keep up with walking pace), shows a live signal meter with a trail of recent readings, and captures a named spot from a short burst of samples so a room is judged on several seconds of signal rather than one twitchy reading. Captured spots are drawn as a ranked coverage map with the weak ones called out, each spot recording which access point served it — useful for spotting a room being held by the wrong mesh node. Surveys are saved so you can re-walk after moving a router and compare.
+- **Open discovered services** — open ports that map to something the phone can actually launch are now tappable in the LAN Scan host sheet and the Port Scan results. A web server opens in the browser, SSH/Telnet/VNC/RDP hand off to a terminal or remote-desktop app, and SMB/FTP to a file client. Ports with nothing to hand off to (databases, caches) stay non-tappable, and if no app is installed for a scheme NetLens says so rather than failing silently.
+
 ## [1.2.6] - 2026-07-27
 
 ### Added

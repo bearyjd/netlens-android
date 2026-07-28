@@ -29,8 +29,11 @@ import com.ventouxlabs.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.MdnsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.WifiSurveyPointEntity
+import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.TlsHistoryEntry
@@ -60,8 +63,10 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         SpeedTestHistoryEntry::class,
         KnownDeviceEntity::class,
         WatchedNetworkEntity::class,
+        WifiSurveySessionEntity::class,
+        WifiSurveyPointEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
@@ -82,4 +87,5 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun speedTestHistoryDao(): SpeedTestHistoryDao
     abstract fun knownDeviceDao(): KnownDeviceDao
     abstract fun watchedNetworkDao(): WatchedNetworkDao
+    abstract fun wifiSurveyDao(): WifiSurveyDao
 }

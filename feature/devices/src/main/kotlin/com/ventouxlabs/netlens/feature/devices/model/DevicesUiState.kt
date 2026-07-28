@@ -11,6 +11,10 @@ data class DevicesUiState(
     val cadence: WatchCadence = WatchCadence.DEFAULT,
     val masterWatchEnabled: Boolean = false,
     val selectedDeviceId: Long? = null,
+    /** Every tag in the inventory, for the filter-chip row — not just the ones in [devices]. */
+    val availableTags: List<String> = emptyList(),
+    /** Tags currently toggled on; empty means unfiltered. */
+    val activeTags: Set<String> = emptySet(),
     /** Transient string-resource id for a watch-add failure; shown once then cleared. */
     @param:StringRes val watchError: Int? = null,
 )

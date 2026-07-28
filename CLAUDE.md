@@ -38,7 +38,7 @@ app ──┬── feature:* (22 modules)  ── core:network
 
 - **`app`** — single Activity (`MainActivity`), hosts `NetLensNavHost` which routes to all feature screens. Navigation uses string routes defined in the `ToolDestination` enum (`app/.../navigation/ToolDestination.kt`).
 - **`core:network`** — connectivity monitoring (`NetworkMonitor`), SSRF guard, coroutine utilities, and result export (`export/ResultExporter`). No HTTP client library (features use Ktor or raw sockets directly).
-- **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`.
+- **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`. Every schema change needs a `Migration` in `DataModule` — the builder only falls back destructively on *downgrade*.
 - **`core:billing`** — `ProStatus` interface (`isPro: StateFlow<Boolean>`, `launchPurchase(activity)`) and `LocalProStatus` CompositionLocal (safe no-op default). Flavor-specific implementations: `app/src/foss/` has `FossProStatus` (always Pro), `app/src/gplay/` has `GplayProStatus` (Google Play Billing with `BillingClientWrapper` for testability, `EncryptedSharedPreferences` for purchase state, reconnect counter with max 3 attempts).
 - **`core:oui`** — MAC address vendor lookup from OUI database.
 - **`widget`** — Glance-based home screen widget.
@@ -63,6 +63,12 @@ feature/<name>/src/main/kotlin/com.ventouxlabs.netlens/feature/<name>/
 **UI state pattern**: `MutableStateFlow<UiState>` exposed as `StateFlow`, updated via `.update { it.copy(...) }`. No MVI event sealed class — ViewModels expose individual action methods.
 
 **Result export pattern**: All 13 tool ViewModels (Ping, Traceroute, DNS, PortScan, WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS, SpeedTest, WiFi) expose `fun buildExportText(): String` which serialises current UI state to a plain-text string. Screens call `ResultExporter.shareAsText()` or `ResultExporter.copyToClipboard()` (both in `core:network/export/ResultExporter.kt`) from Share/Copy IconButtons in each screen's `TopAppBar`. Modules that did not previously depend on `core:network` or `compose.material.icons` had those dependencies added as part of this feature (ipcalc: both; whois, httptester, tls, mdns: `compose.material.icons`).
+
+**Device inventory (`known_devices`)**: scan-derived columns (`hostname`, `ip`, `vendor`, `deviceType`, `osGuess`) are owned by `DeviceInventoryRepository.persistScan` via `KnownDeviceDao.updateLastSeen`; user-authored columns (`customName`, `tags`, `notes`, `location`) are owned by the Devices detail sheet via `KnownDeviceDao.updateUserDetails`. Keep those two write paths disjoint — a re-scan must never clobber what the user typed. Tags are a normalised comma-separated column; always read/write them through `DeviceTags` (`core:data`), and filter/search rows through `KnownDeviceSearch` so Devices and LAN Scan's Inventory tab stay in step.
+
+**Wi-Fi coverage survey** (`feature:wifi`): `WifiSurveyViewModel` samples the live association through the `WifiSignalSampler` seam (fake it in tests — see `FakeWifiSignalSampler`) rather than `WifiManager.startScan()`, which is throttled to 4 scans/2 min on API 28+ and far too slow to walk with. A captured "spot" is an aggregate of `CAPTURE_SAMPLE_TARGET` samples, not one reading; aggregation lives in the pure `SurveyAggregator`.
+
+**Service launch** (`feature:portscan`): `ServiceLauncher.forPort` maps an open port to a URI and `ServiceIntentLauncher` fires it as `ACTION_VIEW`. It deliberately does not call `resolveActivity` first — Android 11 package visibility would make that report "no handler" for schemes that do work — so callers must handle the `false` return and tell the user.
 
 **Pro-gating patterns** (3 variants, choose based on screen architecture):
 1. **Direct `if (isPro)`** (11 screens: DNS, HTTP, IpCalc, IpInfo, Ping, PortScan, SpeedTest, TLS, Traceroute, WHOIS, WiFi share button) — read `LocalProStatus.current` in the screen composable, wrap share `IconButton` in `if (isPro) { ... }`.
