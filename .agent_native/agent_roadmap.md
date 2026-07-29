@@ -223,7 +223,11 @@ their `HttpClient(MockEngine)` test setup through the same shared helper.
 - **Robolectric adoption** for Context/Room/DataStore/ConnectivityManager-dependent
   code — highest structural leverage for verification gaps but repo-wide in scope
   (touches `build-logic/convention`); needs its own scoped plan.
-- **Compose screenshot/snapshot tests** — there are none anywhere in the repo. Would
+- **Compose screenshot/snapshot tests** — there are none anywhere in the repo. **Cost demonstrated
+  2026-07-28:** a duplicate-`LazyColumn`-key crash on the Wi-Fi survey's primary path shipped
+  through three review passes, an adversarial round and 750 green unit tests, and was found by a
+  two-minute manual walk (`dc03409`). Compose runtime invariants — duplicate keys, composition
+  errors, measure/layout failures — are invisible to every check this repo currently runs. Would
   let an agent verify UI regressions (e.g. DESIGN.md's typography/spacing rules)
   without a device. Consider `Paparazzi` (no emulator required, JVM-only, matches the
   "no physical device" constraint) over `Screenshot Testing for Compose` (needs a

@@ -130,11 +130,11 @@ reporting 1.2.5 / code 12. Their NetLens database is at **schema v15**.
 
 ## Open items
 
-1. **The survey has never been exercised on hardware.** Largest untested surface in the app.
-   `WifiSignalSamplerImpl` has no automated coverage at all, and the `isChangingConfigurations`
-   wiring that keeps a capture alive across a fold is device-only by nature. **Required walk:**
-   start a survey, capture a spot, fold mid-burst (must survive), then background past 3s (must
-   discard with `CAPTURE_INTERRUPTED`).
+1. **Survey verified on hardware (2026-07-28) — and the walk found a crash the reviews didn't.**
+   See "The crash a device walk found" below. Capturing multiple points and sharing both work.
+   Still NOT exercised: fold mid-capture (must survive) and background past
+   `MAX_CAPTURE_GAP_MS` (must discard with `CAPTURE_INTERRUPTED`). Those two paths remain
+   device-only and unverified.
 2. **Next release is 1.3.0** — needs `versionCode 14` and
    `fastlane/metadata/android/en-US/changelogs/14.txt`. The `[Unreleased]` CHANGELOG block is
    already written and describes #116's three features. Signing path is proven, so
@@ -151,6 +151,35 @@ reporting 1.2.5 / code 12. Their NetLens database is at **schema v15**.
 7. **`.claude/PRPs` is gitignored**, so review artifacts (including
    `.claude/PRPs/reviews/pr-116-review.md`) are local-only and lost on a fresh clone. Already
    tracked in `.agent_native/agent_roadmap.md` as needing a human decision.
+
+## The crash a device walk found (2026-07-28)
+
+The user walked a survey, captured one point, and the app closed. Root cause, from the device
+crash buffer:
+
+```
+IllegalArgumentException: Key "1" was already used.
+```
+
+`WifiSurveyTab` renders captured spots and past sessions with two `items()` calls inside **one**
+`LazyColumn`, both keyed on the raw row id. Points and sessions come from different tables with
+independent autoincrement sequences, so point 1 and session 1 are the same key. It fires on the
+first capture — the moment a survey first holds both. Sharing looked broken for the same reason:
+copy/share are gated on `points.isNotEmpty()`, so the crash beat the buttons onto the screen.
+
+Fixed in `dc03409` by namespacing through `surveyPointKey`/`surveySessionKey`, pinned by
+`SurveyListKeysTest`. Repo swept for the same shape — `MonitorScreen` uses two separate
+`LazyColumn`s, `HomeScreen` already namespaces (`"tool_"`/`"search_"`), and `DevicesScreen`'s two
+`items()` are partitions of one list. This was the only instance.
+
+**Why it matters beyond the bug.** It was self-inflicted: converting the coverage map from one
+`item{}` into per-bar `items(key = { it.id })` was a *performance fix* from an earlier review
+round; before it, points had no keys and could not collide. Review pass 2 looked straight at that
+line and cleared it ("uses DB primary keys, so no duplicate-key crash") — true within the list,
+wrong across two lists sharing a column. **Three review passes, an adversarial round and 750 unit
+tests missed a crash on the feature's primary path, and a two-minute device walk found it
+instantly.** That is the cost of having no Compose UI tests, stated plainly. Treat "CI is green"
+as saying nothing about Compose runtime invariants.
 
 ## Quick reference
 
