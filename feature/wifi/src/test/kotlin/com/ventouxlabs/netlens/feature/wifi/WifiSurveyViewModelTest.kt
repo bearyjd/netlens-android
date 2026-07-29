@@ -383,19 +383,23 @@ class WifiSurveyViewModelTest {
 
     @Test
     fun `backgrounding mid-capture abandons the burst rather than splitting it`() = runTest {
+        var clock = 10_000L
+        viewModel.nowMs = { clock }
         startSurvey()
         viewModel.onLabelChanged("Landing")
         viewModel.capturePoint()
         sampler.emitBurst(captureTarget - 2, rssi = -70)
 
         viewModel.onScreenStopped()
+        // Genuinely away: past the gap, so the burst no longer describes one spot.
+        clock += WifiSurveyViewModel.MAX_CAPTURE_GAP_MS + 1
+        viewModel.onScreenStarted()
 
         assertNull(viewModel.state.value.capture)
         assertEquals(SurveyError.CAPTURE_INTERRUPTED, viewModel.state.value.error)
         assertTrue(dao.points.value.isEmpty(), "a burst spanning a background gap is not one spot")
 
         // And the abandoned samples must not be folded into the next capture.
-        viewModel.onScreenStarted()
         viewModel.onLabelChanged("Landing")
         viewModel.capturePoint()
         sampler.emitBurst(captureTarget, rssi = -50)
@@ -405,14 +409,17 @@ class WifiSurveyViewModelTest {
     }
 
     @Test
-    fun `a configuration change keeps the capture instead of blaming the background`() = runTest {
+    fun `a fold keeps the capture instead of blaming the background`() = runTest {
+        var clock = 10_000L
+        viewModel.nowMs = { clock }
         startSurvey()
         viewModel.onLabelChanged("Landing")
         viewModel.capturePoint()
         sampler.emitBurst(captureTarget - 2, rssi = -70)
 
-        // Rotation, fold or font-size change: ON_STOP fires, but the user never left.
-        viewModel.onScreenStopped(isConfigurationChange = true)
+        // A fold stops the screen exactly like backgrounding does; only the gap tells them apart.
+        viewModel.onScreenStopped()
+        clock += 400 // an activity recreation, not a departure
 
         assertNotNull(viewModel.state.value.capture, "a fold must not destroy an in-progress burst")
         assertNull(viewModel.state.value.error)
@@ -434,7 +441,7 @@ class WifiSurveyViewModelTest {
         sampler.emitBurst(captureTarget - 2, rssi = -70)
 
         // Folded — held, as a recreation is sub-second.
-        viewModel.onScreenStopped(isConfigurationChange = true)
+        viewModel.onScreenStopped()
         assertNotNull(viewModel.state.value.capture)
 
         // ...but the phone went in a pocket and came back out somewhere else.

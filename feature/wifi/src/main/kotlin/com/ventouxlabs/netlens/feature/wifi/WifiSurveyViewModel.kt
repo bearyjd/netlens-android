@@ -219,16 +219,15 @@ class WifiSurveyViewModel @Inject constructor(
      * this the sampler keeps waking the radio every SAMPLE_INTERVAL_MS for as long as the entry
      * stays on the back stack — a background battery drain the user cannot see or stop.
      *
-     * [isConfigurationChange] separates "the activity is being recreated" from "the user left".
-     * ON_STOP fires for both, but a rotation or a fold is not a departure: abandoning the capture
-     * there would destroy a burst over a gap of milliseconds, and on a foldable that gesture is
-     * constant. On a real departure the capture *is* abandoned — a burst split across a
-     * backgrounded gap is not five seconds of standing in one spot, which is the only thing a
-     * captured point is allowed to mean.
+     * A capture in progress is *suspended*, never abandoned here. ON_STOP cannot tell a fold or
+     * rotation from the user walking away — `isChangingConfigurations` was tried and reports false
+     * for a fold on a real foldable — so the decision is deferred to [onScreenStarted], which has
+     * the one fact that actually matters: how long the gap was. Under MAX_CAPTURE_GAP_MS the burst
+     * still describes one spot; past it, it doesn't, and it is discarded.
      *
      * The session stays open either way, so returning resumes the same walk.
      */
-    fun onScreenStopped(isConfigurationChange: Boolean = false) {
+    fun onScreenStopped() {
         when (val current = phase) {
             // A start in flight is abandoned, not left to resume: within START_SAMPLE_TIMEOUT_MS
             // there is no sampling job yet, so letting it complete would begin polling the radio
@@ -246,15 +245,8 @@ class WifiSurveyViewModel @Inject constructor(
             SurveyPhase.Idle -> Unit
         }
 
-        if (_state.value.capture != null) {
-            if (isConfigurationChange) {
-                // Held, not abandoned — but only for as long as a recreation plausibly takes.
-                // onScreenStarted enforces the bound; see MAX_CAPTURE_GAP_MS.
-                captureSuspendedAtMs = nowMs()
-            } else {
-                abandonCapture(SurveyError.CAPTURE_INTERRUPTED)
-            }
-        }
+        // Held; onScreenStarted enforces the bound. See MAX_CAPTURE_GAP_MS.
+        if (_state.value.capture != null) captureSuspendedAtMs = nowMs()
         _state.update { it.copy(liveSample = null) }
     }
 
@@ -267,10 +259,9 @@ class WifiSurveyViewModel @Inject constructor(
 
     /** Back in the foreground: pick the walk up again if a survey is still open. */
     fun onScreenStarted() {
-        // A configuration change holds the burst rather than dropping it, but nothing bounds how
-        // long the activity stays stopped — fold the phone and pocket it and the "spot" would end
-        // up spanning two rooms. A captured point may only ever mean one place, so past this gap
-        // the burst is discarded like any other interruption.
+        // Every stop suspends the burst; this is where it lives or dies. A fold is sub-second and
+        // the burst resumes. Pocket the phone and walk to another room and the "spot" would span
+        // two of them — a captured point may only ever mean one place, so past the gap it goes.
         captureSuspendedAtMs?.let { suspendedAt ->
             captureSuspendedAtMs = null
             if (nowMs() - suspendedAt > MAX_CAPTURE_GAP_MS && _state.value.capture != null) {

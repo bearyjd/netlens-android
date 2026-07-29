@@ -56,10 +56,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.app.Activity
-import android.util.Log
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
@@ -84,24 +80,13 @@ fun WifiScreen(
     // Sampling follows the screen, not the ViewModel: viewModelScope survives backgrounding, so
     // without this the survey keeps polling the radio while the user is in another app.
     val context = LocalContext.current
-    LifecycleStartEffect(surveyViewModel, context) {
+    // ON_STOP cannot distinguish a fold from the user leaving — isChangingConfigurations was tried
+    // and reports false for a fold on a real foldable. So the screen reports the stop plainly and
+    // the ViewModel decides on resume, using the elapsed gap, whether the burst still means one
+    // spot. That also keeps the decision in code a unit test can reach.
+    LifecycleStartEffect(surveyViewModel) {
         surveyViewModel.onScreenStarted()
-        onStopOrDispose {
-            // ON_STOP also fires for a rotation, a fold, or a font-size change, which are not
-            // departures — isChangingConfigurations is how the platform tells them apart. Getting
-            // this wrong destroys an in-progress capture on the commonest gesture on a foldable.
-            val activity = context.findActivity()
-            if (activity == null) {
-                // Defaulting to "the user left" discards the burst, which is the safe direction —
-                // a retained burst that spans two rooms is a false measurement, a dropped one is
-                // just five seconds. Logged because it should never happen, and if it does it
-                // would otherwise look like captures failing at random.
-                Log.w("WifiSurvey", "no host Activity for the survey screen; treating stop as a departure")
-            }
-            surveyViewModel.onScreenStopped(
-                isConfigurationChange = activity?.isChangingConfigurations == true,
-            )
-        }
+        onStopOrDispose { surveyViewModel.onScreenStopped() }
     }
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
@@ -578,14 +563,4 @@ private fun formatElapsed(ms: Long): String {
         totalSeconds < 3600 -> "${totalSeconds / 60}m"
         else -> "${totalSeconds / 3600}h"
     }
-}
-
-/** Unwraps the Compose context to its hosting Activity; `LocalActivity` needs activity-compose 1.10+. */
-private fun Context.findActivity(): Activity? {
-    var ctx = this
-    while (ctx is ContextWrapper) {
-        if (ctx is Activity) return ctx
-        ctx = ctx.baseContext
-    }
-    return null
 }
