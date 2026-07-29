@@ -45,6 +45,8 @@ import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionSummary
 import com.ventouxlabs.netlens.feature.wifi.engine.SurveyAggregator
 import com.ventouxlabs.netlens.feature.wifi.model.SignalQuality
 import com.ventouxlabs.netlens.feature.wifi.model.SurveyError
+import com.ventouxlabs.netlens.feature.wifi.model.surveyPointKey
+import com.ventouxlabs.netlens.feature.wifi.model.surveySessionKey
 import com.ventouxlabs.netlens.feature.wifi.model.WifiSurveyUiState
 import com.ventouxlabs.netlens.feature.wifi.ui.CoverageBar
 import com.ventouxlabs.netlens.feature.wifi.ui.SignalTrail
@@ -148,7 +150,7 @@ fun WifiSurveyTab(
             // One lazy item per bar, not one item holding every bar: a thorough survey of a large
             // house runs to dozens of spots, and wrapping them in a single item would compose and
             // measure all of them on every emission — including at the live meter's 1.4 Hz tick.
-            items(orderedPoints, key = { it.id }) { point ->
+            items(orderedPoints, key = { surveyPointKey(it.id) }) { point ->
                 CoverageBar(point = point, onDelete = { onDeletePoint(point.id) })
             }
         } else if (!state.isSurveying) {
@@ -173,7 +175,7 @@ fun WifiSurveyTab(
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
-            items(state.sessions, key = { it.id }) { session ->
+            items(state.sessions, key = { surveySessionKey(it.id) }) { session ->
                 SessionRow(
                     session = session,
                     isViewed = session.id == state.viewedSessionId,
