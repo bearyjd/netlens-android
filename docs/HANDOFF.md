@@ -10,10 +10,16 @@ they don't get re-litigated.
   (widget cross-render fix, 4x2 fontScale fix + enrichment, baseline profile). The
   *published* APK was downloaded and verified: cert `8fdfc928…`, `versionCode='13'`.
 - **PR #116 merged** — `78fa6e0`, squashed. Device tagging, Wi-Fi coverage survey,
-  launchable services. master CI green. 750 tests.
+  launchable services. master CI green. 752 tests.
+- **The survey is verified on hardware** — and the walk that verified it found a crash on the
+  feature's primary path that three review passes and 750 green tests had missed. Fixed in
+  `dc03409`; see "The crash a device walk found". Capturing multiple points and sharing both
+  work. Fold-mid-capture and background-past-3s remain unverified.
 - **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
 - **Only `master` exists on the remote.** All feature branches deleted.
 - **Nothing is in flight.** No open PRs, no running jobs.
+- **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
+  "Device state" before testing on either.
 
 ## CORRECTED: release signing secrets are valid (don't re-flag)
 
