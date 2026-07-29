@@ -5,6 +5,7 @@ import com.ventouxlabs.netlens.feature.wifi.model.WifiSignalSample
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -16,7 +17,19 @@ class FakeWifiSignalSampler(
     var connected: Boolean = true,
 ) : WifiSignalSampler {
 
-    private val flow = MutableSharedFlow<WifiSignalSample?>(replay = 1, extraBufferCapacity = 64)
+    private val live = MutableSharedFlow<WifiSignalSample?>(extraBufferCapacity = 64)
+
+    /**
+     * A reading pushed while nobody is collecting. It is handed to the *next* subscriber and then
+     * forgotten — which is what the production sampler does, since it polls the association the
+     * moment it is subscribed to.
+     *
+     * This deliberately replaces a `replay = 1` buffer. Replay served the same first-subscribe
+     * case, but it also redelivered a reading across an unsubscribed gap: a burst resuming after
+     * a fold silently picked up one stale sample from before the stop, so tests whose sample
+     * arithmetic happened to work only did so by accident. Nothing carries across a gap now.
+     */
+    private var pending: WifiSignalSample? = null
 
     /** Intervals the ViewModel asked for, so tests can assert the sampling cadence. */
     val requestedIntervals = mutableListOf<Long>()
@@ -28,12 +41,19 @@ class FakeWifiSignalSampler(
         // Must not be emptyFlow(): that *completes*, so a caller's timeout is never exercised and
         // a test would pass with the timeout deleted while the real app hung forever on Start.
         // The production sampler polls on and on, emitting null each tick — so does this.
-        return if (connected) flow else flow { while (true) { emit(null); delay(intervalMs) } }
+        if (!connected) return flow { while (true) { emit(null); delay(intervalMs) } }
+        return flow {
+            pending?.let {
+                pending = null
+                emit(it)
+            }
+            emitAll(live)
+        }
     }
 
     /** One tick observed while unassociated — what a walk out of range looks like. */
     suspend fun emitDisconnected() {
-        flow.emit(null)
+        push(null)
     }
 
     suspend fun emit(
@@ -43,7 +63,7 @@ class FakeWifiSignalSampler(
         frequency: Int = 5180,
         linkSpeedMbps: Int = 400,
     ) {
-        flow.emit(
+        push(
             WifiSignalSample(
                 timestampMs = nextTimestamp,
                 rssi = rssi,
@@ -54,6 +74,10 @@ class FakeWifiSignalSampler(
             ),
         )
         nextTimestamp += 700L
+    }
+
+    private suspend fun push(sample: WifiSignalSample?) {
+        if (live.subscriptionCount.value == 0) pending = sample else live.emit(sample)
     }
 
     /** Emits [count] readings at [rssi] — one full capture burst by default. */

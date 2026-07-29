@@ -190,4 +190,23 @@ class PortScanViewModelTest {
             assertEquals(2, finalState.results.size)
         }
     }
+
+    @Test
+    fun `arriving from another tool prefills the host`() {
+        // The bug this pins: the screen kept the host in a local rememberSaveable that never read
+        // state, so "scan this host" from LAN Scan or DNS silently opened an empty field.
+        viewModel.prefillHost("192.168.1.50")
+        assertEquals("192.168.1.50", viewModel.state.value.host)
+    }
+
+    @Test
+    fun `a prefill applies once so a recreated screen cannot clobber typing`() {
+        // The screen's LaunchedEffect re-runs whenever the composition is recreated — a rotation,
+        // a fold — while the ViewModel survives. Re-applying there would discard what was typed.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.onHostChanged("nas.local")
+        viewModel.prefillHost("192.168.1.50")
+
+        assertEquals("nas.local", viewModel.state.value.host)
+    }
 }

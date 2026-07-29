@@ -122,6 +122,38 @@ class WifiSurveyViewModelTest {
     }
 
     @Test
+    fun `walking back into range clears the signal error by itself`() = runTest {
+        startSurvey()
+        viewModel.onLabelChanged("Garage")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget - 3, rssi = -80)
+        sampler.emitDisconnected()
+        assertEquals(SurveyError.SIGNAL_LOST, viewModel.state.value.error)
+
+        // The radio comes back. "Signal lost" is now a lie about the spot the user is standing
+        // in, and they should not have to tap anything to dismiss it.
+        sampler.emit(-55)
+
+        assertNull(viewModel.state.value.error)
+        assertEquals(-55, viewModel.state.value.liveSample?.rssi)
+    }
+
+    @Test
+    fun `an error about the walk survives a live reading`() = runTest {
+        startSurvey()
+        // LABEL_REQUIRED is a statement about what the user did, not about the radio, so a
+        // reading does not disprove it — only acting on it does.
+        viewModel.capturePoint()
+        assertEquals(SurveyError.LABEL_REQUIRED, viewModel.state.value.error)
+
+        sampler.emit(-55)
+        assertEquals(SurveyError.LABEL_REQUIRED, viewModel.state.value.error)
+
+        viewModel.onLabelChanged("Garage")
+        assertNull(viewModel.state.value.error)
+    }
+
+    @Test
     fun `a dropped tick outside a capture blanks the meter without raising an error`() = runTest {
         startSurvey()
 

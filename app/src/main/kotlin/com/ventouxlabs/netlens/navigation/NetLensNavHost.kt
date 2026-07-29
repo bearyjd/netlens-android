@@ -42,7 +42,10 @@ fun NetLensNavHost(
     modifier: Modifier = Modifier,
 ) {
     val navigateToTool: (String, String) -> Unit = { route, query ->
-        val encoded = Uri.encode(query)
+        // The query is network-supplied (an mDNS name, a DNS answer, a traceroute hop), so it is
+        // vetted for its destination before it becomes a route — encoding alone keeps the route
+        // well-formed but still hands the target tool whatever the network said.
+        val encoded = Uri.encode(ToolQuery.sanitize(route, query))
         navController.navigate("$route?query=$encoded") { launchSingleTop = true }
     }
 

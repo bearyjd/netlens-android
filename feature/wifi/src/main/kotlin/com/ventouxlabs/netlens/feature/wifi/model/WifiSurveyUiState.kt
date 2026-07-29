@@ -44,4 +44,19 @@ enum class SurveyError {
 
     /** The screen was backgrounded mid-capture, so the burst no longer means "one spot". */
     CAPTURE_INTERRUPTED,
+
+    ;
+
+    /**
+     * Whether a live reading disproves this error, so it should clear itself the moment the radio
+     * comes back.
+     *
+     * True only for the two that are statements about the *current* signal. Leaving "signal lost"
+     * on screen while the meter shows a strong reading is worse than useless during a walk — the
+     * user is standing in the spot it is lying about. The rest describe something that happened
+     * and stays true: no label was typed, a burst produced nothing, a capture was interrupted.
+     * Those clear when the user acts on them.
+     */
+    val clearedByLiveSignal: Boolean
+        get() = this == NOT_CONNECTED || this == SIGNAL_LOST
 }

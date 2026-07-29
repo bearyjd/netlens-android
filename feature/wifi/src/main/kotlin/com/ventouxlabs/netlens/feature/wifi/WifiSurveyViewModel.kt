@@ -424,6 +424,10 @@ class WifiSurveyViewModel @Inject constructor(
             it.copy(
                 liveSample = sample,
                 trail = (it.trail + sample.rssi).takeLast(TRAIL_LENGTH),
+                // A reading in hand is proof the radio is back, so an error that only claimed
+                // otherwise retires itself. Walking back into range is the normal way out of a
+                // dead corner; it should not need a tap to acknowledge.
+                error = it.error?.takeUnless { error -> error.clearedByLiveSignal },
             )
         }
     }

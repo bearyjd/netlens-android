@@ -29,8 +29,23 @@ class PortScanViewModel @Inject constructor(
 
     private var scanJob: Job? = null
 
+    private var prefilled = false
+
     fun onHostChanged(host: String) {
         _state.update { it.copy(host = host) }
+    }
+
+    /**
+     * Seeds the host from another tool's "scan this host" action.
+     *
+     * Applied at most once per ViewModel: the screen's `LaunchedEffect` re-runs whenever the
+     * composition is recreated (a rotation, a fold), and the ViewModel outlives that — so an
+     * unguarded write would throw away whatever the user had typed since arriving.
+     */
+    fun prefillHost(host: String) {
+        if (prefilled) return
+        prefilled = true
+        onHostChanged(host)
     }
 
     fun buildExportText(): String {
