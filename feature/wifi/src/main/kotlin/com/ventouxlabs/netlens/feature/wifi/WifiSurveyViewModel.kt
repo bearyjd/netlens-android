@@ -424,10 +424,12 @@ class WifiSurveyViewModel @Inject constructor(
             it.copy(
                 liveSample = sample,
                 trail = (it.trail + sample.rssi).takeLast(TRAIL_LENGTH),
-                // A reading in hand is proof the radio is back, so an error that only claimed
-                // otherwise retires itself. Walking back into range is the normal way out of a
-                // dead corner; it should not need a tap to acknowledge.
-                error = it.error?.takeUnless { error -> error.clearedByLiveSignal },
+                // Deliberately does NOT clear the error. SIGNAL_LOST looks like a statement about
+                // the current signal, but onSignalLost only raises it when a burst was in flight,
+                // so it always means "the spot you were capturing was discarded". Retiring it on
+                // the next reading would erase that notice ~700ms after it appeared — and a roam
+                // mid-walk produces exactly that sequence, in the one feature whose whole purpose
+                // is walking around. Every error here clears on the user's next action instead.
             )
         }
     }

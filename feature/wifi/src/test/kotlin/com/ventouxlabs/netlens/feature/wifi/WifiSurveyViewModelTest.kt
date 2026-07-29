@@ -122,7 +122,7 @@ class WifiSurveyViewModelTest {
     }
 
     @Test
-    fun `walking back into range clears the signal error by itself`() = runTest {
+    fun `the signal-lost notice outlives the signal coming back`() = runTest {
         startSurvey()
         viewModel.onLabelChanged("Garage")
         viewModel.capturePoint()
@@ -130,12 +130,24 @@ class WifiSurveyViewModelTest {
         sampler.emitDisconnected()
         assertEquals(SurveyError.SIGNAL_LOST, viewModel.state.value.error)
 
-        // The radio comes back. "Signal lost" is now a lie about the spot the user is standing
-        // in, and they should not have to tap anything to dismiss it.
+        // A roam is one dropped tick, so the radio is back ~700ms later. SIGNAL_LOST reads like a
+        // statement about the current signal, but onSignalLost only raises it when a burst was in
+        // flight — it always means "that spot was discarded". Clearing it here would erase the
+        // only notice of the loss almost as fast as it appeared, and the user would walk on
+        // believing the room was recorded.
         sampler.emit(-55)
 
+        assertEquals(
+            SurveyError.SIGNAL_LOST,
+            viewModel.state.value.error,
+            "a discarded burst must stay reported even once the signal returns",
+        )
+        assertEquals(-55, viewModel.state.value.liveSample?.rssi, "the meter still goes live again")
+        assertTrue(dao.points.value.isEmpty(), "the partial burst really was discarded")
+
+        // It clears on the user's next action, like every other error here.
+        viewModel.onLabelChanged("Garage")
         assertNull(viewModel.state.value.error)
-        assertEquals(-55, viewModel.state.value.liveSample?.rssi)
     }
 
     @Test

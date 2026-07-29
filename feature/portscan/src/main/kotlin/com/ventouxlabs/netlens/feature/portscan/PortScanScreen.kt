@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.network.HostName
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.ui.StatusColors
@@ -401,10 +402,15 @@ private fun PortResultRow(
                 if (result.port in HTTP_PORTS) {
                     val scheme = if (result.port in TLS_PORTS) "https" else "http"
                     val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
-                    AssistChip(
-                        onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
-                        label = { Text(stringResource(R.string.portscan_action_http_test)) },
-                    )
+                    // toAuthority, not the bare host: an IPv6 literal has to be bracketed before it
+                    // goes in front of ":port", or the port reads as another group of the address.
+                    val authority = HostName.toAuthority(host)
+                    if (authority != null) {
+                        AssistChip(
+                            onClick = { onNavigateToTool("httptester", "$scheme://$authority$portSuffix") },
+                            label = { Text(stringResource(R.string.portscan_action_http_test)) },
+                        )
+                    }
                     if (result.port in TLS_PORTS) {
                         AssistChip(
                             onClick = { onNavigateToTool("tls", host) },

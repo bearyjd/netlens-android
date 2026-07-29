@@ -21,8 +21,12 @@ object HostName {
     fun sanitize(host: String): String? {
         val trimmed = host.trim().removeSurrounding("[", "]")
         // A link-local address carries a scope id ("fe80::1%wlan0"). '%' starts a percent-escape
-        // in an authority, and the scope is meaningless to whichever app handles the intent.
-        val bare = trimmed.substringBefore('%')
+        // in an authority, and the scope is meaningless to whichever app handles the intent — so
+        // it is dropped, but only for an IPv6 literal. Stripping it from a DNS name would rewrite
+        // "nas%00.local" into a different host ("nas") and hand it over as if it were what was
+        // asked for; a name carrying '%' is refused instead.
+        val beforeScope = trimmed.substringBefore('%')
+        val bare = if (beforeScope != trimmed && IPV6_LITERAL.matches(beforeScope)) beforeScope else trimmed
         return when {
             bare.isEmpty() -> null
             bare.contains(':') -> if (IPV6_LITERAL.matches(bare)) bare else null

@@ -44,6 +44,15 @@ class HostNameTest {
     }
 
     @Test
+    fun `a percent in a DNS name is refused, not silently truncated`() {
+        // Dropping everything after '%' is only correct for an IPv6 scope id. Applied to a name it
+        // would rewrite "nas%00.local" into a different host, "nas", and hand that back as if it
+        // were what was asked for — a silent substitution is worse than a refusal.
+        assertNull(HostName.sanitize("nas%00.local"))
+        assertNull(HostName.sanitize("evil%2f.example"))
+    }
+
+    @Test
     fun `sanitize leaves ipv6 bare and toAuthority brackets it`() {
         assertEquals("fe80::1", HostName.sanitize("fe80::1"))
         assertEquals("[fe80::1]", HostName.toAuthority("fe80::1"))

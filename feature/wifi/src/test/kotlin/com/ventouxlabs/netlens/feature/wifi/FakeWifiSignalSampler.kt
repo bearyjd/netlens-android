@@ -24,10 +24,16 @@ class FakeWifiSignalSampler(
      * forgotten — which is what the production sampler does, since it polls the association the
      * moment it is subscribed to.
      *
-     * This deliberately replaces a `replay = 1` buffer. Replay served the same first-subscribe
-     * case, but it also redelivered a reading across an unsubscribed gap: a burst resuming after
-     * a fold silently picked up one stale sample from before the stop, so tests whose sample
-     * arithmetic happened to work only did so by accident. Nothing carries across a gap now.
+     * This deliberately replaces a `replay = 1` buffer. What changed, precisely: a sample emitted
+     * *while a collector was subscribed* is no longer redelivered to the next one. Under replay a
+     * burst resuming after a fold silently absorbed one stale pre-stop sample, so tests whose
+     * sample arithmetic worked did so by accident.
+     *
+     * What did NOT change: a sample pushed while nothing is collecting is still held and handed to
+     * the next subscriber — that is this field, and tests rely on it (see `startSurvey`, and the
+     * emit between `onScreenStopped` and `onScreenStarted` in the backgrounding test). Only one is
+     * held; a second push while unsubscribed overwrites the first and is lost, so `emitBurst`
+     * against a stopped screen collapses to a single sample.
      */
     private var pending: WifiSignalSample? = null
 
