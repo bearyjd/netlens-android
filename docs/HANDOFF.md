@@ -11,10 +11,9 @@ they don't get re-litigated.
   *published* APK was downloaded and verified: cert `8fdfc928…`, `versionCode='13'`.
 - **PR #116 merged** — `78fa6e0`, squashed. Device tagging, Wi-Fi coverage survey,
   launchable services. master CI green. 752 tests.
-- **The survey is verified on hardware** — and the walk that verified it found a crash on the
-  feature's primary path that three review passes and 750 green tests had missed. Fixed in
-  `dc03409`; see "The crash a device walk found". Capturing multiple points and sharing both
-  work. Fold-mid-capture and background-past-3s remain unverified.
+- **The survey is verified on hardware, and device use found TWO defects the reviews missed** —
+  a crash on the primary path (`dc03409`) and a fold that still killed the capture (`811c9e1`).
+  Capturing multiple points and sharing both work. See "What device use found".
 - **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
 - **Only `master` exists on the remote.** All feature branches deleted.
 - **Nothing is in flight.** No open PRs, no running jobs.
@@ -87,8 +86,10 @@ Worth knowing about the shipped code:
   street address. UI and export share `apShortName`.
 - `ServiceLauncher.forPort` **validates** the host rather than escaping it (no legitimate host
   needs `/ ? # @`).
-- `MAX_CAPTURE_GAP_MS` (3s) bounds how long a capture may be held across a configuration
-  change. A fold survives; a pocketed phone doesn't.
+- A stopped capture is **suspended, never abandoned at ON_STOP**. `onScreenStarted` judges it by
+  the elapsed gap alone: under `MAX_CAPTURE_GAP_MS` (3s) the burst resumes, past it the burst is
+  discarded with `CAPTURE_INTERRUPTED`. A fold survives; a pocketed phone doesn't. Do NOT
+  reintroduce `isChangingConfigurations` — see below for why it doesn't work.
 
 ## Testing lessons worth keeping
 
@@ -125,10 +126,8 @@ what Room does.
 Both phones are signed with the real cert and their NetLens database is at **schema v15**, but
 they are on **different builds**:
 
-- **Pixel 10 Pro Fold `57211FDCG0023C` — versionCode 13**, a master build including the
-  duplicate-key crash fix. This is the one the survey was verified on.
-- **Pixel 9 Pro Fold `4A111FDKD0000C` — versionCode 12**, a pre-refactor #116 branch build. It
-  still has the crash. Reinstall from master before testing anything on it.
+Both are on **versionCode 13**, built from master at `811c9e1` (duplicate-key crash fix plus the
+gap-based capture fix). Reinstall from master after any survey change rather than assuming.
 
 - **Do not install v1.2.6 on them.** It is schema **v14**, and `provideDatabase` has
   `fallbackToDestructiveMigrationOnDowngrade` — Room will **wipe the database**.
@@ -141,11 +140,11 @@ they are on **different builds**:
 
 ## Open items
 
-1. **Survey verified on hardware (2026-07-28) — and the walk found a crash the reviews didn't.**
-   See "The crash a device walk found" below. Capturing multiple points and sharing both work.
-   Still NOT exercised: fold mid-capture (must survive) and background past
-   `MAX_CAPTURE_GAP_MS` (must discard with `CAPTURE_INTERRUPTED`). Those two paths remain
-   device-only and unverified.
+1. **Confirm the fold fix on hardware.** Multiple-point capture and sharing are verified. The
+   fold fix (`811c9e1`) is on both phones but **not yet confirmed by a walk**: fold mid-capture
+   should now keep counting, and backgrounding past 3s should discard with `CAPTURE_INTERRUPTED`.
+   Until someone folds a phone mid-burst, that fix has the same status the last one had when it
+   turned out not to work.
 2. **Next release is 1.3.0** — needs `versionCode 14` and
    `fastlane/metadata/android/en-US/changelogs/14.txt`. The `[Unreleased]` CHANGELOG block is
    already written and describes #116's three features. Signing path is proven, so
@@ -163,7 +162,7 @@ they are on **different builds**:
    `.claude/PRPs/reviews/pr-116-review.md`) are local-only and lost on a fresh clone. Already
    tracked in `.agent_native/agent_roadmap.md` as needing a human decision.
 
-## The crash a device walk found (2026-07-28)
+## What device use found (2026-07-28) — two defects, both invisible to CI
 
 The user walked a survey, captured one point, and the app closed. Root cause, from the device
 crash buffer:
@@ -183,14 +182,37 @@ Fixed in `dc03409` by namespacing through `surveyPointKey`/`surveySessionKey`, p
 `LazyColumn`s, `HomeScreen` already namespaces (`"tool_"`/`"search_"`), and `DevicesScreen`'s two
 `items()` are partitions of one list. This was the only instance.
 
-**Why it matters beyond the bug.** It was self-inflicted: converting the coverage map from one
+### Second defect: the fold fix did not work
+
+Folding mid-capture still showed *"NetLens went to the background mid-capture"* — the exact
+wrong-cause message the pass-2 HIGH fix was meant to remove. No "no host Activity" warning was
+logged, so the Activity unwrap succeeded and **`isChangingConfigurations` simply reports false for
+a fold on a real foldable**. The fix had shipped never having been runnable on a device.
+
+Replaced in `811c9e1` by removing the question entirely: ON_STOP always suspends the burst, and
+`onScreenStarted` judges it by the elapsed gap. That deleted `isConfigurationChange`, the Activity
+unwrap, the null fallback and its log — 56 deletions against 29 insertions — and specifically
+deleted the one part of the feature that no unit test could reach. The surviving decision is pure
+ViewModel logic with a controllable clock, pinned by tests both ways.
+
+**Do not reintroduce `isChangingConfigurations` here.** It was tried, it reports false for a fold,
+and the gap-based rule is both simpler and testable.
+
+### Why this matters beyond the bugs
+
+The crash was self-inflicted: converting the coverage map from one
 `item{}` into per-bar `items(key = { it.id })` was a *performance fix* from an earlier review
 round; before it, points had no keys and could not collide. Review pass 2 looked straight at that
 line and cleared it ("uses DB primary keys, so no duplicate-key crash") — true within the list,
 wrong across two lists sharing a column. **Three review passes, an adversarial round and 750 unit
 tests missed a crash on the feature's primary path, and a two-minute device walk found it
-instantly.** That is the cost of having no Compose UI tests, stated plainly. Treat "CI is green"
-as saying nothing about Compose runtime invariants.
+instantly.** The fold defect is the same story: a fix for a HIGH finding shipped green and did not
+work, because the thing it depended on could not be tested here.
+
+That is the cost of having no Compose or instrumentation tests, stated plainly. Treat "CI is
+green" as saying nothing about Compose runtime invariants or platform signals. **For this feature,
+a hardware walk is a required step, not an optional one** — it is 2 for 2 against the full review
+apparatus.
 
 ## Quick reference
 
