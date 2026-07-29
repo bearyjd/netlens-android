@@ -116,8 +116,13 @@ what Room does.
 
 ## Device state — READ BEFORE INSTALLING ANYTHING
 
-Both Pixel Folds run a **pre-refactor build of the #116 branch**, signed with the real cert,
-reporting 1.2.5 / code 12. Their NetLens database is at **schema v15**.
+Both phones are signed with the real cert and their NetLens database is at **schema v15**, but
+they are on **different builds**:
+
+- **Pixel 10 Pro Fold `57211FDCG0023C` — versionCode 13**, a master build including the
+  duplicate-key crash fix. This is the one the survey was verified on.
+- **Pixel 9 Pro Fold `4A111FDKD0000C` — versionCode 12**, a pre-refactor #116 branch build. It
+  still has the crash. Reinstall from master before testing anything on it.
 
 - **Do not install v1.2.6 on them.** It is schema **v14**, and `provideDatabase` has
   `fallbackToDestructiveMigrationOnDowngrade` — Room will **wipe the database**.
