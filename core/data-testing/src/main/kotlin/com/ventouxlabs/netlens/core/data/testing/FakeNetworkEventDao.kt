@@ -24,10 +24,19 @@ class FakeNetworkEventDao : NetworkEventDao {
 
     private val events = MutableStateFlow<List<NetworkEvent>>(emptyList())
 
-    /** Insertion-ordered record of everything written, for tests asserting on the write path. */
+    /**
+     * The rows currently held, in insertion order — **not** an append-only log of everything ever
+     * written. [deleteOlderThan] and [deleteAll] remove from this too, which is what the copy in
+     * `:feature:wifiaudit` did and what its tests assert. The name is kept for those call sites.
+     */
     val inserted: List<NetworkEvent> get() = events.value
 
-    override fun getAll(): Flow<List<NetworkEvent>> = events
+    // `ORDER BY timestamp DESC`, like the real query. Returning the backing list unsorted — which
+    // is what both copies of this fake did — is insertion order, the *reverse* of what Room gives
+    // back for a test that seeds ascending timestamps. Nothing calls getAll() today; that is
+    // exactly the condition under which the wifiaudit copy's ignored filters survived.
+    override fun getAll(): Flow<List<NetworkEvent>> =
+        events.map { it.sortedByDescending { e -> e.timestamp } }
 
     override fun getRecent(limit: Int): Flow<List<NetworkEvent>> =
         events.map { it.sortedByDescending { e -> e.timestamp }.take(limit) }

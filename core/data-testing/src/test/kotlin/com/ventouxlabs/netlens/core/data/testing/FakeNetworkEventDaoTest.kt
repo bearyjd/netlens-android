@@ -29,6 +29,16 @@ class FakeNetworkEventDaoTest {
     }
 
     @Test
+    fun `getAll comes back newest first, not in insertion order`() = runTest {
+        // Seeded ascending on purpose: the real query is ORDER BY timestamp DESC, so a fake that
+        // returns its backing list untouched hands back the exact reverse. Both copies of this
+        // fake did that, and it went unnoticed because getAll() has no callers yet.
+        val dao = seed()
+
+        assertEquals(listOf(300L, 200L, 100L), dao.getAll().first().map { it.timestamp })
+    }
+
+    @Test
     fun `a type filter actually filters`() = runTest {
         val dao = seed()
 
