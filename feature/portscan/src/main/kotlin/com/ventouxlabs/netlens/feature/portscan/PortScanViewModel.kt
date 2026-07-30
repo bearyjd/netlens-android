@@ -42,16 +42,22 @@ class PortScanViewModel @Inject constructor(
     /**
      * Seeds the host from another tool's "scan this host" action.
      *
-     * Applied at most once, and the "once" is itself saved state. The screen's `LaunchedEffect`
-     * re-runs whenever the composition is recreated (a rotation, a fold) while the ViewModel
-     * outlives it, so an unguarded write would throw away whatever had been typed. A plain field
-     * would not be enough: after process death the nav back stack restores the original
-     * `?query=` argument while the ViewModel is rebuilt fresh, so an in-memory flag would let the
-     * stale argument overwrite the user's edit rather than merely lose it.
+     * Applied once *per distinct host*, and that record is itself saved state. The screen's
+     * `LaunchedEffect` re-runs whenever the composition is recreated (a rotation, a fold) while
+     * the ViewModel outlives it, so an unguarded write would throw away whatever had been typed.
+     * A plain field would not be enough: after process death the nav back stack restores the
+     * original `?query=` argument while the ViewModel is rebuilt fresh, so an in-memory flag would
+     * let the stale argument overwrite the user's edit rather than merely lose it.
+     *
+     * Keyed on the host rather than a boolean because `navigateToTool` uses `launchSingleTop`. A
+     * second "scan this host" arriving while this screen is already on top reuses the entry and
+     * this ViewModel, so a once-ever flag would silently drop the new host — the tap would do
+     * nothing. Comparing values keeps every case the flag got right: a re-run with the same
+     * argument is still a no-op, and so is the argument restored after process death.
      */
     fun prefillHost(host: String) {
-        if (savedState[KEY_PREFILLED] ?: false) return
-        savedState[KEY_PREFILLED] = true
+        if (savedState.get<String>(KEY_PREFILLED_FOR) == host) return
+        savedState[KEY_PREFILLED_FOR] = host
         onHostChanged(host)
     }
 
@@ -127,6 +133,6 @@ class PortScanViewModel @Inject constructor(
 
     private companion object {
         const val KEY_HOST = "host"
-        const val KEY_PREFILLED = "prefilled"
+        const val KEY_PREFILLED_FOR = "prefilledFor"
     }
 }

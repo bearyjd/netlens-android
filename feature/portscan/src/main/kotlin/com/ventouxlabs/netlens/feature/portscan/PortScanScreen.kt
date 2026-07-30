@@ -399,18 +399,19 @@ private fun PortResultRow(
                         },
                     )
                 }
-                if (result.port in HTTP_PORTS) {
+                // toAuthority, not the bare host: an IPv6 literal has to be bracketed before it
+                // goes in front of ":port", or the port reads as another group of the address.
+                // Null means the host is one ToolQuery will refuse, so both chips are hidden
+                // rather than left to open their tool blank — the same "show no action" rule
+                // ServiceLauncher already follows.
+                val authority = HostName.toAuthority(host)
+                if (result.port in HTTP_PORTS && authority != null) {
                     val scheme = if (result.port in TLS_PORTS) "https" else "http"
                     val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
-                    // toAuthority, not the bare host: an IPv6 literal has to be bracketed before it
-                    // goes in front of ":port", or the port reads as another group of the address.
-                    val authority = HostName.toAuthority(host)
-                    if (authority != null) {
-                        AssistChip(
-                            onClick = { onNavigateToTool("httptester", "$scheme://$authority$portSuffix") },
-                            label = { Text(stringResource(R.string.portscan_action_http_test)) },
-                        )
-                    }
+                    AssistChip(
+                        onClick = { onNavigateToTool("httptester", "$scheme://$authority$portSuffix") },
+                        label = { Text(stringResource(R.string.portscan_action_http_test)) },
+                    )
                     if (result.port in TLS_PORTS) {
                         AssistChip(
                             onClick = { onNavigateToTool("tls", host) },

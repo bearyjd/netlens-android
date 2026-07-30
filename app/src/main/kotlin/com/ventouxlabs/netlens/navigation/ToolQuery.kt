@@ -41,7 +41,11 @@ object ToolQuery {
         if (scheme != "http" && scheme != "https") return ""
 
         val afterScheme = url.substring(schemeEnd + 3)
-        val authority = afterScheme.substringBefore('/')
+        // The authority ends at the first '/', '?' or '#' (RFC 3986 §3.2). Stopping only at '/'
+        // folded a query or fragment into the host, so "http://nas?x=1" failed validation and
+        // opened the tool blank — a silent no-op of the same shape as the prefill bug this branch
+        // exists to fix.
+        val authority = afterScheme.takeWhile { it != '/' && it != '?' && it != '#' }
         val rest = afterScheme.removePrefix(authority)
         // Anything before an '@' is userinfo, which is exactly the trick this guards against:
         // "192.168.1.1@evil.example" would otherwise read as a LAN device and load evil.example.
@@ -54,9 +58,22 @@ object ToolQuery {
             authority.substringBefore(':')
         }
         val port = authority.removePrefix(if (authority.startsWith("[")) "[$hostPart]" else hostPart)
-        if (port.isNotEmpty() && (!port.startsWith(":") || port.drop(1).any { !it.isDigit() })) return ""
+        if (port.isNotEmpty() && !isValidPort(port)) return ""
 
         val safeAuthority = HostName.toAuthority(hostPart) ?: return ""
         return "$scheme://$safeAuthority$port$rest"
+    }
+
+    /**
+     * `:` followed by 1-5 digits inside the TCP range.
+     *
+     * A bare `:` used to pass — `drop(1).any { … }` is vacuously false on an empty string — and so
+     * did `:99999999`, which then threw inside the HTTP client rather than being refused here.
+     */
+    private fun isValidPort(port: String): Boolean {
+        if (!port.startsWith(":")) return false
+        val digits = port.drop(1)
+        if (digits.isEmpty() || digits.length > 5 || digits.any { !it.isDigit() }) return false
+        return digits.toInt() in 1..65535
     }
 }

@@ -45,9 +45,41 @@ class ToolQueryTest {
             "ftp://nas.local",                 // not a scheme this tool speaks
             "nas.local",                       // no scheme at all
             "://nas.local",                    // empty scheme
+            "http://nas.local:",               // a colon with no port behind it
+            "http://nas.local:99999999",       // outside the TCP range — would throw in the client
+            "http://nas.local:0",              // not a connectable port
+            "http://[fe80::1]evil.example",    // trailing junk after a bracketed literal
         ).forEach {
             assertEquals("", ToolQuery.sanitize("httptester", it), "$it should be dropped")
         }
+    }
+
+    @Test
+    fun `a query or fragment ends the authority instead of being folded into the host`() {
+        // RFC 3986: the authority ends at the first '/', '?' or '#'. Stopping only at '/' made the
+        // host "nas.local?x=1", which fails validation — so a legitimate URL silently opened the
+        // tool blank. Same class of silent no-op as the prefill bug this branch fixes.
+        assertEquals("http://nas.local?x=1", ToolQuery.sanitize("httptester", "http://nas.local?x=1"))
+        assertEquals("https://example.com#top", ToolQuery.sanitize("httptester", "https://example.com#top"))
+        assertEquals(
+            "http://nas.local:8080?a=b",
+            ToolQuery.sanitize("httptester", "http://nas.local:8080?a=b"),
+        )
+    }
+
+    @Test
+    fun `an at-sign past the authority is query data, not userinfo`() {
+        // Worth pinning because it looks like the attack and is not. Userinfo only exists *before*
+        // the authority ends; "http://192.168.1.1?@evil.example" has host 192.168.1.1 and query
+        // "@evil.example", and it is 192.168.1.1 that gets the request — under RFC 3986, WHATWG
+        // and Ktor alike. Refusing it (which is what stopping the authority only at '/' did) threw
+        // away a safe URL. What matters is that the *host* is still pinned to the LAN device.
+        assertEquals(
+            "http://192.168.1.1?@evil.example",
+            ToolQuery.sanitize("httptester", "http://192.168.1.1?@evil.example"),
+        )
+        // The real trick — '@' inside the authority — is still refused.
+        assertEquals("", ToolQuery.sanitize("httptester", "http://192.168.1.1@evil.example/x"))
     }
 
     @Test

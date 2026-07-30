@@ -25,8 +25,17 @@ object HostName {
         // it is dropped, but only for an IPv6 literal. Stripping it from a DNS name would rewrite
         // "nas%00.local" into a different host ("nas") and hand it over as if it were what was
         // asked for; a name carrying '%' is refused instead.
+        //
+        // The colon test is load-bearing, not decoration. IPV6_LITERAL is deliberately loose and
+        // has no colon of its own, so it matches any run of hex letters and dots — "dead",
+        // "cafe", "1234". Without this, "cafe%evil.example" passed as a scoped literal and was
+        // handed back as "cafe", which is the exact rewrite the paragraph above forbids. It only
+        // looked fixed because the case that was tested ("nas") happens not to spell hex.
         val beforeScope = trimmed.substringBefore('%')
-        val bare = if (beforeScope != trimmed && IPV6_LITERAL.matches(beforeScope)) beforeScope else trimmed
+        val isScopedIpv6 = beforeScope != trimmed &&
+            beforeScope.contains(':') &&
+            IPV6_LITERAL.matches(beforeScope)
+        val bare = if (isScopedIpv6) beforeScope else trimmed
         return when {
             bare.isEmpty() -> null
             bare.contains(':') -> if (IPV6_LITERAL.matches(bare)) bare else null

@@ -219,6 +219,33 @@ class PortScanViewModelTest {
     }
 
     @Test
+    fun `a second scan-this-host for a different device still applies`() {
+        // navigateToTool uses launchSingleTop, so a "scan this host" arriving while Port Scan is
+        // already on top reuses the back stack entry and therefore this ViewModel. Guarding on a
+        // once-ever boolean made that tap do nothing at all — the user would press it and watch
+        // the previous host sit there. The guard is against re-applying the *same* argument, not
+        // against ever hearing a new one.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.prefillHost("192.168.1.60")
+
+        assertEquals("192.168.1.60", viewModel.state.value.host)
+    }
+
+    @Test
+    fun `a re-prefill of the same host is still a no-op after an edit and a restore`() {
+        // Both halves of the guard survive the change from a boolean to a value: the recreated
+        // composition case, and the restored-nav-argument case, for the same host.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.prefillHost("192.168.1.60")
+        viewModel.onHostChanged("nas.local")
+
+        val restored = restoredViewModel()
+        restored.prefillHost("192.168.1.60")
+
+        assertEquals("nas.local", restored.state.value.host)
+    }
+
+    @Test
     fun `a typed host survives process death`() {
         // The host used to live in a rememberSaveable, which wrote to the instance-state Bundle.
         // A plain MutableStateFlow does not, so moving it into the ViewModel would have quietly
