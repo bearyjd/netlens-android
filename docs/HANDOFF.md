@@ -1,4 +1,4 @@
-# Session Handoff — v1.2.6 shipped; #116 merged after three review passes (2026-07-28)
+# Session Handoff — #117/#118/#119 landed; release 1.3.0 gated on a hardware walk (2026-07-30)
 
 Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
 long-standing beliefs were corrected by evidence during this work — read those first, so
@@ -16,7 +16,8 @@ they don't get re-litigated.
   Capturing multiple points and sharing both work. See "What device use found".
 - **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
 - **Only `master` exists on the remote.** All feature branches deleted.
-- **Nothing is in flight.** No open PRs, no running jobs.
+- **Nothing is in flight.** No open PRs, no running jobs. PRs #117, #118 and #119 landed
+  2026-07-30 — see "What landed this session".
 - **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
   "Device state" before testing on either.
 
@@ -147,20 +148,43 @@ gap-based capture fix). Reinstall from master after any survey change rather tha
    turned out not to work.
 2. **Next release is 1.3.0** — needs `versionCode 14` and
    `fastlane/metadata/android/en-US/changelogs/14.txt`. The `[Unreleased]` CHANGELOG block is
-   already written and describes #116's three features. Signing path is proven, so
-   `/android-release` should be mechanical.
+   already written and describes #116's three features; **it does not yet mention #117's fixes**.
+   Signing path is proven, so `/android-release` should be mechanical. **Do item 1 first** — the
+   survey is the headline feature of this release and is 0 for 2 on shipping unverified.
 3. **F-Droid MR** — awaiting maintainers; read the thread manually (API 401s).
 4. **Play Console** — manual; the v1.2.6 gplay AAB is attached to the GitHub release.
    Checklist in `docs/play-store.md`.
-5. **`PortScanScreen.kt` prefill bug** — `var host by rememberSaveable { mutableStateOf("") }`
-   never syncs with `initialHost`, so "scan this host" from another tool silently does nothing.
-   Now safe to fix (host validation landed in #116).
-6. **Deferred LOWs from #116** (documented, not lost): `sanitizeHost` rejects underscore
-   hostnames (`my_nas`), the sibling `onNavigateToTool` URI is still unsanitized, survey errors
-   stick after recovery, and one test depends on `replay = 1` delivery order.
+5. ~~`PortScanScreen.kt` prefill bug~~ — **done, PR #117.**
+6. ~~Deferred LOWs from #116~~ — **done, PR #117.**
 7. **`.claude/PRPs` is gitignored**, so review artifacts (including
    `.claude/PRPs/reviews/pr-116-review.md`) are local-only and lost on a fresh clone. Already
    tracked in `.agent_native/agent_roadmap.md` as needing a human decision.
+8. **A device check for the PortScan prefill path** is unticked on #117: "scan this host" from LAN
+   Scan, then fold mid-edit. Same reasoning as item 1 — the prefill fix is Compose lifecycle
+   behaviour, which nothing in CI reaches.
+
+## What landed this session (2026-07-30) — three PRs, all squashed, master green
+
+- **#117** — PortScan prefill + the four deferred #116 LOWs. Two adversarial rounds on top of the
+  original commit, and **each round found a real defect in the previous round's fix**: round one
+  cleared `SIGNAL_LOST` on the next reading, which silently discarded a capture after a roam;
+  round two's `HostName` scope-id guard was ineffective for any name spelling hex
+  (`cafe%evil.example` → `cafe`) and only appeared to work because the case tested, `nas`, does
+  not spell hex. That is now four consecutive rounds where the fixes needed fixing — the pattern
+  from #116 held exactly.
+- **#118** — shared test doubles as `:core:scan-testing` / `:core:data-testing`. Three fakes had
+  been copied out of their home module and **every copy had drifted weaker**, which is worse than
+  duplication because a loose double turns a red test green. Full accounting in the roadmap.
+- **#119** — `SsrfRedirectProbe` in `:core:network-testing`, replacing a byte-identical MockEngine
+  in both `httptester` and `monitor`.
+
+**Do not reintroduce `testFixtures` source sets.** AGP 8.9 registers the variant; Kotlin 2.1.0
+registers no Kotlin compilation for it, so `compileDebugTestFixturesJavaWithJavac` exists,
+`compileDebugTestFixturesKotlin` does not, and Kotlin fixtures compile to nothing while consumers
+fail with `Unresolved reference`. This was tried first and reverted. The `-testing` module is the
+working shape.
+
+788 tests, up from 752 at the last handoff.
 
 ## What device use found (2026-07-28) — two defects, both invisible to CI
 
