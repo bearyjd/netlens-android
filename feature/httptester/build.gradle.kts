@@ -18,4 +18,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.ktor.client.mock)
+    // Shared SSRF-redirect probe; both modules used to hand-roll the same engine.
+    testImplementation(project(":core:network-testing"))
 }
