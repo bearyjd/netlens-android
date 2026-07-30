@@ -10,6 +10,10 @@ android {
 // see :core:scan-testing's build file for why these are modules rather than `testFixtures`
 // source sets.
 //
+// Named for :core:network even though the fixture is built on Ktor and :core:network deliberately
+// ships no HTTP client: the invariant under test is SsrfGuard, which lives there. The Ktor
+// dependency is the vehicle, not the subject.
+//
 // Consumers depend on this with `testImplementation`, so nothing here ships in the APK.
 dependencies {
     // `api`: MockEngine and HttpClientEngine appear in the fixtures' public signatures.
