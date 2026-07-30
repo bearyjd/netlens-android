@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.portscan
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,15 +23,42 @@ import javax.inject.Inject
 class PortScanViewModel @Inject constructor(
     private val portScanner: PortScanner,
     private val portScanHistoryDao: PortScanHistoryDao,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(PortScanUiState())
+    private val _state = MutableStateFlow(PortScanUiState(host = savedState[KEY_HOST] ?: ""))
     val state: StateFlow<PortScanUiState> = _state.asStateFlow()
 
     private var scanJob: Job? = null
 
     fun onHostChanged(host: String) {
+        // Mirrored into SavedStateHandle, not just the StateFlow: a ViewModel does not survive
+        // process death, and the field used to be a rememberSaveable that did. Without this,
+        // typing a host, getting reclaimed in the background and returning loses it.
+        savedState[KEY_HOST] = host
         _state.update { it.copy(host = host) }
+    }
+
+    /**
+     * Seeds the host from another tool's "scan this host" action.
+     *
+     * Applied once *per distinct host*, and that record is itself saved state. The screen's
+     * `LaunchedEffect` re-runs whenever the composition is recreated (a rotation, a fold) while
+     * the ViewModel outlives it, so an unguarded write would throw away whatever had been typed.
+     * A plain field would not be enough: after process death the nav back stack restores the
+     * original `?query=` argument while the ViewModel is rebuilt fresh, so an in-memory flag would
+     * let the stale argument overwrite the user's edit rather than merely lose it.
+     *
+     * Keyed on the host rather than a boolean because `navigateToTool` uses `launchSingleTop`. A
+     * second "scan this host" arriving while this screen is already on top reuses the entry and
+     * this ViewModel, so a once-ever flag would silently drop the new host — the tap would do
+     * nothing. Comparing values keeps every case the flag got right: a re-run with the same
+     * argument is still a no-op, and so is the argument restored after process death.
+     */
+    fun prefillHost(host: String) {
+        if (savedState.get<String>(KEY_PREFILLED_FOR) == host) return
+        savedState[KEY_PREFILLED_FOR] = host
+        onHostChanged(host)
     }
 
     fun buildExportText(): String {
@@ -47,6 +75,8 @@ class PortScanViewModel @Inject constructor(
 
     fun scan(host: String, ports: List<Int>) {
         scanJob?.cancel()
+        // The screen scans the trimmed host, so that is what must be restored, not the raw text.
+        savedState[KEY_HOST] = host
         _state.update {
             PortScanUiState(
                 host = host,
@@ -99,5 +129,10 @@ class PortScanViewModel @Inject constructor(
     fun cancelScan() {
         scanJob?.cancel()
         _state.update { it.copy(isScanning = false) }
+    }
+
+    private companion object {
+        const val KEY_HOST = "host"
+        const val KEY_PREFILLED_FOR = "prefilledFor"
     }
 }

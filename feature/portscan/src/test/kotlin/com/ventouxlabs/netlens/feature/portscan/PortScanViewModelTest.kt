@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.portscan
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,12 +42,19 @@ class PortScanViewModelTest {
         override suspend fun deleteAll() {}
     }
 
+    private lateinit var savedState: SavedStateHandle
+
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakePortScanner = FakePortScanner()
-        viewModel = PortScanViewModel(fakePortScanner, fakePortScanHistoryDao)
+        savedState = SavedStateHandle()
+        viewModel = PortScanViewModel(fakePortScanner, fakePortScanHistoryDao, savedState)
     }
+
+    /** A fresh ViewModel over the same saved state — what survives process death sees. */
+    private fun restoredViewModel() =
+        PortScanViewModel(fakePortScanner, fakePortScanHistoryDao, SavedStateHandle(savedState.keys().associateWith { savedState.get<Any?>(it) }))
 
     @AfterEach
     fun tearDown() {
@@ -128,7 +136,7 @@ class PortScanViewModelTest {
                 awaitCancellation()
             }
         }
-        val vm = PortScanViewModel(hangingScanner, fakePortScanHistoryDao)
+        val vm = PortScanViewModel(hangingScanner, fakePortScanHistoryDao, SavedStateHandle())
 
         vm.state.test {
             awaitItem() // initial state
@@ -189,5 +197,84 @@ class PortScanViewModelTest {
             assertEquals(1f, finalState.progress)
             assertEquals(2, finalState.results.size)
         }
+    }
+
+    @Test
+    fun `arriving from another tool prefills the host`() {
+        // The bug this pins: the screen kept the host in a local rememberSaveable that never read
+        // state, so "scan this host" from LAN Scan or DNS silently opened an empty field.
+        viewModel.prefillHost("192.168.1.50")
+        assertEquals("192.168.1.50", viewModel.state.value.host)
+    }
+
+    @Test
+    fun `a prefill applies once so a recreated screen cannot clobber typing`() {
+        // The screen's LaunchedEffect re-runs whenever the composition is recreated — a rotation,
+        // a fold — while the ViewModel survives. Re-applying there would discard what was typed.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.onHostChanged("nas.local")
+        viewModel.prefillHost("192.168.1.50")
+
+        assertEquals("nas.local", viewModel.state.value.host)
+    }
+
+    @Test
+    fun `a second scan-this-host for a different device still applies`() {
+        // navigateToTool uses launchSingleTop, so a "scan this host" arriving while Port Scan is
+        // already on top reuses the back stack entry and therefore this ViewModel. Guarding on a
+        // once-ever boolean made that tap do nothing at all — the user would press it and watch
+        // the previous host sit there. The guard is against re-applying the *same* argument, not
+        // against ever hearing a new one.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.prefillHost("192.168.1.60")
+
+        assertEquals("192.168.1.60", viewModel.state.value.host)
+    }
+
+    @Test
+    fun `a re-prefill of the same host is still a no-op after an edit and a restore`() {
+        // Both halves of the guard survive the change from a boolean to a value: the recreated
+        // composition case, and the restored-nav-argument case, for the same host.
+        viewModel.prefillHost("192.168.1.50")
+        viewModel.prefillHost("192.168.1.60")
+        viewModel.onHostChanged("nas.local")
+
+        val restored = restoredViewModel()
+        restored.prefillHost("192.168.1.60")
+
+        assertEquals("nas.local", restored.state.value.host)
+    }
+
+    @Test
+    fun `a typed host survives process death`() {
+        // The host used to live in a rememberSaveable, which wrote to the instance-state Bundle.
+        // A plain MutableStateFlow does not, so moving it into the ViewModel would have quietly
+        // dropped it when the system reclaimed the process.
+        viewModel.onHostChanged("192.168.1.99")
+
+        assertEquals("192.168.1.99", restoredViewModel().state.value.host)
+    }
+
+    @Test
+    fun `a stale nav argument cannot overwrite an edit after process death`() {
+        // The nastier half: the back stack restores the original ?query= argument, so the screen
+        // re-fires prefillHost against a ViewModel that is genuinely new. If "already prefilled"
+        // lived in a plain field it would read false, and the user's edit would be replaced by a
+        // stale value rather than merely lost.
+        viewModel.prefillHost("192.168.1.5")
+        viewModel.onHostChanged("192.168.1.7")
+
+        val restored = restoredViewModel()
+        restored.prefillHost("192.168.1.5")
+
+        assertEquals("192.168.1.7", restored.state.value.host)
+    }
+
+    @Test
+    fun `the scanned host is what gets restored, not the untrimmed text`() {
+        viewModel.onHostChanged("  10.0.0.1  ")
+        viewModel.scan("10.0.0.1", listOf(80))
+
+        assertEquals("10.0.0.1", restoredViewModel().state.value.host)
     }
 }

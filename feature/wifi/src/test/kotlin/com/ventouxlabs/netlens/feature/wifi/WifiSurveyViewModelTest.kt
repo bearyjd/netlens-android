@@ -122,6 +122,50 @@ class WifiSurveyViewModelTest {
     }
 
     @Test
+    fun `the signal-lost notice outlives the signal coming back`() = runTest {
+        startSurvey()
+        viewModel.onLabelChanged("Garage")
+        viewModel.capturePoint()
+        sampler.emitBurst(captureTarget - 3, rssi = -80)
+        sampler.emitDisconnected()
+        assertEquals(SurveyError.SIGNAL_LOST, viewModel.state.value.error)
+
+        // A roam is one dropped tick, so the radio is back ~700ms later. SIGNAL_LOST reads like a
+        // statement about the current signal, but onSignalLost only raises it when a burst was in
+        // flight — it always means "that spot was discarded". Clearing it here would erase the
+        // only notice of the loss almost as fast as it appeared, and the user would walk on
+        // believing the room was recorded.
+        sampler.emit(-55)
+
+        assertEquals(
+            SurveyError.SIGNAL_LOST,
+            viewModel.state.value.error,
+            "a discarded burst must stay reported even once the signal returns",
+        )
+        assertEquals(-55, viewModel.state.value.liveSample?.rssi, "the meter still goes live again")
+        assertTrue(dao.points.value.isEmpty(), "the partial burst really was discarded")
+
+        // It clears on the user's next action, like every other error here.
+        viewModel.onLabelChanged("Garage")
+        assertNull(viewModel.state.value.error)
+    }
+
+    @Test
+    fun `an error about the walk survives a live reading`() = runTest {
+        startSurvey()
+        // LABEL_REQUIRED is a statement about what the user did, not about the radio, so a
+        // reading does not disprove it — only acting on it does.
+        viewModel.capturePoint()
+        assertEquals(SurveyError.LABEL_REQUIRED, viewModel.state.value.error)
+
+        sampler.emit(-55)
+        assertEquals(SurveyError.LABEL_REQUIRED, viewModel.state.value.error)
+
+        viewModel.onLabelChanged("Garage")
+        assertNull(viewModel.state.value.error)
+    }
+
+    @Test
     fun `a dropped tick outside a capture blanks the meter without raising an error`() = runTest {
         startSurvey()
 

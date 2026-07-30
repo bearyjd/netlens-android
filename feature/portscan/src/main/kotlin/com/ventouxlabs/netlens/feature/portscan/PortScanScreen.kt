@@ -40,7 +40,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -49,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.network.HostName
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.ui.StatusColors
@@ -79,7 +79,7 @@ fun PortScanScreen(
     onNavigateToTool: (String, String) -> Unit = { _, _ -> },
 ) {
     LaunchedEffect(initialHost) {
-        if (initialHost != null) viewModel.onHostChanged(initialHost)
+        if (initialHost != null) viewModel.prefillHost(initialHost)
     }
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -121,6 +121,7 @@ fun PortScanScreen(
     ) { padding ->
         PortScanContent(
             state = uiState,
+            onHostChanged = viewModel::onHostChanged,
             onScan = { host, ports -> viewModel.scan(host, ports) },
             onCancel = viewModel::cancelScan,
             onNavigateToTool = onNavigateToTool,
@@ -145,13 +146,17 @@ fun PortScanScreen(
 @Composable
 private fun PortScanContent(
     state: PortScanUiState,
+    onHostChanged: (String) -> Unit,
     onScan: (String, List<Int>) -> Unit,
     onCancel: () -> Unit,
     onNavigateToTool: (String, String) -> Unit,
     onOpenService: (ServiceLaunch) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var host by rememberSaveable { mutableStateOf("") }
+    // The host lives in the ViewModel, not in a local `rememberSaveable`: arriving from another
+    // tool ("scan this host") prefills it through the ViewModel, and a local copy would silently
+    // shadow that with an empty string. It is also the host the results belong to.
+    val host = state.host
     var selectedPreset by rememberSaveable { mutableIntStateOf(PRESET_COMMON) }
 
     Column(
@@ -163,7 +168,7 @@ private fun PortScanContent(
 
         OutlinedTextField(
             value = host,
-            onValueChange = { host = it },
+            onValueChange = onHostChanged,
             label = { Text(stringResource(R.string.portscan_label_host)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -394,11 +399,17 @@ private fun PortResultRow(
                         },
                     )
                 }
-                if (result.port in HTTP_PORTS) {
+                // toAuthority, not the bare host: an IPv6 literal has to be bracketed before it
+                // goes in front of ":port", or the port reads as another group of the address.
+                // Null means the host is one ToolQuery will refuse, so both chips are hidden
+                // rather than left to open their tool blank — the same "show no action" rule
+                // ServiceLauncher already follows.
+                val authority = HostName.toAuthority(host)
+                if (result.port in HTTP_PORTS && authority != null) {
                     val scheme = if (result.port in TLS_PORTS) "https" else "http"
                     val portSuffix = if (result.port == 80 || result.port == 443) "" else ":${result.port}"
                     AssistChip(
-                        onClick = { onNavigateToTool("httptester", "$scheme://$host$portSuffix") },
+                        onClick = { onNavigateToTool("httptester", "$scheme://$authority$portSuffix") },
                         label = { Text(stringResource(R.string.portscan_action_http_test)) },
                     )
                     if (result.port in TLS_PORTS) {
