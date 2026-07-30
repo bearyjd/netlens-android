@@ -221,10 +221,15 @@ Both shared fakes now have their own unit tests pinning the strong behaviour (9 
 weak versions cannot come back silently. `FakeOuiLookupTest` includes an explicit
 assert-the-non-behaviour case: keying the table on a full MAC must **not** match.
 
-**Still open from the original acceptance criteria:** `:feature:httptester` and `:feature:monitor`
-still hand-roll their own `HttpClient(MockEngine)` setup. That half was not done — the Ktor
-fixture wants a different shape (a builder with configurable redirect/host behaviour) and is worth
-its own pass. The fake-per-engine half is complete.
+**The Ktor half is now done too**, as `:core:network-testing`. `:feature:httptester` and
+`:feature:monitor` each carried a byte-identical 18-line `MockEngine` that 302s into a private
+host and records whether anything followed — including the same comment explaining why the
+redirect must keep the `https` scheme (a downgrade makes Ktor refuse for the *wrong* reason, and
+the test then passes whether or not the SSRF guard exists). That is now `SsrfRedirectProbe`.
+
+Verified non-vacuous rather than assumed: flipping `followRedirects = false` to `true` in each
+module's `configureSecureDefaults()` fails exactly that module's redirect test, both before and
+after the migration.
 
 ---
 

@@ -1,10 +1,7 @@
 package com.ventouxlabs.netlens.feature.monitor.engine
 
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.HttpHeaders
+import com.ventouxlabs.netlens.core.network.testing.SsrfRedirectProbe
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,29 +14,13 @@ class EndpointCheckerImplTest {
 
     @Test
     fun `does not follow redirect into private address`() = runTest {
-        var privateHostContacted = false
+        val probe = SsrfRedirectProbe()
 
-        val engine = MockEngine { request ->
-            if (request.url.host == PRIVATE_HOST) {
-                privateHostContacted = true
-                respond(content = "secret", status = HttpStatusCode.OK)
-            } else {
-                respond(
-                    content = "",
-                    status = HttpStatusCode.Found,
-                    // Same scheme as the initial request (https) so Ktor's built-in
-                    // https->http downgrade protection doesn't mask the SSRF hole
-                    // we're actually testing: redirecting into a private/loopback host.
-                    headers = headersOf(HttpHeaders.Location, "https://$PRIVATE_HOST:9/private"),
-                )
-            }
-        }
-
-        val checker = EndpointCheckerImpl(engine)
+        val checker = EndpointCheckerImpl(probe.engine)
         checker.use {
             val result = checker.check("https://example.com/redirect")
 
-            assertFalse(privateHostContacted, "The private redirect target must never be contacted")
+            probe.assertPrivateHostNotContacted()
             assertEquals(HttpStatusCode.Found.value, result.statusCode)
         }
     }
@@ -92,9 +73,5 @@ class EndpointCheckerImplTest {
             assertNotNull(result)
             assertFalse(result.isSuccess && result.errorMessage != null)
         }
-    }
-
-    private companion object {
-        const val PRIVATE_HOST = "127.0.0.1"
     }
 }
