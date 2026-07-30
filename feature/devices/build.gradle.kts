@@ -15,4 +15,7 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.compose.material.icons)
     testImplementation(libs.datastore.preferences)
+    // Shared engine doubles. This module used to carry its own copies of FakeArpTableReader,
+    // FakeOuiLookup and FakeSubnetScanner; they drifted weaker than :core:scan's originals.
+    testImplementation(project(":core:scan-testing"))
 }

@@ -32,8 +32,14 @@ app ──┬── feature:* (22 modules)  ── core:network
       ├── core:network                core:data
       ├── core:data                   core:billing
       ├── core:billing                core:oui
-      ├── core:oui
+      ├── core:oui                    core:scan
+      ├── core:scan                   core:ui
+      ├── core:ui
       └── widget
+
+test-only, never on a runtime classpath:
+  core:scan-testing ── core:scan     (consumed via testImplementation)
+  core:data-testing ── core:data
 ```
 
 - **`app`** — single Activity (`MainActivity`), hosts `NetLensNavHost` which routes to all feature screens. Navigation uses string routes defined in the `ToolDestination` enum (`app/.../navigation/ToolDestination.kt`).
@@ -41,6 +47,8 @@ app ──┬── feature:* (22 modules)  ── core:network
 - **`core:data`** — Room database (`NetLensDatabase`) with DAOs for endpoints, network events, WoL targets. Provides Hilt `DataModule`. Every schema change needs a `Migration` in `DataModule` — the builder only falls back destructively on *downgrade*.
 - **`core:billing`** — `ProStatus` interface (`isPro: StateFlow<Boolean>`, `launchPurchase(activity)`) and `LocalProStatus` CompositionLocal (safe no-op default). Flavor-specific implementations: `app/src/foss/` has `FossProStatus` (always Pro), `app/src/gplay/` has `GplayProStatus` (Google Play Billing with `BillingClientWrapper` for testability, `EncryptedSharedPreferences` for purchase state, reconnect counter with max 3 attempts).
 - **`core:oui`** — MAC address vendor lookup from OUI database.
+- **`core:scan`** — LAN scanning engines (`SubnetScanner`, `ArpTableReader`, `SsdpScanner`, `NetBiosProber`, `LanMdnsScanner`), device fingerprinting, and `DeviceInventoryRepository`.
+- **`core:scan-testing` / `core:data-testing`** — shared test doubles, consumed only via `testImplementation`. See "Testing".
 - **`widget`** — Glance-based home screen widget.
 - **`feature:*`** — each feature is self-contained with its own screen, ViewModel, DI module, and engine/domain layer. Share-export is gated behind `isPro` via `LocalProStatus`.
 
@@ -89,7 +97,9 @@ Inter (Regular, Medium, SemiBold, Bold) for all UI text. JetBrains Mono (Regular
 
 ## Testing
 
-JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in `src/test/` per module. Prefer hand-written fakes over mocking frameworks. Canonical example of the fake-per-engine pattern: `feature/lanscan/src/test/.../engine/Fake*.kt` (fakes for `ArpTableReader`, `NetBiosProber`, `SsdpScanner`, `SubnetScanner`, `OuiLookup`) — copy this shape for new engine tests rather than reaching for a mocking library. For HTTP-touching code (`httptester`, `monitor`), use Ktor's `MockEngine`, matching the existing `HttpRequesterImplTest.kt` / `EndpointCheckerImplTest.kt` setup.
+JUnit 5 + Turbine (Flow testing) + kotlinx-coroutines-test. Test sources live in `src/test/` per module. Prefer hand-written fakes over mocking frameworks. Canonical example of the fake-per-engine pattern: `core/scan-testing/.../engine/Fake*.kt` (fakes for `ArpTableReader`, `NetBiosProber`, `SsdpScanner`, `SubnetScanner`, `LanMdnsScanner`, `OuiLookup`) — copy this shape for new engine tests rather than reaching for a mocking library. For HTTP-touching code (`httptester`, `monitor`), use Ktor's `MockEngine`, matching the existing `HttpRequesterImplTest.kt` / `EndpointCheckerImplTest.kt` setup.
+
+**Shared test doubles live in `core:scan-testing` and `core:data-testing`.** Depend on them with `testImplementation(project(":core:scan-testing"))`; they are plain library modules, not `testFixtures` source sets, because AGP registers a `testFixtures` variant but Kotlin 2.1.0 registers no Kotlin compilation for it — you get a `compileDebugTestFixturesJavaWithJavac` task and no Kotlin equivalent, so Kotlin fixtures silently never compile. **Do not copy a fake into your own module.** The three that were copied all drifted weaker than the original: `:feature:devices`' `FakeOuiLookup` matched a whole MAC where the real database matches an OUI prefix, and `:feature:wifiaudit`'s `FakeNetworkEventDao` accepted the type/from/to arguments and ignored them, so any read-path test written against it would have passed regardless of the real `@Query`. A double that is looser than production turns a red test green. Both shared fakes now have their own tests pinning the strong behaviour.
 
 **Known gaps** (tracked in `.agent_native/agent_roadmap.md`): `feature:history` and `feature:widgetsettings` currently have zero unit tests. `feature:celltower`, `feature:wifiaudit`, `core:billing`, and `core:oui` were fixed in the 2026-07-07 pass — `CellTowerReader` and `WifiInfoReader` already had interface seams (mirroring `lanscan`'s `Fake*` pattern), they just lacked fakes/tests; `core:oui`'s parsing logic was extracted into testable companion functions the same way `ArpTableReaderImpl.parseArpTable` is. `history`/`widgetsettings` are harder: `WidgetSettingsViewModel` reads a real `Application` `Context` directly into a DataStore-backed singleton with no seam, and `HistoryViewModel` depends on a **concrete** `HistoryRepository` (not an interface) wrapping 11 Room DAOs plus `NetLensDatabase.withTransaction`. There is no Robolectric anywhere in the repo and no instrumentation (`androidTest`) or screenshot tests at all — code that touches `Context`, `WifiManager`, `TelephonyManager`, or a live `Room`/`DataStore` instance cannot be verified without a physical device, emulator, or Robolectric today. If you're an agent picking up a bug in `history` or `widgetsettings`, flag the verification gap rather than assuming a test can be added the same way as elsewhere.
 
