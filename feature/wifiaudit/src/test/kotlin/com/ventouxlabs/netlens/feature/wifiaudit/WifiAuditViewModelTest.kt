@@ -1,5 +1,7 @@
 package com.ventouxlabs.netlens.feature.wifiaudit
 
+import com.ventouxlabs.netlens.core.data.testing.FakeNetworkEventDao
+
 import app.cash.turbine.test
 import com.ventouxlabs.netlens.core.data.model.NetworkEventType
 import com.ventouxlabs.netlens.feature.wifiaudit.engine.FakeWifiInfoReader

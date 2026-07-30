@@ -14,7 +14,7 @@ are from static inspection of build files, source, and test trees.
 
 ## Top 5 — immediately actionable
 
-### 1. Fix CLAUDE.md's stale CI-scope claim (effort: 5 min, saves: every future session)
+### 1. Fix CLAUDE.md's stale CI-scope claim (effort: 5 min, saves: every future session) — DONE (2026-07-07)
 
 **Problem:** `CLAUDE.md` (pre-existing, line 20) states CI "currently tests only:
 `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`". This is
@@ -191,7 +191,45 @@ conversation.
 
 ---
 
-### 5. Extract shared network-primitive fakes into a `testFixtures` source set (effort: half a day, saves: reinvented mocks on every future feature)
+### 5. Extract shared network-primitive fakes into a `testFixtures` source set (effort: half a day, saves: reinvented mocks on every future feature) — DONE (2026-07-30)
+
+**Done as `:core:scan-testing` + `:core:data-testing`, not a `testFixtures` source set.** AGP 8.9
+registers the `testFixtures` variant, but Kotlin 2.1.0 registers no Kotlin compilation for it —
+`compileDebugTestFixturesJavaWithJavac` exists and `compileDebugTestFixturesKotlin` does not, so
+Kotlin fixtures compile to nothing and consumers fail with `Unresolved reference`. The plain
+library module this item already offered as an alternative works everywhere. Don't retry
+`testFixtures` until KGP registers that compilation.
+
+**What the migration actually found, which is the reason this mattered more than tidiness:** all
+three duplicated fakes had drifted *weaker* than the originals, and a weaker double turns a red
+test green.
+
+- `:feature:devices`' `FakeOuiLookup` matched the full MAC; the real OUI database (and
+  `:core:scan`'s fake) matches a three-octet prefix. Under the weak one, a caller that never
+  normalised its MAC was indistinguishable from a correct one. `WatchRunnerTest` asserts `vendor`,
+  so this was load-bearing — it passes against the prefix-keyed fake, which is what proves
+  `WatchRunner` hands over something the real lookup could resolve.
+- `:feature:wifiaudit`'s `FakeNetworkEventDao` returned `flowOf(inserted.take(limit))` from every
+  query method — `types`, `hasTypeFilter`, `from` and `to` were accepted and discarded. No test
+  failed because wifiaudit only asserts on the write path, which is exactly how it survived: a
+  double that ignores its arguments fails nothing until someone writes the test it would have
+  caught.
+- `:feature:devices`' `FakeSubnetScanner` had no error-injection hook, so no devices test could
+  cover a failing scan.
+
+Both shared fakes now have their own unit tests pinning the strong behaviour (9 tests), so the
+weak versions cannot come back silently. `FakeOuiLookupTest` includes an explicit
+assert-the-non-behaviour case: keying the table on a full MAC must **not** match.
+
+**Still open from the original acceptance criteria:** `:feature:httptester` and `:feature:monitor`
+still hand-roll their own `HttpClient(MockEngine)` setup. That half was not done — the Ktor
+fixture wants a different shape (a builder with configurable redirect/host behaviour) and is worth
+its own pass. The fake-per-engine half is complete.
+
+---
+
+<details>
+<summary>Original problem statement (kept for context)</summary>
 
 **Problem:** `feature:lanscan` has 5 well-built `Fake*` engine doubles
 (`FakeArpTableReader`, `FakeLanMdnsScanner`, `FakeNetBiosProber`, `FakeOuiLookup`,
@@ -215,6 +253,13 @@ place to get network fixtures instead of writing bespoke ones.
 **Acceptance criteria:** `feature:wifiaudit` consumes the shared `FakeOuiLookup`
 instead of writing a new one; `feature:httptester` and `feature:monitor` both build
 their `HttpClient(MockEngine)` test setup through the same shared helper.
+
+</details>
+
+**Note on the original text above:** it locates the fakes in `feature:lanscan/src/test`. They had
+already moved to `core/scan/src/test` by the time this was executed, and `feature:wifiaudit` had
+gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`, not a missing
+`FakeOuiLookup`. The problem was real; the coordinates were stale.
 
 ---
 

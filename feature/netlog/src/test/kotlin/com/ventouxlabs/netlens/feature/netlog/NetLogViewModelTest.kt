@@ -1,5 +1,7 @@
 package com.ventouxlabs.netlens.feature.netlog
 
+import com.ventouxlabs.netlens.core.data.testing.FakeNetworkEventDao
+
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
 import com.ventouxlabs.netlens.core.ui.UiText
-import com.ventouxlabs.netlens.feature.netlog.dao.FakeNetworkEventDao
 import com.ventouxlabs.netlens.feature.netlog.engine.FakeNetworkMonitor
 import com.ventouxlabs.netlens.feature.netlog.model.NetLogUiState
 
