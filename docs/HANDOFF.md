@@ -16,8 +16,10 @@ they don't get re-litigated.
   Capturing multiple points and sharing both work. See "What device use found".
 - **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
 - **Only `master` exists on the remote.** All feature branches deleted.
-- **Nothing is in flight.** No open PRs, no running jobs. PRs #117, #118 and #119 landed
-  2026-07-30 — see "What landed this session".
+- **Nothing is in flight.** No open PRs, no running jobs. #117/#118/#119 landed 2026-07-30 and
+  #120/#121 on 2026-07-31 — see the two "landed" sections below.
+- **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
+  See "Device state".
 - **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
   "Device state" before testing on either.
 
@@ -127,8 +129,19 @@ what Room does.
 Both phones are signed with the real cert and their NetLens database is at **schema v15**, but
 they are on **different builds**:
 
-Both are on **versionCode 13**, built from master at `811c9e1` (duplicate-key crash fix plus the
-gap-based capture fix). Reinstall from master after any survey change rather than assuming.
+**They are no longer on the same build (2026-07-31).**
+
+- **Pixel 10 Pro Fold `57211FDCG0023C`** — running **master @ `d7b5a38`**, a signed FOSS release
+  build installed over the top with `adb install -r` (cert `8fdfc928…` verified matching, so
+  data was preserved; schema still v15 both sides, so the destructive-downgrade path never
+  triggered). **Its About screen still reads 1.2.6 / versionCode 13** — `gradle.properties` was
+  deliberately not bumped, since that is release prep. So the version string on this phone is a
+  lie: it is post-#117 master, which includes the PortScan prefill fix and the #116 LOWs.
+- **Pixel 9 Pro Fold `4A111FDKD0000C`** — untouched, still the real 1.2.6 / 13 from `811c9e1`.
+
+Reinstall from master after any survey change rather than assuming. To build one:
+`./gradlew assembleFossRelease` — add `--max-workers=6` on a many-core machine or it OOMs, see
+the note above.
 
 - **Do not install v1.2.6 on them.** It is schema **v14**, and `provideDatabase` has
   `fallbackToDestructiveMigrationOnDowngrade` — Room will **wipe the database**.
