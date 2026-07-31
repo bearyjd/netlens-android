@@ -1,4 +1,4 @@
-# Session Handoff — #117/#118/#119 landed; release 1.3.0 gated on a hardware walk (2026-07-30)
+# Session Handoff — #117-#121 landed; release 1.3.0 gated on a hardware walk (2026-07-31)
 
 Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
 long-standing beliefs were corrected by evidence during this work — read those first, so
@@ -178,13 +178,46 @@ gap-based capture fix). Reinstall from master after any survey change rather tha
 - **#119** — `SsrfRedirectProbe` in `:core:network-testing`, replacing a byte-identical MockEngine
   in both `httptester` and `monitor`.
 
+### 2026-07-31 — two CI gaps, and a mistake worth reading
+
+- **#120** — CI now builds release variants (`assembleRelease bundleRelease`, both flavors) on
+  every PR. Nothing did before: `ci.yml` was `assembleFossDebug` only, and `release.yml` runs on
+  tag push, so R8, resource shrinking and lintVital were first exercised *at the moment of
+  tagging*. Unsigned, so no secrets reach PR builds.
+- **#121** — CI now runs `testGplayDebugUnitTest`. **`GplayProStatusTest` — 12 tests over the
+  purchase path — existed, passed, and had never once run in CI.**
+
+**The mistake, because it is the more useful artefact:** #120 asserted in three places that
+`app/src/gplay/` had *zero tests*. It has twelve. I had checked whether the gplay tests *ran*,
+found nothing, and concluded none *existed*. Those are different failures and the second is
+worse — coverage that nothing enforces reads as coverage to everyone who looks. It is the same
+shape as the two defects found the day before (a fake that accepted filter arguments and
+discarded them; a scope guard whose test passed for an incidental reason). **Before recording any
+module as untested, check whether the tests exist and are simply not being run.** Anything under
+`src/test*` that no CI task names is decoration.
+
+Swept afterwards: `src/testFoss` and `src/testGplay` are the only flavored test trees, and there
+are no `androidTest` trees anywhere, so #121 closes the class rather than one instance.
+
+**Release-build CI cost:** 9m cold, ~1m20s warm — on #121 it was faster than `build-and-test`.
+The one-off cold figure is not the steady state.
+
+**A local trap, not a repo bug:** a cold `assembleFossRelease` OOMs on a many-core machine —
+`org.gradle.parallel=true` with `workers.max` unset runs one Kotlin compilation per core against
+a 2048m heap sized for CI's 4-core runners. Raising the heap does *not* help (Kotlin compiles
+in-process via `NoIsolationWorkerFactory`, so `kotlin.daemon.jvmargs` is never consulted). Fix it
+per-machine with `org.gradle.workers.max=6` in `~/.gradle/gradle.properties`. **Do not raise
+`org.gradle.jvmargs` in the repo** — F-Droid builds this from source and a workstation-sized heap
+is its own failure mode there. Five consecutive releases have built cold at 2048m on
+`ubuntu-latest`.
+
 **Do not reintroduce `testFixtures` source sets.** AGP 8.9 registers the variant; Kotlin 2.1.0
 registers no Kotlin compilation for it, so `compileDebugTestFixturesJavaWithJavac` exists,
 `compileDebugTestFixturesKotlin` does not, and Kotlin fixtures compile to nothing while consumers
 fail with `Unresolved reference`. This was tried first and reverted. The `-testing` module is the
 working shape.
 
-788 tests, up from 752 at the last handoff.
+800 unique tests, up from 752 at the last handoff. (Result files aggregate to 822 because `app/src/test` runs under both flavors.)
 
 ## What device use found (2026-07-28) — two defects, both invisible to CI
 
