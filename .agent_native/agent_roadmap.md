@@ -270,6 +270,17 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
 
 ## Backlog (lower H.A.S./effort ratio, or needs a human decision first)
 
+- **`app/src/gplay/` billing has zero tests** — and until 2026-07-31 it had no *compile* coverage
+  either: nothing in CI reached it (`assembleFossDebug` and `testFossDebugUnitTest` are foss;
+  `testDebugUnitTest` covers the unflavored library modules and `:app` is flavored, so it has no
+  such task; there is no gplay test source tree). The `release-build` CI job now compiles it. Do
+  not confuse this with `core:billing`, which holds the unflavored `ProStatus` interface and *is*
+  tested. The four untested files are `BillingClientWrapper`, `BillingPrefs`, `GplayProStatus`
+  and `BillingModule` — the purchase path, `EncryptedSharedPreferences` purchase state, and a
+  reconnect counter capped at 3 attempts. `BillingClientWrapper` exists as a seam precisely so
+  `GplayProStatus` can be faked, so this is ordinary fake-per-engine work, not a Robolectric
+  problem: the blocker is that `:app` is flavored, so the tests go in a `src/testGplayDebug`
+  tree that does not exist yet. Highest-value untested code in the repo — it is the money path.
 - **Robolectric adoption** for Context/Room/DataStore/ConnectivityManager-dependent
   code — highest structural leverage for verification gaps but repo-wide in scope
   (touches `build-logic/convention`); needs its own scoped plan.

@@ -47,6 +47,17 @@ jobs:
   # first as a failed release, which is exactly the class of incident the android-release
   # skill's pre-flight exists to prevent.
   #
+  # It is also the only job that compiles the gplay flavor at all. Be precise about what that
+  # means, because two different things are easy to conflate:
+  #   - :core:billing holds the ProStatus *interface*, is unflavored, and IS covered by
+  #     testDebugUnitTest above.
+  #   - app/src/gplay/ holds the four *implementation* files (BillingClientWrapper, BillingPrefs,
+  #     GplayProStatus, BillingModule) and was reached by nothing. assembleFossDebug and
+  #     testFossDebugUnitTest are foss; testDebugUnitTest covers the unflavored library modules
+  #     and :app is flavored, so it has no such task. There is no gplay test source tree.
+  # This job gives those four files compile coverage. They still have no *tests* — tracked in
+  # .agent_native/agent_roadmap.md.
+  #
   # Runs as its own job so the debug/test feedback loop keeps its current wall-clock.
   release-build:
     runs-on: ubuntu-latest
@@ -68,5 +79,9 @@ jobs:
       # applies signingConfig only when storeFile resolves, so this produces *-unsigned.apk and
       # still exercises everything that matters: compileReleaseKotlin, R8, resource shrinking
       # and lintVital. Signing itself is already proven separately by dispatching release.yml.
-      - name: Build release APKs (unsigned) to exercise R8 and lintVital
-        run: ./gradlew assembleRelease
+      # assembleRelease *and* bundleRelease, matching release.yml's step verbatim. The AAB is
+      # what Play Console consumes and its packaging can fail independently of the APK; since
+      # both share compileReleaseKotlin and R8, adding it costs the bundling step alone rather
+      # than a second build.
+      - name: Build release APKs and AABs (unsigned) to exercise R8 and lintVital
+        run: ./gradlew assembleRelease bundleRelease
