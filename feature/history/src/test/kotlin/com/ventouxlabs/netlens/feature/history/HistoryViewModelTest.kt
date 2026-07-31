@@ -5,7 +5,6 @@ import com.ventouxlabs.netlens.core.data.model.HistoryDetailData
 import com.ventouxlabs.netlens.core.data.model.PingHistoryEntry
 import com.ventouxlabs.netlens.core.data.repository.CombinedHistoryResults
 import com.ventouxlabs.netlens.feature.history.model.HistoryDetailState
-import com.ventouxlabs.netlens.feature.history.model.HistoryItem
 import com.ventouxlabs.netlens.feature.history.model.ToolFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -107,6 +106,42 @@ class HistoryViewModelTest {
         vm.onSearchQueryChanged("   ")
         assertEquals(listOf("nas"), repo.searchCalls)
         assertEquals(2, repo.allRecentCalls)
+    }
+
+    @Test
+    fun `search results replace the list`() = runTest {
+        // Asserting searchAll was *called* proves routing, not wiring. This proves what comes back
+        // from it actually reaches the UI — a different failure, and the one a user would see.
+        repo.recent.value = CombinedHistoryResults(pings = listOf(ping(1, "from-recents", 100)))
+        val vm = HistoryViewModel(repo)
+
+        vm.onSearchQueryChanged("nas")
+        repo.searched.emit(CombinedHistoryResults(pings = listOf(ping(9, "nas.local", 500))))
+
+        assertEquals(listOf("nas.local"), vm.state.value.items.map { it.primaryLabel })
+        assertFalse(vm.state.value.isLoading)
+    }
+
+    @Test
+    fun `a query that fails part-way surfaces an error instead of spinning forever`() = runTest {
+        // Fails after its first emission, like a Room flow whose query throws once the screen is
+        // already open. isLoading must come down, or the UI spins with no explanation.
+        repo.recent.value = CombinedHistoryResults(pings = listOf(ping(1, "example.com", 100)))
+        repo.failAfterFirstEmission = IllegalStateException("database is locked")
+
+        val vm = HistoryViewModel(repo)
+
+        assertFalse(vm.state.value.isLoading)
+        assertEquals("database is locked", vm.state.value.error)
+    }
+
+    @Test
+    fun `an error with no message still says something`() = runTest {
+        repo.failAfterFirstEmission = IllegalStateException()
+
+        val vm = HistoryViewModel(repo)
+
+        assertEquals("Failed to load history", vm.state.value.error)
     }
 
     @Test
@@ -227,7 +262,4 @@ class HistoryViewModelTest {
 
             assertEquals(listOf("Dns" to 1L), repo.getEntryCalls)
         }
-
-    private fun HistoryViewModel.itemsOf(filter: ToolFilter): List<HistoryItem> =
-        state.value.items.filter { it.toolFilter == filter }
 }

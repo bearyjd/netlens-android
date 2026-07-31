@@ -4,6 +4,7 @@ import com.ventouxlabs.netlens.core.data.model.HistoryDetailData
 import com.ventouxlabs.netlens.core.data.repository.CombinedHistoryResults
 import com.ventouxlabs.netlens.core.data.repository.HistoryRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -37,9 +38,20 @@ class FakeHistoryRepository : HistoryRepository {
     var entry: HistoryDetailData? = null
     val getEntryCalls = mutableListOf<Pair<String, Long>>()
 
+    /**
+     * Set to make [allRecent] fail **after** its first emission, the way a Room flow does when a
+     * query throws once the screen is already open. Failing on subscribe instead would exercise a
+     * path the app never takes.
+     */
+    var failAfterFirstEmission: Throwable? = null
+
     override fun allRecent(limit: Int): Flow<CombinedHistoryResults> {
         allRecentCalls++
-        return recent
+        val failure = failAfterFirstEmission ?: return recent
+        return flow {
+            emit(recent.value)
+            throw failure
+        }
     }
 
     override fun searchAll(query: String): Flow<CombinedHistoryResults> {
