@@ -28,10 +28,17 @@ jobs:
         run: ./gradlew assembleFossDebug
 
       - name: Run unit tests
-        # :app is the only flavored module (testFossDebugUnitTest); the library
-        # modules expose testDebugUnitTest. Both are needed for full coverage —
-        # the two task names don't overlap, so nothing runs twice.
-        run: ./gradlew testFossDebugUnitTest testDebugUnitTest
+        # :app is the only flavored module, so it needs one task per flavor; the library modules
+        # expose testDebugUnitTest. The three names don't overlap, so nothing runs twice.
+        #
+        # testGplayDebugUnitTest is not optional padding. app/src/testGplay/ holds
+        # GplayProStatusTest — 12 tests over the purchase path, the reconnect cap,
+        # ITEM_ALREADY_OWNED and purchase acknowledgement — and it was written but never run
+        # here, because neither testFossDebugUnitTest (src/test + src/testFoss) nor
+        # testDebugUnitTest (the unflavored library modules) reaches src/testGplay. Green tests
+        # that CI never executes are worse than no tests: they read as coverage and enforce
+        # nothing. Do not drop this task to save time.
+        run: ./gradlew testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest
 
       - name: Upload test results
         if: always()
@@ -47,16 +54,9 @@ jobs:
   # first as a failed release, which is exactly the class of incident the android-release
   # skill's pre-flight exists to prevent.
   #
-  # It is also the only job that compiles the gplay flavor at all. Be precise about what that
-  # means, because two different things are easy to conflate:
-  #   - :core:billing holds the ProStatus *interface*, is unflavored, and IS covered by
-  #     testDebugUnitTest above.
-  #   - app/src/gplay/ holds the four *implementation* files (BillingClientWrapper, BillingPrefs,
-  #     GplayProStatus, BillingModule) and was reached by nothing. assembleFossDebug and
-  #     testFossDebugUnitTest are foss; testDebugUnitTest covers the unflavored library modules
-  #     and :app is flavored, so it has no such task. There is no gplay test source tree.
-  # This job gives those four files compile coverage. They still have no *tests* — tracked in
-  # .agent_native/agent_roadmap.md.
+  # It is also the only job that builds the gplay flavor's *release* variant, so R8 on the
+  # billing code is exercised here and nowhere else. gplay's Kotlin is compiled by the unit-test
+  # step above too, now that it runs testGplayDebugUnitTest.
   #
   # Runs as its own job so the debug/test feedback loop keeps its current wall-clock.
   release-build:
