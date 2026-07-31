@@ -40,3 +40,33 @@ jobs:
           name: test-results
           path: "**/build/test-results/**/TEST-*.xml"
           retention-days: 14
+
+  # Nothing else in CI compiles a release variant: build-and-test runs assembleFossDebug, and
+  # release.yml's assembleRelease runs only on a tag push. So R8, resource shrinking and
+  # lintVital were unexercised until the moment of tagging — a break in any of them surfaced
+  # first as a failed release, which is exactly the class of incident the android-release
+  # skill's pre-flight exists to prevent.
+  #
+  # Runs as its own job so the debug/test feedback loop keeps its current wall-clock.
+  release-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      # Both flavors, matching what release.yml actually builds at tag time: gplay pulls in
+      # Play Billing and security-crypto that foss does not, so the two can diverge under R8.
+      #
+      # Deliberately unsigned — no RELEASE_* secrets are exposed here. app/build.gradle.kts
+      # applies signingConfig only when storeFile resolves, so this produces *-unsigned.apk and
+      # still exercises everything that matters: compileReleaseKotlin, R8, resource shrinking
+      # and lintVital. Signing itself is already proven separately by dispatching release.yml.
+      - name: Build release APKs (unsigned) to exercise R8 and lintVital
+        run: ./gradlew assembleRelease
