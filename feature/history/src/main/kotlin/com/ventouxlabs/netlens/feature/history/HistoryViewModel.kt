@@ -33,6 +33,19 @@ class HistoryViewModel @Inject constructor(
 
     private var loadJob: Job? = null
 
+    /**
+     * The unfiltered list, kept so a filter chip can narrow it without re-querying.
+     *
+     * Declared **above** `init`, and it has to stay there. Kotlin runs property initializers and
+     * init blocks in declaration order, so with this below `init { loadHistory() }` the load would
+     * populate it and the initializer would then reset it to empty. That is not hypothetical: any
+     * source that emits on subscribe — a StateFlow, a cached value, a test fake — hits it, because
+     * viewModelScope runs on Dispatchers.Main.immediate and collection starts synchronously.
+     * Room's flows happen to emit asynchronously, which is the only reason this was survivable in
+     * production; the first filter tap would otherwise have blanked the list.
+     */
+    private var allItems: List<HistoryItem> = emptyList()
+
     init {
         loadHistory()
     }
@@ -68,8 +81,6 @@ class HistoryViewModel @Inject constructor(
     fun dismissDetail() {
         _detailState.value = null
     }
-
-    private var allItems: List<HistoryItem> = emptyList()
 
     private fun loadHistory() {
         loadJob?.cancel()

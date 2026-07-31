@@ -44,8 +44,24 @@ data class CombinedHistoryResults(
     val wolSends: List<WolHistoryEntry> = emptyList(),
 )
 
+/**
+ * Read/clear access to every tool's history, combined.
+ *
+ * An interface so `HistoryViewModel` can be tested at all. The implementation wraps eleven Room
+ * DAOs plus `NetLensDatabase.withTransaction`, none of which can be stood up in a JVM unit test —
+ * depending on it directly left `:feature:history` as the last module in the repo with no tests.
+ * Consumers depend on this; only Hilt sees [HistoryRepositoryImpl].
+ */
+interface HistoryRepository {
+    fun allRecent(limit: Int = 50): Flow<CombinedHistoryResults>
+    fun searchAll(query: String): Flow<CombinedHistoryResults>
+    suspend fun clearAll()
+    suspend fun clearOlderThan(days: Int)
+    suspend fun getEntry(toolFilter: String, id: Long): HistoryDetailData?
+}
+
 @Singleton
-class HistoryRepository @Inject constructor(
+class HistoryRepositoryImpl @Inject constructor(
     private val database: NetLensDatabase,
     private val pingDao: PingHistoryDao,
     private val lanScanDao: LanScanHistoryDao,
@@ -58,8 +74,9 @@ class HistoryRepository @Inject constructor(
     private val httpTesterDao: HttpTesterHistoryDao,
     private val mdnsDao: MdnsHistoryDao,
     private val wolHistoryDao: WolHistoryDao,
-) {
-    fun allRecent(limit: Int = 50): Flow<CombinedHistoryResults> {
+) : HistoryRepository {
+
+    override fun allRecent(limit: Int): Flow<CombinedHistoryResults> {
         return combine(
             pingDao.getRecent(limit),
             lanScanDao.getRecent(limit),
@@ -89,7 +106,7 @@ class HistoryRepository @Inject constructor(
         }
     }
 
-    fun searchAll(query: String): Flow<CombinedHistoryResults> {
+    override fun searchAll(query: String): Flow<CombinedHistoryResults> {
         return combine(
             pingDao.search(query),
             lanScanDao.search(query),
@@ -119,7 +136,7 @@ class HistoryRepository @Inject constructor(
         }
     }
 
-    suspend fun clearAll() {
+    override suspend fun clearAll() {
         database.withTransaction {
             pingDao.deleteAll()
             lanScanDao.deleteAll()
@@ -135,7 +152,7 @@ class HistoryRepository @Inject constructor(
         }
     }
 
-    suspend fun clearOlderThan(days: Int) {
+    override suspend fun clearOlderThan(days: Int) {
         val cutoff = System.currentTimeMillis() - (days.toLong() * 24 * 60 * 60 * 1000)
         database.withTransaction {
             pingDao.deleteOlderThan(cutoff)
@@ -152,7 +169,7 @@ class HistoryRepository @Inject constructor(
         }
     }
 
-    suspend fun getEntry(toolFilter: String, id: Long): HistoryDetailData? {
+    override suspend fun getEntry(toolFilter: String, id: Long): HistoryDetailData? {
         return when (toolFilter) {
             "Ping" -> pingDao.getById(id)?.let { HistoryDetailData.Ping(it) }
             "LanScan" -> lanScanDao.getById(id)?.let { HistoryDetailData.LanScan(it) }
