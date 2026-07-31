@@ -16,10 +16,17 @@ bin/
 gen/
 out/
 # Ignore .omc contents (state, sessions, project-memory) but KEEP learned skills.
-# Must be `.omc/*` not `.omc/` — a trailing-slash exclude stops Git descending into the
-# directory at all, so a negation inside it can never re-include anything.
-.omc/*
-!.omc/skills/
+#
+# Two subtleties, both of which bit once:
+#  - `/.omc/*` not `/.omc/`: a trailing-slash exclude stops Git descending into the directory
+#    at all, so a negation inside it could never re-include anything.
+#  - A pattern containing a slash is anchored to this file's directory, so `/.omc/*` matches
+#    the root one ONLY. Stray `.omc` dirs get written elsewhere in the tree by tooling
+#    (e.g. app/src/main/res/font/.omc), and the plain `.omc/` this replaced caught them at
+#    any depth. `**/*/.omc/` restores that for everything below the root.
+/.omc/*
+!/.omc/skills/
+**/*/.omc/
 .gstack/
 .kotlin/
 *.jks
