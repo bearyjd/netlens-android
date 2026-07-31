@@ -15,7 +15,11 @@
 bin/
 gen/
 out/
-.omc/
+# Ignore .omc contents (state, sessions, project-memory) but KEEP learned skills.
+# Must be `.omc/*` not `.omc/` — a trailing-slash exclude stops Git descending into the
+# directory at all, so a negation inside it can never re-include anything.
+.omc/*
+!.omc/skills/
 .gstack/
 .kotlin/
 *.jks
