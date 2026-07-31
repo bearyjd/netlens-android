@@ -1,4 +1,4 @@
-# Session Handoff — #117-#122 landed; release 1.3.0 gated on a hardware walk (2026-07-31)
+# Session Handoff — v1.3.0 released; #117-#122 landed (2026-07-31)
 
 Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
 long-standing beliefs were corrected by evidence during this work — read those first, so
@@ -6,6 +6,18 @@ they don't get re-litigated.
 
 ## TL;DR — where things stand
 
+- **v1.3.0 RELEASED (2026-07-31)** — https://github.com/bearyjd/netlens-android/releases/tag/v1.3.0
+  Device tags, Wi-Fi coverage survey, launchable services, plus #117's fixes. Workflow
+  `30662655390` succeeded. **Both published APKs were downloaded and verified**: cert
+  `8fdfc928…ae2b4` (identical to 1.2.6, so in-place updates work), `versionCode='14'`,
+  `versionName='1.3.0'`. All four artefacts attached.
+  - **The device verification behind this release was a user confirmation, not an instrumented
+    result.** The user reported the four checks fine on 2026-07-31; no sample counts or logs were
+    captured. Relevant because the fold fix had previously shipped green *twice* and been wrong
+    both times. If a fold-related report comes in, do not assume the path was measured.
+  - Shipped with a **stale baseline profile** (last regenerated 2026-07-21, predating the v1.2.6
+    tag). Explicitly accepted — unmatched rules are ignored, so the cost is some startup speedup,
+    not correctness. Regenerate before the next release.
 - **v1.2.6 released** — https://github.com/bearyjd/netlens-android/releases/tag/v1.2.6
   (widget cross-render fix, 4x2 fontScale fix + enrichment, baseline profile). The
   *published* APK was downloaded and verified: cert `8fdfc928…`, `versionCode='13'`.
@@ -14,9 +26,13 @@ they don't get re-litigated.
 - **The survey is verified on hardware, and device use found TWO defects the reviews missed** —
   a crash on the primary path (`dc03409`) and a fold that still killed the capture (`811c9e1`).
   Capturing multiple points and sharing both work. See "What device use found".
-- **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
+- **F-Droid MR #42628 still open at 1.2.6 / 13, awaiting maintainers — so F-Droid will NOT ship
+  1.3.0 until it merges.** `AutoUpdateMode: Version` + `UpdateCheckMode: Tags` means the bot picks
+  up later tags automatically *once merged*; nothing on our side speeds that up. The in-repo copy
+  (`fdroid/com.ventouxlabs.netlens.yml`) was synced to 1.3.0 / 14 — that file is a mirror and
+  gates nothing.
 - **Only `master` exists on the remote.** All feature branches deleted.
-- **Nothing is in flight.** No open PRs, no running jobs. #117/#118/#119 landed 2026-07-30 and
+- **Nothing is in flight.** No open PRs, no running jobs. v1.3.0 is out. #117/#118/#119 landed 2026-07-30 and
   #120/#121/#122 on 2026-07-31 — see the two "landed" sections below.
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
