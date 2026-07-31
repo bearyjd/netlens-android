@@ -1,4 +1,4 @@
-# Session Handoff — #117-#121 landed; release 1.3.0 gated on a hardware walk (2026-07-31)
+# Session Handoff — #117-#122 landed; release 1.3.0 gated on a hardware walk (2026-07-31)
 
 Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
 long-standing beliefs were corrected by evidence during this work — read those first, so
@@ -212,8 +212,35 @@ module as untested, check whether the tests exist and are simply not being run.*
 Swept afterwards: `src/testFoss` and `src/testGplay` are the only flavored test trees, and there
 are no `androidTest` trees anywhere, so #121 closes the class rather than one instance.
 
+- **#122** — `HistoryViewModel` covered (16 tests). **Every module in the repo now has unit
+  tests.** Unblocked by splitting `HistoryRepository` into an interface plus
+  `HistoryRepositoryImpl` (`@Binds` in `core/data/di/RepositoryModule.kt`) — the ViewModel had
+  depended on the concrete class wrapping eleven Room DAOs and `withTransaction`. Use that split
+  if you hit the same wall.
+
+  **Writing the tests found a latent defect:** `private var allItems` was declared *below*
+  `init { loadHistory() }`, so Kotlin's declaration-order initialization had the load populate it
+  and the initializer then reset it to `emptyList()`. `viewModelScope` runs on
+  `Dispatchers.Main.immediate`, so collection starts synchronously and anything that emits on
+  subscribe hits it — the symptom is the first filter-chip tap blanking the list. **Production was
+  unaffected only because Room's flows emit asynchronously.** That is luck; one `stateIn`, cache
+  or `replay` would have exposed it. The declaration must stay above `init` — there is a comment
+  saying so.
+
 **Release-build CI cost:** 9m cold, ~1m20s warm — on #121 it was faster than `build-and-test`.
 The one-off cold figure is not the steady state.
+
+**Unexplained, not reproducing:** `:feature:posture:testDebugUnitTest` failed once during a local
+full-suite run on 2026-07-31 and passed on two subsequent runs, leaving **no failure entry in its
+result XML** — which points at a Gradle worker dying rather than an assertion failing, plausibly
+the same memory pressure as the cold-release OOM above. Green in CI. Recorded so a second sighting
+is recognised as a pattern rather than treated as a first.
+
+**When watching a device with `adb logcat`, filter by tag, not by grepping the package name.**
+`AndroidRuntime.*ventouxlabs` matches sibling apps under the same vendor prefix — a
+`com.ventouxlabs.relais.izzy` crash-loop was twice reported as a NetLens crash — and grepping the
+package name alone also matches `adbd` echoing your own `adb shell pidof` probes. Use
+`adb logcat -b crash,main AndroidRuntime:E WifiSurvey:W ActivityManager:E '*:S'`.
 
 **A local trap, not a repo bug:** a cold `assembleFossRelease` OOMs on a many-core machine —
 `org.gradle.parallel=true` with `workers.max` unset runs one Kotlin compilation per core against
@@ -230,7 +257,7 @@ registers no Kotlin compilation for it, so `compileDebugTestFixturesJavaWithJava
 fail with `Unresolved reference`. This was tried first and reverted. The `-testing` module is the
 working shape.
 
-800 unique tests, up from 752 at the last handoff. (Result files aggregate to 822 because `app/src/test` runs under both flavors.)
+816 unique tests, up from 752 at the last handoff. Every module has tests. (Result files aggregate to 822 because `app/src/test` runs under both flavors.)
 
 ## What device use found (2026-07-28) — two defects, both invisible to CI
 
