@@ -16,8 +16,10 @@ they don't get re-litigated.
     captured. Relevant because the fold fix had previously shipped green *twice* and been wrong
     both times. If a fold-related report comes in, do not assume the path was measured.
   - Shipped with a **stale baseline profile** (last regenerated 2026-07-21, predating the v1.2.6
-    tag). Explicitly accepted — unmatched rules are ignored, so the cost is some startup speedup,
-    not correctness. Regenerate before the next release.
+    tag). Explicitly accepted at tag time — unmatched rules are ignored, so the cost is some
+    startup speedup, not correctness. **Regenerated afterwards in #123** (run 30663855762, API 34
+    emulator); master now carries a profile that has actually seen the survey, tagging and
+    launchable-services paths. It will ship in 1.3.1 — 1.3.0 as published does not have it.
 - **v1.2.6 released** — https://github.com/bearyjd/netlens-android/releases/tag/v1.2.6
   (widget cross-render fix, 4x2 fontScale fix + enrichment, baseline profile). The
   *published* APK was downloaded and verified: cert `8fdfc928…`, `versionCode='13'`.
