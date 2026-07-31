@@ -1,5 +1,6 @@
 plugins {
     id("netlens.android.feature")
+    id("netlens.android.screenshot")
 }
 
 android {

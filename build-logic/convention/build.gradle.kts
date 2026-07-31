@@ -8,6 +8,7 @@ dependencies {
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.room.gradlePlugin)
+    compileOnly(libs.paparazzi.gradlePlugin)
 }
 
 gradlePlugin {
@@ -31,6 +32,10 @@ gradlePlugin {
         register("androidFeature") {
             id = "netlens.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
+        }
+        register("androidScreenshot") {
+            id = "netlens.android.screenshot"
+            implementationClass = "AndroidScreenshotConventionPlugin"
         }
     }
 }
