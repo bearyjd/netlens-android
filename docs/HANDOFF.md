@@ -17,7 +17,7 @@ they don't get re-litigated.
 - **F-Droid MR #42628 updated** to 1.2.6 / 13 and awaiting maintainers.
 - **Only `master` exists on the remote.** All feature branches deleted.
 - **Nothing is in flight.** No open PRs, no running jobs. #117/#118/#119 landed 2026-07-30 and
-  #120/#121 on 2026-07-31 — see the two "landed" sections below.
+  #120/#121/#122 on 2026-07-31 — see the two "landed" sections below.
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
 - **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
