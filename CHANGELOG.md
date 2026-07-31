@@ -5,12 +5,19 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] - 2026-07-31
 
 ### Added
 - **Device tags and details** — inventoried hosts can now carry your own labels, a location and free-form notes alongside a custom name. Tags appear on the device rows in both Devices and LAN Scan's Inventory tab, a filter-chip row narrows the inventory to a tag, and search now covers tags, notes, location and custom names instead of just hostname and IP. Tagging a host from a scan jumps straight to it in Devices. Everything you type is stored separately from what the scanner discovers, so a later scan refreshes hostname/IP/vendor without touching your notes.
 - **Wi-Fi coverage survey** — a Coverage tab in the Wi-Fi Analyzer for walking the house and finding dead spots. It samples the live connection continuously (not the throttled Wi-Fi scan, so readings keep up with walking pace), shows a live signal meter with a trail of recent readings, and captures a named spot from a short burst of samples so a room is judged on several seconds of signal rather than one twitchy reading. Captured spots are drawn as a ranked coverage map with the weak ones called out, each spot recording which access point served it — useful for spotting a room being held by the wrong mesh node. Surveys are saved so you can re-walk after moving a router and compare.
 - **Open discovered services** — open ports that map to something the phone can actually launch are now tappable in the LAN Scan host sheet and the Port Scan results. A web server opens in the browser, SSH/Telnet/VNC/RDP hand off to a terminal or remote-desktop app, and SMB/FTP to a file client. Ports with nothing to hand off to (databases, caches) stay non-tappable, and if no app is installed for a scheme NetLens says so rather than failing silently.
+
+### Fixed
+- **"Scan this host" opening an empty port scanner** — sending a host to Port Scan from LAN Scan or DNS left the field blank, so the action appeared to do nothing and you had to retype the address. The host now arrives filled in, and it survives a rotation, a fold, or the system reclaiming the app in the background — including when you've since edited it, which previously could be overwritten by the address you originally arrived with.
+- **Hostnames with underscores being rejected** — names like `my_nas` are not legal in public DNS but are ordinary on a home network, and mDNS service names use them by design. NetLens treated them as invalid and refused to scan them, hiding hosts that work perfectly well.
+- **A lost Wi-Fi survey capture disappearing without trace** — if the signal dropped part-way through capturing a spot, the capture was discarded and the notice explaining why cleared itself a moment later, leaving no capture, no error and no spot. Since roaming between mesh nodes mid-walk causes exactly that, spots could vanish silently during a survey. The notice now stays until you act on it.
+- **HTTP Test doing nothing for IPv6 addresses** — the shortcut from a Port Scan result to the HTTP tester produced a malformed address for IPv6 hosts and opened the tool blank.
+- Addresses handed from one tool to another are now validated before they reach the destination's input field. Device names come from the devices themselves, so a hostile machine on the network could previously supply one that changed which address a follow-up action pointed at.
 
 ## [1.2.6] - 2026-07-27
 

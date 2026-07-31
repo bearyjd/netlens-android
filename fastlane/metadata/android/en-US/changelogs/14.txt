@@ -1,0 +1,8 @@
+New in 1.3.0:
+
+- Device tags and details — give inventoried hosts your own labels, location and notes. Filter and search the inventory by them; a re-scan never overwrites what you typed.
+- Wi-Fi coverage survey — a new Coverage tab for walking the house and finding dead spots. Capture named spots, see a ranked coverage map, and check which access point is serving each room. Surveys are saved so you can re-walk after moving a router.
+- Open discovered services — open ports that lead somewhere are now tappable. Web servers open in the browser, SSH/VNC/RDP hand off to a terminal or remote-desktop app, SMB/FTP to a file client.
+- Fixed "scan this host" opening Port Scan with an empty field.
+- Fixed hostnames containing underscores (like my_nas) being rejected as invalid.
+- Fixed a Wi-Fi survey spot vanishing without explanation when the signal dropped mid-capture.
