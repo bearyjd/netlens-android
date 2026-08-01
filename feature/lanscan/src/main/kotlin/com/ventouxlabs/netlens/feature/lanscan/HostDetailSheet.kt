@@ -288,7 +288,12 @@ internal fun HostDetailSheet(
                             count = results.size,
                         )
                     }
-                    items(results, key = { "${riskLevel.name}_${it.port}" }) { result ->
+                    // Protocol is part of the key because it is part of the row's identity:
+                    // HostPortResult carries one, so 80/TCP and 80/UDP are different rows that
+                    // would otherwise both key to "WARNING_80" and crash the list. Nothing emits
+                    // anything but TCP today, which is exactly the condition under which #116's
+                    // duplicate-key crash sat unnoticed until the data changed underneath it.
+                    items(results, key = { "${riskLevel.name}_${it.protocol}_${it.port}" }) { result ->
                         PortResultRow(
                             result = result,
                             launch = if (result.isOpen) {
