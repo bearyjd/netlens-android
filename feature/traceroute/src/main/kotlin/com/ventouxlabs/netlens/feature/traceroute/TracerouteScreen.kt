@@ -118,7 +118,9 @@ fun TracerouteScreen(
 }
 
 @Composable
-private fun TracerouteContent(
+// `internal`, not `private`: the composition smoke tests render this directly.
+// Still module-scoped — nothing is exposed outside :feature:traceroute.
+internal fun TracerouteContent(
     state: TracerouteUiState,
     onHostChange: (String) -> Unit,
     onStartTrace: (String) -> Unit,

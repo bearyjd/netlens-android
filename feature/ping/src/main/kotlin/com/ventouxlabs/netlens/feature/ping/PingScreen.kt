@@ -132,7 +132,9 @@ fun PingScreen(
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun PingContent(
+// `internal`, not `private`: the composition smoke tests render this directly.
+// Still module-scoped — nothing is exposed outside :feature:ping.
+internal fun PingContent(
     state: PingUiState,
     onHostChange: (String) -> Unit,
     onModeChanged: (PingMode) -> Unit,
