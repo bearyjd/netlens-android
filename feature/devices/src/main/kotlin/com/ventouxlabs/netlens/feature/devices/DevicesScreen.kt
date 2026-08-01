@@ -188,13 +188,19 @@ fun DevicesScreen(
                 )
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
+                    // Keys are namespaced per section even though `partition` guarantees the two
+                    // lists are disjoint. That guarantee lives at line 179, not here, and it is
+                    // the kind that quietly disappears — build these from two Room queries
+                    // instead of one partition and every device in both lists collides. #116 was
+                    // exactly this: two items() in one LazyColumn keyed on raw ids that were
+                    // disjoint right up until they weren't.
                     if (newDevices.isNotEmpty()) {
                         item { SectionHeader(stringResource(R.string.devices_section_new)) }
-                        items(newDevices, key = { it.id }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
+                        items(newDevices, key = { "new_${it.id}" }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
                     }
                     if (knownDevices.isNotEmpty()) {
                         item { SectionHeader(stringResource(R.string.devices_section_known)) }
-                        items(knownDevices, key = { it.id }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
+                        items(knownDevices, key = { "known_${it.id}" }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
                     }
                 }
             }
