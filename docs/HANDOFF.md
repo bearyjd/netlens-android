@@ -39,8 +39,9 @@ they don't get re-litigated.
   "landed" sections below.
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
-- **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
-  "Device state" before testing on either.
+- **Both phones now run published v1.3.0 / versionCode 14.** Pixel 9 was updated in place from
+  the verified FOSS APK on 2026-08-02; its signing certificate matched, so its existing data was
+  retained.
 
 ## CORRECTED: release signing secrets are valid (don't re-flag)
 
@@ -150,7 +151,8 @@ Both phones are signed with the real cert and their databases are at **schema v1
 - **Pixel 10 Pro Fold `57211FDCG0023C`** — running **published v1.3.0 / versionCode 14**, the
   exact artefact downloaded from the GitHub release and verified (cert `8fdfc928…ae2b4`). Its
   About screen is now truthful. Smoke-tested: launches clean, crash buffer empty.
-- **Pixel 9 Pro Fold `4A111FDKD0000C`** — untouched, still on 1.2.6 / 13.
+- **Pixel 9 Pro Fold `4A111FDKD0000C`** — running **published v1.3.0 / versionCode 14**, updated
+  in place on 2026-08-02 from the verified release APK (cert `8fdfc928…ae2b4`).
 
 Both are schema **v15**, and 1.3.0 is still v15, so `adb install -r` preserves data. Do NOT
 install anything at schema v14 or lower — `provideDatabase` has
@@ -179,11 +181,10 @@ the database.
    clone. Note that `.omc/skills/` had the *same* problem and was fixed on 2026-08-01 (`/.omc/*`
    plus `!/.omc/skills/`); the same shape of fix would work here. Tracked in the roadmap as
    needing a human decision.
-4. **Two screens have no composition guard.** `DevicesScreen` and `HomeScreen` keep their lists
-   inline in composables that take `hiltViewModel()`, so Paparazzi cannot render them. Reaching
-   them needs the list extracted into a stateless composable — a refactor, not the
-   `private` → `internal` visibility change the other five screens took. This matters because
-   `DevicesScreen` is the screen whose keys were namespaced in #126, so that fix ships unguarded.
+4. ~~**Two screens have no composition guard**~~ — **done in `95c975c` (2026-08-02).**
+   `DevicesContent` and `HomeContent` are state-driven Paparazzi targets. The system-service-bound
+   Devices watch section remains a production slot because layoutlib does not implement the
+   notification service; the list body is still exercised. Both new render suites pass.
 5. **The baseline profile regenerated in #123 is NOT in published 1.3.0** — it landed after the
    tag. It ships in 1.3.1.
 6. ~~Confirm the fold fix on hardware~~ — **user-confirmed 2026-07-31.** See the caveat in the
