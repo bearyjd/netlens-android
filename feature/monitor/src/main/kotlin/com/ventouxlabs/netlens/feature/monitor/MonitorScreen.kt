@@ -89,7 +89,9 @@ fun MonitorScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonitorContent(
+// `internal`, not `private`: the composition smoke tests render this directly.
+// Still module-scoped — nothing is exposed outside :feature:monitor.
+internal fun MonitorContent(
     state: MonitorUiState,
     onAddEndpoint: (String, String, Int, Int) -> Unit,
     onRemoveEndpoint: (MonitoredEndpoint) -> Unit,

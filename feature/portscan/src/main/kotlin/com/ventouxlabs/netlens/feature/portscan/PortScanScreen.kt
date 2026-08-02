@@ -144,7 +144,9 @@ fun PortScanScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PortScanContent(
+// `internal`, not `private`: the composition smoke tests render this directly.
+// Still module-scoped — nothing is exposed outside :feature:portscan.
+internal fun PortScanContent(
     state: PortScanUiState,
     onHostChanged: (String) -> Unit,
     onScan: (String, List<Int>) -> Unit,

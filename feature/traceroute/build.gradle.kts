@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.serialization)
     id("netlens.android.feature")
+    id("netlens.android.screenshot")
 }
 
 android {

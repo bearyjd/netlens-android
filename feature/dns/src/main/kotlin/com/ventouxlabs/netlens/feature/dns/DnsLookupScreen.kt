@@ -116,7 +116,9 @@ fun DnsLookupScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DnsLookupContent(
+// `internal`, not `private`: the composition smoke tests render this directly.
+// Still module-scoped — nothing is exposed outside :feature:dns.
+internal fun DnsLookupContent(
     state: DnsLookupUiState,
     onDomainChanged: (String) -> Unit,
     onTypeToggled: (DnsRecordType) -> Unit,
