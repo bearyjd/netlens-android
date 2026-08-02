@@ -1,4 +1,4 @@
-# Session Handoff — v1.3.0 released; #117-#122 landed (2026-07-31)
+# Session Handoff — v1.3.0 released; #117-#127 landed (2026-08-02)
 
 Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
 long-standing beliefs were corrected by evidence during this work — read those first, so
@@ -34,8 +34,9 @@ they don't get re-litigated.
   (`fdroid/com.ventouxlabs.netlens.yml`) was synced to 1.3.0 / 14 — that file is a mirror and
   gates nothing.
 - **Only `master` exists on the remote.** All feature branches deleted.
-- **Nothing is in flight.** No open PRs, no running jobs. v1.3.0 is out. #117/#118/#119 landed 2026-07-30 and
-  #120/#121/#122 on 2026-07-31 — see the two "landed" sections below.
+- **Nothing is in flight.** No open PRs, no running jobs, clean tree. v1.3.0 is out.
+  #117-#119 landed 2026-07-30, #120-#122 on 2026-07-31, #123-#127 on 2026-08-01/02 — see the
+  "landed" sections below.
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
 - **The two phones are on different builds** — Pixel 10 has the fix, Pixel 9 does not. See
@@ -144,26 +145,22 @@ what Room does.
 
 ## Device state — READ BEFORE INSTALLING ANYTHING
 
-Both phones are signed with the real cert and their NetLens database is at **schema v15**, but
-they are on **different builds**:
+Both phones are signed with the real cert and their databases are at **schema v15**.
 
-**They are no longer on the same build (2026-07-31).**
+- **Pixel 10 Pro Fold `57211FDCG0023C`** — running **published v1.3.0 / versionCode 14**, the
+  exact artefact downloaded from the GitHub release and verified (cert `8fdfc928…ae2b4`). Its
+  About screen is now truthful. Smoke-tested: launches clean, crash buffer empty.
+- **Pixel 9 Pro Fold `4A111FDKD0000C`** — untouched, still on 1.2.6 / 13.
 
-- **Pixel 10 Pro Fold `57211FDCG0023C`** — running **master @ `d7b5a38`**, a signed FOSS release
-  build installed over the top with `adb install -r` (cert `8fdfc928…` verified matching, so
-  data was preserved; schema still v15 both sides, so the destructive-downgrade path never
-  triggered). **Its About screen still reads 1.2.6 / versionCode 13** — `gradle.properties` was
-  deliberately not bumped, since that is release prep. So the version string on this phone is a
-  lie: it is post-#117 master, which includes the PortScan prefill fix and the #116 LOWs.
-- **Pixel 9 Pro Fold `4A111FDKD0000C`** — untouched, still the real 1.2.6 / 13 from `811c9e1`.
+Both are schema **v15**, and 1.3.0 is still v15, so `adb install -r` preserves data. Do NOT
+install anything at schema v14 or lower — `provideDatabase` has
+`fallbackToDestructiveMigrationOnDowngrade` and Room will wipe the database.
 
-Reinstall from master after any survey change rather than assuming. To build one:
-`./gradlew assembleFossRelease` — add `--max-workers=6` on a many-core machine or it OOMs, see
-the note above.
+To build something newer for testing: `./gradlew assembleFossRelease` — add `--max-workers=6` on
+a many-core machine or it OOMs (see the parallelism note above). Verify the cert with
+`apksigner verify --print-certs` before installing; a mismatch forces an uninstall, which wipes
+the database.
 
-- **Do not install v1.2.6 on them.** It is schema **v14**, and `provideDatabase` has
-  `fallbackToDestructiveMigrationOnDowngrade` — Room will **wipe the database**.
-- A build from current master is fine (also v15).
 - **On-device UI automation on these phones is unreliable.** GrapheneOS updates, Settings and
   the user's own apps repeatedly stole foreground mid-sequence. A capture guarded on
   `topResumedActivity` is **not sufficient** — the notification shade overlays the app without
@@ -172,27 +169,70 @@ the note above.
 
 ## Open items
 
-1. **Confirm the fold fix on hardware.** Multiple-point capture and sharing are verified. The
-   fold fix (`811c9e1`) is on both phones but **not yet confirmed by a walk**: fold mid-capture
-   should now keep counting, and backgrounding past 3s should discard with `CAPTURE_INTERRUPTED`.
-   Until someone folds a phone mid-burst, that fix has the same status the last one had when it
-   turned out not to work.
-2. **Next release is 1.3.0** — needs `versionCode 14` and
-   `fastlane/metadata/android/en-US/changelogs/14.txt`. The `[Unreleased]` CHANGELOG block is
-   already written and describes #116's three features; **it does not yet mention #117's fixes**.
-   Signing path is proven, so `/android-release` should be mechanical. **Do item 1 first** — the
-   survey is the headline feature of this release and is 0 for 2 on shipping unverified.
-3. **F-Droid MR** — awaiting maintainers; read the thread manually (API 401s).
-4. **Play Console** — manual; the v1.2.6 gplay AAB is attached to the GitHub release.
+1. **F-Droid MR #42628** — still open at 1.2.6 / 13, so **F-Droid will not ship 1.3.0 until
+   maintainers merge it**. `AutoUpdateMode: Version` + `UpdateCheckMode: Tags` picks up later
+   tags automatically *once merged*; nothing on our side speeds that up. Read the thread
+   manually — the `notes` API 401s without auth on project 36528.
+2. **Play Console** — manual; the v1.3.0 gplay AAB is attached to the GitHub release.
    Checklist in `docs/play-store.md`.
-5. ~~`PortScanScreen.kt` prefill bug~~ — **done, PR #117.**
-6. ~~Deferred LOWs from #116~~ — **done, PR #117.**
-7. **`.claude/PRPs` is gitignored**, so review artifacts (including
-   `.claude/PRPs/reviews/pr-116-review.md`) are local-only and lost on a fresh clone. Already
-   tracked in `.agent_native/agent_roadmap.md` as needing a human decision.
-8. **A device check for the PortScan prefill path** is unticked on #117: "scan this host" from LAN
-   Scan, then fold mid-edit. Same reasoning as item 1 — the prefill fix is Compose lifecycle
-   behaviour, which nothing in CI reaches.
+3. **`.claude/PRPs` is still gitignored**, so review artifacts are local-only and lost on a fresh
+   clone. Note that `.omc/skills/` had the *same* problem and was fixed on 2026-08-01 (`/.omc/*`
+   plus `!/.omc/skills/`); the same shape of fix would work here. Tracked in the roadmap as
+   needing a human decision.
+4. **Two screens have no composition guard.** `DevicesScreen` and `HomeScreen` keep their lists
+   inline in composables that take `hiltViewModel()`, so Paparazzi cannot render them. Reaching
+   them needs the list extracted into a stateless composable — a refactor, not the
+   `private` → `internal` visibility change the other five screens took. This matters because
+   `DevicesScreen` is the screen whose keys were namespaced in #126, so that fix ships unguarded.
+5. **The baseline profile regenerated in #123 is NOT in published 1.3.0** — it landed after the
+   tag. It ships in 1.3.1.
+6. ~~Confirm the fold fix on hardware~~ — **user-confirmed 2026-07-31.** See the caveat in the
+   TL;DR: this was a verbal confirmation, not an instrumented result.
+7. ~~PortScan prefill bug~~ / ~~Deferred LOWs from #116~~ / ~~Release 1.3.0~~ — **all done.**
+
+## What landed 2026-08-01/02 — five PRs (#123-#127), master green
+
+- **#123** — baseline profile regenerated on an API 34 emulator. The previous one predated even
+  the v1.2.6 tag. Ships in 1.3.1, not in published 1.3.0.
+- **#124** — **composition smoke tests** via Paparazzi. Reverting `dc03409` now fails a test in
+  26 seconds with the exact production message `IllegalArgumentException: Key "1" was already
+  used` — the crash that survived three review passes, an adversarial round and 750 green tests
+  and was found by a two-minute hardware walk.
+- **#125** — extended to `HostDetailSheet`, and put `protocol` back in its row key. The key was
+  `riskLevel_port` while `HostPortResult` carries a protocol, so 80/TCP and 80/UDP would have
+  collided. Latent, not live: nothing emits non-TCP.
+- **#126** — namespaced `DevicesScreen`'s section keys and wrote the convention into CLAUDE.md.
+- **#127** — composition tests for monitor, traceroute, portscan, ping, dns. **36 render tests
+  across seven screens.** Required five `*Content` composables to go `private` → `internal`.
+
+**Use Paparazzi as a composition check, not a screenshot check.** No golden images, no PNGs
+committed, `verifyPaparazzi` never runs. Duplicate keys, composition errors and measure/layout
+failures all throw at *render* time, so `paparazzi.snapshot { }` in a plain unit test is the whole
+assertion. Three gotchas: the render exception escapes via the JUnit rule, NOT out of
+`snapshot { }` (a `try/catch` at the call site silently passes — assert nothing); only
+state-driven composables work; and a screen calling `rememberLauncherForActivityResult` needs
+`LocalActivityResultRegistryOwner` provided (see `PingContentRenderTest`).
+
+**Lazy-list keys were swept — all 28 call sites, 2026-08-01.** All currently safe. The useful
+split is keys safe *by construction* (namespaced: wifi, history, home, lanscan, dns) versus safe
+*by an invariant living elsewhere* (devices' `partition`, netlog's single table, single-list
+containers). The convention is now in CLAUDE.md. `HistoryScreen` already namespaced by tool
+because its rows come from 11 tables — someone hit #116's problem independently and solved it.
+
+**Learned skills are tracked now** (`.omc/skills/`, 8 files). `.gitignore` had excluded all of
+`.omc/`, so five skills from earlier sessions were one `git clean` from gone. Two subtleties in
+the fix, both of which bit: `/.omc/*` not `/.omc/` (a trailing-slash exclude stops Git descending,
+so a negation inside can never re-include), and a pattern containing a slash is root-anchored, so
+`**/*/.omc/` is needed to keep ignoring stray nested `.omc` dirs that tooling writes elsewhere.
+
+**874 tests**, up from 752 at the start of 2026-07-30. Every module has coverage.
+
+**Read `.omc/skills/` before re-deriving anything.** Three skills written 2026-08-01 capture what
+cost real debugging: `unenforced-verification-expertise` (six instances where green meant
+nothing), `gradle-local-parallelism-expertise` (the cold-build OOM and the test-worker
+`Connect timed out` are one cause — worker count, not heap — and the tempting repo-level heap
+fix both fails and endangers F-Droid's from-source build), and
+`paparazzi-composition-smoke-expertise`.
 
 ## What landed this session (2026-07-30) — three PRs, all squashed, master green
 
