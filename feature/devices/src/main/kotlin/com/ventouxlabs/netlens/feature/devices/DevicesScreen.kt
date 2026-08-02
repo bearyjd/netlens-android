@@ -62,6 +62,8 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.StampChip
+import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
+import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 
@@ -85,21 +87,8 @@ fun DevicesScreen(
         }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selected = uiState.devices.find { it.id == uiState.selectedDeviceId }
     val proStatus = LocalProStatus.current
     val isPro by proStatus.isPro.collectAsStateWithLifecycle()
-
-    if (selected != null) {
-        DeviceDetailSheet(
-            device = selected,
-            onDismiss = { viewModel.selectDevice(null) },
-            onSaveDetails = { viewModel.saveDetails(selected.id, it) },
-            onToggleKnown = { viewModel.toggleKnown(selected.id) },
-            onDelete = { viewModel.delete(selected.id) },
-            knownTags = uiState.availableTags,
-        )
-    }
-
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -109,6 +98,67 @@ fun DevicesScreen(
             snackbarHostState.showSnackbar(message)
             viewModel.clearWatchError()
         }
+    }
+
+    DevicesContent(
+        state = uiState,
+        isPro = isPro,
+        onBack = onBack,
+        onCopyResults = { ResultExporter.copyToClipboard(context, "Devices", viewModel.buildExportText()) },
+        onShareResults = { ResultExporter.shareAsText(context, "Device Inventory", viewModel.buildExportText()) },
+        watchSection = {
+            WatchSection(
+                isPro = isPro,
+                watchedNetworks = uiState.watchedNetworks,
+                cadence = uiState.cadence,
+                masterEnabled = uiState.masterWatchEnabled,
+                onWatchThisNetwork = viewModel::watchCurrentNetwork,
+                onToggleNetwork = viewModel::toggleNetworkWatch,
+                onRemoveNetwork = viewModel::removeWatchedNetwork,
+                onMasterToggle = { enabled -> viewModel.setMasterWatch(enabled, isPro) },
+                onCadenceChange = { cadence -> viewModel.setCadence(cadence, isPro) },
+            )
+        },
+        onSearchQueryChanged = viewModel::setSearchQuery,
+        onToggleTag = viewModel::toggleTagFilter,
+        onClearTags = viewModel::clearTagFilters,
+        onSelectDevice = viewModel::selectDevice,
+        onSaveDetails = viewModel::saveDetails,
+        onToggleKnown = viewModel::toggleKnown,
+        onDelete = viewModel::delete,
+        snackbarHostState = snackbarHostState,
+    )
+}
+
+/** State-driven screen body, kept separate from Hilt wiring for composition smoke tests. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun DevicesContent(
+    state: DevicesUiState,
+    isPro: Boolean,
+    onBack: () -> Unit,
+    onCopyResults: () -> Unit,
+    onShareResults: () -> Unit,
+    watchSection: @Composable () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onToggleTag: (String) -> Unit,
+    onClearTags: () -> Unit,
+    onSelectDevice: (Long?) -> Unit,
+    onSaveDetails: (Long, DeviceDetailsEdit) -> Unit,
+    onToggleKnown: (Long) -> Unit,
+    onDelete: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val selected = state.devices.find { it.id == state.selectedDeviceId }
+    if (selected != null) {
+        DeviceDetailSheet(
+            device = selected,
+            onDismiss = { onSelectDevice(null) },
+            onSaveDetails = { onSaveDetails(selected.id, it) },
+            onToggleKnown = { onToggleKnown(selected.id) },
+            onDelete = { onDelete(selected.id) },
+            knownTags = state.availableTags,
+        )
     }
 
     Scaffold(
@@ -123,13 +173,13 @@ fun DevicesScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        ResultExporter.copyToClipboard(context, "Devices", viewModel.buildExportText())
+                        onCopyResults()
                     }) {
                         Icon(Icons.Default.ContentCopy, stringResource(R.string.devices_cd_copy_results))
                     }
                     if (isPro) {
                         IconButton(onClick = {
-                            ResultExporter.shareAsText(context, "Device Inventory", viewModel.buildExportText())
+                            onShareResults()
                         }) {
                             Icon(Icons.Default.Share, stringResource(R.string.devices_cd_share))
                         }
@@ -139,25 +189,15 @@ fun DevicesScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            WatchSection(
-                isPro = isPro,
-                watchedNetworks = uiState.watchedNetworks,
-                cadence = uiState.cadence,
-                masterEnabled = uiState.masterWatchEnabled,
-                onWatchThisNetwork = viewModel::watchCurrentNetwork,
-                onToggleNetwork = viewModel::toggleNetworkWatch,
-                onRemoveNetwork = viewModel::removeWatchedNetwork,
-                onMasterToggle = { enabled -> viewModel.setMasterWatch(enabled, isPro) },
-                onCadenceChange = { cadence -> viewModel.setCadence(cadence, isPro) },
-            )
+            watchSection()
             OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::setSearchQuery,
+                value = state.searchQuery,
+                onValueChange = onSearchQueryChanged,
                 placeholder = { Text(stringResource(R.string.devices_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                    if (state.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChanged("") }) {
                             Icon(Icons.Default.Close, stringResource(R.string.devices_clear_search))
                         }
                     }
@@ -167,21 +207,21 @@ fun DevicesScreen(
             )
 
             TagFilterRow(
-                availableTags = uiState.availableTags,
-                activeTags = uiState.activeTags,
-                onToggleTag = viewModel::toggleTagFilter,
-                onClearTags = viewModel::clearTagFilters,
+                availableTags = state.availableTags,
+                activeTags = state.activeTags,
+                onToggleTag = onToggleTag,
+                onClearTags = onClearTags,
             )
 
             // Partition once per device-list change rather than on every recomposition
             // (every search keystroke, selection, and isPro emission re-filtered twice).
-            val (newDevices, knownDevices) = remember(uiState.devices) {
-                uiState.devices.partition { !it.isKnown }
+            val (newDevices, knownDevices) = remember(state.devices) {
+                state.devices.partition { !it.isKnown }
             }
 
-            if (uiState.devices.isEmpty()) {
+            if (state.devices.isEmpty()) {
                 Text(
-                    if (uiState.searchQuery.isBlank()) stringResource(R.string.devices_empty)
+                    if (state.searchQuery.isBlank()) stringResource(R.string.devices_empty)
                     else stringResource(R.string.devices_no_results),
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -196,11 +236,11 @@ fun DevicesScreen(
                     // disjoint right up until they weren't.
                     if (newDevices.isNotEmpty()) {
                         item { SectionHeader(stringResource(R.string.devices_section_new)) }
-                        items(newDevices, key = { "new_${it.id}" }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
+                        items(newDevices, key = { "new_${it.id}" }) { DeviceRow(it) { onSelectDevice(it.id) } }
                     }
                     if (knownDevices.isNotEmpty()) {
                         item { SectionHeader(stringResource(R.string.devices_section_known)) }
-                        items(knownDevices, key = { "known_${it.id}" }) { DeviceRow(it) { viewModel.selectDevice(it.id) } }
+                        items(knownDevices, key = { "known_${it.id}" }) { DeviceRow(it) { onSelectDevice(it.id) } }
                     }
                 }
             }

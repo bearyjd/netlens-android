@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("netlens.android.application")
     id("netlens.android.compose")
+    id("netlens.android.screenshot")
     id("netlens.hilt")
     alias(libs.plugins.baselineprofile)
 }

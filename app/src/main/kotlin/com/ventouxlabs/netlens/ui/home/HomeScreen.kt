@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.R
 import com.ventouxlabs.netlens.feature.posture.PostureViewModel
+import com.ventouxlabs.netlens.feature.posture.model.PostureUiState
 import com.ventouxlabs.netlens.navigation.ToolCategory
 import com.ventouxlabs.netlens.navigation.ToolDestination
 import com.ventouxlabs.netlens.ui.components.SectionHeader
@@ -79,34 +80,56 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val handleToolClick = remember(homeViewModel, onToolClick) {
-        { tool: ToolDestination ->
-            homeViewModel.recordToolUsage(tool.route)
-            onToolClick(tool)
-        }
-    }
+    HomeContent(
+        state = homeState,
+        postureState = postureState,
+        onToolClick = { tool -> homeViewModel.recordToolUsage(tool.route); onToolClick(tool) },
+        onSettingsClick = onSettingsClick,
+        onSearchQueryChanged = homeViewModel::onSearchQueryChanged,
+        onToggleFavoritesEditing = { homeViewModel.setEditingFavorites(!homeState.isEditingFavorites) },
+        onPostureRetry = postureViewModel::refresh,
+        metricsContent = {
+            HomeMetricsSection(
+                latencyViewModel = latencyViewModel,
+                isVpnActive = homeState.isVpnActive,
+                localIp = homeState.localIp,
+                gatewayIp = homeState.gatewayIp,
+                onVpnClick = { homeViewModel.recordToolUsage(ToolDestination.VpnStatus.route); onToolClick(ToolDestination.VpnStatus) },
+                onIpClick = { homeViewModel.recordToolUsage(ToolDestination.IpInfo.route); onToolClick(ToolDestination.IpInfo) },
+            )
+        },
+        modifier = modifier,
+    )
+}
 
+/** State-driven home body, separated from Hilt and lifecycle wiring for composition smoke tests. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun HomeContent(
+    state: HomeUiState,
+    postureState: PostureUiState,
+    onToolClick: (ToolDestination) -> Unit,
+    onSettingsClick: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onToggleFavoritesEditing: () -> Unit,
+    onPostureRetry: () -> Unit,
+    metricsContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val allGridTools = remember { ToolDestination.entries.filter { it.isVisibleInGrid } }
-    val isSearching = homeState.searchQuery.isNotBlank()
-    val filteredTools = remember(homeState.searchQuery, allGridTools) {
-        if (homeState.searchQuery.isNotBlank()) {
-            allGridTools.filter {
-                it.label.contains(homeState.searchQuery, ignoreCase = true) ||
-                    it.description.contains(homeState.searchQuery, ignoreCase = true)
-            }
-        } else {
-            allGridTools
-        }
+    val isSearching = state.searchQuery.isNotBlank()
+    val filteredTools = remember(state.searchQuery, allGridTools) {
+        if (state.searchQuery.isNotBlank()) allGridTools.filter {
+            it.label.contains(state.searchQuery, ignoreCase = true) ||
+                it.description.contains(state.searchQuery, ignoreCase = true)
+        } else allGridTools
     }
-    val favoriteTools = remember(homeState.favoriteRoutes) {
-        homeState.favoriteRoutes
-            .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    val favoriteTools = remember(state.favoriteRoutes) {
+        state.favoriteRoutes.mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
     }
-    val recentTools = remember(homeState.recentRoutes) {
-        homeState.recentRoutes
-            .mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
+    val recentTools = remember(state.recentRoutes) {
+        state.recentRoutes.mapNotNull { route -> ToolDestination.entries.find { it.route == route } }
     }
-
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -138,10 +161,10 @@ fun HomeScreen(
             item(key = "posture_hero", span = { GridItemSpan(maxLineSpan) }) {
                 PostureHeroCard(
                     postureState = postureState,
-                    isConnected = homeState.isConnected,
-                    interfaceLabel = homeState.interfaceLabel,
-                    onClick = { handleToolClick(ToolDestination.Posture) },
-                    onRetry = postureViewModel::refresh,
+                    isConnected = state.isConnected,
+                    interfaceLabel = state.interfaceLabel,
+                    onClick = { onToolClick(ToolDestination.Posture) },
+                    onRetry = onPostureRetry,
                 )
             }
 
@@ -149,20 +172,13 @@ fun HomeScreen(
                 // latencyState is collected inside this child, not in HomeScreen's body, so
                 // the ~1Hz latency tick recomposes only this section and not the whole grid
                 // (which would otherwise re-run every tool derivation once per second).
-                HomeMetricsSection(
-                    latencyViewModel = latencyViewModel,
-                    isVpnActive = homeState.isVpnActive,
-                    localIp = homeState.localIp,
-                    gatewayIp = homeState.gatewayIp,
-                    onVpnClick = { handleToolClick(ToolDestination.VpnStatus) },
-                    onIpClick = { handleToolClick(ToolDestination.IpInfo) },
-                )
+                metricsContent()
             }
 
             item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
                 ToolSearchBar(
-                    query = homeState.searchQuery,
-                    onQueryChange = homeViewModel::onSearchQueryChanged,
+                    query = state.searchQuery,
+                    onQueryChange = onSearchQueryChanged,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -173,11 +189,9 @@ fun HomeScreen(
                         SectionHeader(
                             title = stringResource(R.string.home_favorites),
                             actionLabel = stringResource(
-                                if (homeState.isEditingFavorites) R.string.home_done else R.string.home_edit,
+                                if (state.isEditingFavorites) R.string.home_done else R.string.home_edit,
                             ),
-                            onAction = {
-                                homeViewModel.setEditingFavorites(!homeState.isEditingFavorites)
-                            },
+                            onAction = onToggleFavoritesEditing,
                         )
                     }
                     item(key = "favorites_row", span = { GridItemSpan(maxLineSpan) }) {
@@ -186,7 +200,7 @@ fun HomeScreen(
                                 ToolChip(
                                     icon = tool.icon,
                                     label = tool.label,
-                                    onClick = { handleToolClick(tool) },
+                                    onClick = { onToolClick(tool) },
                                 )
                             }
                         }
@@ -203,7 +217,7 @@ fun HomeScreen(
                                 ToolChip(
                                     icon = tool.icon,
                                     label = tool.label,
-                                    onClick = { handleToolClick(tool) },
+                                    onClick = { onToolClick(tool) },
                                 )
                             }
                         }
@@ -221,7 +235,7 @@ fun HomeScreen(
                                 icon = tool.icon,
                                 label = tool.label,
                                 description = tool.description,
-                                onClick = { handleToolClick(tool) },
+                                onClick = { onToolClick(tool) },
                             )
                         }
                     }
@@ -242,7 +256,7 @@ fun HomeScreen(
                             icon = tool.icon,
                             label = tool.label,
                             description = tool.description,
-                            onClick = { handleToolClick(tool) },
+                            onClick = { onToolClick(tool) },
                         )
                     }
                 }
@@ -261,7 +275,6 @@ private fun HomeMetricsSection(
     onIpClick: () -> Unit,
 ) {
     val latencyState by latencyViewModel.state.collectAsStateWithLifecycle()
-
     Column {
         MetricsRow(
             latestLatencyMs = latencyState.dataPoints.lastOrNull { it.latencyMs != null }?.latencyMs,
@@ -272,11 +285,7 @@ private fun HomeMetricsSection(
             localIp = localIp,
             gatewayIp = gatewayIp,
             onLatencyClick = {
-                if (latencyState.isEnabled) {
-                    latencyViewModel.toggleExpanded()
-                } else {
-                    latencyViewModel.toggleEnabled()
-                }
+                if (latencyState.isEnabled) latencyViewModel.toggleExpanded() else latencyViewModel.toggleEnabled()
             },
             onVpnClick = onVpnClick,
             onIpClick = onIpClick,
