@@ -36,9 +36,11 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -160,6 +162,7 @@ fun LanScanScreen(
         onShareSavedInventory = if (isPro) {
             { inventory -> ResultExporter.shareAsText(context, inventory.name, viewModel.buildInventoryExportText(inventory)) }
         } else null,
+        onDeleteSavedInventory = viewModel::deleteSavedInventory,
         onNavigateToTool = onNavigateToTool,
         onOpenService = { launch ->
             // Toast rather than a snackbar: the host sheet covers the Scaffold, so a snackbar
@@ -220,6 +223,7 @@ private fun LanScanContent(
     onShareEvent: ((LanScanHistoryUiModel) -> Unit)? = null,
     onCopySavedInventory: (com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit = {},
     onShareSavedInventory: ((com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit)? = null,
+    onDeleteSavedInventory: (Long) -> Unit = {},
     onNavigateToTool: (String, String) -> Unit,
     onOpenService: (ServiceLaunch) -> Unit = {},
     onCopyResults: () -> Unit = {},
@@ -394,7 +398,12 @@ private fun LanScanContent(
                     onDeleteDevice = onDeleteDevice,
                     onClearInventory = onClearInventory,
                 )
-                LanScanTab.SAVED -> SavedInventoriesTabContent(uiState.savedInventories, onCopySavedInventory, onShareSavedInventory)
+                LanScanTab.SAVED -> SavedInventoriesTabContent(
+                    inventories = uiState.savedInventories,
+                    onCopy = onCopySavedInventory,
+                    onShare = onShareSavedInventory,
+                    onDelete = onDeleteSavedInventory,
+                )
             }
         }
     }
@@ -658,7 +667,25 @@ private fun SavedInventoriesTabContent(
     inventories: List<com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry>,
     onCopy: (com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit,
     onShare: ((com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit)?,
+    onDelete: (Long) -> Unit,
 ) {
+    var pendingDelete by remember { mutableStateOf<com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry?>(null) }
+    pendingDelete?.let { inventory ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.lanscan_saved_delete_title)) },
+            text = { Text(stringResource(R.string.lanscan_saved_delete_message, inventory.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(inventory.id)
+                    pendingDelete = null
+                }) { Text(stringResource(R.string.lanscan_saved_delete_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.lanscan_inventory_clear_cancel)) }
+            },
+        )
+    }
     if (inventories.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.lanscan_saved_empty), textAlign = TextAlign.Center)
@@ -682,6 +709,9 @@ private fun SavedInventoriesTabContent(
                     }
                     if (onShare != null) IconButton(onClick = { onShare(inventory) }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share_inventory))
+                    }
+                    IconButton(onClick = { pendingDelete = inventory }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.lanscan_cd_delete_inventory))
                     }
                 }
             }

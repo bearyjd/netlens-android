@@ -69,7 +69,11 @@
     <string name="lanscan_cd_save_inventory">Save as inventory</string>
     <string name="lanscan_cd_copy_inventory">Copy saved inventory</string>
     <string name="lanscan_cd_share_inventory">Share saved inventory</string>
+    <string name="lanscan_cd_delete_inventory">Delete saved inventory</string>
     <string name="lanscan_saved_empty">No saved inventory snapshots yet. Save a scan event to keep an immutable inventory.</string>
+    <string name="lanscan_saved_delete_title">Delete saved inventory?</string>
+    <string name="lanscan_saved_delete_message">Remove %1$s? This cannot be undone.</string>
+    <string name="lanscan_saved_delete_confirm">Delete</string>
 
     <!-- Inventory -->
     <string name="lanscan_inventory_search_placeholder">Search devices…</string>

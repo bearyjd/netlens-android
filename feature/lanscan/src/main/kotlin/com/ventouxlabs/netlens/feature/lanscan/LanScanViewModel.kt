@@ -449,6 +449,11 @@ class LanScanViewModel @Inject constructor(
         }
     }
 
+    fun deleteSavedInventory(id: Long) {
+        val inventoryDao = lanScanInventoryDao ?: return
+        viewModelScope.launch { inventoryDao.deleteById(id) }
+    }
+
     fun buildEventExportText(event: LanScanHistoryUiModel): String = buildSnapshotExportText(
         title = "LAN Scan Event",
         timestamp = event.timestamp,
