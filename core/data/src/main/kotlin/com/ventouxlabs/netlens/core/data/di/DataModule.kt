@@ -15,6 +15,7 @@ import com.ventouxlabs.netlens.core.data.dao.EndpointDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.LanScanInventoryDao
 import com.ventouxlabs.netlens.core.data.dao.NetworkEventDao
 import com.ventouxlabs.netlens.core.data.dao.PingHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
@@ -181,6 +182,19 @@ object DataModule {
         }
     }
 
+    // v16: LAN scan history becomes a complete, exportable event record. Saved inventories are
+    // independent snapshots so future scans can never alter an inventory the user preserved.
+    private val MIGRATION_15_16 = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE history_lanscan ADD COLUMN latitude REAL")
+            db.execSQL("ALTER TABLE history_lanscan ADD COLUMN longitude REAL")
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `lan_scan_inventories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `sourceEventId` INTEGER NOT NULL, `capturedAt` INTEGER NOT NULL, `subnet` TEXT, `deviceCount` INTEGER NOT NULL, `devicesJson` TEXT NOT NULL, `latitude` REAL, `longitude` REAL)""",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_lan_scan_inventories_createdAt` ON `lan_scan_inventories` (`createdAt`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -192,7 +206,7 @@ object DataModule {
             .addMigrations(
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                 MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
-                MIGRATION_13_14, MIGRATION_14_15,
+                MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -216,6 +230,10 @@ object DataModule {
     @Provides
     fun provideLanScanHistoryDao(database: NetLensDatabase): LanScanHistoryDao =
         database.lanScanHistoryDao()
+
+    @Provides
+    fun provideLanScanInventoryDao(database: NetLensDatabase): LanScanInventoryDao =
+        database.lanScanInventoryDao()
 
     @Provides
     fun providePortScanHistoryDao(database: NetLensDatabase): PortScanHistoryDao =

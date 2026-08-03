@@ -34,4 +34,17 @@ class VpnStatusViewModel @Inject constructor(
             }
         }
     }
+
+    fun buildExportText(): String = buildString {
+        appendLine("VPN Status")
+        appendLine("Network: ${if (_uiState.value.isOnline) "Online" else "Offline"}")
+        append("VPN: ")
+        append(
+            when (_uiState.value.vpnState) {
+                com.ventouxlabs.netlens.core.network.VpnState.FullTunnel -> "Full tunnel"
+                com.ventouxlabs.netlens.core.network.VpnState.SplitTunnel -> "Split tunnel"
+                com.ventouxlabs.netlens.core.network.VpnState.None -> "Not connected"
+            },
+        )
+    }
 }

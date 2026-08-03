@@ -6,6 +6,7 @@ import com.ventouxlabs.netlens.core.data.dao.DnsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.EndpointDao
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.LanScanInventoryDao
 import com.ventouxlabs.netlens.core.data.dao.NetworkEventDao
 import com.ventouxlabs.netlens.core.data.dao.PingHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
@@ -16,6 +17,7 @@ import com.ventouxlabs.netlens.core.data.model.DnsHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.EndpointCheck
 import com.ventouxlabs.netlens.core.data.model.IpInfoHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
+import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
 import com.ventouxlabs.netlens.core.data.model.MonitoredEndpoint
 import com.ventouxlabs.netlens.core.data.model.NetworkEvent
 import com.ventouxlabs.netlens.core.data.model.PingHistoryEntry
@@ -51,6 +53,7 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         EndpointCheck::class,
         PingHistoryEntry::class,
         LanScanHistoryEntry::class,
+        LanScanInventoryEntry::class,
         PortScanHistoryEntry::class,
         DnsHistoryEntry::class,
         WhoisHistoryEntry::class,
@@ -66,7 +69,7 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         WifiSurveySessionEntity::class,
         WifiSurveyPointEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
@@ -75,6 +78,7 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun endpointDao(): EndpointDao
     abstract fun pingHistoryDao(): PingHistoryDao
     abstract fun lanScanHistoryDao(): LanScanHistoryDao
+    abstract fun lanScanInventoryDao(): LanScanInventoryDao
     abstract fun portScanHistoryDao(): PortScanHistoryDao
     abstract fun dnsHistoryDao(): DnsHistoryDao
     abstract fun whoisHistoryDao(): WhoisHistoryDao

@@ -5,4 +5,7 @@ data class LanScanHistoryUiModel(
     val timestamp: Long,
     val subnet: String?,
     val deviceCount: Int,
+    val devicesJson: String = "[]",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )

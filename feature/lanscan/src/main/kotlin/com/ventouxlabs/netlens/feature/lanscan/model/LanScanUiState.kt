@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.lanscan.model
 
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 
 data class LanScanUiState(
@@ -12,17 +13,20 @@ data class LanScanUiState(
     val deviceCount: Int = 0,
     val rangeMode: ScanRangeMode = ScanRangeMode.AUTO,
     val customRange: String = "",
+    val manualLatitude: String = "",
+    val manualLongitude: String = "",
     val rangeError: String? = null,
     val selectedDevice: LanDevice? = null,
     val suggestedNetworks: List<SuggestedNetwork> = emptyList(),
     val selectedTab: LanScanTab = LanScanTab.SCAN,
     val historyEntries: List<LanScanHistoryUiModel> = emptyList(),
+    val savedInventories: List<LanScanInventoryEntry> = emptyList(),
     val knownDevices: List<KnownDeviceEntity> = emptyList(),
     val inventorySearchQuery: String = "",
     val inventorySortField: DeviceSortField = DeviceSortField.LAST_SEEN,
     val inventorySortAscending: Boolean = false,
 )
 
-enum class LanScanTab { SCAN, HISTORY, INVENTORY }
+enum class LanScanTab { SCAN, HISTORY, INVENTORY, SAVED }
 
 enum class DeviceSortField { HOSTNAME, IP, VENDOR, FIRST_SEEN, LAST_SEEN, MAC }

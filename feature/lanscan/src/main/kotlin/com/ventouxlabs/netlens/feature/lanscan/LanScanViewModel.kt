@@ -24,9 +24,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.LanScanInventoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
+import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
@@ -44,13 +46,19 @@ import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanTab
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanUiState
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates
 import com.ventouxlabs.netlens.feature.lanscan.model.SuggestedNetwork
+import com.ventouxlabs.netlens.feature.lanscan.model.toSnapshotDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
 import com.ventouxlabs.netlens.feature.lanscan.model.HostScanExport
 import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
 import com.ventouxlabs.netlens.feature.portscan.model.PortRiskClassifier
 import com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts
 import javax.inject.Inject
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 enum class SortOrder { IP, LATENCY }
 
@@ -67,6 +75,7 @@ class LanScanViewModel @Inject constructor(
     private val lanScanHistoryDao: LanScanHistoryDao,
     private val knownDeviceDao: KnownDeviceDao,
     private val deviceInventoryRepository: DeviceInventoryRepository,
+    private val lanScanInventoryDao: LanScanInventoryDao? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -93,6 +102,9 @@ class LanScanViewModel @Inject constructor(
                     timestamp = entry.timestamp,
                     subnet = entry.subnet,
                     deviceCount = entry.deviceCount,
+                    devicesJson = entry.devicesJson,
+                    latitude = entry.latitude,
+                    longitude = entry.longitude,
                 )
             }
         }
@@ -103,6 +115,13 @@ class LanScanViewModel @Inject constructor(
         viewModelScope.launch {
             historyEntries.collect { entries ->
                 _uiState.update { it.copy(historyEntries = entries) }
+            }
+        }
+        lanScanInventoryDao?.let { inventoryDao ->
+            viewModelScope.launch {
+                inventoryDao.getAll().collect { inventories ->
+                    _uiState.update { it.copy(savedInventories = inventories) }
+                }
             }
         }
         viewModelScope.launch {
@@ -147,7 +166,7 @@ class LanScanViewModel @Inject constructor(
         _uiState.update { it.copy(suggestedNetworks = suggestions) }
     }
 
-    fun startScanWithCidr(cidr: String) {
+    fun startScanWithCidr(cidr: String, location: ScanCoordinates? = null) {
         if (parseCidr(cidr) == null) return
         _uiState.update {
             it.copy(
@@ -156,7 +175,7 @@ class LanScanViewModel @Inject constructor(
                 selectedTab = LanScanTab.SCAN,
             )
         }
-        startScan()
+        startScan(location)
     }
 
     fun selectTab(tab: LanScanTab) {
@@ -183,7 +202,15 @@ class LanScanViewModel @Inject constructor(
         _uiState.update { it.copy(customRange = range, rangeError = null) }
     }
 
-    fun startScan() {
+    fun onManualLatitudeChanged(latitude: String) {
+        _uiState.update { it.copy(manualLatitude = latitude) }
+    }
+
+    fun onManualLongitudeChanged(longitude: String) {
+        _uiState.update { it.copy(manualLongitude = longitude) }
+    }
+
+    fun startScan(location: ScanCoordinates? = null) {
         if (scanJob?.isActive == true) return
 
         val (subnet, prefixLength, subnetInfo) = when (_uiState.value.rangeMode) {
@@ -219,6 +246,7 @@ class LanScanViewModel @Inject constructor(
             )
         }
 
+        val scanStartedAt = System.currentTimeMillis()
         scanJob = viewModelScope.launch {
             // Three scanners discover hosts concurrently. Rather than copy + re-sort the whole
             // device list and emit a new _uiState on every single discovery (an O(n^2 log n)
@@ -311,7 +339,7 @@ class LanScanViewModel @Inject constructor(
             enrichWithArpAndNetBios()
 
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
-            saveToHistory()
+            saveToHistory(scanStartedAt, location)
             deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null)
         }
     }
@@ -387,18 +415,81 @@ class LanScanViewModel @Inject constructor(
         }
     }
 
-    private suspend fun saveToHistory() {
+    private suspend fun saveToHistory(timestamp: Long, location: ScanCoordinates?) {
         val state = _uiState.value
         if (state.devices.isEmpty()) return
         lanScanHistoryDao.insert(
             LanScanHistoryEntry(
+                timestamp = timestamp,
                 ssid = null,
                 subnet = state.subnetInfo,
                 deviceCount = state.devices.size,
-                devicesJson = Json.encodeToString(state.devices.map { it.ip }),
+                devicesJson = Json.encodeToString(state.devices.map { it.toSnapshotDevice() }),
+                latitude = location?.latitude,
+                longitude = location?.longitude,
             ),
         )
     }
+
+    fun saveEventToInventory(event: LanScanHistoryUiModel) {
+        val inventoryDao = lanScanInventoryDao ?: return
+        viewModelScope.launch {
+            inventoryDao.insert(
+                LanScanInventoryEntry(
+                    name = "LAN scan ${event.subnet ?: "inventory"}",
+                    sourceEventId = event.id,
+                    capturedAt = event.timestamp,
+                    subnet = event.subnet,
+                    deviceCount = event.deviceCount,
+                    devicesJson = event.devicesJson,
+                    latitude = event.latitude,
+                    longitude = event.longitude,
+                ),
+            )
+        }
+    }
+
+    fun buildEventExportText(event: LanScanHistoryUiModel): String = buildSnapshotExportText(
+        title = "LAN Scan Event",
+        timestamp = event.timestamp,
+        subnet = event.subnet,
+        deviceCount = event.deviceCount,
+        devicesJson = event.devicesJson,
+        latitude = event.latitude,
+        longitude = event.longitude,
+    )
+
+    fun buildInventoryExportText(inventory: LanScanInventoryEntry): String = buildSnapshotExportText(
+        title = inventory.name,
+        timestamp = inventory.capturedAt,
+        subnet = inventory.subnet,
+        deviceCount = inventory.deviceCount,
+        devicesJson = inventory.devicesJson,
+        latitude = inventory.latitude,
+        longitude = inventory.longitude,
+    )
+
+    private fun buildSnapshotExportText(
+        title: String,
+        timestamp: Long,
+        subnet: String?,
+        deviceCount: Int,
+        devicesJson: String,
+        latitude: Double?,
+        longitude: Double?,
+    ): String = buildString {
+        appendLine(title)
+        appendLine("Captured: ${DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))}")
+        appendLine("Subnet: ${subnet ?: "Unknown"}")
+        appendLine("Devices: $deviceCount")
+        if (latitude != null && longitude != null) appendLine("Location: $latitude, $longitude")
+        val snapshots = runCatching { Json.decodeFromString<List<com.ventouxlabs.netlens.feature.lanscan.model.ScanSnapshotDevice>>(devicesJson) }.getOrNull()
+        val legacyIps = if (snapshots == null) runCatching { Json.decodeFromString<List<String>>(devicesJson) }.getOrDefault(emptyList()) else emptyList()
+        snapshots.orEmpty().forEach { device ->
+            appendLine("${device.ip}${device.hostname?.let { " ($it)" } ?: ""}${device.macAddress?.let { "  MAC=$it" } ?: ""}${device.vendor?.let { "  Vendor=$it" } ?: ""}")
+        }
+        legacyIps.forEach(::appendLine)
+    }.trimEnd()
 
     fun buildExportText(): String {
         val current = _uiState.value

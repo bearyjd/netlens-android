@@ -32,6 +32,10 @@ import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
+import com.ventouxlabs.netlens.feature.lanscan.model.ScanSnapshotDevice
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
 import com.ventouxlabs.netlens.feature.portscan.model.PortResult
@@ -98,6 +102,34 @@ class LanScanBuildExportTextTest {
         assertTrue(text.contains("Devices found: 1"))
         assertTrue(text.contains("192.168.1.50  MAC=11:22:33:44:55:66  3ms"))
         assertFalse(text.contains("192.168.1.50 ("))
+    }
+
+    @Test
+    fun `event export includes captured snapshot and optional coordinates`() {
+        val event = LanScanHistoryUiModel(
+            id = 7,
+            timestamp = 1_700_000_000_000,
+            subnet = "192.168.1.0/24",
+            deviceCount = 1,
+            devicesJson = Json.encodeToString(listOf(ScanSnapshotDevice("192.168.1.4", hostname = "router", vendor = "Example"))),
+            latitude = 45.5,
+            longitude = -73.6,
+        )
+
+        val text = viewModel.buildEventExportText(event)
+
+        assertTrue(text.contains("LAN Scan Event"))
+        assertTrue(text.contains("Location: 45.5, -73.6"))
+        assertTrue(text.contains("192.168.1.4 (router)  Vendor=Example"))
+    }
+
+    @Test
+    fun `event export retains legacy IP-only history`() {
+        val text = viewModel.buildEventExportText(
+            LanScanHistoryUiModel(1, 0, "10.0.0.0/24", 1, devicesJson = "[\"10.0.0.1\"]"),
+        )
+
+        assertTrue(text.contains("10.0.0.1"))
     }
 }
 
