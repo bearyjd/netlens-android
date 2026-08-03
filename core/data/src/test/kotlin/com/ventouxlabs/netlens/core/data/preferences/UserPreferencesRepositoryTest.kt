@@ -20,9 +20,6 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserPreferencesRepositoryTest {
 
-    @TempDir
-    lateinit var tempDir: File
-
     private val testScope = TestScope(UnconfinedTestDispatcher())
     private lateinit var repository: UserPreferencesRepository
 
@@ -35,7 +32,7 @@ class UserPreferencesRepositoryTest {
     fun setUp() {
         val dataStore = PreferenceDataStoreFactory.create(
             scope = testScope.backgroundScope,
-            produceFile = { File(tempDir, "test_prefs.preferences_pb") },
+            produceFile = { File(requireNotNull(sharedTempDir), "test_prefs_${nextDataStoreIndex++}.preferences_pb") },
         )
         val fakeKeyValueStore = object : KeyValueStore {
             private val map = mutableMapOf<String, String>()
@@ -147,5 +144,14 @@ class UserPreferencesRepositoryTest {
         assertEquals(false, repository.watchMasterEnabled.first())
         repository.setWatchMasterEnabled(true)
         assertEquals(true, repository.watchMasterEnabled.first())
+    }
+
+    companion object {
+        // DataStore cleanup can outlive an individual test scope; keep the parent directory
+        // available for the whole class while each test still receives its own store file.
+        @JvmField
+        @TempDir
+        var sharedTempDir: File? = null
+        private var nextDataStoreIndex = 0
     }
 }
