@@ -42,7 +42,7 @@ class GplayProStatus @Inject constructor(
 
     private fun connectAndQueryPurchases() {
         if (reconnectAttempts.get() >= MAX_RECONNECT_ATTEMPTS) {
-            Log.w(TAG, "Max reconnect attempts reached, giving up")
+            logWarning("Max reconnect attempts reached, giving up")
             return
         }
         reconnectAttempts.incrementAndGet()
@@ -53,7 +53,7 @@ class GplayProStatus @Inject constructor(
                     reconnectAttempts.set(0)
                     queryExistingPurchases()
                 } else {
-                    Log.w(TAG, "Billing setup failed: ${result.debugMessage}")
+                    logWarning("Billing setup failed: ${result.debugMessage}")
                     connectAndQueryPurchases()
                 }
             }
@@ -135,7 +135,7 @@ class GplayProStatus @Inject constructor(
                             if (!purchase.isAcknowledged) acknowledge(purchase)
                         }
                         Purchase.PurchaseState.PENDING ->
-                            Log.i(TAG, "Purchase pending — waiting for completion")
+                            logInfo("Purchase pending — waiting for completion")
                         else -> {}
                     }
                 }
@@ -144,7 +144,7 @@ class GplayProStatus @Inject constructor(
                 queryExistingPurchases()
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {}
-            else -> Log.w(TAG, "Purchase failed: ${result.debugMessage}")
+            else -> logWarning("Purchase failed: ${result.debugMessage}")
         }
     }
 
@@ -159,9 +159,19 @@ class GplayProStatus @Inject constructor(
             .build()
         billingClient.acknowledgePurchase(params) { result ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                Log.w(TAG, "Acknowledge failed: ${result.debugMessage}")
+                logWarning("Acknowledge failed: ${result.debugMessage}")
             }
         }
+    }
+
+    // Plain JVM unit tests include Android stubs whose Log methods call unavailable native code.
+    // Billing must not depend on logging, so keep diagnostics best-effort in that environment.
+    private fun logWarning(message: String) {
+        runCatching { Log.w(TAG, message) }
+    }
+
+    private fun logInfo(message: String) {
+        runCatching { Log.i(TAG, message) }
     }
 
     companion object {

@@ -13,4 +13,6 @@
     <string name="vpnstatus_desc_offline">Device is offline. Reconnect to evaluate VPN status.</string>
     <string name="vpnstatus_run_leak_test">Run DNS Leak Test</string>
     <string name="vpnstatus_caption">Tunnel state is detected from the active network\'s transport. Some VPN apps may take a moment to reflect changes.</string>
+    <string name="vpnstatus_copy">Copy VPN status</string>
+    <string name="vpnstatus_share">Share VPN status</string>
 </resources>

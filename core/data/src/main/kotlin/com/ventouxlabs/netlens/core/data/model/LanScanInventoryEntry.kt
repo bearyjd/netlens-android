@@ -4,15 +4,17 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "history_lanscan", indices = [Index("timestamp")])
-data class LanScanHistoryEntry(
+/** An immutable inventory snapshot promoted from one completed LAN scan event. */
+@Entity(tableName = "lan_scan_inventories", indices = [Index("createdAt")])
+data class LanScanInventoryEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val timestamp: Long = System.currentTimeMillis(),
-    val ssid: String?,
+    val name: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val sourceEventId: Long,
+    val capturedAt: Long,
     val subnet: String?,
     val deviceCount: Int,
     val devicesJson: String,
-    /** Coordinates are optional: scans remain useful when location is unavailable or declined. */
     val latitude: Double? = null,
     val longitude: Double? = null,
 )

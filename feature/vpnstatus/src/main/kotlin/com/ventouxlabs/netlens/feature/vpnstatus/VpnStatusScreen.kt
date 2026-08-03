@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -28,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.network.VpnState
+import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.feature.vpnstatus.model.VpnStatusUiState
 
@@ -47,6 +52,8 @@ fun VpnStatusScreen(
     viewModel: VpnStatusViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val isPro by LocalProStatus.current.isPro.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -58,6 +65,14 @@ fun VpnStatusScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.vpnstatus_back),
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { ResultExporter.copyToClipboard(context, "VPN Status", viewModel.buildExportText()) }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.vpnstatus_copy))
+                    }
+                    if (isPro) IconButton(onClick = { ResultExporter.shareAsText(context, "VPN Status", viewModel.buildExportText()) }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.vpnstatus_share))
                     }
                 },
             )

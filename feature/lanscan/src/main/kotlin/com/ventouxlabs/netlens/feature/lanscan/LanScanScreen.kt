@@ -1,6 +1,9 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
 import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,11 +33,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -72,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.content.ContextCompat
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
@@ -107,9 +114,16 @@ fun LanScanScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { /* no-op: best effort */ },
     )
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { /* Location is optional and never blocks a scan. */ },
+    )
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
@@ -118,18 +132,37 @@ fun LanScanScreen(
         uiState = uiState,
         sortOrder = sortOrder,
         hostDetail = hostDetail,
-        onStartScan = viewModel::startScan,
+        onStartScan = {
+            viewModel.startScan(
+                context.lastKnownScanCoordinates()
+                    ?: uiState.manualScanCoordinates(),
+            )
+        },
         onCancelScan = viewModel::cancelScan,
         onSortOrderChange = viewModel::setSortOrder,
         onRangeModeChanged = viewModel::onRangeModeChanged,
         onCustomRangeChanged = viewModel::onCustomRangeChanged,
+        onManualLatitudeChanged = viewModel::onManualLatitudeChanged,
+        onManualLongitudeChanged = viewModel::onManualLongitudeChanged,
         onDeviceClick = viewModel::selectDevice,
         onDismissDetail = viewModel::dismissDetail,
         onScanHostPorts = viewModel::scanHostPorts,
         onCancelHostScan = viewModel::cancelHostScan,
         onTabSelected = viewModel::selectTab,
-        onScanWithCidr = viewModel::startScanWithCidr,
+        onScanWithCidr = { cidr ->
+            viewModel.startScanWithCidr(cidr, context.lastKnownScanCoordinates() ?: uiState.manualScanCoordinates())
+        },
         onClearHistory = viewModel::clearHistory,
+        onSaveEventToInventory = viewModel::saveEventToInventory,
+        onCopyEvent = { event -> ResultExporter.copyToClipboard(context, "LAN Scan Event", viewModel.buildEventExportText(event)) },
+        onShareEvent = if (isPro) {
+            { event -> ResultExporter.shareAsText(context, "LAN Scan Event", viewModel.buildEventExportText(event)) }
+        } else null,
+        onCopySavedInventory = { inventory -> ResultExporter.copyToClipboard(context, inventory.name, viewModel.buildInventoryExportText(inventory)) },
+        onShareSavedInventory = if (isPro) {
+            { inventory -> ResultExporter.shareAsText(context, inventory.name, viewModel.buildInventoryExportText(inventory)) }
+        } else null,
+        onDeleteSavedInventory = viewModel::deleteSavedInventory,
         onNavigateToTool = onNavigateToTool,
         onOpenService = { launch ->
             // Toast rather than a snackbar: the host sheet covers the Scaffold, so a snackbar
@@ -176,6 +209,8 @@ private fun LanScanContent(
     onSortOrderChange: (SortOrder) -> Unit,
     onRangeModeChanged: (ScanRangeMode) -> Unit,
     onCustomRangeChanged: (String) -> Unit,
+    onManualLatitudeChanged: (String) -> Unit,
+    onManualLongitudeChanged: (String) -> Unit,
     onDeviceClick: (LanDevice) -> Unit,
     onDismissDetail: () -> Unit,
     onScanHostPorts: (List<Int>) -> Unit,
@@ -183,6 +218,12 @@ private fun LanScanContent(
     onTabSelected: (LanScanTab) -> Unit,
     onScanWithCidr: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onSaveEventToInventory: (LanScanHistoryUiModel) -> Unit = {},
+    onCopyEvent: (LanScanHistoryUiModel) -> Unit = {},
+    onShareEvent: ((LanScanHistoryUiModel) -> Unit)? = null,
+    onCopySavedInventory: (com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit = {},
+    onShareSavedInventory: ((com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit)? = null,
+    onDeleteSavedInventory: (Long) -> Unit = {},
     onNavigateToTool: (String, String) -> Unit,
     onOpenService: (ServiceLaunch) -> Unit = {},
     onCopyResults: () -> Unit = {},
@@ -313,6 +354,11 @@ private fun LanScanContent(
                     onClick = { onTabSelected(LanScanTab.INVENTORY) },
                     text = { Text(stringResource(R.string.lanscan_tab_inventory)) },
                 )
+                Tab(
+                    selected = uiState.selectedTab == LanScanTab.SAVED,
+                    onClick = { onTabSelected(LanScanTab.SAVED) },
+                    text = { Text(stringResource(R.string.lanscan_tab_saved)) },
+                )
             }
 
             when (uiState.selectedTab) {
@@ -321,6 +367,8 @@ private fun LanScanContent(
                     showCustomField = showCustomField,
                     onRangeModeChanged = onRangeModeChanged,
                     onCustomRangeChanged = onCustomRangeChanged,
+                    onManualLatitudeChanged = onManualLatitudeChanged,
+                    onManualLongitudeChanged = onManualLongitudeChanged,
                     onScanWithCidr = onScanWithCidr,
                     onStartScan = onStartScan,
                     onDeviceClick = onDeviceClick,
@@ -329,6 +377,9 @@ private fun LanScanContent(
                     entries = uiState.historyEntries,
                     onRescan = onScanWithCidr,
                     onClearHistory = onClearHistory,
+                    onSaveToInventory = onSaveEventToInventory,
+                    onCopy = onCopyEvent,
+                    onShare = onShareEvent,
                 )
                 LanScanTab.INVENTORY -> InventoryTabContent(
                     onEditDeviceDetails = { device ->
@@ -347,6 +398,12 @@ private fun LanScanContent(
                     onDeleteDevice = onDeleteDevice,
                     onClearInventory = onClearInventory,
                 )
+                LanScanTab.SAVED -> SavedInventoriesTabContent(
+                    inventories = uiState.savedInventories,
+                    onCopy = onCopySavedInventory,
+                    onShare = onShareSavedInventory,
+                    onDelete = onDeleteSavedInventory,
+                )
             }
         }
     }
@@ -359,6 +416,8 @@ private fun ScanTabContent(
     showCustomField: Boolean,
     onRangeModeChanged: (ScanRangeMode) -> Unit,
     onCustomRangeChanged: (String) -> Unit,
+    onManualLatitudeChanged: (String) -> Unit,
+    onManualLongitudeChanged: (String) -> Unit,
     onScanWithCidr: (String) -> Unit,
     onStartScan: () -> Unit,
     onDeviceClick: (LanDevice) -> Unit,
@@ -409,6 +468,28 @@ private fun ScanTabContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = uiState.manualLatitude,
+            onValueChange = onManualLatitudeChanged,
+            label = { Text(stringResource(R.string.lanscan_label_latitude)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        )
+        OutlinedTextField(
+            value = uiState.manualLongitude,
+            onValueChange = onManualLongitudeChanged,
+            label = { Text(stringResource(R.string.lanscan_label_longitude)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
     }
 
@@ -475,6 +556,9 @@ private fun HistoryTabContent(
     entries: List<LanScanHistoryUiModel>,
     onRescan: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onSaveToInventory: (LanScanHistoryUiModel) -> Unit,
+    onCopy: (LanScanHistoryUiModel) -> Unit,
+    onShare: ((LanScanHistoryUiModel) -> Unit)?,
 ) {
     if (entries.isEmpty()) {
         Box(
@@ -506,6 +590,9 @@ private fun HistoryTabContent(
                     onClick = if (subnet != null) {
                         { onRescan(subnet) }
                     } else null,
+                    onSaveToInventory = { onSaveToInventory(entry) },
+                    onCopy = { onCopy(entry) },
+                    onShare = onShare?.let { share -> { share(entry) } },
                 )
             }
             item {
@@ -521,7 +608,13 @@ private fun HistoryTabContent(
 }
 
 @Composable
-private fun HistoryCard(entry: LanScanHistoryUiModel, onClick: (() -> Unit)?) {
+private fun HistoryCard(
+    entry: LanScanHistoryUiModel,
+    onClick: (() -> Unit)?,
+    onSaveToInventory: () -> Unit,
+    onCopy: () -> Unit,
+    onShare: (() -> Unit)?,
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -556,14 +649,92 @@ private fun HistoryCard(entry: LanScanHistoryUiModel, onClick: (() -> Unit)?) {
                     )
                 }
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
+            IconButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.lanscan_cd_copy_event))
+            }
+            IconButton(onClick = onSaveToInventory) {
+                Icon(Icons.Default.BookmarkAdd, contentDescription = stringResource(R.string.lanscan_cd_save_inventory))
+            }
+            if (onShare != null) IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share_event))
+            }
         }
     }
+}
+
+@Composable
+private fun SavedInventoriesTabContent(
+    inventories: List<com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry>,
+    onCopy: (com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit,
+    onShare: ((com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry) -> Unit)?,
+    onDelete: (Long) -> Unit,
+) {
+    var pendingDelete by remember { mutableStateOf<com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry?>(null) }
+    pendingDelete?.let { inventory ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.lanscan_saved_delete_title)) },
+            text = { Text(stringResource(R.string.lanscan_saved_delete_message, inventory.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(inventory.id)
+                    pendingDelete = null
+                }) { Text(stringResource(R.string.lanscan_saved_delete_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.lanscan_inventory_clear_cancel)) }
+            },
+        )
+    }
+    if (inventories.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.lanscan_saved_empty), textAlign = TextAlign.Center)
+        }
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(inventories, key = { it.id }) { inventory ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(inventory.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.lanscan_history_devices, inventory.deviceCount), style = MaterialTheme.typography.bodySmall)
+                        inventory.subnet?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    }
+                    IconButton(onClick = { onCopy(inventory) }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.lanscan_cd_copy_inventory))
+                    }
+                    if (onShare != null) IconButton(onClick = { onShare(inventory) }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.lanscan_cd_share_inventory))
+                    }
+                    IconButton(onClick = { pendingDelete = inventory }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.lanscan_cd_delete_inventory))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun Context.lastKnownScanCoordinates(): com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates? {
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
+    val manager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+    val location = runCatching {
+        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .mapNotNull { manager.getLastKnownLocation(it) }
+            .maxByOrNull { it.time }
+    }.getOrNull() ?: return null
+    return com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates(location.latitude, location.longitude)
+}
+
+private fun LanScanUiState.manualScanCoordinates(): com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates? {
+    val latitude = manualLatitude.toDoubleOrNull() ?: return null
+    val longitude = manualLongitude.toDoubleOrNull() ?: return null
+    if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return null
+    return com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates(latitude, longitude)
 }
 
 @Composable
