@@ -1,8 +1,8 @@
-package com.ventouxlabs.netlens.feature.portscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 class FakePortScanner : PortScanner {
     var results: List<PortResult> = emptyList()

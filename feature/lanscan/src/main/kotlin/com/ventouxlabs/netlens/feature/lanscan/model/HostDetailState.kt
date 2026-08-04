@@ -1,7 +1,7 @@
 package com.ventouxlabs.netlens.feature.lanscan.model
 
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 data class HostDetailState(
     val device: LanDevice,

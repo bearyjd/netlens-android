@@ -1,6 +1,6 @@
 package com.ventouxlabs.netlens.feature.lanscan.model
 
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
+import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
 import kotlinx.serialization.Serializable
 
 @Serializable

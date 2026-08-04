@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,9 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
+import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StatItem
 import com.ventouxlabs.netlens.core.ui.withTabularFigures
 import com.ventouxlabs.netlens.feature.speedtest.model.SpeedTestPhase
@@ -83,20 +82,14 @@ fun SpeedTestScreen(
                     }
                 },
                 actions = {
-                    if (hasResults) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "Speed Test", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.speedtest_cd_copy_results))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "Speed Test Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.speedtest_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = hasResults,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "Speed Test", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.speedtest_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "Speed Test Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.speedtest_cd_share),
+                    )
                 },
             )
         },

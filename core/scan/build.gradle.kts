@@ -1,4 +1,5 @@
 plugins {
+    alias(libs.plugins.kotlin.serialization)
     id("netlens.android.library")
     id("netlens.hilt")
 }
@@ -14,6 +15,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.core.ktx)
+    implementation(libs.kotlinx.serialization.json)
 
     // The engine fakes live in :core:scan-testing so :feature:devices can share them instead of
     // keeping its own drifted copies. This module's own tests are just another consumer.

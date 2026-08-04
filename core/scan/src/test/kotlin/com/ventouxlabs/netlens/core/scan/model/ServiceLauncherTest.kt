@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.portscan.model
+package com.ventouxlabs.netlens.core.scan.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

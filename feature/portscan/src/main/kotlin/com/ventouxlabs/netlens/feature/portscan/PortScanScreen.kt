@@ -22,8 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,20 +49,21 @@ import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.HostName
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StatusColors
 import com.ventouxlabs.netlens.core.ui.resolve
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
-import com.ventouxlabs.netlens.feature.portscan.engine.ServiceIntentLauncher
+import com.ventouxlabs.netlens.core.scan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
+import com.ventouxlabs.netlens.core.scan.engine.ServiceIntentLauncher
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunchKind
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLauncher
-import com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunch
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunchKind
+import com.ventouxlabs.netlens.core.scan.model.ServiceLauncher
+import com.ventouxlabs.netlens.core.scan.model.WellKnownPorts
 
 private const val PRESET_COMMON = 0
 private const val PRESET_ALL = 1
@@ -99,22 +98,16 @@ fun PortScanScreen(
                     }
                 },
                 actions = {
-                    if (uiState.results.isNotEmpty()) {
-                        val clipboardLabel = stringResource(R.string.portscan_export_label_clipboard)
-                        val shareLabel = stringResource(R.string.portscan_export_label_share)
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, clipboardLabel, viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.portscan_cd_copy_open_ports))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, shareLabel, viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.portscan_cd_share))
-                            }
-                        }
-                    }
+                    val clipboardLabel = stringResource(R.string.portscan_export_label_clipboard)
+                    val shareLabel = stringResource(R.string.portscan_export_label_share)
+                    ResultActions(
+                        hasResults = uiState.results.isNotEmpty(),
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, clipboardLabel, viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.portscan_cd_copy_open_ports),
+                        onShare = { ResultExporter.shareAsText(context, shareLabel, viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.portscan_cd_share),
+                    )
                 },
             )
         },

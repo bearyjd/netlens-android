@@ -37,8 +37,7 @@ import com.ventouxlabs.netlens.feature.lanscan.model.ScanSnapshotDevice
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
-import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LanScanBuildExportTextTest {
@@ -150,10 +149,6 @@ private class FakeDeviceFingerprinter : DeviceFingerprinter {
     override fun classifyFromNetBios(info: NetBiosInfo): String? = null
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
         PortFingerprint(null, null, emptyList())
-}
-
-private class FakePortScanner : PortScanner {
-    override fun scan(host: String, ports: List<Int>, timeoutMs: Int): Flow<PortResult> = emptyFlow()
 }
 
 private class FakeSsdpScanner : SsdpScanner {

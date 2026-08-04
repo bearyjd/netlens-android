@@ -12,6 +12,8 @@ import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScannerImpl
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProberImpl
+import com.ventouxlabs.netlens.core.scan.engine.PortScanner
+import com.ventouxlabs.netlens.core.scan.engine.PortScannerImpl
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScannerImpl
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
@@ -59,4 +61,7 @@ abstract class ScanModule {
     abstract fun bindDeviceInventoryRepository(
         impl: DeviceInventoryRepositoryImpl,
     ): DeviceInventoryRepository
+
+    @Binds
+    abstract fun bindPortScanner(impl: PortScannerImpl): PortScanner
 }

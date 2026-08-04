@@ -1,7 +1,7 @@
-package com.ventouxlabs.netlens.feature.portscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import kotlinx.coroutines.flow.Flow
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 interface PortScanner {
     fun scan(

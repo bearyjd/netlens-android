@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.portscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -7,9 +7,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskClassifier
-import com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts
+import com.ventouxlabs.netlens.core.scan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortRiskClassifier
+import com.ventouxlabs.netlens.core.scan.model.WellKnownPorts
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket

@@ -21,8 +21,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -48,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -86,20 +85,14 @@ fun TlsScreen(
                     }
                 },
                 actions = {
-                    if (uiState is TlsUiState.Success) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "TLS Inspector", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.tls_cd_copy_results))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.tls_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = uiState is TlsUiState.Success,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "TLS Inspector", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.tls_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "TLS Inspector Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.tls_cd_share),
+                    )
                 },
             )
         },

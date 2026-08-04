@@ -51,9 +51,9 @@ import com.ventouxlabs.netlens.feature.lanscan.model.SuggestedNetwork
 import com.ventouxlabs.netlens.feature.lanscan.model.toSnapshotDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
 import com.ventouxlabs.netlens.feature.lanscan.model.HostScanExport
-import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskClassifier
-import com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts
+import com.ventouxlabs.netlens.core.scan.engine.PortScanner
+import com.ventouxlabs.netlens.core.scan.model.PortRiskClassifier
+import com.ventouxlabs.netlens.core.scan.model.WellKnownPorts
 import javax.inject.Inject
 import java.time.Instant
 import java.time.ZoneId
@@ -545,7 +545,7 @@ class LanScanViewModel @Inject constructor(
             try {
                 var scanned = 0
                 val total = ports.size
-                val rawBatch = mutableListOf<com.ventouxlabs.netlens.feature.portscan.model.PortResult>()
+                val rawBatch = mutableListOf<com.ventouxlabs.netlens.core.scan.model.PortResult>()
                 val enrichedBatch = mutableListOf<HostPortResult>()
                 portScanner.scan(detail.device.ip, ports).collect { result ->
                     scanned++
