@@ -1,44 +1,89 @@
-Codemap + docs refresh — 2026-07-20
+Codemap + docs refresh — 2026-08-04
 
-Trigger: /update-codemaps + /update-docs after the device-inventory feature,
-speed-test rework, and perf batch landed on master this session.
+Trigger: /update-codemaps + /update-docs after the anti-slop cleanup pass (PR #129)
+landed on master. Previous scan: 2026-07-19/20.
 
-Modules: 32 gradle projects (was 30): app, widget, 6 core, 24 feature.
-  + core:scan        NEW — LAN scan engines + DeviceInventoryRepository +
-                          NewDeviceNotifier, extracted from feature:lanscan and
-                          shared with feature:devices. [architecture.md, README]
-  + feature:devices  NEW — device inventory tool (custom names, first/last seen)
-                          + Pro background watch (gateway-MAC identity, WorkManager).
-                          [architecture.md, features.md, data.md, README]
-  (a :baselineprofile module exists on branch perf/baseline-profile / draft PR
-   #108 only — NOT on master; generation blocked on Android 17 tooling.)
+Modules: 36 gradle projects (was 32): app, widget, baselineprofile, 9 core, 24 feature.
+  + core:scan-testing     NEW — shared Fake* engine doubles (testImplementation only)
+  + core:data-testing     NEW — FakeNetworkEventDao (testImplementation only)
+  + core:network-testing  NEW — SsrfRedirectProbe (testImplementation only)
+  + baselineprofile       now ON MASTER (settings.gradle.kts:55). The previous report
+                          said "branch perf/baseline-profile / draft PR #108 only —
+                          NOT on master". That is no longer true. [architecture.md]
 
-Data layer: Room version 12 -> 14.
-  + WatchedNetworkEntity + WatchedNetworkDao (v13) — Pro background watch.
-  + KnownDeviceEntity.customName / networkId (v13).
-  + SpeedTestHistoryEntry.latencyMethod (v14) — tags old full-HTTPS latency rows
-    vs new TCP-connect-RTT rows. 19 entities, 17 DAOs.
+Module graph: feature:lanscan -> feature:portscan REMOVED.
+  This was the only feature->feature edge in the repo. Nine shared port types
+  (PortScanner, PortScannerImpl, ServiceIntentLauncher, PortResult, PortRiskLevel,
+  PortRiskClassifier, WellKnownPorts, ServiceLaunch, ServiceLauncher) moved to
+  core:scan. bindPortScanner folded into ScanModule; PortScanModule deleted.
+  The graph is now flat: feature:* -> core:* only. [architecture.md]
 
-Dependencies: + ktor-client-okhttp — speed test swapped from CIO to OkHttp engine
-  (connection reuse + HTTP/2; KTOR-6503). Other HTTP features still use CIO.
+New shared component: core:ui/ResultActions.kt — TopAppBar copy/share row replacing a
+  ~15-line inline block duplicated across 14 screens. isPro is a required parameter
+  with no default, so a call site cannot silently expose the Pro-only share action.
+  [architecture.md, features.md]
+
+New convention plugin: netlens.android.screenshot (Paparazzi composition smoke tests,
+  no golden images recorded or committed). [architecture.md, dependencies.md]
+
+Build config: testLogging added to AndroidLibraryConventionPlugin + app/build.gradle.kts.
+  Previously NO testLogging existed anywhere — Gradle printed only a failing test's
+  name, with no exception or stack trace, in every module.
+
+Data layer: Room version 14 -> 16. 22 entities (was 19), 19 DAOs (was 17).
+  + WifiSurveySessionEntity, WifiSurveyPointEntity + WifiSurveyDao (v15) — coverage survey
+  + LanScanInventoryEntry + LanScanInventoryDao (v16) — saved LAN scan collections
+  + MIGRATION_14_15, MIGRATION_15_16; schemas 15.json, 16.json
+  + core/data/repository/ — HistoryRepository split into interface + Impl so
+    HistoryViewModel could be unit tested (@Binds in RepositoryModule)
+
+Dependencies: no new runtime libraries. core:ui gained compose-material-icons (for
+  ResultActions); core:scan gained the kotlin-serialization plugin + json (PortRiskLevel
+  is @Serializable and moved in).
+
+CORRECTED CLAIMS — docs were wrong, not merely stale:
+  CI test command
+    was documented: ./gradlew testFossDebugUnitTest testDebugUnitTest
+    actual:         ./gradlew testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest
+    Only the gplay task reaches src/testGplay, where GplayProStatusTest's 12 billing
+    tests live. A two-task run skips them SILENTLY rather than failing. Measured:
+    858 tests (2 tasks) vs 895 (3 tasks). ci.yml:36-41 carries the same warning.
+    Fixed in CLAUDE.md, docs/CONTRIBUTING.md, dependencies.md, agent_roadmap.md.
+  Result export: "13 tool ViewModels" -> 18.
+  Pro-gating: "3 patterns, 11 screens direct if (isPro)" -> ResultActions (14 screens)
+    + nullable lambda (lanscan, mdns) + boolean param (WiFi channel graph).
+  Fake location: CONTRIBUTING said to copy the Fake* pattern from
+    feature/lanscan/src/test/.../engine/ — a path that no longer exists, prescribing
+    exactly the copying that produced three drifted fakes. Actively harmful; replaced.
 
 Per-file:
-  architecture.md  MODIFIED  +core:scan, +feature:devices, flat-graph note,
-                             baselineprofile branch note, header 30->32 modules
-  data.md          MODIFIED  Room 12->14, +WatchedNetworkEntity/Dao, migration notes,
-                             19 entities / 17 DAOs, latencyMethod tag
-  dependencies.md  MODIFIED  HTTP row notes OkHttp engine for speedtest
-  features.md      MODIFIED  +feature:devices row (Discovery), header 23->24
-  README.md        MODIFIED  +Devices feature (Discovery), +core/scan, 24 feature modules
+  architecture.md  MODIFIED  9 core modules, test-only modules, port domain in core:scan,
+                             ResultActions in core:ui, flat-graph rule, baselineprofile
+                             on master, +netlens.android.screenshot, header 32->36 modules
+  data.md          MODIFIED  Room 14->16, 22 entities / 19 DAOs, +3 entities +2 DAOs,
+                             +2 migrations, repository/ package, write-path ownership
+  features.md      MODIFIED  pro-gating rewritten around ResultActions, export 13->18,
+                             NetLog export exception noted; 24-row module index unchanged
+  dependencies.md  MODIFIED  CI runs three test tasks, +netlens.android.screenshot
   backend.md/frontend.md  N/A (Android app; no backend/route or web-frontend codemaps)
 
-Docs (/update-docs): no package.json/.env/openapi — sources of truth are Gradle +
-  CLAUDE.md. docs/CONTRIBUTING.md (created 2026-07-16) still accurate; docs/RELEASING.md
-  current. No new script/env docs needed.
+OPEN FINDINGS — not fixed by this pass:
+  FakeDataStore is duplicated in two feature test files rather than living in
+  core:data-testing: feature/ipinfo/.../IpInfoViewModelTest.kt and
+  feature/widgetsettings/.../WidgetSettingsViewModelTest.kt. Same copied-fake pattern
+  that produced the drifted FakeOuiLookup, FakeNetworkEventDao and two FakePortScanner
+  copies. Worth consolidating.
 
-Architecture changes: 2 new modules; no new nav route categories beyond Devices;
-  DI unchanged (Hilt); no flavor changes. Current app version: 1.2.4 (versionCode 11),
-  CHANGELOG [Unreleased] holds this session's work (device inventory, speed-test
-  fixes, perf batch, follow-ups) pending a v1.2.5 release cut.
+  DevicesViewModelTest > "watchCurrentNetwork is a no-op when gateway is unresolvable"
+  is a live flake: failed twice under full-suite runs, then did not reproduce in 26
+  attempts (12 idle module, 8 CPU-saturated module, 6 full-suite). Unfixed by design —
+  no root cause established. Failures now print full stack traces, so the next firing
+  is diagnosable rather than another dead end.
 
-Staleness warnings (>90 days): none.
+Current app version: 1.3.1 (versionCode 15).
+
+Staleness warnings (>90 days): none. Oldest tracked doc is docs/PRIVACY_POLICY.md at
+  20 days. Deliberately NOT rewritten (dated historical records — editing them would
+  destroy the record): docs/superpowers/plans/**, docs/superpowers/specs/**,
+  .omc/skills/unenforced-verification-expertise.md, and the problem statements in
+  .agent_native/agent_roadmap.md (dated correction appended beneath instead).

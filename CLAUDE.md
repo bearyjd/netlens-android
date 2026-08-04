@@ -19,7 +19,7 @@ For known verification gaps, missing test coverage, and prioritized next steps f
 
 Two product flavors: `foss` (F-Droid / source builds, Pro always on) and `gplay` (Google Play, Pro via in-app purchase). Only `:app` is flavored — feature/core/widget modules build and test via the unflavored task names (`assembleDebug`, `testDebugUnitTest`).
 
-CI (`.github/workflows/ci.yml`) builds `assembleFossDebug`, then runs `testFossDebugUnitTest testDebugUnitTest` — this covers **every** module that has a `src/test` tree (unflavored `testDebugUnitTest` for core/feature/widget modules, flavored `testFossDebugUnitTest` for `:app`), not a fixed subset. If you add tests to a previously-untested module, CI picks them up automatically — no workflow edit needed.
+CI (`.github/workflows/ci.yml`) builds `assembleFossDebug`, then runs `testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest` — **all three**, and they cover disjoint source sets. `testFossDebugUnitTest` reaches `src/test` + `src/testFoss`, `testDebugUnitTest` reaches the unflavored core/feature/widget modules, and `testGplayDebugUnitTest` is the only one that reaches `src/testGplay`, where the billing tests live. Dropping one skips tests silently instead of failing, so a two-task run reads green while proving nothing about gplay (`ci.yml:36-41` says the same). Between them they cover **every** module that has a `src/test` tree, not a fixed subset. If you add tests to a previously-untested module, CI picks them up automatically — no workflow edit needed.
 
 **SDK targets**: compileSdk 35, minSdk 29, Java 17.
 

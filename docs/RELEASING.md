@@ -2,9 +2,29 @@
 
 ## Prerequisites
 
-- Release keystore configured in `local.properties` or CI environment variables
+- Release keystore configured in `local.properties` or the environment variables below
 - `gh` CLI authenticated for GitHub Releases
 - Google Play Console access (for Play Store)
+
+## Signing Configuration
+
+<!-- AUTO-GENERATED from app/build.gradle.kts and .github/workflows/ — regenerate with /update-docs. -->
+
+Resolution is **per field, not all-or-nothing** (`app/build.gradle.kts:25-42`): each key is read from `local.properties` first, and falls through to its environment variable when the property is absent *or blank*. So a half-filled `local.properties` silently takes some values from one source and some from the other.
+
+| Variable | `local.properties` key | Required for | Description |
+|---|---|---|---|
+| `RELEASE_STORE_FILE` | `release.storeFile` | Local release builds | Path to the keystore file |
+| `RELEASE_STORE_PASSWORD` | `release.storePassword` | Local release builds | Keystore password |
+| `RELEASE_KEY_ALIAS` | `release.keyAlias` | Local release builds | Signing key alias |
+| `RELEASE_KEY_PASSWORD` | `release.keyPassword` | Local release builds | Key password |
+| `RELEASE_KEYSTORE_BASE64` | — | CI only | Base64 keystore, decoded to a temp file by `release.yml` / `play-publish.yml`, which then sets `RELEASE_STORE_FILE` |
+
+In this repo `local.properties` holds only `sdk.dir`; everything else comes from the environment. All five are GitHub Actions secrets.
+
+**Failure signal:** if `assembleRelease` produces `*-unsigned.apk`, the signing config resolved to nothing. That means the env wiring is wrong — fix it, do not push. A signed local build is the pre-flight for any release.
+
+CI never exposes these on pull requests: `ci.yml` builds release artifacts deliberately unsigned (`ci.yml:78`).
 
 ## Version Bump
 
@@ -18,16 +38,20 @@ Use the GitHub Actions workflow **or** bump manually:
 
 ### Manual
 ```bash
-# Edit gradle.properties
-netlens.versionName=1.1.0
-netlens.versionCode=2
+# Edit gradle.properties — current is 1.3.1 / 15
+netlens.versionName=1.3.2
+netlens.versionCode=16
 
 # Commit and tag
 git add gradle.properties
-git commit -m "chore: bump version to 1.1.0"
-git tag v1.1.0
+git commit -m "chore: bump version to 1.3.2"
+git tag v1.3.2
 git push && git push --tags
 ```
+
+Three things must agree or the release is broken: the tag (`v<versionName>`), the `gradle.properties` values, and the CHANGELOG heading (`## [<versionName>] - <date>`). `release.yml` fails at its version-verification step on a tag/properties mismatch. The CHANGELOG is not verified by CI — it is on you.
+
+Also required: `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. Without it F-Droid silently ships the new code with no release note.
 
 ## Channel Checklist
 
