@@ -2,6 +2,8 @@ import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withType
@@ -57,6 +59,20 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     isFailOnNoMatchingTests = false
                 }
                 enabled = hasTestSources
+
+                // Without this Gradle prints only the failing test's NAME. A rare flake in
+                // :feature:devices cost a whole investigation that ended in "cannot reproduce",
+                // because neither CI nor a local run ever showed the actual exception — the only
+                // way to see it was hand-parsing build/test-results/**/TEST-*.xml after the fact,
+                // which is impossible for a failure that does not reproduce on demand.
+                // Failures only, so green runs stay quiet.
+                testLogging {
+                    events(TestLogEvent.FAILED)
+                    exceptionFormat = TestExceptionFormat.FULL
+                    showExceptions = true
+                    showCauses = true
+                    showStackTraces = true
+                }
             }
         }
     }
