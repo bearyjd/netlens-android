@@ -18,10 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -61,6 +59,7 @@ import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StampChip
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
@@ -172,18 +171,16 @@ internal fun DevicesContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        onCopyResults()
-                    }) {
-                        Icon(Icons.Default.ContentCopy, stringResource(R.string.devices_cd_copy_results))
-                    }
-                    if (isPro) {
-                        IconButton(onClick = {
-                            onShareResults()
-                        }) {
-                            Icon(Icons.Default.Share, stringResource(R.string.devices_cd_share))
-                        }
-                    }
+                    ResultActions(
+                        // Always true: the inventory is persistent, so unlike a scan tool there is
+                        // no "no results yet" state that should hide the copy button.
+                        hasResults = true,
+                        isPro = isPro,
+                        onCopy = onCopyResults,
+                        copyContentDescription = stringResource(R.string.devices_cd_copy_results),
+                        onShare = onShareResults,
+                        shareContentDescription = stringResource(R.string.devices_cd_share),
+                    )
                 },
             )
         },

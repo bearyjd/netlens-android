@@ -17,9 +17,11 @@ import androidx.compose.runtime.Composable
  * gate. A `Boolean = true` default would let a new call site silently expose the
  * Pro action, which is exactly how `WifiContent` drifted.
  *
- * Screens that hand their export callbacks down to a separate stateless
- * `Content` composable (lanscan, mdns, devices) gate with a nullable lambda
- * instead; they render their own buttons and do not use this.
+ * `lanscan` and `mdns` still render their own buttons. They gate with a nullable
+ * `onShare` lambda because their export callbacks are threaded through a stateless
+ * `Content` composable, and lanscan has three separate export targets (results,
+ * event, saved inventory). Add an `onShare: (() -> Unit)?` overload here if you
+ * want to fold them in as well.
  */
 @Composable
 fun ResultActions(

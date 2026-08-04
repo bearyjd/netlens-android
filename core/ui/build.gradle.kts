@@ -1,6 +1,7 @@
 plugins {
     id("netlens.android.library")
     id("netlens.android.compose")
+    id("netlens.android.screenshot")
 }
 
 android {
