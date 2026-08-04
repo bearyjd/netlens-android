@@ -38,7 +38,6 @@ import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
-import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceInventoryTest {

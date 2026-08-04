@@ -38,7 +38,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
-import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LanScanBuildExportTextTest {
