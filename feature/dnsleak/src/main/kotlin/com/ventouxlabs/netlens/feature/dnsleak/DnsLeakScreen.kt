@@ -15,10 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -45,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.feature.dnsleak.model.DnsLeakResult
 import com.ventouxlabs.netlens.feature.dnsleak.model.DnsLeakUiState
 import com.ventouxlabs.netlens.feature.dnsleak.model.ResolverInfo
@@ -73,34 +72,18 @@ fun DnsLeakScreen(
                     }
                 },
                 actions = {
-                    if (state.result != null) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(
-                                context,
-                                "DNS Leak Test",
-                                viewModel.buildExportText(),
-                            )
-                        }) {
-                            Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = stringResource(R.string.dnsleak_cd_copy),
-                            )
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(
-                                    context,
-                                    "DNS Leak Test Results",
-                                    viewModel.buildExportText(),
-                                )
-                            }) {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.dnsleak_cd_share),
-                                )
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state.result != null,
+                        isPro = isPro,
+                        onCopy = {
+                            ResultExporter.copyToClipboard(context, "DNS Leak Test", viewModel.buildExportText())
+                        },
+                        copyContentDescription = stringResource(R.string.dnsleak_cd_copy),
+                        onShare = {
+                            ResultExporter.shareAsText(context, "DNS Leak Test Results", viewModel.buildExportText())
+                        },
+                        shareContentDescription = stringResource(R.string.dnsleak_cd_share),
+                    )
                 },
             )
         },

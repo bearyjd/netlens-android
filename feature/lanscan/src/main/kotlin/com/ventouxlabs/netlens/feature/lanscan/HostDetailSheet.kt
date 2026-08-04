@@ -52,10 +52,10 @@ import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunchKind
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLauncher
+import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunch
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunchKind
+import com.ventouxlabs.netlens.core.scan.model.ServiceLauncher
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -216,7 +216,7 @@ internal fun HostDetailSheet(
                             Text(stringResource(R.string.lanscan_cancel_port_scan))
                         }
                     } else if (state.portResults.isNotEmpty()) {
-                        OutlinedButton(onClick = { onScanPorts(com.ventouxlabs.netlens.feature.portscan.model.WellKnownPorts.TOP_1000_PORTS) }) {
+                        OutlinedButton(onClick = { onScanPorts(com.ventouxlabs.netlens.core.scan.model.WellKnownPorts.TOP_1000_PORTS) }) {
                             Text(stringResource(R.string.lanscan_rescan))
                         }
                     }

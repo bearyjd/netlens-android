@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.PortScanHistoryEntry
 import com.ventouxlabs.netlens.core.ui.UiText
-import com.ventouxlabs.netlens.feature.portscan.engine.FakePortScanner
-import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
+import com.ventouxlabs.netlens.core.scan.engine.PortScanner
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
 
 @OptIn(ExperimentalCoroutinesApi::class)

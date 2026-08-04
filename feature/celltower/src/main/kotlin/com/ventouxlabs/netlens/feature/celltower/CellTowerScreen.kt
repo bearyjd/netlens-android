@@ -19,10 +19,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CellTower
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.SignalCellularOff
@@ -53,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.feature.celltower.model.CellTowerInfo
 import com.ventouxlabs.netlens.feature.celltower.model.SignalQuality
 import com.ventouxlabs.netlens.feature.celltower.model.rsrpQuality
@@ -97,30 +96,18 @@ fun CellTowerScreen(
                     }
                 },
                 actions = {
-                    if (state.connectedTower != null || state.neighborCells.isNotEmpty()) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(
-                                context, "Cell Tower", viewModel.buildExportText(),
-                            )
-                        }) {
-                            Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = stringResource(R.string.celltower_cd_copy),
-                            )
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(
-                                    context, "Cell Tower Info", viewModel.buildExportText(),
-                                )
-                            }) {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.celltower_cd_share),
-                                )
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state.connectedTower != null || state.neighborCells.isNotEmpty(),
+                        isPro = isPro,
+                        onCopy = {
+                            ResultExporter.copyToClipboard(context, "Cell Tower", viewModel.buildExportText())
+                        },
+                        copyContentDescription = stringResource(R.string.celltower_cd_copy),
+                        onShare = {
+                            ResultExporter.shareAsText(context, "Cell Tower Info", viewModel.buildExportText())
+                        },
+                        shareContentDescription = stringResource(R.string.celltower_cd_share),
+                    )
                     IconButton(onClick = viewModel::refresh) {
                         Icon(
                             Icons.Default.Refresh,

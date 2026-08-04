@@ -15,7 +15,7 @@ import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.PortScanHistoryEntry
 import com.ventouxlabs.netlens.core.ui.UiText
-import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
+import com.ventouxlabs.netlens.core.scan.engine.PortScanner
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
 import javax.inject.Inject
 

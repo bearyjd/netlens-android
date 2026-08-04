@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -55,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.feature.ipinfo.model.IpInfoResponse
 import com.ventouxlabs.netlens.feature.ipinfo.model.IpInfoUiState
 import com.ventouxlabs.netlens.feature.ipinfo.model.ReputationResult
@@ -92,20 +92,14 @@ fun IpInfoScreen(
                     }
                 },
                 actions = {
-                    if (uiState is IpInfoUiState.Success) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "IP Info", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ipinfo_cd_copy))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ipinfo_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = uiState is IpInfoUiState.Success,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "IP Info", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.ipinfo_cd_copy),
+                        onShare = { ResultExporter.shareAsText(context, "IP Info Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.ipinfo_cd_share),
+                    )
                 },
             )
         },

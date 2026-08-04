@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -61,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StatItem
 import com.ventouxlabs.netlens.core.ui.withTabularFigures
 import com.ventouxlabs.netlens.feature.ping.model.PingMode
@@ -98,20 +98,14 @@ fun PingScreen(
                     }
                 },
                 actions = {
-                    if (state.results.isNotEmpty()) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "Ping", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ping_cd_copy_results))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "Ping Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.ping_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state.results.isNotEmpty(),
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "Ping", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.ping_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "Ping Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.ping_cd_share),
+                    )
                 },
             )
         },

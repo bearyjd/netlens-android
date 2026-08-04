@@ -37,8 +37,8 @@ import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
-import com.ventouxlabs.netlens.feature.portscan.engine.PortScanner
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceInventoryTest {
@@ -58,7 +58,7 @@ class DeviceInventoryTest {
             subnetScanner = fakeSubnetScanner,
             mdnsScanner = StubLanMdnsScanner(),
             fingerprinter = StubDeviceFingerprinter(),
-            portScanner = StubPortScanner(),
+            portScanner = FakePortScanner(),
             ssdpScanner = StubSsdpScanner(),
             netBiosProber = StubNetBiosProber(),
             arpTableReader = StubArpTableReader(),
@@ -182,10 +182,6 @@ private class StubDeviceFingerprinter : DeviceFingerprinter {
     override fun classifyFromNetBios(info: NetBiosInfo): String? = null
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
         PortFingerprint(null, null, emptyList())
-}
-
-private class StubPortScanner : PortScanner {
-    override fun scan(host: String, ports: List<Int>, timeoutMs: Int): Flow<PortResult> = emptyFlow()
 }
 
 private class StubSsdpScanner : SsdpScanner {

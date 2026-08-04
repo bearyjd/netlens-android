@@ -6,3 +6,7 @@ plugins {
 android {
     namespace = "com.ventouxlabs.netlens.core.ui"
 }
+
+dependencies {
+    implementation(libs.compose.material.icons)
+}

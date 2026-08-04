@@ -88,8 +88,8 @@ import com.ventouxlabs.netlens.feature.lanscan.model.LanScanTab
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanUiState
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
-import com.ventouxlabs.netlens.feature.portscan.engine.ServiceIntentLauncher
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
+import com.ventouxlabs.netlens.core.scan.engine.ServiceIntentLauncher
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

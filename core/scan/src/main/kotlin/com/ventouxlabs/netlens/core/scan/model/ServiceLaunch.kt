@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.portscan.model
+package com.ventouxlabs.netlens.core.scan.model
 
 import com.ventouxlabs.netlens.core.network.HostName
 

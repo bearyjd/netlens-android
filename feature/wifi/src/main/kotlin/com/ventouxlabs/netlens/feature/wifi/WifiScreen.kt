@@ -19,10 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.NetworkWifi
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalWifi4Bar
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material3.Button
@@ -60,6 +58,7 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.feature.wifi.model.ConnectedWifiInfo
 import com.ventouxlabs.netlens.feature.wifi.model.WifiBand
 import com.ventouxlabs.netlens.feature.wifi.model.WifiNetwork
@@ -134,26 +133,14 @@ fun WifiScreen(
                         WifiTab.NETWORKS -> viewModel::buildExportText
                         WifiTab.SURVEY -> surveyViewModel::buildExportText
                     }
-                    if (exportable) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, exportTitle, buildExport())
-                        }) {
-                            Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = stringResource(R.string.wifi_cd_copy_results),
-                            )
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "$exportTitle Results", buildExport())
-                            }) {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.wifi_cd_share),
-                                )
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = exportable,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, exportTitle, buildExport()) },
+                        copyContentDescription = stringResource(R.string.wifi_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "$exportTitle Results", buildExport()) },
+                        shareContentDescription = stringResource(R.string.wifi_cd_share),
+                    )
                 },
             )
         },
@@ -277,7 +264,7 @@ private fun WifiContent(
     state: WifiUiState,
     filteredNetworks: List<WifiNetwork>,
     onBandSelected: (WifiBand) -> Unit,
-    isPro: Boolean = true,
+    isPro: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(

@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.portscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest

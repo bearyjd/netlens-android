@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -85,20 +85,14 @@ fun DnsLookupScreen(
                     }
                 },
                 actions = {
-                    if (state.results.isNotEmpty()) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "DNS Lookup", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.dns_cd_copy_all))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "DNS Lookup Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.dns_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state.results.isNotEmpty(),
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "DNS Lookup", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.dns_cd_copy_all),
+                        onShare = { ResultExporter.shareAsText(context, "DNS Lookup Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.dns_cd_share),
+                    )
                 },
             )
         },

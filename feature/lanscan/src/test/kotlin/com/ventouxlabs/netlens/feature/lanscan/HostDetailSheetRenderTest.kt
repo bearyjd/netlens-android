@@ -4,7 +4,7 @@ import app.cash.paparazzi.Paparazzi
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
+import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
 import org.junit.Rule
 import org.junit.Test
 

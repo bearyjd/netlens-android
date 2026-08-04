@@ -9,9 +9,12 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:scan"))
     implementation(project(":core:network"))
     implementation(project(":core:data"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.core.ktx)
     implementation(libs.compose.material.icons)
+
+    testImplementation(project(":core:scan-testing"))
 }

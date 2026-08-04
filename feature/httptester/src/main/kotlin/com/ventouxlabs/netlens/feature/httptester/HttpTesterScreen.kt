@@ -19,8 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -48,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -86,20 +85,14 @@ fun HttpTesterScreen(
                     }
                 },
                 actions = {
-                    if (state is HttpTesterUiState.Success) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "HTTP Tester", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.httptester_cd_copy_results))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "HTTP Tester Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.httptester_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state is HttpTesterUiState.Success,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "HTTP Tester", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.httptester_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "HTTP Tester Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.httptester_cd_share),
+                    )
                 },
             )
         },

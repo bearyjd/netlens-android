@@ -16,9 +16,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.AssistChip
@@ -52,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
+import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.feature.whois.model.RdnsResult
 import com.ventouxlabs.netlens.feature.whois.model.WhoisResult
 import com.ventouxlabs.netlens.feature.whois.model.WhoisUiState
@@ -86,20 +85,14 @@ fun WhoisScreen(
                     }
                 },
                 actions = {
-                    if (state is WhoisUiState.Success) {
-                        IconButton(onClick = {
-                            ResultExporter.copyToClipboard(context, "WHOIS", viewModel.buildExportText())
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.whois_cd_copy_results))
-                        }
-                        if (isPro) {
-                            IconButton(onClick = {
-                                ResultExporter.shareAsText(context, "WHOIS Results", viewModel.buildExportText())
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.whois_cd_share))
-                            }
-                        }
-                    }
+                    ResultActions(
+                        hasResults = state is WhoisUiState.Success,
+                        isPro = isPro,
+                        onCopy = { ResultExporter.copyToClipboard(context, "WHOIS", viewModel.buildExportText()) },
+                        copyContentDescription = stringResource(R.string.whois_cd_copy_results),
+                        onShare = { ResultExporter.shareAsText(context, "WHOIS Results", viewModel.buildExportText()) },
+                        shareContentDescription = stringResource(R.string.whois_cd_share),
+                    )
                 },
             )
         },

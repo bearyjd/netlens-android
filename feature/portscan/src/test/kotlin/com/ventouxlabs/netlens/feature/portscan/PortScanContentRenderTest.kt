@@ -2,8 +2,8 @@ package com.ventouxlabs.netlens.feature.portscan
 
 import app.cash.paparazzi.Paparazzi
 import com.ventouxlabs.netlens.core.ui.UiText
-import com.ventouxlabs.netlens.feature.portscan.model.PortResult
-import com.ventouxlabs.netlens.feature.portscan.model.PortRiskLevel
+import com.ventouxlabs.netlens.core.scan.model.PortResult
+import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
 import com.ventouxlabs.netlens.feature.portscan.model.PortScanUiState
 import org.junit.Rule
 import org.junit.Test

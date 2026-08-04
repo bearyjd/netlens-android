@@ -1,11 +1,11 @@
-package com.ventouxlabs.netlens.feature.portscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import com.ventouxlabs.netlens.feature.portscan.model.ServiceLaunch
+import com.ventouxlabs.netlens.core.scan.model.ServiceLaunch
 
 /**
  * Fires a discovered service's URI as a view intent.

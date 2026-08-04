@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.portscan.model
 
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 import com.ventouxlabs.netlens.core.ui.UiText
 
 data class PortScanUiState(
