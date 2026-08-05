@@ -20,7 +20,14 @@ are from static inspection of build files, source, and test trees.
 `:core:network`, `:feature:lanscan`, `:feature:whois`, `:feature:monitor`". This is
 false — `.github/workflows/ci.yml` runs `testFossDebugUnitTest testDebugUnitTest`, which
 executes unit tests in **every** module that has a `src/test` tree (23 of 27
-core+feature+app+widget modules currently have tests). An agent that trusts the stale
+core+feature+app+widget modules currently have tests).
+
+> **Update 2026-08-04:** the CI command quoted above is itself now out of date. `ci.yml`
+> runs **three** tasks — `testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest`.
+> The gplay task was added because it is the only one reaching `src/testGplay`, where
+> `GplayProStatusTest`'s 12 billing tests live; they had been written but never executed.
+> Every module now has tests. Run all three locally — a two-task run skips those 12
+> silently rather than failing. An agent that trusts the stale
 claim will assume most modules are untested by CI and either skip writing tests
 (wrongly believing they won't run) or waste effort re-verifying test execution that CI
 already guarantees.
@@ -122,8 +129,10 @@ engines (`feature/celltower/.../engine/CellTowerEngine.kt`,
 `feature/wifiaudit/.../engine/WifiInfoReader.kt`) read directly from
 `TelephonyManager` / `WifiManager` system services with no interface seam — unlike
 `feature:lanscan`'s engines (`ArpTableReader`, `NetBiosProber`, `SsdpScanner`,
-`SubnetScanner`), which already have `Fake*` counterparts under
-`feature/lanscan/src/test/.../engine/`. There is also **zero Robolectric usage
+`SubnetScanner`), which already have `Fake*` counterparts — these now live in
+`core:scan-testing` (consumed via `testImplementation`), **not** under
+`feature/lanscan/src/test/`, and must not be copied into a consuming module: every
+copy made so far drifted weaker than the original. There is also **zero Robolectric usage
 anywhere in the repo** (verified via repo-wide grep) — meaning any code that touches
 `Context`, `WifiManager`, `TelephonyManager`, or a real `Room` instance is currently
 verifiable only on a physical device or emulator, which an autonomous agent doesn't

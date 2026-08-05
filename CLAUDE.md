@@ -19,7 +19,7 @@ For known verification gaps, missing test coverage, and prioritized next steps f
 
 Two product flavors: `foss` (F-Droid / source builds, Pro always on) and `gplay` (Google Play, Pro via in-app purchase). Only `:app` is flavored — feature/core/widget modules build and test via the unflavored task names (`assembleDebug`, `testDebugUnitTest`).
 
-CI (`.github/workflows/ci.yml`) builds `assembleFossDebug`, then runs `testFossDebugUnitTest testDebugUnitTest` — this covers **every** module that has a `src/test` tree (unflavored `testDebugUnitTest` for core/feature/widget modules, flavored `testFossDebugUnitTest` for `:app`), not a fixed subset. If you add tests to a previously-untested module, CI picks them up automatically — no workflow edit needed.
+CI (`.github/workflows/ci.yml`) builds `assembleFossDebug`, then runs `testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest` — **all three**, and they cover disjoint source sets. `testFossDebugUnitTest` reaches `src/test` + `src/testFoss`, `testDebugUnitTest` reaches the unflavored core/feature/widget modules, and `testGplayDebugUnitTest` is the only one that reaches `src/testGplay`, where the billing tests live. Dropping one skips tests silently instead of failing, so a two-task run reads green while proving nothing about gplay (`ci.yml:36-41` says the same). Between them they cover **every** module that has a `src/test` tree, not a fixed subset. If you add tests to a previously-untested module, CI picks them up automatically — no workflow edit needed.
 
 **SDK targets**: compileSdk 35, minSdk 29, Java 17.
 
@@ -144,8 +144,10 @@ Project-scoped skills live under `.claude/skills/`. When invoking Claude Code in
 
 ## Release signing
 
-- `local.properties` contains only `sdk.dir`. Release signing falls through **per field** to `RELEASE_STORE_FILE` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_ALIAS` / `RELEASE_KEY_PASSWORD` env vars when a `release.*` key is absent or blank in `local.properties`. See `app/build.gradle.kts:25-42`.
-- A signed local build is the pre-flight for any release. If `assembleRelease` produces `*-unsigned.apk`, env wiring is wrong — fix that, do not push.
+- Signing resolves **per field, not all-or-nothing** (`app/build.gradle.kts:25-42`): each of `release.storeFile` / `release.storePassword` / `release.keyAlias` / `release.keyPassword` is read from `local.properties` first, falling through to `RELEASE_STORE_FILE` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_ALIAS` / `RELEASE_KEY_PASSWORD` when that key is absent **or blank**. A half-filled `local.properties` therefore takes some values from one source and some from the other, silently.
+- **Don't assume which source is in play.** `local.properties` is git-ignored and machine-local, so it differs per checkout — this file previously asserted it "contains only `sdk.dir`", which was untrue on the primary dev machine (all four `release.*` keys are set there) and sent an agent down the wrong path. Check, don't assume.
+- A signed local build is the pre-flight for any release. If `assembleRelease` produces `*-unsigned.apk`, signing resolved to nothing — fix the wiring, do not push.
+- **Cert continuity baseline** — release APKs must be signed by `CN=Ventoux Advisory Co, O=Ventoux Advisory Co, C=US`, cert SHA-256 `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4` (v2 scheme; v1 and v3 are off). Verify with `apksigner verify --print-certs --verbose <apk>`. A mismatch means users cannot upgrade in place and F-Droid/Play will reject the build. Note the `signatures:[…]` value in `adb shell dumpsys package` is a Java object hashCode, **not** a cert digest — it cannot be used for this check.
 - The release CI workflow at `.github/workflows/release.yml` decodes the keystore from `RELEASE_KEYSTORE_BASE64` (GitHub secret) and signs at the `assembleRelease`/`bundleRelease` step. Tag-vs-`gradle.properties` mismatch fails the workflow at the version-verification step.
 
 ## Versioning

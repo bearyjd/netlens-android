@@ -87,6 +87,17 @@ android {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+
+    // Mirrors AndroidLibraryConventionPlugin — :app configures its own Test tasks, so it does
+    // not inherit that block. Without it Gradle prints only the failing test's name, which is
+    // what made a rare :feature:devices flake undiagnosable from CI output alone.
+    testLogging {
+        events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
 }
 
 baselineProfile {

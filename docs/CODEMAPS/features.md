@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-20 | Files scanned: 24 feature modules | Token estimate: ~1000 -->
+<!-- Generated: 2026-08-04 | Files scanned: 24 feature modules | Token estimate: ~840 -->
 
 # Feature Modules
 
@@ -38,11 +38,23 @@ Pro-gating: share-export buttons gated via `LocalProStatus.current`.
 
 ## Pro-Gating Patterns
 
-1. **Direct `if (isPro)`** — 11 screens: wrap share IconButton
-2. **Nullable lambda** — LanScan, mDNS: `onShareResults: (() -> Unit)? = null`
-3. **Boolean parameter** — WiFi: `isPro` param to `WifiContent` for channel graph
+1. **`ResultActions`** (`core:ui`) — 14 screens. The shared TopAppBar copy/share row.
+   `isPro` is a **required** parameter with no default, so a call site cannot omit the
+   gate and silently expose the Pro-only share action.
+2. **Nullable lambda** — LanScan, mDNS: `onShareResults: (() -> Unit)?`, null when not Pro.
+   Used where callbacks are threaded through a stateless `Content` composable. LanScan has
+   three export targets (results, event, saved inventory); its event row interleaves a
+   BookmarkAdd button between copy and share, so it cannot adopt `ResultActions` without
+   reordering the UI.
+3. **Boolean parameter** — WiFi: `isPro` param to `WifiContent` gating the channel graph
+   (non-action UI, so neither pattern above applies).
 
 ## Result Export
 
-13 tool ViewModels expose `buildExportText(): String`.
-Export via `ResultExporter.shareAsText()` / `copyToClipboard()` from `core:network/export/`.
+18 tool ViewModels expose `buildExportText(): String` — Ping, Traceroute, DNS, PortScan,
+WHOIS, HttpTester, LanScan, TLS, IpInfo, IpCalc, mDNS, SpeedTest, WiFi, WifiSurvey,
+CellTower, Devices, DnsLeak, VpnStatus.
+
+Screens render the buttons via `ResultActions` (`core:ui`) and perform the export with
+`ResultExporter.shareAsText()` / `copyToClipboard()` (`core:network/export/`).
+NetLog is the exception: a dropdown menu item exporting JSON, not the shared row.

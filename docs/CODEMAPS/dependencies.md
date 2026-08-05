@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-20 | Files scanned: libs.versions.toml + build-logic | Token estimate: ~640 -->
+<!-- Generated: 2026-08-04 | Files scanned: libs.versions.toml + build-logic + .github/workflows | Token estimate: ~580 -->
 
 # Dependencies
 
@@ -46,12 +46,13 @@
 | `netlens.android.library` | AGP library, same SDK/Java targets |
 | `netlens.android.compose` | Compose compiler plugin + BOM + Material3 + icons + tooling |
 | `netlens.hilt` | Hilt plugin + KSP + hilt-android + hilt-compiler |
-| `netlens.android.feature` | library + compose + hilt + lifecycle + nav + core:billing |
+| `netlens.android.feature` | library + compose + hilt + lifecycle + nav + core:billing + core:ui |
+| `netlens.android.screenshot` | Paparazzi + JUnit4 vintage engine — composition smoke tests, no golden images |
 
 ## CI
 
 GitHub Actions: `.github/workflows/ci.yml`
 - Builds `foss` flavor (`assembleFossDebug`)
-- Tests: `testFossDebugUnitTest testDebugUnitTest` — covers every module with a `src/test` tree (flavored task for `:app`, unflavored for core/feature/widget)
+- Tests: `testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest` — all three; they cover disjoint source sets, and only the gplay task reaches `src/testGplay` (the billing tests). Between them, every module with a `src/test` tree.
 
 Release: `.github/workflows/release.yml` — decodes keystore from `RELEASE_KEYSTORE_BASE64` secret, verifies tag matches `gradle.properties` version, signs `assembleRelease`/`bundleRelease`.
