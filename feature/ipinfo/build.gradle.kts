@@ -19,4 +19,6 @@ dependencies {
 
     testImplementation(libs.datastore.preferences)
     testImplementation(libs.ktor.client.mock)
+
+    testImplementation(project(":core:data-testing"))
 }

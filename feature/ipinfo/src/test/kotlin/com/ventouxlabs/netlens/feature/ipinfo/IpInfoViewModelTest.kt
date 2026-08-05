@@ -16,18 +16,11 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.mutablePreferencesOf
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
+import com.ventouxlabs.netlens.core.data.testing.FakeDataStore
+import com.ventouxlabs.netlens.core.data.testing.FakeKeyValueStore
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
 import com.ventouxlabs.netlens.core.data.model.IpInfoHistoryEntry
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
-import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.feature.ipinfo.data.FakeIpInfoRepository
 import com.ventouxlabs.netlens.feature.ipinfo.data.ReputationClient
 import com.ventouxlabs.netlens.feature.ipinfo.model.IpInfoResponse
@@ -104,7 +97,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `init auto-loads data and shows Success when consent already granted`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.success(testIpData)
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -115,7 +108,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `init shows Loading while fetching when consent granted`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.success(testIpData)
         fakeRepository.enableSuspend()
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
@@ -129,7 +122,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `init auto-loads data and shows Error on failure when consent granted`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.failure(RuntimeException("Network error"))
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -140,7 +133,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `refresh with success shows Success state`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.success(testIpData)
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -156,7 +149,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `refresh with failure shows Error state`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.success(testIpData)
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -171,7 +164,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `refresh with failure and null message shows default error`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.success(testIpData)
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -186,7 +179,7 @@ class IpInfoViewModelTest {
 
     @Test
     fun `refresh after error recovers to Success`() = runTest {
-        fakeDataStore.setConsent(true)
+        userPreferencesRepository.setIpInfoConsent(true)
         fakeRepository.result = Result.failure(RuntimeException("fail"))
         viewModel = IpInfoViewModel(fakeRepository, reputationClient, fakeIpInfoHistoryDao, userPreferencesRepository)
 
@@ -200,30 +193,4 @@ class IpInfoViewModelTest {
     }
 }
 
-private class FakeKeyValueStore : KeyValueStore {
-    private val map = mutableMapOf<String, String>()
-    override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
-    override fun putString(key: String, value: String?) {
-        if (value.isNullOrBlank()) map.remove(key) else map[key] = value
-    }
-}
 
-private val IPINFO_CONSENT_KEY = booleanPreferencesKey("ipinfo_consent_granted")
-
-private class FakeDataStore : DataStore<Preferences> {
-    private val state = MutableStateFlow<Preferences>(mutablePreferencesOf())
-
-    override val data: Flow<Preferences> = state
-
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        val updated = transform(state.value)
-        state.value = updated
-        return updated
-    }
-
-    fun setConsent(value: Boolean) {
-        val mutable = state.value.toMutablePreferences()
-        mutable[IPINFO_CONSENT_KEY] = value
-        state.value = mutable
-    }
-}

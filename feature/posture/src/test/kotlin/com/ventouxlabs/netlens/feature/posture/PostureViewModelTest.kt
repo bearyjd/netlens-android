@@ -6,10 +6,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.ventouxlabs.netlens.core.data.testing.FakeKeyValueStore
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
-import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.core.network.NetworkMonitor
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.feature.posture.engine.EncryptionTypeProvider
@@ -232,13 +232,6 @@ class PostureViewModelTest {
     }
 }
 
-private class FakeKeyValueStore : KeyValueStore {
-    private val map = mutableMapOf<String, String>()
-    override fun getString(key: String): String? = map[key]?.takeIf { it.isNotBlank() }
-    override fun putString(key: String, value: String?) {
-        if (value.isNullOrBlank()) map.remove(key) else map[key] = value
-    }
-}
 
 private class FakeNetworkMonitor : NetworkMonitor {
     val online = MutableStateFlow(true)
