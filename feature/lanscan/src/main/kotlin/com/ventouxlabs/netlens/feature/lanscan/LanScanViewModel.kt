@@ -46,6 +46,8 @@ import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanTab
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanUiState
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
+import com.ventouxlabs.netlens.feature.lanscan.engine.ScanLocationProvider
+import com.ventouxlabs.netlens.feature.lanscan.model.LocationStatus
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates
 import com.ventouxlabs.netlens.feature.lanscan.model.SuggestedNetwork
 import com.ventouxlabs.netlens.feature.lanscan.model.toSnapshotDevice
@@ -75,6 +77,7 @@ class LanScanViewModel @Inject constructor(
     private val lanScanHistoryDao: LanScanHistoryDao,
     private val knownDeviceDao: KnownDeviceDao,
     private val deviceInventoryRepository: DeviceInventoryRepository,
+    private val scanLocationProvider: ScanLocationProvider,
     private val lanScanInventoryDao: LanScanInventoryDao? = null,
 ) : ViewModel() {
 
@@ -208,6 +211,63 @@ class LanScanViewModel @Inject constructor(
 
     fun onManualLongitudeChanged(longitude: String) {
         _uiState.update { it.copy(manualLongitude = longitude) }
+    }
+
+    /**
+     * Capture the device's position for tagging the next scan. Never fails: a missing fix is
+     * [LocationStatus.UNAVAILABLE], which offers manual entry rather than surfacing an error.
+     */
+    fun captureLocation() {
+        if (_uiState.value.locationStatus == LocationStatus.CAPTURING) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(locationStatus = LocationStatus.CAPTURING) }
+            // runCatching even though ScanLocationProvider's contract says it never throws: this
+            // is optional metadata on a scan, and a future implementation breaking that contract
+            // should degrade to "no location", not take down the ViewModel's scope.
+            val fix = runCatching { scanLocationProvider.current() }.getOrNull()
+            _uiState.update {
+                if (fix == null) {
+                    it.copy(locationStatus = LocationStatus.UNAVAILABLE, capturedLocation = null)
+                } else {
+                    it.copy(
+                        locationStatus = LocationStatus.FOUND,
+                        capturedLocation = fix,
+                        showManualLocationEntry = false,
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearCapturedLocation() {
+        _uiState.update {
+            it.copy(
+                locationStatus = LocationStatus.IDLE,
+                capturedLocation = null,
+                showManualLocationEntry = false,
+            )
+        }
+    }
+
+    fun showManualLocationEntry() {
+        _uiState.update { it.copy(showManualLocationEntry = true) }
+    }
+
+    /**
+     * Coordinates to tag a scan with: a captured fix wins over anything typed. This lived in
+     * `LanScanScreen` as `context.lastKnownScanCoordinates() ?: uiState.manualScanCoordinates()`;
+     * keeping the precedence here means it is testable and the screen does not re-derive it.
+     *
+     * Manual values are range-checked, so a half-typed or nonsense entry contributes nothing
+     * rather than tagging a scan with a bad position.
+     */
+    internal fun resolveScanCoordinates(): ScanCoordinates? {
+        val state = _uiState.value
+        state.capturedLocation?.let { return it }
+        val latitude = state.manualLatitude.toDoubleOrNull() ?: return null
+        val longitude = state.manualLongitude.toDoubleOrNull() ?: return null
+        if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return null
+        return ScanCoordinates(latitude, longitude)
     }
 
     fun startScan(location: ScanCoordinates? = null) {

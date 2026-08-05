@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventouxlabs.netlens.feature.lanscan.engine.FakeScanLocationProvider
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
@@ -61,6 +62,7 @@ class LanScanBuildExportTextTest {
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
             deviceInventoryRepository = DeviceInventoryRepositoryImpl(FakeKnownDeviceDao(), FakeNewDeviceNotifier()),
+            scanLocationProvider = FakeScanLocationProvider(),
         )
     }
 
@@ -130,81 +132,4 @@ class LanScanBuildExportTextTest {
 
         assertTrue(text.contains("10.0.0.1"))
     }
-}
-
-private class FakeSubnetScanner : SubnetScanner {
-    var devices: List<LanDevice> = emptyList()
-    override fun scan(subnet: String, prefixLength: Int): Flow<LanDevice> =
-        flowOf(*devices.toTypedArray())
-}
-
-private class FakeLanMdnsScanner : LanMdnsScanner {
-    override fun discover(timeoutMs: Long): Flow<LanDevice> = emptyFlow()
-}
-
-private class FakeDeviceFingerprinter : DeviceFingerprinter {
-    override suspend fun fingerprint(device: LanDevice): LanDevice = device
-    override fun classifyFromServices(services: List<String>): Pair<String?, String?> = null to null
-    override fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?> = null to null
-    override fun classifyFromNetBios(info: NetBiosInfo): String? = null
-    override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
-        PortFingerprint(null, null, emptyList())
-}
-
-private class FakeSsdpScanner : SsdpScanner {
-    override fun discover(timeoutMs: Long): Flow<SsdpDevice> = emptyFlow()
-}
-
-private class FakeNetBiosProber : NetBiosProber {
-    override suspend fun probe(ip: String): NetBiosInfo? = null
-}
-
-private class FakeArpTableReader : ArpTableReader {
-    override suspend fun getMacForIp(ip: String): String? = null
-    override suspend fun getAll(): Map<String, String> = emptyMap()
-    override fun invalidateCache() {}
-}
-
-private class FakeNetworkInterfaceProvider : NetworkInterfaceProvider {
-    override fun getNetworkInterfaces(): List<NetworkInterfaceInfo> = emptyList()
-    override fun getActiveNetworkInterface(): NetworkInterfaceInfo? = null
-}
-
-private class FakeLanScanHistoryDao : LanScanHistoryDao {
-    override fun getRecent(limit: Int): Flow<List<LanScanHistoryEntry>> = flowOf(emptyList())
-    override fun search(query: String, limit: Int): Flow<List<LanScanHistoryEntry>> = flowOf(emptyList())
-    override suspend fun getById(id: Long): LanScanHistoryEntry? = null
-    override suspend fun insert(entry: LanScanHistoryEntry) {}
-    override suspend fun deleteById(id: Long) {}
-    override suspend fun deleteOlderThan(before: Long) {}
-    override suspend fun deleteAll() {}
-}
-
-private class FakeKnownDeviceDao : KnownDeviceDao {
-    override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun getByMac(mac: String): KnownDeviceEntity? = null
-    override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? = null
-    override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun insertIfNew(device: KnownDeviceEntity): Long = 1L
-    override suspend fun updateLastSeen(id: Long, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
-    override suspend fun setMacAddress(id: Long, mac: String) {}
-    override suspend fun setKnown(id: Long, isKnown: Boolean) {}
-    override suspend fun setCustomName(id: Long, customName: String?) {}
-    override suspend fun getById(id: Long): KnownDeviceEntity? = null
-    override suspend fun updateUserDetails(
-        id: Long,
-        customName: String?,
-        tags: String?,
-        notes: String?,
-        location: String?,
-    ) {}
-    override suspend fun setNetworkId(id: Long, networkId: Long?) {}
-    override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun delete(id: Long) {}
-    override suspend fun deleteAll() {}
-}
-
-private class FakeNewDeviceNotifier : NewDeviceNotifier {
-    override fun createChannel() {}
-    override fun notify(device: KnownDeviceEntity) {}
 }

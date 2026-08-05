@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ventouxlabs.netlens.feature.lanscan.engine.FakeScanLocationProvider
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
@@ -65,6 +66,7 @@ class DeviceInventoryTest {
             lanScanHistoryDao = StubLanScanHistoryDao(),
             knownDeviceDao = fakeKnownDeviceDao,
             deviceInventoryRepository = DeviceInventoryRepositoryImpl(fakeKnownDeviceDao, fakeNotifier),
+            scanLocationProvider = FakeScanLocationProvider(),
         )
     }
 
