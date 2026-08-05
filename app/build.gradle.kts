@@ -65,6 +65,24 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug installs alongside a release build instead of replacing it. Without this
+            // both share `com.ventouxlabs.netlens`, and a debug-signed APK cannot replace a
+            // release-signed one (INSTALL_FAILED_UPDATE_INCOMPATIBLE) — so testing a debug
+            // build on a phone carrying a real install meant uninstalling first, which wipes
+            // the Room database. That cost a populated device inventory on 2026-08-05.
+            //
+            // Safe against the places the package name is used: WidgetRefresh resolves
+            // receivers via ComponentName(context, …) and NewDeviceNotifier via
+            // context.packageName, both of which follow the suffix automatically. The
+            // baseline profile generator hardcodes the unsuffixed id but targets the
+            // non-minified *release* variant, so it is unaffected.
+            //
+            // Known consequence: both apps claim the `netlens://` scheme, so a deep link
+            // opened while both are installed shows a chooser. Dev-only, and worth it.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isDebuggable = false
             isJniDebuggable = false
