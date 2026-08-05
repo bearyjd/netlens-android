@@ -1,7 +1,162 @@
+# Session Handoff — PR backlog cleared, two audit blind spots found (2026-08-05 evening)
+
+Supersedes the PM handoff below. Nothing here changes the security verdict; the PM security
+section is still the current one and still the only review those five features have had.
+
+## TL;DR — 2026-08-05 evening
+
+- **Six PRs merged, PR backlog empty:** #138 (the PM handoff), #134/#135 (Dependabot CI action
+  bumps), **#136 (`applicationIdSuffix`)** — the wipe-per-debug-install tax is gone — **#137
+  (one-tap location)**, and **#139 (shared engine fakes)**.
+- **#137's location path is now device-verified.** It was the PM handoff's #1 open item: the
+  button rendered but tapping it against a real `LocationManager` had never been exercised,
+  because the provider is faked in every test. **The user confirmed on hardware that it works**
+  and it was merged on that basis. *(Like the v1.3.0 fold confirmation, this is a user
+  confirmation, not an instrumented result — no coordinates or logs were captured. Relevant if
+  a location-related report comes in: do not assume the path was measured.)*
+- **#139 merged** — finishes the shared-fake consolidation. Independently reviewed via
+  `/codex review` (GATE PASS, zero findings) after being **rewritten from scratch**: #137
+  landed first and restructured the same file, which invalidated both #139's diff and the
+  Codex review of it. See "The #139 rewrite" — the conflict was worth more than the original PR.
+- **Two blind spots found, both in the audit apparatus rather than the code.** See the two
+  sections below. Neither is a live bug; both explain why an earlier sweep read clean.
+
+## `#136` is merged, so ALWAYS pin the package in `am start`
+
+Debug is now `com.ventouxlabs.netlens.debug`. **Both apps claim `netlens://`**, so an unpinned
+deep link opens a chooser or silently the wrong app:
+
+```
+adb shell am start -a android.intent.action.VIEW -d "netlens://feature/lanscan" -p com.ventouxlabs.netlens
+```
+
+This cost the PM session ten minutes when the suffix was only *proposed*. It is live now.
+
+## Blind spot 1: the `Fake*` grep misses `Stub*`, and undercounted item 5 by half
+
+The PM handoff recorded open item 5 as "five private fakes in `LanScanTestFakes.kt`".
+
+**RETRACTED, and read this before trusting the retraction that used to be here.** An earlier
+version of this section "corrected" the handoff by asserting *"there is no
+`LanScanTestFakes.kt`"*. That was wrong, and wrong in an instructive way: the file did not
+exist on `master` at the time, but it existed on **#137's branch**, which was open when the PM
+handoff was written and merged a few hours later. **The PM handoff was describing in-flight
+state, and the correction was describing `master`.** Both were accurate about different trees.
+If a handoff names a file you cannot find, check the open PRs before declaring it fictional.
+
+What *was* a genuine undercount, and still is:
+
+- **It was ten shadowing doubles across two files, not five in one.** `DeviceInventoryTest`
+  carried a second, *byte-identical* set. #137 consolidated one file's worth into
+  `LanScanTestFakes.kt`; `DeviceInventoryTest`'s set survived untouched until #139.
+
+**Why the audit missed them: the second set is named `Stub*` / `InventoryTestSubnetScanner`,
+not `Fake*`.** A `grep 'class Fake<Engine>'` — the obvious way to sweep for copied doubles, and
+the one that produced the count of five — cannot see them. **Grep the interface name, not the
+`Fake` prefix.** `grep 'class \w* : SubnetScanner'` finds both spellings; `class Fake` finds one.
+
+All ten had the same weakness (no `error` seam, hardcoded `emptyFlow()`, always-null lookups)
+and all were replaced by `core:scan-testing` in #139, behaviour-preserving.
+
+## The #139 rewrite — and the worst instance of this whole class of bug
+
+#139 could not be rebased. #137 merged first and restructured the same file, so the diff had to
+be **rewritten from scratch** against the new `master`, and the Codex PASS that covered the old
+diff was thrown away and re-run rather than carried forward. Two things worth keeping:
+
+**#137 named this follow-up itself.** Its `LanScanTestFakes` KDoc read: *"Deleting these in
+favour of the shared ones is a worthwhile follow-up; it was left out of the location change to
+keep that diff about location."* That is the right way to defer work — the next agent found the
+note in the file rather than rediscovering the problem.
+
+**The rewrite exposed something worse than duplication: two files in the same package were
+resolving the same simple name to different classes.**
+
+| File | Import | Which `FakeSubnetScanner` it got |
+|---|---|---|
+| `LanScanLocationTest` | `import ...core.scan.engine.FakeSubnetScanner` | the **strong** shared one |
+| `LanScanBuildExportTextTest` | *(none)* | the **weak** same-package copy |
+
+Kotlin gives an explicit import priority over a same-package declaration, so **which
+implementation a test received depended on whether someone had written an import line** — with
+no visible difference at the call site. Both files read as though they use the same fake. That
+is strictly worse than plain duplication, because the divergence is invisible at the point of
+use and nothing warns about it.
+
+`LanScanLocationTest` needed **zero** changes in #139: it was already dodging the shadow.
+Deleting the local copies just removed something it had been stepping around.
+
+**Generalise this.** A local double sharing a simple name with a shared one is a hazard even
+when both exist "on purpose" — the import line becomes load-bearing and silent. When you add a
+fake to a `-testing` module, delete the local namesake in the same change; do not leave both
+and rely on imports to disambiguate.
+
+## Blind spot 2: item 6 is bigger than "one copy each"
+
+The PM handoff lists `FakeKnownDeviceDao` as "still private, one copy each". There are **three**
+`KnownDeviceDao` implementations and they have **already drifted** — this is not a preventive
+item, the drift has happened:
+
+| Where | Kind |
+|---|---|
+| `feature/devices/FakeKnownDeviceDao.kt` | real, `MutableStateFlow`-backed, writes mutate |
+| `DeviceInventoryTest.InMemoryKnownDeviceDao` | real, stateful; its assertions depend on it |
+| `LanScanBuildExportTextTest.FakeKnownDeviceDao` | **inert** — every write a no-op, every read empty, `insertIfNew` returns `1L` without storing |
+
+**The inert one is a trap.** It is sound *today* only because the export test never asserts
+through it. Reuse it for anything that checks persistence and the test passes regardless of the
+production `@Query` — the exact failure mode that made `FakeNetworkEventDao` dangerous. Left in
+place deliberately in #139; consolidating these is its own change.
+
+## The Profile Check OOM — a flake, and it will come back
+
+`release-profile-merge` failed on #136 with a lint FIR resolve crash **and** `Java heap space`
+in `:app:mergeFossReleaseJavaResource`. **It was not #136's fault** — that diff touches only the
+`debug` buildType and cannot affect `assembleFossRelease`. Proof: CI's `release-build` does
+strictly *more* work on the same commit (both flavors, APK **and** AAB, same 2048m heap, same
+runner) and passed. A rerun of the identical commit went green in 7m11s after dying at 3m07s.
+
+**Expect recurrence.** `profile-check.yml` is the only workflow that builds release with a
+persistently *cold* Gradle cache — it is path-filtered and has run 6 times ever, where
+`release-build` runs on every PR and stays warm. Cold `assembleFossRelease` is exactly the OOM
+path `.omc/skills/gradle-local-parallelism-expertise` documents.
+
+**If it fires again, cap `org.gradle.workers.max` in that workflow.** Do **not** raise
+`org.gradle.jvmargs` in the repo: Kotlin compiles in-process via `NoIsolationWorkerFactory` so
+the heap bump does not help, and a workstation-sized heap is its own failure mode for F-Droid's
+from-source build.
+
+**Also worth knowing:** merging four PRs inside 11 seconds left three `cancelled` CI runs on
+master from the workflow's `concurrency` group superseding them. Only the tip (`a1c761e`, green)
+was verified. A glance at the Actions tab reads as three failed master builds when nothing is
+wrong.
+
+## Open items — 2026-08-05 evening (current)
+
+1. ~~**#139 needs a review pass, then merge**~~ — **done, merged.** Rewritten against the
+   post-#137 `master`, `/codex review` GATE PASS with zero findings, 43 lanscan tests green.
+   **Process note worth keeping:** a review is bound to a diff, not to a PR. When #137
+   invalidated #139's diff, the earlier PASS became worthless and re-running was the cheap
+   option; carrying it forward would have merged an unreviewed change under a green label.
+2. ~~**#137 one-tap location — NOT device-verified**~~ — **done, user-confirmed on hardware
+   2026-08-05 and merged.** Caveat recorded in the TL;DR: verbal confirmation, not an
+   instrumented result. The permission-denied manual fallback was not separately confirmed.
+3. **Consolidate the three `KnownDeviceDao` doubles** into `core:data-testing`, and kill the
+   inert one. See "Blind spot 2". `FakeEndpointDao` (`:feature:monitor`) and `FakeWolTargetDao`
+   (`:feature:wol`) are genuinely one-copy-each and remain preventive.
+4. **`.claude/PRPs` is half-tracked and nobody has decided.** Unchanged — 51 of 77 files
+   tracked, `.gitignore` added afterwards does not untrack. Three options in the PM handoff.
+5. **The `DevicesViewModelTest` flake is still live and still unfixed by design.** Wait for the
+   stack trace `testLogging` now gives. Do not chase it cold.
+6. **Security follow-up:** the mDNS/SSDP/NetBIOS parsers consuming hostile LAN input remain the
+   highest-value unreviewed surface. No fuzzing has ever been done on them.
+
+---
+
 # Session Handoff — five PRs merged, security review of the unreviewed features (2026-08-05 PM)
 
-Supersedes the earlier 2026-08-05 handoff below. **Read the security section first** — it is
-the first review those five features have ever had.
+Superseded by the evening handoff above, but **the security section here is still current** —
+it is the first and only review those five features have had.
 
 ## TL;DR — 2026-08-05 PM
 
