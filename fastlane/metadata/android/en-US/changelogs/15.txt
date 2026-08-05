@@ -1,0 +1,6 @@
+New in 1.3.1:
+
+- Saved LAN inventories — a new Saved tab in LAN Scan keeps an immutable snapshot of a scan. Save an inventory, then copy, share or delete it later. A scan event can also record where it was taken.
+- VPN Status can now be copied and shared like the other tools.
+- Faster app startup — the startup profile was regenerated against the current app, so it now covers the survey, tagging and service-launch paths.
+- Hardened several lists against a duplicate-key crash of the kind that closed the app mid-survey in 1.3.0.
