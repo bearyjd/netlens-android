@@ -1,4 +1,66 @@
-# Session Handoff — anti-slop pass, #129/#130 merged (2026-08-05)
+# Session Handoff — five PRs merged, security review of the unreviewed features (2026-08-05 PM)
+
+Supersedes the earlier 2026-08-05 handoff below. **Read the security section first** — it is
+the first review those five features have ever had.
+
+## TL;DR — 2026-08-05 PM
+
+- **Five PRs merged:** #129 (anti-slop), #130 (testLogging + doc fixes), #131 (tab wrap),
+  #132 (shared FakeDataStore/FakeKeyValueStore), #133 (cleartext audit finding closed).
+- **Four PRs open:** #136 (`applicationIdSuffix`), #137 (one-tap location), plus Dependabot
+  #134/#135 (CI action bumps, not mine, untouched).
+- **Tests 848 → 922** over the day. Run all three tasks or you are running 858 of them.
+- **Security review done on the five never-reviewed features** — survey, device inventory,
+  background watch, saved inventories, launchable services. **No CRITICAL or HIGH.** Details
+  and the explicit gaps are in "Security review" below.
+- **Debug builds now install alongside release** (#136, unmerged) — `.debug` suffix. It bit me
+  within the hour: `am start` on a `netlens://` link opened the **debug** app and I spent ten
+  minutes convinced a feature had not shipped. **Pin the package**:
+  `adb shell am start -a android.intent.action.VIEW -d "netlens://feature/lanscan" -p com.ventouxlabs.netlens`
+
+## Security review — 2026-08-05, the five features added since the April audit
+
+Scope: `feature:wifi` survey, device inventory, background watch, saved LAN inventories,
+launchable services. **Code-reading pass, not dynamic testing, and not a full re-audit.**
+The April `cso-security-audit.md` still says "Full codebase" in its scope line; it means the
+April codebase.
+
+**Verdict: no CRITICAL, no HIGH.**
+
+Verified sound:
+
+| Area | Finding |
+|---|---|
+| Backup exposure | `allowBackup="false"` + `fullBackupContent="false"`. Device inventory, survey points and scan coordinates are **not** in cloud backup — the right call given the location data. |
+| Intent injection (launchable services) | The URI host comes from mDNS/SSDP/NetBIOS, i.e. **attacker-controlled by anyone on the LAN**. `HostName.toAuthority` is a whitelist validator that rejects `/ ? # @ %`, so `192.168.1.1@evil.example` cannot escape the authority position. Its KDoc records a previously-missed rewrite (`cafe%evil.example` → `cafe`), so it has already survived one adversarial pass. |
+| URI construction | `ServiceLauncher.forPort` uses fixed scheme literals and a hardcoded port allowlist; unknown ports return null. No user or network string reaches the scheme. |
+| PendingIntent | All three sites use `FLAG_IMMUTABLE`. |
+| Exported components | Only the four Glance widget receivers (which must be) and `PostureTileService`, gated by `BIND_QUICK_SETTINGS_TILE`. No exported service or receiver accepts arbitrary commands. |
+| SQL injection | Zero string-concatenated `@Query`, zero `@RawQuery`. Every `LIKE` binds through `:param`. |
+| Deep links | Scheme and host strictly checked, path resolved through a whitelist map, query accepted only for an allowlisted route set and `Uri.encode`d before entering the route string. |
+| Logging | No location, MAC, hostname or user-authored field is logged. The five log sites in scope are error-path only. |
+
+Notes, INFO only — not worth a fix on their own:
+
+- `ServiceIntentLauncher.kt:28` logs the target URI (a LAN IP or hostname) at `Log.d`. Logcat is
+  app-private on modern Android, so this is disclosure only to someone already holding the device
+  unlocked with ADB.
+- `NewDeviceNotifier` puts a network-supplied device name into notification text. Android treats
+  it as plain `CharSequence`, so there is no markup injection — but a hostile LAN device does
+  choose a string the user sees. Cosmetic spoofing at worst.
+
+**Explicit gaps — do not read this as "the app is reviewed":**
+- No dependency vulnerability scan was run.
+- Survey location retention/deletion was not traced end to end.
+- WorkManager constraints on the background watch were not reviewed.
+- The widget data path was out of scope.
+- No dynamic testing, no fuzzing of mDNS/SSDP/NetBIOS responses. The parsers that consume
+  hostile LAN input are the highest-value place to look next.
+
+## TL;DR — 2026-08-05 AM
+
+(from the earlier handoff)
+
 
 Supersedes the 2026-08-02 handoff (kept below from "TL;DR — 2026-08-02" onward; its
 release history is still accurate, its **device state is not**).
@@ -278,7 +340,39 @@ the database.
   changing it, and one capture caught personal notifications. Prefer having the user drive the
   UI; the survey needs someone walking the house anyway.
 
-## Open items — added 2026-08-05
+## Open items — 2026-08-05 PM (current)
+
+1. **#137 one-tap location — NOT device-verified end to end.** The button renders on hardware
+   and the manual fields are gone (screenshot-confirmed), but **tapping it against a real
+   `LocationManager` was never exercised** — the provider is faked in every test. My `adb input
+   tap` attempts kept hitting the wrong control or losing foreground, which is the automation
+   flakiness this file already documents. One manual tap closes it: expect coordinates, or
+   "No location available" indoors; then deny permission and expect the manual fallback.
+2. **#136 `applicationIdSuffix` — merge it early.** Every debug install without it costs a
+   database wipe. Known consequence once merged: both apps claim `netlens://`, so **always pass
+   `-p com.ventouxlabs.netlens`** to `am start` or you will test the wrong app. I did exactly
+   that and lost ten minutes to it.
+3. **Dependabot #134/#135** — CI action bumps, not mine, untouched. Both touch the workflows
+   that just gained stack-trace output.
+4. **`.claude/PRPs` is half-tracked and nobody has decided.** 51 of 77 files are tracked and
+   public; the `.gitignore` rule was added afterwards and does not untrack. So new plans —
+   including `lanscan-location-one-tap.plan.md`, which #137 implements — are invisible to a
+   fresh clone, and #137's body references a path that will not exist there. Three coherent
+   options: untrack all 51, allowlist deliberately like `.omc/skills`, or drop the gitignore
+   rule and accept them as tracked.
+5. **Five private fakes in `LanScanTestFakes.kt` shadow `core:scan-testing`** —
+   `FakeSubnetScanner`, `FakeLanMdnsScanner`, `FakeArpTableReader`, `FakeSsdpScanner`,
+   `FakeNetBiosProber`. The module already depends on that artifact. Deleting them in favour of
+   the shared ones is mechanical.
+6. **Still private, one copy each:** `FakeEndpointDao` (`:feature:monitor`), `FakeWolTargetDao`
+   (`:feature:wol`), `FakeKnownDeviceDao` (`:feature:devices`).
+7. **The `DevicesViewModelTest` flake is still live and still unfixed by design.** See the
+   dedicated section. Do not chase it cold — wait for the stack trace `testLogging` now gives.
+8. **Security follow-up:** the highest-value unreviewed surface is the parsers consuming hostile
+   LAN input — mDNS, SSDP, NetBIOS. No fuzzing has ever been done on them. `HostName` guards the
+   *URI* sink well, but the parsers upstream of it were not reviewed.
+
+## Open items — added 2026-08-05 AM
 
 0. ~~LAN Scan "Inventory" tab wraps mid-word~~ — **done in `2950887` (2026-08-05)**, merged
    with this handoff. 895 tests green, verified on the Fold's cover screen.
