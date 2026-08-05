@@ -12,4 +12,6 @@ dependencies {
     implementation(libs.compose.material.icons)
 
     testImplementation(libs.datastore.preferences)
+
+    testImplementation(project(":core:data-testing"))
 }

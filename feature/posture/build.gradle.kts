@@ -20,6 +20,7 @@ dependencies {
     testRuntimeOnly(libs.junit5.engine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(project(":core:data-testing"))
 }
 
 tasks.withType<Test>().configureEach {
