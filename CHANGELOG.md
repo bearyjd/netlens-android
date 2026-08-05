@@ -5,6 +5,31 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-08-05
+
+### Added
+- **One-tap location for a LAN scan** — LAN Scan can now record where a scan was taken from your device's location instead of you typing coordinates. Tap "Use my location" and it fills in; if location is unavailable — indoors, or with the permission denied — it says so and the manual latitude/longitude fields are still there as a fallback. Uses the platform location provider, so it works on F-Droid and other builds without Google Play Services.
+
+### Fixed
+- **LAN Scan's "Inventory" tab label wrapping mid-word** on narrow screens, such as a foldable's cover display.
+
+## [1.3.1] - 2026-08-03
+
+> Documented retroactively on 2026-08-05. This release was tagged and published on
+> 2026-08-03 without a CHANGELOG entry or an F-Droid changelog file, so the notes below were
+> reconstructed from the `v1.3.0..v1.3.1` commit range rather than written at release time.
+
+### Added
+- **Saved LAN inventories** — a new Saved tab in LAN Scan keeps an immutable snapshot of a scan, separate from the rolling scan history that changes every time you re-scan. Save an inventory from a scan event, then copy, share or delete it later; deleting asks first, because it cannot be undone. A scan event can optionally record the coordinates where it was taken, which is useful when you scan the same subnet in more than one building.
+- **Copy and share on VPN Status** — the tool now has the copy and share actions the other tools have. Copy is available to everyone; share is Pro, matching the rest of the app.
+
+### Fixed
+- **Deleting a saved inventory not working** — the delete action on a saved inventory did nothing, so a snapshot saved by mistake could not be removed.
+
+### Changed
+- **Faster startup** — the startup profile was regenerated against the current app. The previous one predated the 1.2.6 tag, so it knew nothing about the Wi-Fi survey, device tagging or launchable-services paths and could not speed them up.
+- Several lists were hardened against the duplicate-key crash that closed the app during the first Wi-Fi survey capture in 1.3.0. These were latent rather than live — no reported crash — but the same shape of bug had already shipped once.
+
 ## [1.3.0] - 2026-07-31
 
 ### Added
