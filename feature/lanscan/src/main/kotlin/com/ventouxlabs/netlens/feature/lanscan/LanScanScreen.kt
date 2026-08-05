@@ -8,6 +8,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
@@ -339,26 +340,28 @@ private fun LanScanContent(
             TabRow(
                 selectedTabIndex = uiState.selectedTab.ordinal,
             ) {
-                Tab(
-                    selected = uiState.selectedTab == LanScanTab.SCAN,
-                    onClick = { onTabSelected(LanScanTab.SCAN) },
-                    text = { Text(stringResource(R.string.lanscan_tab_scan)) },
-                )
-                Tab(
-                    selected = uiState.selectedTab == LanScanTab.HISTORY,
-                    onClick = { onTabSelected(LanScanTab.HISTORY) },
-                    text = { Text(stringResource(R.string.lanscan_tab_history)) },
-                )
-                Tab(
-                    selected = uiState.selectedTab == LanScanTab.INVENTORY,
-                    onClick = { onTabSelected(LanScanTab.INVENTORY) },
-                    text = { Text(stringResource(R.string.lanscan_tab_inventory)) },
-                )
-                Tab(
-                    selected = uiState.selectedTab == LanScanTab.SAVED,
-                    onClick = { onTabSelected(LanScanTab.SAVED) },
-                    text = { Text(stringResource(R.string.lanscan_tab_saved)) },
-                )
+                // TabRow splits its width equally, so each of the four tabs gets ~1/4 of the
+                // screen — about 270dp on a Pixel Fold's 1080px cover display. "Inventory" does
+                // not fit that at Tab's default titleSmall: it wrapped mid-word to a second line
+                // ("Inventor" / "y"), and softWrap = false alone only turned the wrap into a
+                // clipped descender. labelMedium is the smallest step that fits the longest
+                // label at the narrowest width we support, and it keeps TabRow's equal
+                // distribution on both displays — ScrollableTabRow would fix the narrow screen
+                // by left-bunching all four tabs on the wide one.
+                LanScanTab.entries.forEach { tab ->
+                    Tab(
+                        selected = uiState.selectedTab == tab,
+                        onClick = { onTabSelected(tab) },
+                        text = {
+                            Text(
+                                text = stringResource(tab.labelRes()),
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        },
+                    )
+                }
             }
 
             when (uiState.selectedTab) {
@@ -717,6 +720,18 @@ private fun SavedInventoriesTabContent(
             }
         }
     }
+}
+
+/**
+ * Tab label lookup. Kept here rather than on the enum because [LanScanTab] lives in `model/`,
+ * which is otherwise free of Android resource references.
+ */
+@StringRes
+private fun LanScanTab.labelRes(): Int = when (this) {
+    LanScanTab.SCAN -> R.string.lanscan_tab_scan
+    LanScanTab.HISTORY -> R.string.lanscan_tab_history
+    LanScanTab.INVENTORY -> R.string.lanscan_tab_inventory
+    LanScanTab.SAVED -> R.string.lanscan_tab_saved
 }
 
 private fun Context.lastKnownScanCoordinates(): com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates? {
