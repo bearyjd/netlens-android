@@ -1,10 +1,94 @@
-# Session Handoff — v1.3.0 released; #117-#127 landed (2026-08-02)
+# Session Handoff — anti-slop pass, #129/#130 merged (2026-08-05)
 
-Supersedes the 2026-07-27 handoff. Everything in it is now released or merged. Two
-long-standing beliefs were corrected by evidence during this work — read those first, so
-they don't get re-litigated.
+Supersedes the 2026-08-02 handoff (kept below from "TL;DR — 2026-08-02" onward; its
+release history is still accurate, its **device state is not**).
 
-## TL;DR — where things stand
+## TL;DR — 2026-08-04/05
+
+- **#129 merged** (`4049c2b`) — anti-slop pass. `ResultActions` in `core:ui` replaces a
+  ~15-line copy/share block duplicated across 14 screens; nine port/service types moved
+  `feature:portscan → core:scan`; three `PortScanner` fakes collapsed into one in
+  `core:scan-testing`. **No feature→feature dependency remains anywhere in the repo.**
+- **#130 merged** (`8293928`) — `testLogging` + doc corrections. See the two CORRECTED
+  sections immediately below; both were wrong claims, not stale ones.
+- **CI runs THREE test tasks, and every doc said two.** `testFossDebugUnitTest
+  testGplayDebugUnitTest testDebugUnitTest`. Only the gplay task reaches `src/testGplay`,
+  where `GplayProStatusTest`'s 12 billing tests live. **858 tests with two tasks, 895 with
+  three.** A two-task run skips them silently rather than failing. Fixed in `CLAUDE.md`,
+  `CONTRIBUTING.md`, `dependencies.md`, `agent_roadmap.md` — but if you see a two-task
+  command anywhere, it is wrong.
+- **Test failures now print a real stack trace.** There was no `testLogging` anywhere in
+  `build-logic/`; Gradle printed only a failing test's *name*, in every module. That is why
+  a flake cost a full investigation that ended in "cannot reproduce".
+- **LAN Scan "Inventory" tab no longer wraps mid-word** (`2950887`) — landed with this
+  handoff via `fix/lanscan-tab-label-wrap`. Verified on the Fold's cover screen. The
+  first attempt was wrong in an instructive way; see Open items.
+- **The Pixel 9 Pro Fold was WIPED and is no longer on a published build.** Its schema is
+  now **v16**. Read "Device state" before installing anything on it — installing published
+  1.3.0 would be a *downgrade* and Room will destroy the database.
+- Codemaps refreshed (first since 2026-07-19; `architecture.md` and `data.md` were both
+  >30% stale). `.reports/codemap-diff.txt` has the full diff and open findings.
+
+## CORRECTED: the DevicesViewModelTest dispatcher wiring is FINE (don't "fix" it)
+
+An earlier claim in this session — and in PR #129's body before it was corrected — said
+`setUp()` running outside `runTest` left `Dispatchers.setMain(UnconfinedTestDispatcher())`
+and the injected `defaultDispatcher` on schedulers unrelated to each test's `runTest`
+scheduler, making its `advanceUntilIdle()` calls no-ops. **That is false.** A probe proved
+all three share one scheduler:
+
+```
+testScheduler === setUpDispatcher.scheduler      -> true
+testScheduler === injectedDispatcher.scheduler   -> true
+testScheduler === TestCoroutineScheduler()       -> false   (control)
+```
+
+`kotlinx-coroutines-test` auto-links them: `setMain` publishes its dispatcher's scheduler,
+and any `TestDispatcher` constructed afterwards **without an explicit scheduler argument**
+adopts it. Only an explicitly-passed `TestCoroutineScheduler` creates a real split. Acting
+on the wrong diagnosis would have "fixed" 20+ tests that were never broken.
+
+Also: `Dispatchers.Main` is a `TestMainDispatcher` **wrapper** and throws
+`ClassCastException` if cast to `TestDispatcher`. Hold a reference to the dispatcher you
+created instead.
+
+## CORRECTED: `local.properties` does NOT contain only `sdk.dir`
+
+`CLAUDE.md` asserted that for months. On the primary dev machine all four `release.*` keys
+are set and are what signs local release builds (keystore at
+`/home/user/keys/netlens/netlens-release.keystore`). The file is git-ignored and
+machine-local, so **check it, don't assume** — that assumption cost a wrong recommendation
+during this session. `CLAUDE.md` now describes the per-field fallback mechanism instead of
+asserting machine state, and records the cert continuity baseline
+`8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`.
+
+Note the `signatures:[…]` value in `adb shell dumpsys package` is a **Java object
+hashCode, not a cert digest** — it cannot be used for a continuity check. Use
+`apksigner verify --print-certs`.
+
+## The flake that is still live — do not chase it cold
+
+`DevicesViewModelTest > watchCurrentNetwork is a no-op when gateway is unresolvable`
+failed twice under full-suite runs, then survived **26 reproduction attempts** (12 idle
+module runs, 8 under CPU saturation, 6 full-suite with the exact failing command). No root
+cause was established and **nothing was patched** — deliberately.
+
+Why the assertion itself is near-unfailable: `watchCurrentNetwork()` only reaches
+`watchedNetworkDao.upsert` when `gatewayMac` **and** `subnet` are non-null, the test nulls
+`gatewayMac`, and the init block only *reads* `observeAll()`. A genuine assertion failure
+needs a writer that does not exist. The likelier story is misattribution — the class
+comment at `DevicesViewModelTest.kt:47-51` already describes a DataStore collector
+resuming on a later test's dispatcher and surfacing "as a flake in a test that did nothing
+wrong".
+
+Remaining unproven candidate: `@TempDir` deletion racing a still-running DataStore write
+(fits "only fails under load"). Not fixed because joining a scope whose children run on the
+test dispatcher risks turning a rare flake into a reliable hang.
+
+**What changed: its next firing will print a real stack trace.** Wait for that, then act on
+it. Do not spend time reproducing it cold — that path is already exhausted.
+
+## TL;DR — 2026-08-02
 
 - **v1.3.0 RELEASED (2026-07-31)** — https://github.com/bearyjd/netlens-android/releases/tag/v1.3.0
   Device tags, Wi-Fi coverage survey, launchable services, plus #117's fixes. Workflow
@@ -37,11 +121,12 @@ they don't get re-litigated.
 - **Nothing is in flight.** No open PRs, no running jobs, clean tree. v1.3.0 is out.
   #117-#119 landed 2026-07-30, #120-#122 on 2026-07-31, #123-#127 on 2026-08-01/02 — see the
   "landed" sections below.
+  *(Was true on 2026-08-02, and true again after `fix/lanscan-tab-label-wrap` merged on
+  2026-08-05. Only `master` exists on the remote.)*
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
-- **Both phones now run published v1.3.0 / versionCode 14.** Pixel 9 was updated in place from
-  the verified FOSS APK on 2026-08-02; its signing certificate matched, so its existing data was
-  retained.
+- ~~**Both phones now run published v1.3.0 / versionCode 14.**~~ **NO LONGER TRUE for the
+  Pixel 9 Pro Fold** — it was wiped and rebuilt on 2026-08-05. See "Device state".
 
 ## CORRECTED: release signing secrets are valid (don't re-flag)
 
@@ -146,17 +231,41 @@ what Room does.
 
 ## Device state — READ BEFORE INSTALLING ANYTHING
 
-Both phones are signed with the real cert and their databases are at **schema v15**.
+**The two phones are no longer in the same state. Updated 2026-08-05.**
 
-- **Pixel 10 Pro Fold `57211FDCG0023C`** — running **published v1.3.0 / versionCode 14**, the
-  exact artefact downloaded from the GitHub release and verified (cert `8fdfc928…ae2b4`). Its
-  About screen is now truthful. Smoke-tested: launches clean, crash buffer empty.
-- **Pixel 9 Pro Fold `4A111FDKD0000C`** — running **published v1.3.0 / versionCode 14**, updated
-  in place on 2026-08-02 from the verified release APK (cert `8fdfc928…ae2b4`).
+- **Pixel 10 Pro Fold `57211FDCG0023C`** — running **published v1.3.0 / versionCode 14**,
+  schema **v15**, the exact artefact downloaded from the GitHub release and verified (cert
+  `8fdfc928…ae2b4`). Unchanged this session. `adb install -r` of a v15-or-later build
+  preserves its data.
+- **Pixel 9 Pro Fold `4A111FDKD0000C`** — **WIPED 2026-08-05.** Now running a **locally
+  built, release-signed FOSS 1.3.1 / versionCode 15** at schema **v16**, launched clean.
+  - **Its database was destroyed.** A debug-signed build cannot replace a release-signed
+    one (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), so the app was uninstalled — the user chose
+    this with the data loss stated. Device inventory, custom names, tags, saved scans and
+    all history are gone. It is at first-run state.
+  - **Do NOT install published 1.3.0 on it.** That is schema v15 against its v16 database —
+    a *downgrade*, and `provideDatabase` has `fallbackToDestructiveMigrationOnDowngrade`, so
+    Room will wipe it again. Only install 1.3.1+ / v16+ here.
 
-Both are schema **v15**, and 1.3.0 is still v15, so `adb install -r` preserves data. Do NOT
-install anything at schema v14 or lower — `provideDatabase` has
-`fallbackToDestructiveMigrationOnDowngrade` and Room will wipe the database.
+Rule that still holds for both: verify the cert with `apksigner verify --print-certs` before
+installing. A mismatch forces an uninstall, which wipes the database. Expected cert:
+`8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`, v2 scheme only (v1 and
+v3 are off — fine for minSdk 29).
+
+**This collision is avoidable and nobody has fixed it yet.** Debug and release share
+`com.ventouxlabs.netlens` (no `applicationIdSuffix` on the debug buildType), so every
+on-device debug test costs a wipe. See Open items.
+
+To build something newer for testing: `./gradlew assembleFossRelease` — add `--max-workers=6` on
+a many-core machine or it OOMs (see the parallelism note above). Signing resolves per field from
+`local.properties` then `RELEASE_*` env vars; a `*-unsigned.apk` means it resolved to nothing.
+
+**Driving the app via adb works well** and is worth reusing: `adb shell am start -a
+android.intent.action.VIEW -d "netlens://feature/<route>"` jumps straight to any tool. Two
+gotchas on the Fold: `screencap` needs an explicit `-d <displayId>` or it writes a warning
+into the PNG and corrupts it, and the **outer** display is `4619827677550801153` (the inner
+one captures pure black while folded). Fire the deep link twice after an `install -r` — the
+first lands before nav is ready.
 
 To build something newer for testing: `./gradlew assembleFossRelease` — add `--max-workers=6` on
 a many-core machine or it OOMs (see the parallelism note above). Verify the cert with
@@ -169,7 +278,41 @@ the database.
   changing it, and one capture caught personal notifications. Prefer having the user drive the
   UI; the survey needs someone walking the house anyway.
 
-## Open items
+## Open items — added 2026-08-05
+
+0. ~~LAN Scan "Inventory" tab wraps mid-word~~ — **done in `2950887` (2026-08-05)**, merged
+   with this handoff. 895 tests green, verified on the Fold's cover screen.
+   - **Worth keeping:** the first attempt (`softWrap = false` alone) only converted the wrap
+     into a **clipped descender** — at normal zoom it looked fixed and was not. It took
+     `labelMedium` as well. **Magnify a screenshot before believing a visual fix.**
+   - `TabRow` was kept over `ScrollableTabRow` deliberately: the latter fixes the 1080px
+     cover screen by left-bunching all four tabs on the 2076px inner one. Reasoning is in a
+     comment at the call site so it does not get re-litigated.
+A. **Location one-tap for LAN Scan — plan written, not implemented.**
+   `.claude/PRPs/plans/lanscan-location-one-tap.plan.md`. The headline: **this is ~80%
+   already built.** `ACCESS_FINE_LOCATION` is declared, the screen already requests it on
+   entry (`LanScanScreen.kt:118-129`), a `LocationManager` fix is already read
+   (`:722-731`) and already preferred over anything typed (`:137-140`). The manual
+   lat/long fields are a silent fallback presented as the primary input. It is a UX
+   correction plus a testability extraction, not a new capability.
+   **Never reach for FusedLocationProvider** — needs Play Services, breaks `foss` and
+   F-Droid.
+B. **`FakeDataStore` is duplicated** in `feature/ipinfo/.../IpInfoViewModelTest.kt` and
+   `feature/widgetsettings/.../WidgetSettingsViewModelTest.kt` instead of living in
+   `core:data-testing`. Same copied-fake pattern that produced the drifted `FakeOuiLookup`,
+   `FakeNetworkEventDao` and two `FakePortScanner` copies. Mechanical to fix;
+   `FakePortScannerTest` is the template.
+C. **`applicationIdSuffix ".debug"` on the debug buildType** — would stop debug and release
+   colliding on `com.ventouxlabs.netlens` and end the wipe-per-debug-install tax that cost
+   a database this session. One line, but check the Glance widget provider and the
+   `netlens://` deep links tolerate the changed id.
+D. **On-device verification of #129 is partial.** Confirmed by screenshot on the release
+   build: `ResultActions` renders on Devices, correctly renders *nothing* on LAN Scan with
+   no results, the v16 "Saved" tab exists, logcat clean of R8 fallout, and
+   `proguard-rules.pro` keeps serializers correctly. **Not** exercised: saving an inventory,
+   and port→service launching — both need a real LAN scan against live infrastructure.
+
+## Open items — carried over
 
 1. **F-Droid MR #42628** — still open at 1.2.6 / 13, so **F-Droid will not ship 1.3.0 until
    maintainers merge it**. `AutoUpdateMode: Version` + `UpdateCheckMode: Tags` picks up later
@@ -372,13 +515,23 @@ apparatus.
 
 ## Quick reference
 
-- Version 1.2.6 / code 13. Cert `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`.
+- **Version 1.3.1 / code 15** (was wrongly listed here as 1.2.6 / 13 until 2026-08-05).
+  Cert `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`, v2 scheme only.
+- **Tests: `./gradlew testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest`** —
+  all three, always. 895 tests. Two of them is 858 and silently skips the gplay billing tests.
 - Devices: Pixel 9 Pro Fold `4A111FDKD0000C`, Pixel 10 Pro Fold `57211FDCG0023C`.
+  **They are no longer in the same state — read "Device state".**
 - Release signing lives in `local.properties` (git-ignored) or the `RELEASE_*` env vars,
   per-field. An `*-unsigned.apk` means the wiring is wrong — fix it, don't push.
 - Emulator: DO NOT attempt locally (QEMU segfaults on this kernel). Emulator-bound work goes
   through the `baseline-profile.yml` CI pattern.
-- No Robolectric, no instrumentation, no screenshot tests anywhere in the repo. Anything
+- No Robolectric and no instrumentation anywhere in the repo. **There ARE 10 Paparazzi
+  composition smoke tests** (`netlens.android.screenshot`) — this line used to say "no
+  screenshot tests anywhere", which is wrong; what is true is that **no golden images are
+  recorded or committed** and `verifyPaparazzi` never runs. They catch duplicate
+  `LazyColumn` keys and composition/measure crashes, nothing visual. Note **no test renders
+  a `*Screen`** — they all render the stateless `*Content` below the Scaffold's `topBar`, so
+  anything in a `TopAppBar` (e.g. `ResultActions`) is uncovered. Anything
   touching `Context`, `WifiManager`, `TelephonyManager`, or a live Room/DataStore instance is
   unverifiable without a physical device — say so rather than assuming a test can be added the
   way it can elsewhere. Known-untested invariants are listed in
