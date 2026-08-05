@@ -22,6 +22,12 @@
     <string name="lanscan_mode_custom">Custom range</string>
     <string name="lanscan_label_custom_range">IP Range (CIDR)</string>
     <string name="lanscan_placeholder_cidr">192.168.1.0/24</string>
+    <string name="lanscan_location_use_my_location">Use my location</string>
+    <string name="lanscan_location_capturing">Getting location…</string>
+    <string name="lanscan_location_captured">Location: %1$s, %2$s</string>
+    <string name="lanscan_location_unavailable">No location available. Grant location permission, or enter coordinates manually.</string>
+    <string name="lanscan_location_enter_manually">Enter manually</string>
+    <string name="lanscan_location_clear">Clear</string>
     <string name="lanscan_label_latitude">Latitude (optional)</string>
     <string name="lanscan_label_longitude">Longitude (optional)</string>
     <string name="lanscan_error_invalid_cidr">Invalid CIDR — use format like 192.168.1.0/24 (prefix /16–/30)</string>

@@ -1,9 +1,7 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +27,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.OutlinedButton
+import com.ventouxlabs.netlens.feature.lanscan.model.LocationStatus
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -60,12 +61,12 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -133,25 +134,23 @@ fun LanScanScreen(
         uiState = uiState,
         sortOrder = sortOrder,
         hostDetail = hostDetail,
-        onStartScan = {
-            viewModel.startScan(
-                context.lastKnownScanCoordinates()
-                    ?: uiState.manualScanCoordinates(),
-            )
-        },
+        onStartScan = { viewModel.startScan(viewModel.resolveScanCoordinates()) },
         onCancelScan = viewModel::cancelScan,
         onSortOrderChange = viewModel::setSortOrder,
         onRangeModeChanged = viewModel::onRangeModeChanged,
         onCustomRangeChanged = viewModel::onCustomRangeChanged,
         onManualLatitudeChanged = viewModel::onManualLatitudeChanged,
         onManualLongitudeChanged = viewModel::onManualLongitudeChanged,
+        onCaptureLocation = viewModel::captureLocation,
+        onClearLocation = viewModel::clearCapturedLocation,
+        onShowManualEntry = viewModel::showManualLocationEntry,
         onDeviceClick = viewModel::selectDevice,
         onDismissDetail = viewModel::dismissDetail,
         onScanHostPorts = viewModel::scanHostPorts,
         onCancelHostScan = viewModel::cancelHostScan,
         onTabSelected = viewModel::selectTab,
         onScanWithCidr = { cidr ->
-            viewModel.startScanWithCidr(cidr, context.lastKnownScanCoordinates() ?: uiState.manualScanCoordinates())
+            viewModel.startScanWithCidr(cidr, viewModel.resolveScanCoordinates())
         },
         onClearHistory = viewModel::clearHistory,
         onSaveEventToInventory = viewModel::saveEventToInventory,
@@ -212,6 +211,9 @@ private fun LanScanContent(
     onCustomRangeChanged: (String) -> Unit,
     onManualLatitudeChanged: (String) -> Unit,
     onManualLongitudeChanged: (String) -> Unit,
+    onCaptureLocation: () -> Unit,
+    onClearLocation: () -> Unit,
+    onShowManualEntry: () -> Unit,
     onDeviceClick: (LanDevice) -> Unit,
     onDismissDetail: () -> Unit,
     onScanHostPorts: (List<Int>) -> Unit,
@@ -372,6 +374,9 @@ private fun LanScanContent(
                     onCustomRangeChanged = onCustomRangeChanged,
                     onManualLatitudeChanged = onManualLatitudeChanged,
                     onManualLongitudeChanged = onManualLongitudeChanged,
+                    onCaptureLocation = onCaptureLocation,
+                    onClearLocation = onClearLocation,
+                    onShowManualEntry = onShowManualEntry,
                     onScanWithCidr = onScanWithCidr,
                     onStartScan = onStartScan,
                     onDeviceClick = onDeviceClick,
@@ -421,6 +426,9 @@ private fun ScanTabContent(
     onCustomRangeChanged: (String) -> Unit,
     onManualLatitudeChanged: (String) -> Unit,
     onManualLongitudeChanged: (String) -> Unit,
+    onCaptureLocation: () -> Unit,
+    onClearLocation: () -> Unit,
+    onShowManualEntry: () -> Unit,
     onScanWithCidr: (String) -> Unit,
     onStartScan: () -> Unit,
     onDeviceClick: (LanDevice) -> Unit,
@@ -474,27 +482,14 @@ private fun ScanTabContent(
         )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedTextField(
-            value = uiState.manualLatitude,
-            onValueChange = onManualLatitudeChanged,
-            label = { Text(stringResource(R.string.lanscan_label_latitude)) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        )
-        OutlinedTextField(
-            value = uiState.manualLongitude,
-            onValueChange = onManualLongitudeChanged,
-            label = { Text(stringResource(R.string.lanscan_label_longitude)) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        )
-    }
+    ScanLocationSection(
+        uiState = uiState,
+        onCaptureLocation = onCaptureLocation,
+        onClearLocation = onClearLocation,
+        onShowManualEntry = onShowManualEntry,
+        onManualLatitudeChanged = onManualLatitudeChanged,
+        onManualLongitudeChanged = onManualLongitudeChanged,
+    )
 
     AnimatedVisibility(visible = uiState.isScanning) {
         LinearProgressIndicator(
@@ -723,6 +718,128 @@ private fun SavedInventoriesTabContent(
 }
 
 /**
+ * Location tagging for a scan.
+ *
+ * One tap replaces two decimal text fields. The app already had the capability — it requested
+ * `ACCESS_FINE_LOCATION` on entry and silently preferred a device fix over anything typed — but
+ * showed only the manual fields, so the user was invited to type coordinates for something
+ * already being captured, with no feedback either way.
+ *
+ * Manual entry survives as the fallback for [LocationStatus.UNAVAILABLE], which is a real and
+ * common outcome (indoors, after a reboot, permission denied, location services off).
+ *
+ * Stateless by design: `LanScanContent` is the composition-smoke-test seam, so everything here
+ * arrives as parameters rather than being read from a ViewModel.
+ */
+@Composable
+internal fun ScanLocationSection(
+    uiState: LanScanUiState,
+    onCaptureLocation: () -> Unit,
+    onClearLocation: () -> Unit,
+    onShowManualEntry: () -> Unit,
+    onManualLatitudeChanged: (String) -> Unit,
+    onManualLongitudeChanged: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (uiState.locationStatus) {
+            LocationStatus.FOUND -> {
+                val fix = uiState.capturedLocation
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = if (fix == null) {
+                            ""
+                        } else {
+                            stringResource(
+                                R.string.lanscan_location_captured,
+                                formatCoordinate(fix.latitude),
+                                formatCoordinate(fix.longitude),
+                            )
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onClearLocation) {
+                        Text(stringResource(R.string.lanscan_location_clear))
+                    }
+                }
+            }
+
+            LocationStatus.UNAVAILABLE -> {
+                Text(
+                    text = stringResource(R.string.lanscan_location_unavailable),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (!uiState.showManualLocationEntry) {
+                    TextButton(onClick = onShowManualEntry) {
+                        Text(stringResource(R.string.lanscan_location_enter_manually))
+                    }
+                }
+            }
+
+            LocationStatus.IDLE, LocationStatus.CAPTURING -> {
+                OutlinedButton(
+                    onClick = onCaptureLocation,
+                    enabled = uiState.locationStatus != LocationStatus.CAPTURING,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(
+                            if (uiState.locationStatus == LocationStatus.CAPTURING) {
+                                R.string.lanscan_location_capturing
+                            } else {
+                                R.string.lanscan_location_use_my_location
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+
+        if (uiState.showManualLocationEntry) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = uiState.manualLatitude,
+                    onValueChange = onManualLatitudeChanged,
+                    label = { Text(stringResource(R.string.lanscan_label_latitude)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                OutlinedTextField(
+                    value = uiState.manualLongitude,
+                    onValueChange = onManualLongitudeChanged,
+                    label = { Text(stringResource(R.string.lanscan_label_longitude)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+            }
+        }
+    }
+}
+
+/** Five decimals is ~1 m — more precision than a last-known fix has, and less noise on screen. */
+private fun formatCoordinate(value: Double): String = String.format(java.util.Locale.US, "%.5f", value)
+
+/**
  * Tab label lookup. Kept here rather than on the enum because [LanScanTab] lives in `model/`,
  * which is otherwise free of Android resource references.
  */
@@ -732,24 +849,6 @@ private fun LanScanTab.labelRes(): Int = when (this) {
     LanScanTab.HISTORY -> R.string.lanscan_tab_history
     LanScanTab.INVENTORY -> R.string.lanscan_tab_inventory
     LanScanTab.SAVED -> R.string.lanscan_tab_saved
-}
-
-private fun Context.lastKnownScanCoordinates(): com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates? {
-    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
-    val manager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
-    val location = runCatching {
-        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .mapNotNull { manager.getLastKnownLocation(it) }
-            .maxByOrNull { it.time }
-    }.getOrNull() ?: return null
-    return com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates(location.latitude, location.longitude)
-}
-
-private fun LanScanUiState.manualScanCoordinates(): com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates? {
-    val latitude = manualLatitude.toDoubleOrNull() ?: return null
-    val longitude = manualLongitude.toDoubleOrNull() ?: return null
-    if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return null
-    return com.ventouxlabs.netlens.feature.lanscan.model.ScanCoordinates(latitude, longitude)
 }
 
 @Composable
