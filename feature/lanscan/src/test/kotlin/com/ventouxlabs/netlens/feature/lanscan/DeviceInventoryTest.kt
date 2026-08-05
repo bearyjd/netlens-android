@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,13 +24,8 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceInfo
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
-import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
-import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
-import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
-import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
-import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -39,11 +33,16 @@ import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
 import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
+import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
+import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceInventoryTest {
 
-    private lateinit var fakeSubnetScanner: InventoryTestSubnetScanner
+    private lateinit var fakeSubnetScanner: FakeSubnetScanner
     private lateinit var fakeKnownDeviceDao: InMemoryKnownDeviceDao
     private lateinit var fakeNotifier: RecordingNewDeviceNotifier
     private lateinit var viewModel: LanScanViewModel
@@ -51,17 +50,17 @@ class DeviceInventoryTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        fakeSubnetScanner = InventoryTestSubnetScanner()
+        fakeSubnetScanner = FakeSubnetScanner()
         fakeKnownDeviceDao = InMemoryKnownDeviceDao()
         fakeNotifier = RecordingNewDeviceNotifier()
         viewModel = LanScanViewModel(
             subnetScanner = fakeSubnetScanner,
-            mdnsScanner = StubLanMdnsScanner(),
+            mdnsScanner = FakeLanMdnsScanner(),
             fingerprinter = StubDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = StubSsdpScanner(),
-            netBiosProber = StubNetBiosProber(),
-            arpTableReader = StubArpTableReader(),
+            ssdpScanner = FakeSsdpScanner(),
+            netBiosProber = FakeNetBiosProber(),
+            arpTableReader = FakeArpTableReader(),
             networkInterfaceProvider = StubNetworkInterfaceProvider(),
             lanScanHistoryDao = StubLanScanHistoryDao(),
             knownDeviceDao = fakeKnownDeviceDao,
@@ -166,16 +165,6 @@ class DeviceInventoryTest {
 
 // --- Test fakes ---
 
-private class InventoryTestSubnetScanner : SubnetScanner {
-    var devices: List<LanDevice> = emptyList()
-    override fun scan(subnet: String, prefixLength: Int): Flow<LanDevice> =
-        flowOf(*devices.toTypedArray())
-}
-
-private class StubLanMdnsScanner : LanMdnsScanner {
-    override fun discover(timeoutMs: Long): Flow<LanDevice> = emptyFlow()
-}
-
 private class StubDeviceFingerprinter : DeviceFingerprinter {
     override suspend fun fingerprint(device: LanDevice): LanDevice = device
     override fun classifyFromServices(services: List<String>): Pair<String?, String?> = null to null
@@ -183,20 +172,6 @@ private class StubDeviceFingerprinter : DeviceFingerprinter {
     override fun classifyFromNetBios(info: NetBiosInfo): String? = null
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
         PortFingerprint(null, null, emptyList())
-}
-
-private class StubSsdpScanner : SsdpScanner {
-    override fun discover(timeoutMs: Long): Flow<SsdpDevice> = emptyFlow()
-}
-
-private class StubNetBiosProber : NetBiosProber {
-    override suspend fun probe(ip: String): NetBiosInfo? = null
-}
-
-private class StubArpTableReader : ArpTableReader {
-    override suspend fun getMacForIp(ip: String): String? = null
-    override suspend fun getAll(): Map<String, String> = emptyMap()
-    override fun invalidateCache() {}
 }
 
 private class StubNetworkInterfaceProvider : NetworkInterfaceProvider {

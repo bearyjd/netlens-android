@@ -3,7 +3,6 @@ package com.ventouxlabs.netlens.feature.lanscan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -21,13 +20,8 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceInfo
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
-import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
-import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
-import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
-import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
-import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -45,22 +39,15 @@ import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
  * `LanScanBuildExportTextTest` when a second test file needed them — `internal` rather than
  * `private` so the next one does not make an eleventh copy.
  *
- * **Five of these shadow doubles that already exist in `core:scan-testing`** —
- * `FakeSubnetScanner`, `FakeLanMdnsScanner`, `FakeArpTableReader`, `FakeSsdpScanner` and
- * `FakeNetBiosProber`. The module already depends on that artifact (it imports
- * `FakePortScanner` from it). Deleting these in favour of the shared ones is a worthwhile
- * follow-up; it was left out of the location change to keep that diff about location.
+ * The five engine doubles that used to live here — `FakeSubnetScanner`, `FakeLanMdnsScanner`,
+ * `FakeArpTableReader`, `FakeSsdpScanner`, `FakeNetBiosProber` — are gone; they shadowed
+ * `core:scan-testing`, which this module already depends on, and every local copy was the
+ * weaker one (no `error` seam, hardcoded `emptyFlow()`, always-null lookups). Import them from
+ * `com.ventouxlabs.netlens.core.scan.engine` instead. Anything two modules both need belongs
+ * there, not here.
+ *
+ * What remains has no shared equivalent yet. If you add one, move it rather than copying it.
  */
-internal class FakeSubnetScanner : SubnetScanner {
-    var devices: List<LanDevice> = emptyList()
-    override fun scan(subnet: String, prefixLength: Int): Flow<LanDevice> =
-        flowOf(*devices.toTypedArray())
-}
-
-internal class FakeLanMdnsScanner : LanMdnsScanner {
-    override fun discover(timeoutMs: Long): Flow<LanDevice> = emptyFlow()
-}
-
 internal class FakeDeviceFingerprinter : DeviceFingerprinter {
     override suspend fun fingerprint(device: LanDevice): LanDevice = device
     override fun classifyFromServices(services: List<String>): Pair<String?, String?> = null to null
@@ -68,20 +55,6 @@ internal class FakeDeviceFingerprinter : DeviceFingerprinter {
     override fun classifyFromNetBios(info: NetBiosInfo): String? = null
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
         PortFingerprint(null, null, emptyList())
-}
-
-internal class FakeSsdpScanner : SsdpScanner {
-    override fun discover(timeoutMs: Long): Flow<SsdpDevice> = emptyFlow()
-}
-
-internal class FakeNetBiosProber : NetBiosProber {
-    override suspend fun probe(ip: String): NetBiosInfo? = null
-}
-
-internal class FakeArpTableReader : ArpTableReader {
-    override suspend fun getMacForIp(ip: String): String? = null
-    override suspend fun getAll(): Map<String, String> = emptyMap()
-    override fun invalidateCache() {}
 }
 
 internal class FakeNetworkInterfaceProvider : NetworkInterfaceProvider {
