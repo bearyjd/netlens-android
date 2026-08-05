@@ -20,8 +20,9 @@ release history is still accurate, its **device state is not**).
 - **Test failures now print a real stack trace.** There was no `testLogging` anywhere in
   `build-logic/`; Gradle printed only a failing test's *name*, in every module. That is why
   a flake cost a full investigation that ended in "cannot reproduce".
-- **`fix/lanscan-tab-label-wrap` is UNPUSHED and has no PR** — one commit (`2950887`),
-  the only thing in flight. See Open items.
+- **LAN Scan "Inventory" tab no longer wraps mid-word** (`2950887`) — landed with this
+  handoff via `fix/lanscan-tab-label-wrap`. Verified on the Fold's cover screen. The
+  first attempt was wrong in an instructive way; see Open items.
 - **The Pixel 9 Pro Fold was WIPED and is no longer on a published build.** Its schema is
   now **v16**. Read "Device state" before installing anything on it — installing published
   1.3.0 would be a *downgrade* and Room will destroy the database.
@@ -120,8 +121,8 @@ it. Do not spend time reproducing it cold — that path is already exhausted.
 - **Nothing is in flight.** No open PRs, no running jobs, clean tree. v1.3.0 is out.
   #117-#119 landed 2026-07-30, #120-#122 on 2026-07-31, #123-#127 on 2026-08-01/02 — see the
   "landed" sections below.
-  *(Was true on 2026-08-02. As of 2026-08-05 there is one unpushed branch —
-  `fix/lanscan-tab-label-wrap`. See the top TL;DR.)*
+  *(Was true on 2026-08-02, and true again after `fix/lanscan-tab-label-wrap` merged on
+  2026-08-05. Only `master` exists on the remote.)*
 - **The Pixel 10 Pro Fold is running master, not 1.2.6, and its About screen says otherwise.**
   See "Device state".
 - ~~**Both phones now run published v1.3.0 / versionCode 14.**~~ **NO LONGER TRUE for the
@@ -279,12 +280,14 @@ the database.
 
 ## Open items — added 2026-08-05
 
-0. **`fix/lanscan-tab-label-wrap` is unpushed with no PR** — one commit (`2950887`), the
-   only thing in flight. Fixes the LAN Scan "Inventory" tab wrapping mid-word on the Fold's
-   cover screen. 895 tests green, verified on hardware. Just needs push + PR + merge.
-   - Worth knowing: the first attempt (`softWrap = false` alone) only converted the wrap
-     into a **clipped descender** — it looked fixed at normal zoom and was not. It needed
-     `labelMedium` too. Magnify screenshots before believing a visual fix.
+0. ~~LAN Scan "Inventory" tab wraps mid-word~~ — **done in `2950887` (2026-08-05)**, merged
+   with this handoff. 895 tests green, verified on the Fold's cover screen.
+   - **Worth keeping:** the first attempt (`softWrap = false` alone) only converted the wrap
+     into a **clipped descender** — at normal zoom it looked fixed and was not. It took
+     `labelMedium` as well. **Magnify a screenshot before believing a visual fix.**
+   - `TabRow` was kept over `ScrollableTabRow` deliberately: the latter fixes the 1080px
+     cover screen by left-bunching all four tabs on the 2076px inner one. Reasoning is in a
+     comment at the call site so it does not get re-litigated.
 A. **Location one-tap for LAN Scan — plan written, not implemented.**
    `.claude/PRPs/plans/lanscan-location-one-tap.plan.md`. The headline: **this is ~80%
    already built.** `ACCESS_FINE_LOCATION` is declared, the screen already requests it on
