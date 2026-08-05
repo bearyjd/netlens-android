@@ -20,7 +20,7 @@
 
 ---
 
-### FINDING 2 — MEDIUM: HTTP Cleartext to ip-api.com
+### FINDING 2 — MEDIUM: HTTP Cleartext to ip-api.com (FIXED)
 
 **File:** `feature/ipinfo/src/main/kotlin/com.ventouxlabs.netlens/feature/ipinfo/data/IpInfoRepositoryImpl.kt`
 **File:** `app/src/main/res/xml/network_security_config.xml`
@@ -30,6 +30,19 @@ Public IP, ISP, geolocation, and proxy status sent over plaintext HTTP. The `net
 **Risk:** On-path observers (captive portals, ISP, public WiFi) see the device's IP metadata.
 
 **Recommendation:** Switch to an HTTPS provider (ipinfo.io free tier, or ip-api.com paid HTTPS plan) and remove the `domain-config` cleartext exception.
+
+**FIXED** — verified by code inspection 2026-08-05, closed by exactly the remediation above:
+- `IpInfoRepositoryImpl.kt:43` — `const val IPINFO_URL = "https://ipinfo.io/json"`. The
+  `ip-api.com` provider is gone; no reference to it remains anywhere in the source tree.
+- `network_security_config.xml` now contains only
+  `<base-config cleartextTrafficPermitted="false" />`. The `domain-config` exception was
+  removed, so cleartext is refused app-wide with no carve-outs.
+- No cleartext `http://` endpoint remains in any Kotlin or resource file (the surviving
+  matches are XML namespace URIs, which are identifiers, not network calls).
+
+*This document asserted the finding was open until 2026-08-05, long after the code had
+changed. If you are reading a finding here, re-verify it against the source before acting —
+an audit report is a snapshot, and this one had already drifted once.*
 
 ---
 
@@ -109,7 +122,7 @@ dnsjava `Lookup` encodes domain as DNS wire-format label octets. No injection su
 
 - **0 CRITICAL** findings
 - **1 HIGH** finding (fixed)
-- **2 MEDIUM** findings (1 fixed, 1 recommendation pending)
+- **2 MEDIUM** findings (**both fixed** — Finding 2 closed by 2026-08-05, see below)
 - **1 LOW** finding (fixed)
 - **2 INFO** findings (no action needed)
 - No hardcoded secrets detected
@@ -119,4 +132,19 @@ dnsjava `Lookup` encodes domain as DNS wire-format label octets. No injection su
 
 ## Remaining Recommendation
 
-Switch ip-api.com to an HTTPS endpoint to close the cleartext information disclosure. This is the only open finding.
+~~Switch ip-api.com to an HTTPS endpoint to close the cleartext information disclosure. This is the only open finding.~~
+
+**Done.** The provider is now `https://ipinfo.io/json` and the cleartext carve-out is gone.
+**No findings from this audit remain open.**
+
+## Status of this document
+
+Audited 2026-04-21. Findings re-verified against source on **2026-08-05** — that pass found
+Finding 2 had been remediated at some point in between while this report still described it
+as open, i.e. the report understated the security posture for months.
+
+**Scope of the 2026-08-05 pass:** re-verification of the six findings already listed here,
+by code inspection only. It was **not** a fresh audit — no new threat modelling, and code
+added since 2026-04-21 (the Wi-Fi coverage survey, device inventory and background watch,
+saved LAN inventories, launchable services) has **never been security-reviewed**. Treat the
+scope line at the top of this document as describing the April codebase, not today's.
