@@ -1,11 +1,11 @@
 package com.ventouxlabs.netlens.baselineprofile
 
+import android.os.SystemClock
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
-import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -77,6 +77,7 @@ class BaselineProfileGenerator {
             pressHome()
             startActivityAndWait()
             device.waitForIdle()
+            dismissRuntimePermissionDialog()
 
             scrollGrid()
 
@@ -99,46 +100,65 @@ class BaselineProfileGenerator {
             "am start -a android.intent.action.VIEW " +
                 "-d netlens://feature/$route -p $PACKAGE_NAME",
         )
-        dismissRuntimePermissionDialog()
-        val arrived = device.wait(Until.hasObject(By.text(arrivalMarker)), NAV_TIMEOUT_MS)
-        check(arrived) {
-            // Say what IS on screen. Without this the failure is a 20-minute blind
-            // iteration: "not there" cannot distinguish a wrong selector from a slow
-            // screen from a deep link that silently stayed on Home.
-            val visible = device.findObjects(By.clazz("android.widget.TextView"))
-                .mapNotNull { it.text?.takeIf(String::isNotBlank) }
-                .distinct()
-                .take(12)
-            "Deep link netlens://feature/$route never showed \"$arrivalMarker\" within " +
-                "${NAV_TIMEOUT_MS}ms. Visible text was: $visible. " +
-                "If that looks like Home, the path is missing from " +
-                "DeepLinkRouter.PATH_TO_ROUTE (unlisted paths resolve to null and stay " +
-                "on Home). If it looks like the right screen, the title changed or the " +
-                "timeout is too short. Refusing to emit a profile that omits it."
-        }
-        device.waitForIdle()
+        awaitScreen(arrivalMarker, route)
     }
 
     /**
-     * Dismisses the POST_NOTIFICATIONS runtime dialog if the system raised one.
+     * Polls until [marker] is on screen, clearing runtime-permission dialogs as they appear.
      *
-     * Devices requests notification permission on entry (its "Background new-device alerts"
-     * toggle), and a **fresh emulator has never been asked**, so the dialog covers the screen
-     * and the arrival marker never appears. This does not reproduce on a phone that has
-     * already answered: `pm revoke` after a grant sets `USER_SET`, which Android reads as
-     * "already declined" and suppresses the re-prompt — so revoking is NOT a way to simulate
-     * first-run state, and a hardware test done that way will wrongly clear this.
+     * **Why a poll and not a single `wait`.** The app requests POST_NOTIFICATIONS shortly
+     * after launch (Devices' "Background new-device alerts"), and on a fresh emulator — which
+     * has never been asked — the dialog covers whatever is on screen. *When* it lands is
+     * non-deterministic: it blocked `devices` on two runs and `lanscan` on the next. Anything
+     * that dismisses once, at a fixed point, races it. Re-checking each iteration removes the
+     * ordering assumption entirely.
+     *
+     * A phone that has already answered never shows it, and `pm revoke` does NOT recreate the
+     * condition — revoking after a grant sets `USER_SET`, which Android reads as "already
+     * declined" and suppresses the re-prompt. Hardware testing will wrongly clear this.
+     */
+    private fun MacrobenchmarkScope.awaitScreen(marker: String, route: String) {
+        val deadline = SystemClock.uptimeMillis() + NAV_TIMEOUT_MS
+        while (SystemClock.uptimeMillis() < deadline) {
+            dismissRuntimePermissionDialog()
+            if (device.hasObject(By.text(marker))) return
+            SystemClock.sleep(POLL_INTERVAL_MS)
+        }
+        val visible = device.findObjects(By.clazz("android.widget.TextView"))
+            .mapNotNull { it.text?.takeIf(String::isNotBlank) }
+            .distinct()
+            .take(12)
+        error(
+            "Deep link netlens://feature/$route never showed \"$marker\" within " +
+                "${NAV_TIMEOUT_MS}ms. Visible text was: $visible. " +
+                "A permission dialog here means dismissal failed — check the " +
+                "permissioncontroller package id. Text that looks like Home means the path " +
+                "is missing from DeepLinkRouter.PATH_TO_ROUTE (unlisted paths resolve to " +
+                "null and stay on Home). The right screen means the title changed. " +
+                "Refusing to emit a profile that omits it.",
+        )
+    }
+
+    /**
+     * Clicks "deny" on a runtime-permission dialog if one is up. No-op otherwise.
+     *
+     * Tries **both** permissioncontroller package names: AOSP images use
+     * `com.android.permissioncontroller`, but the CI emulator runs a `google_apis` image where
+     * it is `com.google.android.permissioncontroller`. A previous version checked only the
+     * AOSP id, found nothing, and returned silently — so the dialog stayed up and the run
+     * failed 30s later blaming navigation. Resource ids are matched before text because
+     * button wording is localized.
      *
      * Denies rather than allows: the profile should capture the app, and granting would let a
-     * notification channel and WorkManager scheduling run inside the capture window. Best
-     * effort — no dialog is the normal case on a warm device, and absence is not an error.
+     * notification channel and WorkManager scheduling run inside the capture window.
      */
     private fun MacrobenchmarkScope.dismissRuntimePermissionDialog() {
-        val denyButton = device.wait(
-            Until.findObject(By.res(PERMISSION_CONTROLLER_PKG, "permission_deny_button")),
-            PERMISSION_DIALOG_TIMEOUT_MS,
-        ) ?: return
-        denyButton.click()
+        val button = PERMISSION_CONTROLLER_PKGS
+            .firstNotNullOfOrNull { pkg -> device.findObject(By.res(pkg, "permission_deny_button")) }
+            ?: device.findObject(By.textStartsWith("Don't allow"))
+            ?: device.findObject(By.text("Deny"))
+            ?: return
+        button.click()
         device.waitForIdle()
     }
 
@@ -173,9 +193,15 @@ class BaselineProfileGenerator {
          */
         const val NAV_TIMEOUT_MS = 30_000L
 
-        const val PERMISSION_CONTROLLER_PKG = "com.android.permissioncontroller"
+        /**
+         * AOSP images use the first; the CI emulator's `google_apis` image uses the second.
+         * Checking only one is why an earlier dismissal silently did nothing.
+         */
+        val PERMISSION_CONTROLLER_PKGS = listOf(
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
+        )
 
-        /** Short: the dialog is either already up or was never going to appear. */
-        const val PERMISSION_DIALOG_TIMEOUT_MS = 3_000L
+        const val POLL_INTERVAL_MS = 250L
     }
 }
