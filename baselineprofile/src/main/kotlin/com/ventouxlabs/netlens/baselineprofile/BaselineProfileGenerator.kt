@@ -101,10 +101,19 @@ class BaselineProfileGenerator {
         )
         val arrived = device.wait(Until.hasObject(By.text(arrivalMarker)), NAV_TIMEOUT_MS)
         check(arrived) {
+            // Say what IS on screen. Without this the failure is a 20-minute blind
+            // iteration: "not there" cannot distinguish a wrong selector from a slow
+            // screen from a deep link that silently stayed on Home.
+            val visible = device.findObjects(By.clazz("android.widget.TextView"))
+                .mapNotNull { it.text?.takeIf(String::isNotBlank) }
+                .distinct()
+                .take(12)
             "Deep link netlens://feature/$route never showed \"$arrivalMarker\" within " +
-                "${NAV_TIMEOUT_MS}ms. Either the path is missing from " +
-                "DeepLinkRouter.PATH_TO_ROUTE (unlisted paths silently stay on Home), " +
-                "or the screen's title changed. Refusing to emit a profile that omits it."
+                "${NAV_TIMEOUT_MS}ms. Visible text was: $visible. " +
+                "If that looks like Home, the path is missing from " +
+                "DeepLinkRouter.PATH_TO_ROUTE (unlisted paths resolve to null and stay " +
+                "on Home). If it looks like the right screen, the title changed or the " +
+                "timeout is too short. Refusing to emit a profile that omits it."
         }
         device.waitForIdle()
     }
@@ -130,7 +139,14 @@ class BaselineProfileGenerator {
     private companion object {
         const val PACKAGE_NAME = "com.ventouxlabs.netlens"
 
-        /** Generous: an emulator under CI load is slow, and a false negative fails the build. */
-        const val NAV_TIMEOUT_MS = 10_000L
+        /**
+         * A CI emulator runs on a software GPU (swiftshader) under shared load, so screen
+         * transitions are far slower than on a phone. 10s was measured to be too short: the
+         * SECOND navigation timed out on Devices even though the same deep link lands in
+         * ~5s on hardware and UiAutomator does see the "Devices" title there. Cost of being
+         * generous is a slower failure; cost of being tight is a red build and 20 wasted
+         * CI minutes.
+         */
+        const val NAV_TIMEOUT_MS = 30_000L
     }
 }
