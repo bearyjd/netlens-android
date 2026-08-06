@@ -22,7 +22,11 @@ text below is a snapshot. Keep them in sync.
   > Network diagnostics toolkit: ping, traceroute, DNS, LAN scan, port scan & more
 - **Full description** (`full_description.txt`): see the file — feature-grouped,
   no package references, ready as-is.
-- **What's new** (`changelogs/6.txt`, versionCode 6): the v1.1.3 migration note.
+- **What's new**: use the changelog for the versionCode you are uploading —
+  `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. At bootstrap time
+  that is the latest release's file, not `6.txt` (which was the v1.1.3 migration note
+  this doc originally shipped with). `supply` reads the versionCode from the AAB and
+  picks the matching file automatically.
 
 **Assets** (from `fastlane/metadata/android/en-US/images/`):
 - App icon — `icon.png` (Play requires 512×512 PNG; verify dimensions)
@@ -63,13 +67,28 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
 
 ### One-time service-account setup
 
-> 🚧 **Status (as of 2026-06-29): NOT yet done.** The `PLAY_SERVICE_ACCOUNT_JSON`
-> repository secret is **not set**, so the **Play Publish** workflow will hard-fail
-> at the "Write Play service-account key" step until the three steps below are
-> completed. The signing secrets (`RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`,
-> `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) **are** set, so the signed-AAB build
-> portion of the workflow does run. The bootstrap manual upload (app creation + first
-> AAB) has **not been verified** and must also be done before automation can succeed.
+> 🚧 **Status (re-verified 2026-08-06): STILL NOT done — nothing has moved since
+> 2026-06-29.** Checked directly rather than inferred:
+>
+> ```
+> gh secret list             → RELEASE_KEYSTORE_BASE64, RELEASE_KEY_ALIAS,
+>                              RELEASE_KEY_PASSWORD, RELEASE_STORE_PASSWORD
+>                              PLAY_SERVICE_ACCOUNT_JSON  ← absent
+> Play Publish runs, ever    → 1 (2026-06-29, failure)
+> ```
+>
+> So the **Play Publish** workflow still hard-fails at "Write Play service-account key".
+> The four `RELEASE_*` signing secrets **are** set, so the signed-AAB build half does run —
+> that half is proven. The bootstrap manual upload (app creation + first AAB) is still
+> **unverified** and must happen before any automation can succeed.
+>
+> **All remaining blockers are human work in Google's web consoles.** No amount of repo
+> change unblocks this; see the go-live checklist below.
+>
+> Listing inputs were verified ready on 2026-08-06: `title.txt`, `short_description.txt`
+> (78/80 chars), `full_description.txt` (1439/4000), `icon.png` 512×512,
+> `featureGraphic.png` 1024×500, and four 1080×2160 phone screenshots. The data-safety
+> answers below are pre-written, including the paste-ready IP-address justification.
 
 1. Google Cloud Console → create a **service account**; create a JSON key.
 2. Play Console → **Users & permissions** → invite the service-account email →
@@ -106,6 +125,45 @@ first upload for `com.ventouxlabs.netlens`:
       (listing copy + assets are ready in `fastlane/metadata/android/en-US/`; use the
       latest release at bootstrap time so the listing launches with current icon/UI,
       not whatever version this doc last mentioned)
+
+### Capturing phone screenshots (proven 2026-08-06)
+
+The shipped set is **1080x2160 (2:1), RGB with no alpha** — Play rejects alpha, and the
+existing files set the ratio convention. Working recipe on the Pixel 9 Pro Fold:
+
+```bash
+D=4A111FDKD0000C; OUT=4619827677550801153   # OUTER display; the inner one captures black while folded
+adb -s $D shell am start -a android.intent.action.VIEW -d "netlens://feature/<route>" -p com.ventouxlabs.netlens
+sleep 2   # fire it TWICE - the first lands before nav is ready
+adb -s $D shell am start -a android.intent.action.VIEW -d "netlens://feature/<route>" -p com.ventouxlabs.netlens
+adb -s $D shell screencap -d $OUT -p > raw.png
+```
+
+Then crop with Pillow: `Image.open('raw.png').convert('RGB').crop((0,130,1080,130+2160))` —
+`convert('RGB')` drops the alpha, and dropping the top 130px removes the status bar and lands
+exactly on 2:1 with no padding.
+
+Four things that cost time, so they are written down:
+
+- **`screencap` needs an explicit `-d <displayId>`** on a foldable or it writes a warning into
+  the PNG and corrupts it.
+- **Crop the status bar; do not try to clean it.** SysUI demo mode
+  (`settings put global sysui_demo_allowed 1`, then the `com.android.systemui.demo` broadcasts)
+  does fix the clock, carrier, roaming and battery — but **persistent/ongoing notification icons
+  survive it**, and those reveal which apps the device owner uses. Cropping removes the whole
+  class of leak. Remember to `exit` demo mode and reset `sysui_demo_allowed` to 0 afterwards.
+- **Not every `ToolDestination` route is a deep link.** `lanscan` and `devices` resolve;
+  **`wifi` silently lands on Home**. Verify by hashing the crop — two screens that hash
+  identically means the route did not resolve, and a wrong screenshot is easy to miss by eye.
+- **Populate the device first.** A wiped phone yields empty forms. The current `4_ping.png`
+  shows a real ping to `8.8.8.8` with latency bars and summary stats; an empty Ping form is a
+  strictly worse listing image. **Before capturing, set custom names on inventoried devices**
+  (`Living Room TV`, `Office NAS`): the tagging feature hides real hostnames *and* makes the
+  screenshots look curated rather than accidental.
+
+**What not to show:** the Wi-Fi analyzer channel graph lists *neighbours'* SSIDs, which are
+often surnames or flat numbers — third-party data you cannot rename. Use the Coverage tab
+instead; it shows your own APs by short name, and full BSSIDs never leave the device by design.
 
 ### Data safety form answers
 
@@ -154,5 +212,5 @@ tracking."*
   (`RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
   `RELEASE_KEY_PASSWORD`) to build the signed AAB.
 - `supply` reads the versionCode from the AAB; bump `gradle.properties` as usual.
-- `ruby/setup-ruby` in the workflow is not yet pinned to a commit SHA (see the
-  TODO) — pin it to match the rest of the workflows before relying on it.
+- `ruby/setup-ruby` is pinned to `95ef2b04` (v1.321.0) as of 2026-08-06, matching
+  the SHA-pinning convention used by every other action in this repo.
