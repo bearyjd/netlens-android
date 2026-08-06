@@ -62,16 +62,27 @@ Push directly to `master` (matches existing pattern: `7825ab9`, `5360d1f`).
 
 ### 3. Tag
 
-Create an annotated tag using the matching CHANGELOG block as the message body:
+Create an annotated tag using the matching CHANGELOG block as the message body.
+
+**`--cleanup=verbatim` is mandatory, not optional.** Git's default cleanup strips every line
+beginning with `#` from a tag message as a comment. A CHANGELOG block starts its subsections
+with `### Added` / `### Fixed` / `### Changed`, so the default silently deletes exactly the
+headers that tell a reader which bullets are features and which are fixes. This bit v1.3.2: the
+tag annotation came out as two undifferentiated bullets, and the tab-wrap *fix* read as a
+feature. The failure is silent — `git tag` succeeds and only `git tag -n99` reveals it.
 
 ```
-git tag -a v<versionName> -m "$(cat <<'EOF'
+git tag -a v<versionName> --cleanup=verbatim -m "$(cat <<'EOF'
 v<versionName> — <one-line summary>
 
 <copy the body of the matching CHANGELOG.md [<versionName>] block here>
 EOF
 )"
 ```
+
+**Verify before pushing:** run `git tag -n99 v<versionName>` and confirm the `###` headers
+survived. If they are missing, delete the tag (`git tag -d`) and recreate it — a tag that has
+not been pushed is free to fix, and this is the last moment it is free.
 
 Then `git push origin v<versionName>`.
 
@@ -84,8 +95,9 @@ Then `git push origin v<versionName>`.
 ### 5. Done
 
 Output the published release URL and remind the user:
-- F-Droid auto-tracker will pick up the tag on its next sync (typically 24–48h).
+- **F-Droid: check whether the app is actually listed before claiming anything.** As of 2026-08-05 NetLens is **not on F-Droid at all** — `https://f-droid.org/api/v1/packages/com.ventouxlabs.netlens` returns **404**, and MR #42628 on `fdroiddata` (project 36528) is the *initial inclusion* request, still open since 2026-07-28. Until a maintainer merges it, **a new tag reaches no F-Droid user**, and the auto-tracker has nothing to track. Only once the app is listed does the usual line apply: `AutoUpdateMode: Version` + `UpdateCheckMode: Tags` picks up later tags on the next sync (typically 24–48h). Verify with the API call rather than repeating either claim from memory — an earlier handoff described the MR as "open at 1.2.6/13", which reads as *listed but behind* and is a materially different situation from *never listed*.
 - The new APK on a connected device requires `adb install -r` (no uninstall) ONLY if the cert SHA-256 matches the prior release. If it doesn't, the user will need to uninstall first — losing app data. The cert continuity check in step 1.7 surfaces this in advance.
+- **Record the release in `docs/HANDOFF.md` now, not next session.** v1.3.1 was tagged and published on 2026-08-03 and never written down; the handoff kept describing it as forthcoming, so the next session shipped from a tree whose version was already taken and whose CHANGELOG had no entry for the released version. Writing one line at tag time is what prevents that.
 
 ## What this skill explicitly does NOT do
 

@@ -1,3 +1,89 @@
+# Session Handoff — v1.3.2 released, and the release records that were missing (2026-08-05 night)
+
+Supersedes the evening handoff below, which is otherwise still accurate.
+
+## Releases — READ THIS BEFORE SHIPPING ANYTHING
+
+**Both of these are recorded here because the last one was not, and that cost a release.**
+
+| Version | Code | Tagged | Published cert verified | Notes present |
+|---|---|---|---|---|
+| **v1.3.2** | 16 | 2026-08-05 | ✅ `8fdfc928…ae2b4`, v2 only | ✅ CHANGELOG + `16.txt` |
+| **v1.3.1** | 15 | 2026-08-03 | ✅ `8fdfc928…ae2b4`, v2 only | ⚠️ **backfilled 2026-08-05**, not written at release time |
+
+**v1.3.2** — https://github.com/bearyjd/netlens-android/releases/tag/v1.3.2
+Tag `v1.3.2` → commit `e444c9b`. All four artifacts attached, `release.yml` run `31047402141`
+succeeded. The **published** foss APK was downloaded and verified: cert
+`8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`, v2 scheme only,
+`versionCode='16' versionName='1.3.2'`. Contents: one-tap scan location (#137) and the LAN Scan
+tab label wrap fix (#131). Everything else since 1.3.1 is tests, CI, docs or internal
+refactoring with no user-visible effect.
+
+**v1.3.1 shipped undocumented, and this is the lesson of the session.** It was tagged and
+published on 2026-08-03, marked Latest, all four artifacts attached — with **no CHANGELOG entry
+and no `changelogs/15.txt`**. Nobody wrote it down, so this file went on calling 1.3.1
+*forthcoming* ("the baseline profile ships in 1.3.1", "Version 1.3.1 / code 15"). Two days
+later `gradle.properties` still read `1.3.1 / 15` with **30 commits** stacked on top, all
+carrying a version number that was already published under different content. Both files were
+backfilled on 2026-08-05 and the CHANGELOG entry says so, because reconstructed notes deserve
+less trust than contemporaneous ones.
+
+**The rule that prevents a repeat: write the release into this file at tag time, not next
+session.** `/android-release` step 5 now says so too.
+
+## `git tag -m` eats your `###` headers
+
+Git's default cleanup strips every line starting with `#` from a tag message as a comment. A
+CHANGELOG block uses `### Added` / `### Fixed`, so the default **silently deletes exactly the
+headers that say which bullets are features and which are fixes**. v1.3.2's first tag came out
+as two undifferentiated bullets with the tab-wrap *fix* reading as a feature.
+
+Use `git tag -a <tag> --cleanup=verbatim -m ...`, then **verify with `git tag -n99 <tag>` before
+pushing** — `git tag` exits 0 either way, so nothing surfaces the loss. An unpushed tag is free
+to delete and recreate; that is the last moment it is free. `/android-release` step 3 now
+mandates the flag and the verification.
+
+## F-Droid: NetLens has NEVER been listed — correcting this file
+
+Earlier versions of this handoff said *"F-Droid MR #42628 still open at 1.2.6 / 13, so F-Droid
+will not ship 1.3.0 until it merges."* That reads as **listed but behind**. The truth is
+**never listed at all**:
+
+```
+https://f-droid.org/api/v1/packages/com.ventouxlabs.netlens   →  HTTP 404
+MR #42628 title: "New app: NetLens (com.ventouxlabs.netlens)" →  still open, updated 2026-07-28
+```
+
+MR #42628 is the **initial inclusion** request, not an update to an existing listing. So **no
+F-Droid user has ever had NetLens**, no tag reaches them, and the auto-tracker has nothing to
+track until a maintainer merges it. One consequence worth stating plainly: the missing
+`15.txt` **harmed no F-Droid user**, because there are none — backfilling it was still right
+for when the MR merges, but the urgency attached to it at the time was misplaced.
+
+Also: this file said "no maintainer activity since 2026-07-14". The API reports
+`updated_at: 2026-07-28`. Something touched it two weeks later than recorded; the `notes`
+endpoint still needs auth to read the discussion, so check it manually.
+
+## Open items — 2026-08-05 night (current)
+
+1. **Play Console for 1.3.2** — manual. The gplay AAB is attached to the GitHub release;
+   checklist in `docs/play-store.md`.
+2. **F-Droid MR #42628** — nothing on our side speeds it up, but read the thread manually; the
+   `notes` API 401s without auth on project 36528.
+3. **Baseline profile is one release stale** — last regenerated 2026-07-31, so it has never seen
+   #137's one-tap location UI or the `ResultActions` refactor. Accepted at 1.3.2's tag time;
+   unmatched rules are ignored, so the cost is startup speed on that path, not correctness.
+   Re-dispatch `baseline-profile.yml` from a branch before the next release.
+4. **Consolidate the three `KnownDeviceDao` doubles** into `core:data-testing`, and kill the
+   inert one. See "Blind spot 2" below.
+5. **`.claude/PRPs` is half-tracked and nobody has decided.** Three options in the PM handoff.
+6. **The `DevicesViewModelTest` flake is still live and still unfixed by design.** Wait for the
+   stack trace `testLogging` now gives. Do not chase it cold.
+7. **Security follow-up:** the mDNS/SSDP/NetBIOS parsers consuming hostile LAN input remain the
+   highest-value unreviewed surface. No fuzzing has ever been done on them.
+
+---
+
 # Session Handoff — PR backlog cleared, two audit blind spots found (2026-08-05 evening)
 
 Supersedes the PM handoff below. Nothing here changes the security verdict; the PM security
@@ -764,8 +850,11 @@ apparatus.
 
 ## Quick reference
 
-- **Version 1.3.1 / code 15** (was wrongly listed here as 1.2.6 / 13 until 2026-08-05).
-  Cert `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`, v2 scheme only.
+- **Version 1.3.2 / code 16 — RELEASED 2026-08-05.** Cert
+  `8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa086ae2b4`, v2 scheme only, verified
+  on the published APK. This line has now been wrong twice (it said 1.2.6/13 until 2026-08-05,
+  then 1.3.1/15 while 1.3.1 was already published) — **check `gradle.properties` and
+  `gh release list` rather than trusting it.**
 - **Tests: `./gradlew testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest`** —
   all three, always. 895 tests. Two of them is 858 and silently skips the gplay billing tests.
 - Devices: Pixel 9 Pro Fold `4A111FDKD0000C`, Pixel 10 Pro Fold `57211FDCG0023C`.
