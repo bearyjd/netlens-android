@@ -99,6 +99,7 @@ class BaselineProfileGenerator {
             "am start -a android.intent.action.VIEW " +
                 "-d netlens://feature/$route -p $PACKAGE_NAME",
         )
+        dismissRuntimePermissionDialog()
         val arrived = device.wait(Until.hasObject(By.text(arrivalMarker)), NAV_TIMEOUT_MS)
         check(arrived) {
             // Say what IS on screen. Without this the failure is a 20-minute blind
@@ -115,6 +116,29 @@ class BaselineProfileGenerator {
                 "on Home). If it looks like the right screen, the title changed or the " +
                 "timeout is too short. Refusing to emit a profile that omits it."
         }
+        device.waitForIdle()
+    }
+
+    /**
+     * Dismisses the POST_NOTIFICATIONS runtime dialog if the system raised one.
+     *
+     * Devices requests notification permission on entry (its "Background new-device alerts"
+     * toggle), and a **fresh emulator has never been asked**, so the dialog covers the screen
+     * and the arrival marker never appears. This does not reproduce on a phone that has
+     * already answered: `pm revoke` after a grant sets `USER_SET`, which Android reads as
+     * "already declined" and suppresses the re-prompt — so revoking is NOT a way to simulate
+     * first-run state, and a hardware test done that way will wrongly clear this.
+     *
+     * Denies rather than allows: the profile should capture the app, and granting would let a
+     * notification channel and WorkManager scheduling run inside the capture window. Best
+     * effort — no dialog is the normal case on a warm device, and absence is not an error.
+     */
+    private fun MacrobenchmarkScope.dismissRuntimePermissionDialog() {
+        val denyButton = device.wait(
+            Until.findObject(By.res(PERMISSION_CONTROLLER_PKG, "permission_deny_button")),
+            PERMISSION_DIALOG_TIMEOUT_MS,
+        ) ?: return
+        denyButton.click()
         device.waitForIdle()
     }
 
@@ -148,5 +172,10 @@ class BaselineProfileGenerator {
          * CI minutes.
          */
         const val NAV_TIMEOUT_MS = 30_000L
+
+        const val PERMISSION_CONTROLLER_PKG = "com.android.permissioncontroller"
+
+        /** Short: the dialog is either already up or was never going to appear. */
+        const val PERMISSION_DIALOG_TIMEOUT_MS = 3_000L
     }
 }
