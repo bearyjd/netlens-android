@@ -1,3 +1,90 @@
+# Session Handoff — baseline profile: what regenerating does and does not fix (2026-08-06)
+
+Supersedes the night handoff below on the baseline-profile item only; everything else there
+still stands.
+
+## CORRECTED: the profile problem is journey SCOPE, not staleness
+
+This file has said, in several places, that the baseline profile "has never seen the one-tap
+location UI" and framed it as **stale** — implying a re-dispatch fixes it. **It does not, and
+never could.** Measured across a full successful regeneration:
+
+```
+ScanLocation entries:  before 0  →  after 0
+lanscan entries:       before 6  →  after 6   (unchanged)
+```
+
+`BaselineProfileGenerator`'s journey is **cold start into HomeScreen + a home-grid scroll**. It
+has never navigated further, at any point in its history. **A profile only contains what the
+benchmark walks.** Regenerating on a fresh date refreshes the paths already covered and adds
+nothing else.
+
+Left uncorrected, that framing buys a ~20-minute CI run every release and delivers nothing for
+the features it claims to cover. **Do not re-dispatch expecting feature coverage.** Extending
+coverage is a code change to `baselineprofile/`, and the attempt is described below.
+
+## What the regeneration DID do (PR #144)
+
+Run `31092524613`, API 34 emulator. Real but modest:
+
+```
+baseline-prof.txt   23068 → 23071 lines   (481 changed)
+startup-prof.txt    21430 → 21414 lines   (364 changed)
+156 netlens-owned entries added, concentrated in ui.home + Compose lazy.grid
+```
+
+That is the **startup** path, which is the highest-value thing to have profiled, so it is worth
+landing on its own.
+
+## The journey extension was attempted and ABANDONED — read before retrying
+
+Six CI runs. The work is preserved on **`spike/baseline-journey-extension`** (`0e81d1a`), not
+deleted. It is NOT in #144.
+
+**The blocker was never navigation.** Deep links work; `lanscan` and `devices` both resolve;
+`generateStartup` passed every run. The blocker is the **POST_NOTIFICATIONS dialog on a fresh
+emulator** — Devices requests it on entry, a clean emulator has never been asked, and the dialog
+covers the screen so the arrival marker never appears. Dismissal was attempted with resource ids
+for **both** `com.android.permissioncontroller` and `com.google.android.permissioncontroller`,
+plus "Don't allow" / "Deny" text fallbacks. **All missed. Cause unknown.** That is where it was
+stopped.
+
+Two traps that cost runs, both worth keeping:
+
+- **`pm revoke` does NOT simulate a fresh install.** Revoking after a prior grant sets
+  `USER_SET`, which Android reads as "user already declined" and suppresses the re-prompt. A
+  hardware test done that way shows no dialog and will **wrongly clear** this exact hypothesis —
+  which is what happened here, sending two runs down a timeout dead end.
+- **The dialog's timing is non-deterministic.** It blocked `devices` on two runs and `lanscan`
+  on the next. Anything that dismisses once, at a fixed point, races it. The spike's final form
+  polls (clear-dialog, check-marker, repeat) rather than guessing the moment.
+
+If you retry: the highest-value next step is making the dialog impossible rather than dismissing
+it — pre-grant or pre-deny `POST_NOTIFICATIONS` after install but before the benchmark, so no
+dialog is ever raised.
+
+**Also learned, and independently useful:** `DeepLinkRouter.PATH_TO_ROUTE` is a whitelist, and an
+unlisted path resolves to `null` so the app **silently stays on Home**. `wifi` is NOT in that map
+(`wifiaudit` is a different screen), which is why deep-linking the Wi-Fi analyser appears to do
+nothing. `ipcalc` is in `ROUTES_WITH_QUERY` but not in `PATH_TO_ROUTE`, so that entry is dead.
+
+## Reading CI status: `cancelled` renders as `fail`
+
+`gh pr checks` prints **`fail` for a cancelled job**. Three times this session that was misread
+as a real failure — twice by me in the same hour. The cancellations were self-inflicted: this
+repo's workflows use `concurrency: cancel-in-progress`, so every push supersedes the previous
+commit's in-flight checks, and **closing/reopening a PR also spawns a run that cancels a
+re-run you just started.**
+
+**Check the conclusion, not the rendering:**
+
+```
+gh api repos/<owner>/<repo>/commits/<sha>/check-runs -q '.check_runs[]|"\(.name) \(.conclusion)"'
+```
+
+Related and still true: a commit pushed by a workflow using `GITHUB_TOKEN` does **not** trigger
+workflows, so a bot-committed profile has no CI of its own until something else pushes.
+
 # Session Handoff — v1.3.2 released, and the release records that were missing (2026-08-05 night)
 
 Supersedes the evening handoff below, which is otherwise still accurate.
@@ -70,10 +157,12 @@ endpoint still needs auth to read the discussion, so check it manually.
    checklist in `docs/play-store.md`.
 2. **F-Droid MR #42628** — nothing on our side speeds it up, but read the thread manually; the
    `notes` API 401s without auth on project 36528.
-3. **Baseline profile is one release stale** — last regenerated 2026-07-31, so it has never seen
-   #137's one-tap location UI or the `ResultActions` refactor. Accepted at 1.3.2's tag time;
-   unmatched rules are ignored, so the cost is startup speed on that path, not correctness.
-   Re-dispatch `baseline-profile.yml` from a branch before the next release.
+3. ~~**Baseline profile is one release stale**~~ — **regenerated 2026-08-06 (PR #144), and the
+   framing below it was wrong.** This item said the profile "has never seen #137's one-tap
+   location UI", implying a re-dispatch would fix that. It would not: the journey stops at the
+   home grid, so no feature screen has ever been in the profile and regenerating cannot add
+   one. See "CORRECTED: the profile problem is journey SCOPE, not staleness" in the 2026-08-06
+   handoff above before spending a CI run on this.
 4. **Consolidate the three `KnownDeviceDao` doubles** into `core:data-testing`, and kill the
    inert one. See "Blind spot 2" below.
 5. **`.claude/PRPs` is half-tracked and nobody has decided.** Three options in the PM handoff.
