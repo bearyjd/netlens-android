@@ -69,7 +69,7 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
 
     private fun fetchDeviceDescription(ip: String, locationUrl: String?): SsdpDevice? {
         if (locationUrl == null) return SsdpDevice(ip = ip)
-        if (!isSafeLocationUrl(locationUrl)) return SsdpDevice(ip = ip)
+        if (!isSafeLocationUrl(locationUrl, ip)) return SsdpDevice(ip = ip)
         var connection: HttpURLConnection? = null
         return try {
             connection = (URL(locationUrl).openConnection() as HttpURLConnection).apply {
@@ -109,7 +109,28 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
             return result.toString()
         }
 
-        internal fun isSafeLocationUrl(url: String): Boolean {
+        /**
+         * A LOCATION URL is fetchable only if it points at **the device that answered**.
+         *
+         * The previous version resolved the host and rejected loopback/link-local. That left two
+         * holes, both exploitable by any device on the LAN:
+         *
+         *  1. **DNS rebinding.** It resolved the host to check it, then [URL.openConnection]
+         *     resolved *again* to connect. A responder controlling DNS answers benign on the
+         *     check and loopback on the fetch. Multiple A records did it without any trickery —
+         *     `getByName` returns the first, the connection may use another.
+         *  2. **Cross-host SSRF inside the LAN.** Nothing tied the URL to the responder, so a
+         *     hostile device could set `LOCATION: http://192.168.1.1/admin` and have the app
+         *     fetch the router on its behalf. Neither loopback nor link-local, so it passed.
+         *
+         * Requiring an IP literal equal to the responder's address closes both, and makes this
+         * a **pure function** — the old one did DNS I/O, which is why it had no tests.
+         *
+         * Cost: a device advertising LOCATION by hostname loses its description and is reported
+         * with its IP only. UPnP devices advertise their own address, so this is rare; a
+         * degraded row is the right trade against fetching an attacker-chosen host.
+         */
+        internal fun isSafeLocationUrl(url: String, responderIp: String): Boolean {
             val lower = url.lowercase()
             if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
             val host = try {
@@ -117,15 +138,13 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
             } catch (_: Exception) {
                 return false
             }
-            val addr = try {
-                InetAddress.getByName(host)
-            } catch (_: Exception) {
-                return false
-            }
-            if (addr.isLoopbackAddress) return false
-            if (addr.isLinkLocalAddress) return false
-            return true
+            if (host.isNullOrEmpty()) return false
+            return normalizeIp(host) == normalizeIp(responderIp)
         }
+
+        /** Strips IPv6 brackets and any zone id, so `[fe80::1%wlan0]` and `fe80::1` compare equal. */
+        private fun normalizeIp(value: String): String =
+            value.removeSurrounding("[", "]").substringBefore('%').lowercase()
 
         private val M_SEARCH_MESSAGE = buildString {
             append("M-SEARCH * HTTP/1.1\r\n")
