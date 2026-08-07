@@ -44,6 +44,7 @@ import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
+import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LanScanBuildExportTextTest {

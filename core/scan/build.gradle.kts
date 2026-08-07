@@ -20,4 +20,5 @@ dependencies {
     // The engine fakes live in :core:scan-testing so :feature:devices can share them instead of
     // keeping its own drifted copies. This module's own tests are just another consumer.
     testImplementation(project(":core:scan-testing"))
+    testImplementation(project(":core:data-testing"))
 }

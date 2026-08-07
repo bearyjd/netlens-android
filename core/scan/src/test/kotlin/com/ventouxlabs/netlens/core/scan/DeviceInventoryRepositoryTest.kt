@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.core.scan
 
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,13 +12,13 @@ import org.junit.jupiter.api.Test
 class DeviceInventoryRepositoryTest {
 
     private fun repo(
-        dao: InMemoryKnownDeviceDao,
+        dao: FakeKnownDeviceDao,
         notifier: RecordingNewDeviceNotifier,
     ) = DeviceInventoryRepositoryImpl(dao, notifier)
 
     @Test
     fun `new device with MAC is persisted and notified once`() = runTest {
-        val dao = InMemoryKnownDeviceDao()
+        val dao = FakeKnownDeviceDao()
         val notifier = RecordingNewDeviceNotifier()
         repo(dao, notifier).persistScan(
             listOf(LanDevice(ip = "192.168.1.10", hostname = "phone", macAddress = "AA:BB:CC:DD:EE:01")),
@@ -31,7 +32,7 @@ class DeviceInventoryRepositoryTest {
 
     @Test
     fun `re-seen device updates lastSeen and does not notify`() = runTest {
-        val dao = InMemoryKnownDeviceDao()
+        val dao = FakeKnownDeviceDao()
         val notifier = RecordingNewDeviceNotifier()
         dao.insertIfNew(
             KnownDeviceEntity(
@@ -54,7 +55,7 @@ class DeviceInventoryRepositoryTest {
 
     @Test
     fun `mac-less device is persisted keyed by IP then upgrades in place`() = runTest {
-        val dao = InMemoryKnownDeviceDao()
+        val dao = FakeKnownDeviceDao()
         val notifier = RecordingNewDeviceNotifier()
         val r = repo(dao, notifier)
         r.persistScan(listOf(LanDevice(ip = "192.168.1.22", hostname = "d", macAddress = null)), networkId = null)
@@ -66,7 +67,7 @@ class DeviceInventoryRepositoryTest {
 
     @Test
     fun `insert tags the network id`() = runTest {
-        val dao = InMemoryKnownDeviceDao()
+        val dao = FakeKnownDeviceDao()
         val notifier = RecordingNewDeviceNotifier()
         repo(dao, notifier).persistScan(
             listOf(LanDevice(ip = "192.168.1.5", macAddress = "AA:BB:CC:DD:EE:05")),
