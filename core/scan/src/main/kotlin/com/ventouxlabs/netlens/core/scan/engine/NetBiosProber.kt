@@ -74,17 +74,22 @@ class NetBiosProberImpl @Inject constructor() : NetBiosProber {
         }
 
         internal fun parseResponse(data: ByteArray, length: Int): NetBiosInfo? {
-            if (length < 57) return null
+            // Never index past the array even if the caller reports a longer length than it
+            // supplied. probe() cannot currently do that — receive() caps at buffer.size — but
+            // the parser must not depend on an invariant held only by its caller. Randomised
+            // input found this: length=323 against a 171-byte array read index 171.
+            val limit = minOf(length, data.size)
+            if (limit < 57) return null
 
             // Skip header (12 bytes) + question section
             var offset = 12
             // Skip name in response
-            while (offset < length && data[offset].toInt() != 0) offset++
+            while (offset < limit && data[offset].toInt() != 0) offset++
             offset++ // null terminator
             offset += 4 // type + class
             // Skip TTL (4 bytes) + data length (2 bytes)
             offset += 6
-            if (offset >= length) return null
+            if (offset >= limit) return null
 
             val nameCount = data[offset].toInt() and 0xFF
             offset++
@@ -93,7 +98,7 @@ class NetBiosProberImpl @Inject constructor() : NetBiosProber {
             var workgroup: String? = null
 
             for (i in 0 until nameCount) {
-                if (offset + 18 > length) break
+                if (offset + 18 > limit) break
                 val nameBytes = data.copyOfRange(offset, offset + 15)
                 val nameType = data[offset + 15].toInt() and 0xFF
                 val flags = ((data[offset + 16].toInt() and 0xFF) shl 8) or

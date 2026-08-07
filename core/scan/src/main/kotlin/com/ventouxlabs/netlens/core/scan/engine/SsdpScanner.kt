@@ -147,10 +147,17 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
 
         internal fun parseDeviceXml(ip: String, xml: String): SsdpDevice {
             fun extractTag(tag: String): String? {
-                val start = xml.indexOf("<$tag>")
-                val end = xml.indexOf("</$tag>")
-                if (start < 0 || end < 0) return null
-                return xml.substring(start + tag.length + 2, end).trim().ifEmpty { null }
+                val open = "<$tag>"
+                val close = "</$tag>"
+                val start = xml.indexOf(open)
+                if (start < 0) return null
+                // Search for the closing tag AFTER the opening one. Searching the whole string
+                // found a `</tag>` that precedes `<tag>`, then called substring(start, end) with
+                // start > end — a StringIndexOutOfBoundsException on input a hostile LAN device
+                // fully controls. It was masked only by the catch-all in fetchDeviceDescription.
+                val end = xml.indexOf(close, start + open.length)
+                if (end < 0) return null
+                return xml.substring(start + open.length, end).trim().ifEmpty { null }
             }
             return SsdpDevice(
                 ip = ip,
