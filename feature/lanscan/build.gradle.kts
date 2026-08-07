@@ -18,4 +18,5 @@ dependencies {
     implementation(libs.compose.material.icons)
 
     testImplementation(project(":core:scan-testing"))
+    testImplementation(project(":core:data-testing"))
 }

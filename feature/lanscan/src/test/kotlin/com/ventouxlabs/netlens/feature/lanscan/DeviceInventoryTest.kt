@@ -18,10 +18,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.feature.lanscan.engine.FakeScanLocationProvider
-import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
+import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceInfo
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
@@ -43,7 +43,7 @@ import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
 class DeviceInventoryTest {
 
     private lateinit var fakeSubnetScanner: FakeSubnetScanner
-    private lateinit var fakeKnownDeviceDao: InMemoryKnownDeviceDao
+    private lateinit var fakeKnownDeviceDao: FakeKnownDeviceDao
     private lateinit var fakeNotifier: RecordingNewDeviceNotifier
     private lateinit var viewModel: LanScanViewModel
 
@@ -51,7 +51,7 @@ class DeviceInventoryTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeSubnetScanner = FakeSubnetScanner()
-        fakeKnownDeviceDao = InMemoryKnownDeviceDao()
+        fakeKnownDeviceDao = FakeKnownDeviceDao()
         fakeNotifier = RecordingNewDeviceNotifier()
         viewModel = LanScanViewModel(
             subnetScanner = fakeSubnetScanner,
@@ -197,116 +197,3 @@ private class RecordingNewDeviceNotifier : NewDeviceNotifier {
     }
 }
 
-private class InMemoryKnownDeviceDao : KnownDeviceDao {
-    val allDevices = mutableListOf<KnownDeviceEntity>()
-    private var nextId = 1L
-    private val _flow = MutableStateFlow<List<KnownDeviceEntity>>(emptyList())
-
-    override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = _flow
-
-    override suspend fun getByMac(mac: String): KnownDeviceEntity? =
-        allDevices.find { it.macAddress == mac }
-
-    override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? =
-        allDevices.find { it.ip == ip && it.macAddress == null }
-
-    override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> =
-        flowOf(allDevices.filter { !it.isKnown })
-
-    override suspend fun insertIfNew(device: KnownDeviceEntity): Long {
-        if (device.macAddress != null && allDevices.any { it.macAddress == device.macAddress }) return -1L
-        val withId = device.copy(id = nextId++)
-        allDevices.add(withId)
-        _flow.update { allDevices.toList() }
-        return withId.id
-    }
-
-    override suspend fun updateLastSeen(
-        id: Long,
-        hostname: String?,
-        ip: String,
-        vendor: String?,
-        lastSeen: Long,
-        deviceType: String?,
-        osGuess: String?,
-    ) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(
-                hostname = hostname,
-                ip = ip,
-                vendor = vendor,
-                lastSeen = lastSeen,
-                deviceType = deviceType,
-                osGuess = osGuess,
-            )
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override suspend fun setMacAddress(id: Long, mac: String) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(macAddress = mac)
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override suspend fun setKnown(id: Long, isKnown: Boolean) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(isKnown = isKnown)
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override suspend fun setCustomName(id: Long, customName: String?) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(customName = customName)
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override suspend fun setNetworkId(id: Long, networkId: Long?) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(networkId = networkId)
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override suspend fun getById(id: Long): KnownDeviceEntity? = allDevices.find { it.id == id }
-
-    override suspend fun updateUserDetails(
-        id: Long,
-        customName: String?,
-        tags: String?,
-        notes: String?,
-        location: String?,
-    ) {
-        val index = allDevices.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            allDevices[index] = allDevices[index].copy(
-                customName = customName,
-                tags = tags,
-                notes = notes,
-                location = location,
-            )
-            _flow.update { allDevices.toList() }
-        }
-    }
-
-    override fun search(query: String): Flow<List<KnownDeviceEntity>> =
-        flowOf(allDevices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })
-
-    override suspend fun delete(id: Long) {
-        allDevices.removeAll { it.id == id }
-        _flow.update { allDevices.toList() }
-    }
-
-    override suspend fun deleteAll() {
-        allDevices.clear()
-        _flow.update { emptyList() }
-    }
-}

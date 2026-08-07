@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.feature.lanscan.engine.FakeScanLocationProvider
-import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.LanScanHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
+import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceInfo
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
@@ -69,30 +69,6 @@ internal class FakeLanScanHistoryDao : LanScanHistoryDao {
     override suspend fun insert(entry: LanScanHistoryEntry) {}
     override suspend fun deleteById(id: Long) {}
     override suspend fun deleteOlderThan(before: Long) {}
-    override suspend fun deleteAll() {}
-}
-
-internal class FakeKnownDeviceDao : KnownDeviceDao {
-    override fun getAllDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun getByMac(mac: String): KnownDeviceEntity? = null
-    override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? = null
-    override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun insertIfNew(device: KnownDeviceEntity): Long = 1L
-    override suspend fun updateLastSeen(id: Long, hostname: String?, ip: String, vendor: String?, lastSeen: Long, deviceType: String?, osGuess: String?) {}
-    override suspend fun setMacAddress(id: Long, mac: String) {}
-    override suspend fun setKnown(id: Long, isKnown: Boolean) {}
-    override suspend fun setCustomName(id: Long, customName: String?) {}
-    override suspend fun getById(id: Long): KnownDeviceEntity? = null
-    override suspend fun updateUserDetails(
-        id: Long,
-        customName: String?,
-        tags: String?,
-        notes: String?,
-        location: String?,
-    ) {}
-    override suspend fun setNetworkId(id: Long, networkId: Long?) {}
-    override fun search(query: String): Flow<List<KnownDeviceEntity>> = flowOf(emptyList())
-    override suspend fun delete(id: Long) {}
     override suspend fun deleteAll() {}
 }
 

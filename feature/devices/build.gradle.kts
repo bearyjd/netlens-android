@@ -19,4 +19,5 @@ dependencies {
     // Shared engine doubles. This module used to carry its own copies of FakeArpTableReader,
     // FakeOuiLookup and FakeSubnetScanner; they drifted weaker than :core:scan's originals.
     testImplementation(project(":core:scan-testing"))
+    testImplementation(project(":core:data-testing"))
 }
