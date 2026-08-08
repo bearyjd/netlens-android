@@ -41,6 +41,7 @@ import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
+import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
@@ -307,6 +308,7 @@ class LanScanViewModel @Inject constructor(
                 error = null,
                 rangeError = null,
                 deviceCount = 0,
+                emptyScanReason = null,
             )
         }
 
@@ -360,7 +362,7 @@ class LanScanViewModel @Inject constructor(
             // Without this a scan under any VPN, including on-device ad-blockers, silently returns
             // nothing (issue #152). Scope stays as tight as the network work: the DB writes below
             // stay outside it.
-            lanNetworkBinder.withLanNetwork {
+            val boundToLanNetwork = lanNetworkBinder.withLanNetwork { bound ->
                 coroutineScope {
                     val emitterJob = launch {
                         while (isActive) {
@@ -412,9 +414,24 @@ class LanScanViewModel @Inject constructor(
 
                     enrichWithArpAndNetBios()
                 }
+                bound
             }
 
-            _uiState.update { it.copy(isScanning = false, progress = 1f) }
+            // An empty result only means "nothing is out there" if the probes had a way out. When
+            // the binder found no LAN network to bind to, they did not, and reporting that as an
+            // empty network is the ambiguity users hit in #152. Finding anything at all proves a
+            // route existed, so the notice is never shown alongside results.
+            _uiState.update { state ->
+                state.copy(
+                    isScanning = false,
+                    progress = 1f,
+                    emptyScanReason = if (!boundToLanNetwork && state.devices.isEmpty()) {
+                        EmptyScanReason.NETWORK_UNREACHABLE
+                    } else {
+                        null
+                    },
+                )
+            }
             saveToHistory(scanStartedAt, location)
             deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null)
         }

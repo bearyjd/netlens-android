@@ -112,4 +112,5 @@
     <string name="lanscan_service_connect">Connect via %1$s</string>
     <string name="lanscan_service_browse">Browse %1$s</string>
     <string name="lanscan_service_no_handler">No installed app can open %1$s</string>
+    <string name="lanscan_empty_scan_unreachable">No Wi-Fi or Ethernet connection was available for this scan, so devices may exist that it could not find. A VPN is a common cause, including on-device ad blockers and private DNS apps. Turn it off and scan again.</string>
 </resources>

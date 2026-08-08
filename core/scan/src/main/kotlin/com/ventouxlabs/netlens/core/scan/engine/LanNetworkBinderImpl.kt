@@ -16,18 +16,21 @@ class LanNetworkBinderImpl @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : LanNetworkBinder {
 
-    override suspend fun <T> withLanNetwork(block: suspend () -> T): T {
+    override suspend fun <T> withLanNetwork(block: suspend (bound: Boolean) -> T): T {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
-            ?: return block()
-        val lanNetwork = connectivityManager.findLanNetwork() ?: return block()
+            ?: return block(false)
+        val lanNetwork = connectivityManager.findLanNetwork() ?: return block(false)
 
         // Restore whatever was bound before rather than unconditionally clearing to null: another
         // caller may have bound the process for its own reasons, and clobbering that would trade
         // this bug for a subtler one.
         val previous = connectivityManager.boundNetworkForProcess
         return try {
-            connectivityManager.bindProcessToNetwork(lanNetwork)
-            block()
+            // bindProcessToNetwork returns false if lanNetwork went invalid between
+            // findLanNetwork() and here (e.g. Wi-Fi dropped) — the process stays on whatever it
+            // was bound to before, so callers must not be told they're on the LAN.
+            val didBind = connectivityManager.bindProcessToNetwork(lanNetwork)
+            block(didBind)
         } finally {
             connectivityManager.bindProcessToNetwork(previous)
         }

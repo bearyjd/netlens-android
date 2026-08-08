@@ -36,7 +36,10 @@ interface LanNetworkBinder {
      * binding — including when [block] throws.
      *
      * Falls back to running [block] unbound when no local network is available, so a scan on a
-     * device with no Wi-Fi behaves exactly as it did before rather than failing outright.
+     * device with no Wi-Fi behaves exactly as it did before rather than failing outright. That
+     * fallback is why [block] receives whether the binding actually happened: an unbound run whose
+     * probes all came back negative proves nothing about the network, and the caller needs to be
+     * able to say so rather than report an empty result as fact (issue #152).
      */
-    suspend fun <T> withLanNetwork(block: suspend () -> T): T
+    suspend fun <T> withLanNetwork(block: suspend (bound: Boolean) -> T): T
 }

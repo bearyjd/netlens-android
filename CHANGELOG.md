@@ -5,6 +5,15 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] - 2026-08-08
+
+### Fixed
+- **LAN Scan finding zero devices whenever a VPN was active** — this included on-device ad-blockers and private-DNS apps such as Blokada, NextDNS and AdGuard, which are all implemented as VPNs even though they don't feel like one. The scan failed silently, showing "0 devices" with nothing to tell you why, indistinguishable from an actually-empty network. LAN Scan now binds to your Wi-Fi or Ethernet connection directly, so it keeps working with a VPN turned on — and if it still can't reach the local network, it tells you that instead of just showing zero results.
+- **Hardened LAN discovery against a malicious device on the network.** A device could previously supply a discovery URL that pointed the app at a different host than the one that answered, redirect that request onward again, or claim a hostname that let it forge extra rows in a shared or exported scan result. LAN Scan now rejects loopback and link-local addresses in these responses, keeps a discovery URL bound to the device that actually answered, refuses to follow redirects, and sanitizes device-supplied names before they reach an export.
+
+### Changed
+- **Faster app startup** — the baseline profile was regenerated against the current app.
+
 ## [1.3.2] - 2026-08-05
 
 ### Added
