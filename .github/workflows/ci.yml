@@ -24,6 +24,30 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
 
+      # Literal control characters in a source file make git and grep treat it as BINARY. The
+      # file then silently disappears from grep, from `git diff` (shown as "Bin N -> M bytes"),
+      # and from any grep-based audit or security scan — coverage that exists looks absent.
+      # U+202A-202E / U+2066-2069 are the Trojan Source (CVE-2021-42574) bidi overrides, which
+      # additionally make rendered source differ from what compiles.
+      #
+      # This is a CI gate rather than a convention because a convention did not hold: the same
+      # mistake was made twice within one session, the second time by someone who had just
+      # fixed the first. Write control characters as Kotlin escapes such as \u0000 in test fixtures.
+      #
+      # -a is load-bearing. Without it grep classifies the offending file as binary and
+      # SUPPRESSES the match, so the check passes on exactly the files it exists to catch.
+      - name: Reject literal control characters in source
+        run: |
+          pattern='[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]|\x{202A}|\x{202B}|\x{202C}|\x{202D}|\x{202E}|\x{2066}|\x{2067}|\x{2068}|\x{2069}'
+          offenders=$(git ls-files -z '*.kt' '*.kts' '*.java' '*.xml' '*.yml' '*.yaml' \
+            | xargs -0 grep -alP "$pattern" 2>/dev/null || true)
+          if [ -n "$offenders" ]; then
+            echo "::error::Literal control or bidi characters found. Use escapes (\\u0000) instead:"
+            echo "$offenders" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "No literal control characters in tracked source."
+
       - name: Build debug APK
         run: ./gradlew assembleFossDebug
 

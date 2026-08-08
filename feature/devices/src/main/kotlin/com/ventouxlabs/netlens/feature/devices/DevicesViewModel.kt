@@ -2,6 +2,7 @@ package com.ventouxlabs.netlens.feature.devices
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.di.DefaultDispatcher
@@ -209,10 +210,15 @@ class DevicesViewModel @Inject constructor(
             sb.appendLine("Filtered by tags: ${current.activeTags.sorted().joinToString(", ")}")
         }
         current.devices.forEach { device ->
-            val mac = device.macAddress ?: "no-mac"
-            val vendor = device.vendor?.let { "  Vendor=$it" } ?: ""
+            // displayName() falls back to the scanner-supplied hostname, and macAddress comes off
+            // the wire; a control character in either splits this row. The notes branch below
+            // already splits on newlines for USER text - the network-supplied fields are the ones
+            // that actually carry an adversary's choice. See DisplayText.
+            val mac = DisplayText.flatten(device.macAddress) ?: "no-mac"
+            val vendor = DisplayText.flatten(device.vendor)?.let { "  Vendor=$it" } ?: ""
             val status = if (device.isKnown) "known" else "new"
-            sb.appendLine("${device.displayName()}  ${device.ip}  $mac  [$status]$vendor")
+            val name = DisplayText.flatten(device.displayName()) ?: device.ip
+            sb.appendLine("$name  ${device.ip}  $mac  [$status]$vendor")
             device.location?.let { sb.appendLine("    Location: $it") }
             val tags = DeviceTags.parse(device.tags)
             if (tags.isNotEmpty()) sb.appendLine("    Tags: ${tags.joinToString(", ")}")

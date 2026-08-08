@@ -29,6 +29,7 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.LanScanHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
@@ -551,7 +552,12 @@ class LanScanViewModel @Inject constructor(
         val snapshots = runCatching { Json.decodeFromString<List<com.ventouxlabs.netlens.feature.lanscan.model.ScanSnapshotDevice>>(devicesJson) }.getOrNull()
         val legacyIps = if (snapshots == null) runCatching { Json.decodeFromString<List<String>>(devicesJson) }.getOrDefault(emptyList()) else emptyList()
         snapshots.orEmpty().forEach { device ->
-            appendLine("${device.ip}${device.hostname?.let { " ($it)" } ?: ""}${device.macAddress?.let { "  MAC=$it" } ?: ""}${device.vendor?.let { "  Vendor=$it" } ?: ""}")
+            // Flattened: hostname/vendor are device-supplied, and a control character in one
+            // splits this row in two. See DisplayText.
+            val host = DisplayText.flatten(device.hostname)?.let { " ($it)" } ?: ""
+            val mac = DisplayText.flatten(device.macAddress)?.let { "  MAC=$it" } ?: ""
+            val vendor = DisplayText.flatten(device.vendor)?.let { "  Vendor=$it" } ?: ""
+            appendLine("${device.ip}$host$mac$vendor")
         }
         legacyIps.forEach(::appendLine)
     }.trimEnd()
@@ -562,9 +568,10 @@ class LanScanViewModel @Inject constructor(
         sb.appendLine("LAN Scan results (${current.subnetInfo}):")
         sb.appendLine("Devices found: ${current.devices.size}")
         current.devices.forEach { d ->
-            val host = d.hostname?.let { " ($it)" } ?: ""
-            val mac = d.macAddress?.let { "  MAC=$it" } ?: ""
-            val vendor = d.vendor?.let { "  Vendor=$it" } ?: ""
+            // Same reason as buildSnapshotExportText: these come from the device, not from us.
+            val host = DisplayText.flatten(d.hostname)?.let { " ($it)" } ?: ""
+            val mac = DisplayText.flatten(d.macAddress)?.let { "  MAC=$it" } ?: ""
+            val vendor = DisplayText.flatten(d.vendor)?.let { "  Vendor=$it" } ?: ""
             sb.appendLine("${d.ip}$host$mac$vendor  ${d.latencyMs}ms")
         }
         return sb.toString().trimEnd()
