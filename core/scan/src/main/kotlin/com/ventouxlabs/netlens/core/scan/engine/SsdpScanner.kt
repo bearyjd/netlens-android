@@ -153,12 +153,48 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
                 return false
             }
             if (host.isNullOrEmpty()) return false
+
+            // An IP literal, never a hostname. Rejecting hostnames outright is what removes the
+            // second resolution: there is nothing left to rebind.
+            val target = parseIpLiteral(host) ?: return false
+
+            // Unconditional, and NOT redundant with the responder match below. Source addresses
+            // on unauthenticated UDP are forgeable, so "it matches the sender" does not mean the
+            // destination is safe: a forged reply claiming ::1 or fe80:: with a matching LOCATION
+            // would otherwise be fetched. An earlier revision of this function dropped these
+            // checks in favour of the match alone, which reintroduced local SSRF — including from
+            // another app on the same device answering from 127.0.0.1.
+            if (target.isLoopbackAddress) return false
+            if (target.isLinkLocalAddress) return false
+            if (target.isAnyLocalAddress) return false
+            if (target.isMulticastAddress) return false
+
             return normalizeIp(host) == normalizeIp(responderIp)
         }
 
         /** Strips IPv6 brackets and any zone id, so `[fe80::1%wlan0]` and `fe80::1` compare equal. */
         private fun normalizeIp(value: String): String =
             value.removeSurrounding("[", "]").substringBefore('%').lowercase()
+
+        private val IPV4_LITERAL = Regex("""^\d{1,3}(\.\d{1,3}){3}$""")
+        private val IPV6_LITERAL = Regex("""^[0-9a-f:]*:[0-9a-f:.]*$""")
+
+        /**
+         * Parses [value] only if it is an IP literal, returning null for anything else.
+         *
+         * The literal check runs BEFORE `getByName` on purpose: `getByName` performs a DNS lookup
+         * for a hostname, and a blocking network call inside a security predicate is exactly what
+         * this function was rewritten to remove. For a literal it only parses.
+         */
+        private fun parseIpLiteral(value: String): InetAddress? {
+            val normalized = normalizeIp(value)
+            if (!IPV4_LITERAL.matches(normalized) && !IPV6_LITERAL.matches(normalized)) return null
+            return try {
+                InetAddress.getByName(normalized)
+            } catch (_: Exception) {
+                null
+            }
+        }
 
         private val M_SEARCH_MESSAGE = buildString {
             append("M-SEARCH * HTTP/1.1\r\n")

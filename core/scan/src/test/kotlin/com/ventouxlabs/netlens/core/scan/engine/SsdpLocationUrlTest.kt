@@ -45,9 +45,35 @@ class SsdpLocationUrlTest {
     }
 
     @Test
-    fun `loopback and link-local stay rejected unless they are the responder`() {
+    fun `loopback and link-local are rejected even when they ARE the responder`() {
+        // This test previously read "...unless they are the responder" and asserted only the
+        // two cases below, which encoded a REGRESSION as if it were intended behaviour: the
+        // rewrite had dropped the unconditional loopback/link-local rejection in favour of the
+        // responder match alone. UDP source addresses are forgeable, so a match proves nothing
+        // about the destination. Both halves are asserted now.
         assertFalse(safe("http://127.0.0.1/desc.xml", "192.168.1.50"))
         assertFalse(safe("http://169.254.1.1/desc.xml", "192.168.1.50"))
+
+        // The cases the old name waved through:
+        assertFalse(safe("http://127.0.0.1/desc.xml", "127.0.0.1"))
+        assertFalse(safe("http://[::1]/desc.xml", "::1"))
+        assertFalse(safe("http://169.254.1.1/desc.xml", "169.254.1.1"))
+        assertFalse(safe("http://[fe80::1]/desc.xml", "fe80::1"))
+    }
+
+    @Test
+    fun `wildcard and multicast targets are rejected even when they match`() {
+        assertFalse(safe("http://0.0.0.0/desc.xml", "0.0.0.0"))
+        assertFalse(safe("http://239.255.255.250/desc.xml", "239.255.255.250"))
+    }
+
+    @Test
+    fun `a hostname is not parsed as a literal, so no DNS lookup can happen`() {
+        // parseIpLiteral must reject before getByName, otherwise a hostname triggers a blocking
+        // DNS call inside a security predicate — the thing this rewrite removed.
+        assertFalse(safe("http://localhost/desc.xml", "localhost"))
+        assertFalse(safe("http://example.com/desc.xml", "example.com"))
+        assertFalse(safe("http://999.999.999.999/d.xml", "999.999.999.999"))
     }
 
     @Test
@@ -88,9 +114,12 @@ class SsdpLocationUrlTest {
 
     @Test
     fun `IPv6 compares equal across brackets and zone ids`() {
-        assertTrue(safe("http://[fe80::1]/desc.xml", "fe80::1"))
-        assertTrue(safe("http://[fe80::1]:8080/desc.xml", "fe80::1%wlan0"))
-        assertFalse(safe("http://[fe80::2]/desc.xml", "fe80::1"))
+        // Deliberately a unique-local address (fd00::/8), NOT fe80:: — this test used to use a
+        // link-local example, which the loopback/link-local rejection now correctly refuses.
+        // A test asserting a special address is fetchable is a test asserting a bug.
+        assertTrue(safe("http://[fd00::1]/desc.xml", "fd00::1"))
+        assertTrue(safe("http://[fd00::1]:8080/desc.xml", "fd00::1%wlan0"))
+        assertFalse(safe("http://[fd00::2]/desc.xml", "fd00::1"))
     }
 
     private fun safe(url: String, responderIp: String) =
