@@ -69,12 +69,18 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
 
     private fun fetchDeviceDescription(ip: String, locationUrl: String?): SsdpDevice? {
         if (locationUrl == null) return SsdpDevice(ip = ip)
-        if (!isSafeLocationUrl(locationUrl)) return SsdpDevice(ip = ip)
+        if (!isSafeLocationUrl(locationUrl, ip)) return SsdpDevice(ip = ip)
         var connection: HttpURLConnection? = null
         return try {
             connection = (URL(locationUrl).openConnection() as HttpURLConnection).apply {
                 connectTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
                 readTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
+                // Without this the host check above is bypassable in one hop:
+                // HttpURLConnection follows redirects by DEFAULT, so a hostile responder passes
+                // isSafeLocationUrl with its own IP and then answers 302 -> anywhere, and the
+                // redirect target is fetched with no re-validation. Matches the convention the
+                // other two HTTP paths already follow (HttpRequesterImpl, EndpointCheckerImpl).
+                instanceFollowRedirects = false
             }
             val xml = connection.inputStream.bufferedReader().use { reader ->
                 readCapped(reader, MAX_DESCRIPTION_BYTES)
@@ -109,7 +115,36 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
             return result.toString()
         }
 
-        internal fun isSafeLocationUrl(url: String): Boolean {
+        /**
+         * A LOCATION URL is fetchable only if it points at **the device that answered**.
+         *
+         * The previous version resolved the host and rejected loopback/link-local. That left two
+         * holes, both exploitable by any device on the LAN:
+         *
+         *  1. **DNS rebinding.** It resolved the host to check it, then [URL.openConnection]
+         *     resolved *again* to connect. A responder controlling DNS answers benign on the
+         *     check and loopback on the fetch. Multiple A records did it without any trickery —
+         *     `getByName` returns the first, the connection may use another.
+         *  2. **Cross-host SSRF inside the LAN.** Nothing tied the URL to the responder, so a
+         *     hostile device could set `LOCATION: http://192.168.1.1/admin` and have the app
+         *     fetch the router on its behalf. Neither loopback nor link-local, so it passed.
+         *
+         * Requiring an IP literal equal to the responder's address closes (1) outright — there
+         * is no second resolution because there is no resolution at all — and makes this a
+         * **pure function**, which is why it finally has tests; the old one did DNS I/O.
+         *
+         * **(2) is reduced, not eliminated.** The "responder" is the source address of an
+         * unauthenticated UDP datagram, and source addresses are trivially spoofable on the same
+         * L2 segment. An on-segment attacker can emit a datagram claiming to be 192.168.1.1 with
+         * a matching LOCATION and still steer the fetch. What that costs them: they must be on
+         * the segment, and they never see the response body — it only reaches this app's UI.
+         * Fixing that is not possible at this layer; UDP has no sender authentication.
+         *
+         * Cost: a device advertising LOCATION by hostname loses its description and is reported
+         * with its IP only. UPnP devices advertise their own address, so this is rare; a
+         * degraded row is the right trade against fetching an attacker-chosen host.
+         */
+        internal fun isSafeLocationUrl(url: String, responderIp: String): Boolean {
             val lower = url.lowercase()
             if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
             val host = try {
@@ -117,14 +152,48 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
             } catch (_: Exception) {
                 return false
             }
-            val addr = try {
-                InetAddress.getByName(host)
+            if (host.isNullOrEmpty()) return false
+
+            // An IP literal, never a hostname. Rejecting hostnames outright is what removes the
+            // second resolution: there is nothing left to rebind.
+            val target = parseIpLiteral(host) ?: return false
+
+            // Unconditional, and NOT redundant with the responder match below. Source addresses
+            // on unauthenticated UDP are forgeable, so "it matches the sender" does not mean the
+            // destination is safe: a forged reply claiming ::1 or fe80:: with a matching LOCATION
+            // would otherwise be fetched. An earlier revision of this function dropped these
+            // checks in favour of the match alone, which reintroduced local SSRF — including from
+            // another app on the same device answering from 127.0.0.1.
+            if (target.isLoopbackAddress) return false
+            if (target.isLinkLocalAddress) return false
+            if (target.isAnyLocalAddress) return false
+            if (target.isMulticastAddress) return false
+
+            return normalizeIp(host) == normalizeIp(responderIp)
+        }
+
+        /** Strips IPv6 brackets and any zone id, so `[fe80::1%wlan0]` and `fe80::1` compare equal. */
+        private fun normalizeIp(value: String): String =
+            value.removeSurrounding("[", "]").substringBefore('%').lowercase()
+
+        private val IPV4_LITERAL = Regex("""^\d{1,3}(\.\d{1,3}){3}$""")
+        private val IPV6_LITERAL = Regex("""^[0-9a-f:]*:[0-9a-f:.]*$""")
+
+        /**
+         * Parses [value] only if it is an IP literal, returning null for anything else.
+         *
+         * The literal check runs BEFORE `getByName` on purpose: `getByName` performs a DNS lookup
+         * for a hostname, and a blocking network call inside a security predicate is exactly what
+         * this function was rewritten to remove. For a literal it only parses.
+         */
+        private fun parseIpLiteral(value: String): InetAddress? {
+            val normalized = normalizeIp(value)
+            if (!IPV4_LITERAL.matches(normalized) && !IPV6_LITERAL.matches(normalized)) return null
+            return try {
+                InetAddress.getByName(normalized)
             } catch (_: Exception) {
-                return false
+                null
             }
-            if (addr.isLoopbackAddress) return false
-            if (addr.isLinkLocalAddress) return false
-            return true
         }
 
         private val M_SEARCH_MESSAGE = buildString {
