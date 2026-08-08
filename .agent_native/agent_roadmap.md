@@ -172,13 +172,25 @@ that wrote it, the destination is `docs/` — `docs/HANDOFF.md` is the living ex
 this trail now lands. Promoting a file out of `.claude/PRPs/` by hand remains fine; the blanket
 policy is what was rejected.
 
-**What this costs, stated plainly so it is not rediscovered as a surprise:** the problem described
-below is real and is now unmitigated. `HANDOFF-fable-audit-2026-07-04.md`, `fable-audit-fixes.plan.md`
-and the competitor-feature research are invisible to a fresh clone — though note they were *already*
-ignored and never tracked, so this decision did not lose them; it only declined to rescue them. The
-Phases 2-4 backlog is still referenced from the Backlog section of this file, which is the
-grep-discoverable pointer that survives. Anything else in there that matters should be moved to
-`docs/` before the local checkout it lives in goes away.
+**The three files worth keeping were rescued into `docs/` on 2026-08-08, and `.claude/PRPs/` was
+then deleted entirely** (74 files: completed per-tool plans, per-PR reviews of long-merged PRs,
+April/May widget reports). What survived, and where it now lives:
+
+| Was | Now |
+|---|---|
+| `.claude/PRPs/plans/fable-audit-fixes.plan.md` | `docs/backlog/fable-audit-fixes.plan.md` |
+| `.claude/PRPs/HANDOFF-fable-audit-2026-07-04.md` | `docs/backlog/fable-audit-handoff-2026-07-04.md` |
+| `.claude/PRPs/reports/cso-security-audit.md` | `docs/security-audit-2026-04-21.md` |
+
+So the re-discovery problem described below is **solved for the parts that mattered** — Phases 2-4
+and the competitor research are now tracked and greppable, which is what this item actually wanted.
+The rejected part was the mechanism, not the goal: `docs/`, not an un-ignored `.claude/PRPs/`.
+
+Two notes for whoever reads those files. The security audit is dated **2026-04-21** in its header
+despite a 2026-08-05 mtime — the mtime is a touch, not an edit, and every finding in it is marked
+FIXED, so treat it as history rather than an open list. And the 51 files that were tracked before
+the untrack are recoverable at `git show 651be87^:<path>`; the other 74 were never tracked and are
+gone.
 
 **Problem:** `.claude/PRPs/reports/` and `.claude/PRPs/plans/` are gitignored
 (`.gitignore:23`). This repo has a rich history of prior audits, phased fix plans, and
