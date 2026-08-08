@@ -1,3 +1,35 @@
+# Session Handoff — v1.3.3 shipped (2026-08-08)
+
+Supersedes the "five security findings" handoff below on the release status: **v1.3.3 is
+released**, not pending. That handoff's bodies (SSDP guard rounds, cross-model review findings,
+control-character CI gate) are still accurate history, just no longer the current release state.
+
+## TL;DR
+
+- **v1.3.3 is the released version**, tagged and published 2026-08-08
+  (https://github.com/bearyjd/netlens-android/releases/tag/v1.3.3). `gradle.properties` is
+  `1.3.3 / 17`. All four release artifacts (foss/gplay × apk/aab) built, signed, and uploaded;
+  release CI green. Cert SHA-256 unchanged (`8fdfc928f8...`) — in-place upgrade from 1.3.2 works.
+- **PR #154** (merged, branch deleted) added the actual fix for #152's second half: LAN Scan
+  now shows a distinct "couldn't reach the local network" notice instead of a bare "0 devices"
+  when the process fails to bind to Wi-Fi/Ethernet — not just under a VPN, any unreachable-LAN
+  case (cellular-only, no network at all). Also fixed a real bug caught in review:
+  `bindProcessToNetwork`'s return value was being discarded, so a network going invalid between
+  selection and bind (e.g. Wi-Fi dropping mid-scan) would have been silently reported as bound.
+- **F-Droid MR #42628 still open, not blocked on us.** Maintainer's requested changes (latest-
+  version-only, full commit hash, reproducible-builds answer) were addressed weeks ago; pipeline
+  passed a week ago on `ff6ccabf` (pinned at 1.2.6). Posted a nudge comment today
+  (note_3663038993) since the `waiting-for-upstream` label looked stale. **Don't bump the pinned
+  commit in that MR proactively** — `AutoUpdateMode: Version` + `Tags` backfills 1.2.7→1.3.3
+  automatically once merged, and touching the recipe now just re-triggers CI for no benefit.
+- Four merged feature/chore branches (`chore/bump-1.3.3`, `chore/untrack-prps`,
+  `docs/handoff-2026-08-08`, `fix/lan-scan-vpn-binding`) were already auto-deleted on merge —
+  confirmed via `git fetch --prune`, nothing left to clean up there.
+- `spike/baseline-journey-extension` remains open on origin, unmerged — untouched, presumed
+  intentional in-progress work, not evaluated this session.
+
+---
+
 # Session Handoff — five security findings in the LAN parsers, three of them mine (2026-08-08)
 
 Supersedes the 2026-08-06 handoff below on everything except the baseline-profile section,
