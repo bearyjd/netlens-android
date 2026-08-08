@@ -159,14 +159,26 @@ non-system-service logic reaches ≥1 fake-driven test each.
 
 ---
 
-### 4. Un-silo the prior-audit trail — commit durable planning artifacts instead of gitignoring them (effort: 30 min, saves: re-discovery cost on every fresh clone/session) — SKIPPED (2026-07-07, needs a human)
+### 4. Un-silo the prior-audit trail — commit durable planning artifacts instead of gitignoring them (effort: 30 min, saves: re-discovery cost on every fresh clone/session) — REJECTED (2026-08-08, human decision)
 
-**Status:** Not attempted in this pass. This item requires editing `.gitignore` and then git-committing
-the newly un-ignored files — both are outside a no-commit automation pass (the agent doing items 2-3
-in this session was explicitly instructed not to touch git). Left for the user: decide whether
-`docs/decisions/` or `docs/backlog/` is the right destination, then force-add and commit
-`HANDOFF-fable-audit-2026-07-04.md`, `fable-audit-fixes.plan.md`, `fable-audit-2026-07-04.md`, and a
-new `docs/backlog/competitor-features.md` per the Fix section above.
+**Status:** Decided against, deliberately. The Fix below was **not** adopted; the repo went the
+other way. `.claude/PRPs/` stays gitignored, and the 51 files that were still tracked from before
+`.gitignore:34` existed were untracked (`git rm --cached`, files kept on disk). The half-tracked
+state is what this resolves: committed plans kept updating while every new plan, report and review
+was invisible, so a fresh clone got an arbitrary 2026-era slice and nothing since.
+
+**Do not re-propose committing `.claude/PRPs/`.** If a planning artifact matters beyond the session
+that wrote it, the destination is `docs/` — `docs/HANDOFF.md` is the living example and is where
+this trail now lands. Promoting a file out of `.claude/PRPs/` by hand remains fine; the blanket
+policy is what was rejected.
+
+**What this costs, stated plainly so it is not rediscovered as a surprise:** the problem described
+below is real and is now unmitigated. `HANDOFF-fable-audit-2026-07-04.md`, `fable-audit-fixes.plan.md`
+and the competitor-feature research are invisible to a fresh clone — though note they were *already*
+ignored and never tracked, so this decision did not lose them; it only declined to rescue them. The
+Phases 2-4 backlog is still referenced from the Backlog section of this file, which is the
+grep-discoverable pointer that survives. Anything else in there that matters should be moved to
+`docs/` before the local checkout it lives in goes away.
 
 **Problem:** `.claude/PRPs/reports/` and `.claude/PRPs/plans/` are gitignored
 (`.gitignore:23`). This repo has a rich history of prior audits, phased fix plans, and
@@ -294,15 +306,29 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
 - **Robolectric adoption** for Context/Room/DataStore/ConnectivityManager-dependent
   code — highest structural leverage for verification gaps but repo-wide in scope
   (touches `build-logic/convention`); needs its own scoped plan.
-- **Compose screenshot/snapshot tests** — there are none anywhere in the repo. **Cost demonstrated
-  2026-07-28:** a duplicate-`LazyColumn`-key crash on the Wi-Fi survey's primary path shipped
-  through three review passes, an adversarial round and 750 green unit tests, and was found by a
-  two-minute manual walk (`dc03409`). Compose runtime invariants — duplicate keys, composition
-  errors, measure/layout failures — are invisible to every check this repo currently runs. Would
-  let an agent verify UI regressions (e.g. DESIGN.md's typography/spacing rules)
-  without a device. Consider `Paparazzi` (no emulator required, JVM-only, matches the
-  "no physical device" constraint) over `Screenshot Testing for Compose` (needs a
-  device/emulator).
+- **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
+  read "there are none anywhere in the repo", which is no longer true; read the split below
+  before planning against it, because only half of what was asked for exists.
+  **Cost that motivated it, 2026-07-28:** a duplicate-`LazyColumn`-key crash on the Wi-Fi
+  survey's primary path shipped through three review passes, an adversarial round and 750 green
+  unit tests, and was found by a two-minute manual walk (`dc03409`).
+  - **Done — composition smoke tests.** `Paparazzi` was chosen (JVM-only, no emulator, matches
+    the "no physical device" constraint) and wired as the `netlens.android.screenshot`
+    convention plugin. Eleven `*RenderTest.kt` files across ten modules render a screen on the
+    JVM and fail if it cannot compose, which closes the duplicate-key / composition-error /
+    measure-failure class that motivated the entry. Covered: home, devices, dns, lanscan
+    (`HostDetailSheet`, `ScanLocationSection`), monitor, ping, portscan, traceroute, wifi
+    (`WifiSurveyTab`), and `core:ui`'s `ResultActions`.
+  - **Still open — visual regression.** **No golden images are recorded**, nothing is committed,
+    and `verifyPaparazzi` never runs. So the original goal of letting an agent verify
+    *appearance* regressions (DESIGN.md's typography and spacing rules) is **not** met — a
+    screen that composes fine but renders wrong still passes. Adopting goldens is a separate
+    decision with real cost: committed PNGs, and font/renderer drift making them flaky across
+    environments. Do not assume the existing tests provide it.
+  - **Also still open:** the remaining screens have no render test at all. Mechanics and the two
+    traps (the render exception escapes via the JUnit rule, so asserting inside `snapshot { }`
+    silently passes; screens taking `hiltViewModel()` must have their list lifted into a
+    stateless `internal fun *Content(...)` first) are documented in `CLAUDE.md` under "Testing".
 - **Recorded network-scan fixture corpus** — no captured real-world ARP tables, SSDP
   responses, DNS response bytes, WHOIS text, or TLS handshakes exist anywhere in the
   repo as replay fixtures. An agent asked to reproduce "LAN scan doesn't find my
