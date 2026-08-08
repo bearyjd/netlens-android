@@ -75,6 +75,12 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
             connection = (URL(locationUrl).openConnection() as HttpURLConnection).apply {
                 connectTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
                 readTimeout = DESCRIPTION_TIMEOUT_MS.toInt()
+                // Without this the host check above is bypassable in one hop:
+                // HttpURLConnection follows redirects by DEFAULT, so a hostile responder passes
+                // isSafeLocationUrl with its own IP and then answers 302 -> anywhere, and the
+                // redirect target is fetched with no re-validation. Matches the convention the
+                // other two HTTP paths already follow (HttpRequesterImpl, EndpointCheckerImpl).
+                instanceFollowRedirects = false
             }
             val xml = connection.inputStream.bufferedReader().use { reader ->
                 readCapped(reader, MAX_DESCRIPTION_BYTES)
@@ -123,8 +129,16 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
          *     hostile device could set `LOCATION: http://192.168.1.1/admin` and have the app
          *     fetch the router on its behalf. Neither loopback nor link-local, so it passed.
          *
-         * Requiring an IP literal equal to the responder's address closes both, and makes this
-         * a **pure function** — the old one did DNS I/O, which is why it had no tests.
+         * Requiring an IP literal equal to the responder's address closes (1) outright — there
+         * is no second resolution because there is no resolution at all — and makes this a
+         * **pure function**, which is why it finally has tests; the old one did DNS I/O.
+         *
+         * **(2) is reduced, not eliminated.** The "responder" is the source address of an
+         * unauthenticated UDP datagram, and source addresses are trivially spoofable on the same
+         * L2 segment. An on-segment attacker can emit a datagram claiming to be 192.168.1.1 with
+         * a matching LOCATION and still steer the fetch. What that costs them: they must be on
+         * the segment, and they never see the response body — it only reaches this app's UI.
+         * Fixing that is not possible at this layer; UDP has no sender authentication.
          *
          * Cost: a device advertising LOCATION by hostname loses its description and is reported
          * with its IP only. UPnP devices advertise their own address, so this is rare; a
