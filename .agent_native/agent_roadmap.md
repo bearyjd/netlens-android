@@ -84,10 +84,12 @@ behavior has an explicit test asserting it stops at 3, not N.
 
 ---
 
-### 3. Add a hardware-seam + fakes for `feature:celltower` and `feature:wifiaudit` (effort: half a day, saves: the two modules currently un-verifiable by any agent) — PARTIALLY DONE (2026-07-07)
+### 3. Add a hardware-seam + fakes for `feature:celltower` and `feature:wifiaudit` (effort: half a day, saves: the two modules currently un-verifiable by any agent) — DONE (celltower/wifiaudit 2026-07-07; history/widgetsettings since, confirmed 2026-08-08)
 
-**Status:** `celltower` and `wifiaudit` are done; `history` and `widgetsettings` were skipped — see
-correction below. This item's own problem statement was stale on one point: `CellTowerReader` and
+**Status:** Complete. `celltower` and `wifiaudit` were done 2026-07-07; `history` and
+`widgetsettings`, recorded below as skipped, were finished later — **that correction block is
+itself now out of date and is kept only for the reasoning it contains.** See "Correction, corrected"
+after it. This item's own problem statement was stale on one point: `CellTowerReader` and
 `WifiInfoReader` **already had interface seams** (`feature/celltower/.../engine/CellTowerEngine.kt`
 defines `interface CellTowerReader` with `CellTowerReaderImpl`; `feature/wifiaudit/.../engine/WifiInfoReader.kt`
 likewise) — what was actually missing was just `Fake*` doubles and tests exercising them, not the
@@ -120,6 +122,30 @@ picked up next: `history` is the better next target (Room DAOs are plain interfa
 `Room.inMemoryDatabaseBuilder()`-backed `HistoryRepository` — or Fake DAOs plus accepting
 `withTransaction` needs a real `RoomDatabase` subclass — is tractable without Robolectric);
 `widgetsettings` genuinely needs the Robolectric backlog item first.
+
+**Correction, corrected (verified 2026-08-08): both were done, and neither needed Robolectric.**
+The block above is wrong on its conclusion while still being right on its diagnosis — which is why
+it is kept rather than deleted, because the two seams it called for are exactly what got built:
+
+- `history` — `HistoryRepository` was split into an interface plus `HistoryRepositoryImpl`
+  (`core/data/.../repository/HistoryRepository.kt:55`, `@Binds` in `core/data/di/RepositoryModule.kt`).
+  The ViewModel now depends on the interface, so `FakeHistoryRepository` stands it up in a plain JVM
+  test — `HistoryViewModelTest` has 13. The concrete-class dependency was the whole blocker; the 11
+  DAOs and `withTransaction` never had to be faked at all.
+- `widgetsettings` — `WidgetSettingsViewModelTest` covers it with 3 tests. The seam this block
+  described as absent now exists: `UserPreferencesRepository` takes an injectable
+  `DataStore<Preferences>` (use `FakeDataStore`), and `Application()` is directly constructible in a
+  JVM test because `:app` sets `unitTests.isReturnDefaultValues = true`. **That last detail is the
+  transferable one** — it is why this was never a Robolectric-class problem, and it applies to
+  anything else here that looks `Context`-bound.
+
+**Acceptance criteria met.** Every module with a `src/main` Kotlin tree now has a `src/test` except
+`core:billing` — an interface-only module whose flavor implementations live in `app/src/{foss,gplay}`
+and are tested there (`FossProStatusTest`, `GplayProStatusTest`) — and `core:network-testing`, which
+is itself a test-double module. Robolectric remains at zero usage repo-wide, which is now a
+deliberate outcome rather than a gap: the interface-seam discipline covered every case this item
+raised. The Robolectric backlog entry below still stands on its own merits, but nothing in item 3
+is waiting on it.
 
 **Problem:** `celltower`, `history`, `widgetsettings`, and `wifiaudit` are the only 4
 feature modules with **no test directory at all**. `history` and `widgetsettings` are
@@ -378,8 +404,48 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
 - **Pro-gating patterns** (3 coexisting variants) are documented in both `CLAUDE.md`
   and `DESIGN.md` with explicit "choose based on screen architecture" guidance — this
   is exactly the kind of tribal knowledge that's supposed to be codified, and it is.
-- **SSRF-guard discipline** — already fixed and documented per the prior audit handoff
-  (`configureSecureDefaults()` pattern in `httptester` and `monitor`); one known
-  deferred low-priority instance remains at `feature/lanscan/.../SsdpScanner.kt:74`
-  (LAN-local SSDP spoofing, different threat model, explicitly deferred — not a new
-  finding, just noting it's tracked).
+- **SSRF-guard discipline** — **the outbound-HTTP half only.** The `configureSecureDefaults()`
+  pattern in `httptester` and `monitor` is settled and needs no further attention.
+  **The SSDP half has been REMOVED from this section — see the warning below.** It was listed here
+  as a "known deferred low-priority instance… not a new finding, just noting it's tracked", which
+  turned out to be the single most misleading line in this file.
+
+---
+
+## The SSDP LOCATION guard — the opposite of "don't re-litigate" (added 2026-08-08)
+
+`SsdpScannerImpl.isSafeLocationUrl` (`core/scan/.../engine/SsdpScanner.kt:72` — the file moved out
+of `feature/lanscan` into `core:scan`, so the old path in this document's history is dead) decides
+whether the app will fetch an attacker-supplied URL. **Any device on the LAN can answer an M-SEARCH
+and choose that URL.**
+
+This entry exists because the "Not a gap" section told a future agent that this code was tracked,
+deferred and low-priority. On 2026-08-08 it produced **five security findings in one session**, and
+that framing is part of why they sat there:
+
+| # | Finding | Found by |
+|---|---|---|
+| 1 | DNS rebinding — resolved once to validate, `openConnection` resolved again to connect | scoping pass |
+| 2 | Cross-host SSRF — nothing tied the URL to the responder, so `LOCATION: http://192.168.1.1/admin` was fetched | scoping pass |
+| 3 | Redirects were never disabled; `HttpURLConnection` follows them by default, so the new host check was bypassable in one hop | `/review` |
+| 4 | The loopback/link-local rejection was **deleted** while fixing 1-2 — replaced by the responder match rather than added to | `/codex review` |
+| 5 | Device-supplied hostnames could forge rows in exported text (`DisplayText.flatten`, `core:network`) | mDNS data-flow review |
+
+**Three of the five were introduced while fixing the first two.** The rules that came out of it,
+which generalise past this file:
+
+- **When tightening a security predicate, ADD the check — never let it replace the old one.** Both
+  conditions were necessary; neither was sufficient. UDP source addresses are forgeable, so
+  `host == responderIp` proves nothing, and another app on the same device can answer from
+  `127.0.0.1`.
+- **A test can encode the vulnerability as intended behaviour.** The test for finding 4 was named
+  *"loopback and link-local stay rejected UNLESS they are the responder"* and asserted only the
+  cases that still passed. It went green against the hole it described. A sibling test used
+  `fe80::1` — itself link-local — to assert a special address was fetchable.
+- **Run two independent reviewers on anything security-shaped, before merge.** `/review` (plus a
+  security specialist subagent) and `/codex review` covered the same 137-line diff and found four
+  real issues with **zero overlap**: one asked "is the new guard bypassable?", the other asked "what
+  did the old guard do that the new one no longer does?" The specialist shared the first blind spot.
+
+Current coverage: `SsdpLocationUrlTest` and `SsdpHostileInputTest` in `core/scan/src/test/`. Treat
+this function as high-risk on every edit. **Do not restore it to "Not a gap".**
