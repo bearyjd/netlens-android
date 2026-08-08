@@ -35,6 +35,7 @@ import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeLanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
@@ -61,6 +62,7 @@ class DeviceInventoryTest {
             ssdpScanner = FakeSsdpScanner(),
             netBiosProber = FakeNetBiosProber(),
             arpTableReader = FakeArpTableReader(),
+            lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = StubNetworkInterfaceProvider(),
             lanScanHistoryDao = StubLanScanHistoryDao(),
             knownDeviceDao = fakeKnownDeviceDao,

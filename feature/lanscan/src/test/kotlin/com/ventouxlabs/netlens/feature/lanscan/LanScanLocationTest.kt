@@ -4,6 +4,7 @@ import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
 
 import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeLanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
@@ -52,6 +53,7 @@ class LanScanLocationTest {
             ssdpScanner = FakeSsdpScanner(),
             netBiosProber = FakeNetBiosProber(),
             arpTableReader = FakeArpTableReader(),
+            lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),

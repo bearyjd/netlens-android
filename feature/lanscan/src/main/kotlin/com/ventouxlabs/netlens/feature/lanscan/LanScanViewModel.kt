@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
@@ -74,6 +76,7 @@ class LanScanViewModel @Inject constructor(
     private val ssdpScanner: SsdpScanner,
     private val netBiosProber: NetBiosProber,
     private val arpTableReader: ArpTableReader,
+    private val lanNetworkBinder: LanNetworkBinder,
     private val networkInterfaceProvider: NetworkInterfaceProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
     private val knownDeviceDao: KnownDeviceDao,
@@ -351,53 +354,65 @@ class LanScanViewModel @Inject constructor(
                 }
             }
 
-            val emitterJob = launch {
-                while (isActive) {
-                    delay(DISCOVERY_EMIT_INTERVAL_MS)
+            // Every engine below reaches the LAN through an unbound socket, which Android binds to
+            // the process default — the VPN, whenever one is up. Pin the process to the Wi-Fi or
+            // Ethernet network for the discovery phase so the probes actually leave over the LAN.
+            // Without this a scan under any VPN, including on-device ad-blockers, silently returns
+            // nothing (issue #152). Scope stays as tight as the network work: the DB writes below
+            // stay outside it.
+            lanNetworkBinder.withLanNetwork {
+                coroutineScope {
+                    val emitterJob = launch {
+                        while (isActive) {
+                            delay(DISCOVERY_EMIT_INTERVAL_MS)
+                            flushDiscovered()
+                        }
+                    }
+
+                    val pingJob = launch {
+                        subnetScanner.scan(subnet, prefixLength)
+                            .catch { e ->
+                                _uiState.update {
+                                    it.copy(error = e.message ?: "Ping sweep failed")
+                                }
+                            }
+                            .collect { device -> mergeDevice(device) }
+                    }
+
+                    val mdnsJob = launch {
+                        mdnsScanner.discover()
+                            .catch { e -> Log.d("LanScan", "mDNS discovery failed: ${e.message}") }
+                            .collect { device -> mergeDevice(device) }
+                    }
+
+                    val ssdpJob = launch {
+                        ssdpScanner.discover()
+                            .catch { e -> Log.d("LanScan", "SSDP discovery failed: ${e.message}") }
+                            .collect { ssdpDevice ->
+                                val (type, os) = fingerprinter.classifyFromSsdp(ssdpDevice)
+                                val device = LanDevice(
+                                    ip = ssdpDevice.ip,
+                                    hostname = ssdpDevice.friendlyName,
+                                    isReachable = true,
+                                    discoveryMethod = DiscoveryMethod.SSDP,
+                                    deviceType = type,
+                                    osGuess = os,
+                                    vendor = ssdpDevice.manufacturer,
+                                )
+                                mergeDevice(device)
+                            }
+                    }
+
+                    pingJob.join()
+                    mdnsJob.join()
+                    ssdpJob.join()
+
+                    emitterJob.cancelAndJoin()
                     flushDiscovered()
+
+                    enrichWithArpAndNetBios()
                 }
             }
-
-            val pingJob = launch {
-                subnetScanner.scan(subnet, prefixLength)
-                    .catch { e ->
-                        _uiState.update { it.copy(error = e.message ?: "Ping sweep failed") }
-                    }
-                    .collect { device -> mergeDevice(device) }
-            }
-
-            val mdnsJob = launch {
-                mdnsScanner.discover()
-                    .catch { e -> Log.d("LanScan", "mDNS discovery failed: ${e.message}") }
-                    .collect { device -> mergeDevice(device) }
-            }
-
-            val ssdpJob = launch {
-                ssdpScanner.discover()
-                    .catch { e -> Log.d("LanScan", "SSDP discovery failed: ${e.message}") }
-                    .collect { ssdpDevice ->
-                        val (type, os) = fingerprinter.classifyFromSsdp(ssdpDevice)
-                        val device = LanDevice(
-                            ip = ssdpDevice.ip,
-                            hostname = ssdpDevice.friendlyName,
-                            isReachable = true,
-                            discoveryMethod = DiscoveryMethod.SSDP,
-                            deviceType = type,
-                            osGuess = os,
-                            vendor = ssdpDevice.manufacturer,
-                        )
-                        mergeDevice(device)
-                    }
-            }
-
-            pingJob.join()
-            mdnsJob.join()
-            ssdpJob.join()
-
-            emitterJob.cancelAndJoin()
-            flushDiscovered()
-
-            enrichWithArpAndNetBios()
 
             _uiState.update { it.copy(isScanning = false, progress = 1f) }
             saveToHistory(scanStartedAt, location)
