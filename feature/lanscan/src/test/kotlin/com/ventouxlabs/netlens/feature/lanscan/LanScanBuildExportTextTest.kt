@@ -96,6 +96,32 @@ class LanScanBuildExportTextTest {
     }
 
     @Test
+    fun `a newline in a network-supplied hostname cannot forge an export row`() = runTest {
+        // hostname is chosen by the device: mDNS serviceName, NetBIOS name, or SSDP friendlyName.
+        // None of those parsers strip inner control characters - .trim() only touches the ends -
+        // so a newline reaches this line-oriented export and splits one row into two. The export
+        // is a Pro share/copy feature, so the forged row lands in something the user sends on.
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(
+                ip = "192.168.1.9",
+                hostname = "nas)\n192.168.1.1 (Router)  Vendor=Cisco",
+                latencyMs = 1,
+            ),
+        )
+
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        val text = viewModel.buildExportText()
+
+        assertTrue(text.contains("Devices found: 1"), "one device was scanned")
+        // The forged row must not appear as its own line.
+        val forged = text.lines().any { it.trim().startsWith("192.168.1.1 (Router)") }
+        assertFalse(forged, "hostname newline forged a second device row:\n$text")
+    }
+
+    @Test
     fun `buildExportText with null hostname and present MAC`() = runTest {
         fakeSubnetScanner.devices = listOf(
             LanDevice(ip = "192.168.1.50", hostname = null, latencyMs = 3, macAddress = "11:22:33:44:55:66"),
