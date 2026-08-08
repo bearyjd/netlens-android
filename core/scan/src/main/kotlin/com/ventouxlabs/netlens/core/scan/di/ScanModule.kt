@@ -10,6 +10,8 @@ import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinterImpl
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScannerImpl
+import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinder
+import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinderImpl
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProberImpl
 import com.ventouxlabs.netlens.core.scan.engine.PortScanner
@@ -31,6 +33,10 @@ abstract class ScanModule {
     @Binds
     @Singleton
     abstract fun bindSubnetScanner(impl: SubnetScannerImpl): SubnetScanner
+
+    @Binds
+    @Singleton
+    abstract fun bindLanNetworkBinder(impl: LanNetworkBinderImpl): LanNetworkBinder
 
     @Binds
     @Singleton
