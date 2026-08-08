@@ -84,10 +84,12 @@ behavior has an explicit test asserting it stops at 3, not N.
 
 ---
 
-### 3. Add a hardware-seam + fakes for `feature:celltower` and `feature:wifiaudit` (effort: half a day, saves: the two modules currently un-verifiable by any agent) — PARTIALLY DONE (2026-07-07)
+### 3. Add a hardware-seam + fakes for `feature:celltower` and `feature:wifiaudit` (effort: half a day, saves: the two modules currently un-verifiable by any agent) — DONE (celltower/wifiaudit 2026-07-07; history/widgetsettings since, confirmed 2026-08-08)
 
-**Status:** `celltower` and `wifiaudit` are done; `history` and `widgetsettings` were skipped — see
-correction below. This item's own problem statement was stale on one point: `CellTowerReader` and
+**Status:** Complete. `celltower` and `wifiaudit` were done 2026-07-07; `history` and
+`widgetsettings`, recorded below as skipped, were finished later — **that correction block is
+itself now out of date and is kept only for the reasoning it contains.** See "Correction, corrected"
+after it. This item's own problem statement was stale on one point: `CellTowerReader` and
 `WifiInfoReader` **already had interface seams** (`feature/celltower/.../engine/CellTowerEngine.kt`
 defines `interface CellTowerReader` with `CellTowerReaderImpl`; `feature/wifiaudit/.../engine/WifiInfoReader.kt`
 likewise) — what was actually missing was just `Fake*` doubles and tests exercising them, not the
@@ -120,6 +122,30 @@ picked up next: `history` is the better next target (Room DAOs are plain interfa
 `Room.inMemoryDatabaseBuilder()`-backed `HistoryRepository` — or Fake DAOs plus accepting
 `withTransaction` needs a real `RoomDatabase` subclass — is tractable without Robolectric);
 `widgetsettings` genuinely needs the Robolectric backlog item first.
+
+**Correction, corrected (verified 2026-08-08): both were done, and neither needed Robolectric.**
+The block above is wrong on its conclusion while still being right on its diagnosis — which is why
+it is kept rather than deleted, because the two seams it called for are exactly what got built:
+
+- `history` — `HistoryRepository` was split into an interface plus `HistoryRepositoryImpl`
+  (`core/data/.../repository/HistoryRepository.kt:55`, `@Binds` in `core/data/di/RepositoryModule.kt`).
+  The ViewModel now depends on the interface, so `FakeHistoryRepository` stands it up in a plain JVM
+  test — `HistoryViewModelTest` has 13. The concrete-class dependency was the whole blocker; the 11
+  DAOs and `withTransaction` never had to be faked at all.
+- `widgetsettings` — `WidgetSettingsViewModelTest` covers it with 3 tests. The seam this block
+  described as absent now exists: `UserPreferencesRepository` takes an injectable
+  `DataStore<Preferences>` (use `FakeDataStore`), and `Application()` is directly constructible in a
+  JVM test because `:app` sets `unitTests.isReturnDefaultValues = true`. **That last detail is the
+  transferable one** — it is why this was never a Robolectric-class problem, and it applies to
+  anything else here that looks `Context`-bound.
+
+**Acceptance criteria met.** Every module with a `src/main` Kotlin tree now has a `src/test` except
+`core:billing` — an interface-only module whose flavor implementations live in `app/src/{foss,gplay}`
+and are tested there (`FossProStatusTest`, `GplayProStatusTest`) — and `core:network-testing`, which
+is itself a test-double module. Robolectric remains at zero usage repo-wide, which is now a
+deliberate outcome rather than a gap: the interface-seam discipline covered every case this item
+raised. The Robolectric backlog entry below still stands on its own merits, but nothing in item 3
+is waiting on it.
 
 **Problem:** `celltower`, `history`, `widgetsettings`, and `wifiaudit` are the only 4
 feature modules with **no test directory at all**. `history` and `widgetsettings` are
@@ -159,14 +185,38 @@ non-system-service logic reaches ≥1 fake-driven test each.
 
 ---
 
-### 4. Un-silo the prior-audit trail — commit durable planning artifacts instead of gitignoring them (effort: 30 min, saves: re-discovery cost on every fresh clone/session) — SKIPPED (2026-07-07, needs a human)
+### 4. Un-silo the prior-audit trail — commit durable planning artifacts instead of gitignoring them (effort: 30 min, saves: re-discovery cost on every fresh clone/session) — REJECTED (2026-08-08, human decision)
 
-**Status:** Not attempted in this pass. This item requires editing `.gitignore` and then git-committing
-the newly un-ignored files — both are outside a no-commit automation pass (the agent doing items 2-3
-in this session was explicitly instructed not to touch git). Left for the user: decide whether
-`docs/decisions/` or `docs/backlog/` is the right destination, then force-add and commit
-`HANDOFF-fable-audit-2026-07-04.md`, `fable-audit-fixes.plan.md`, `fable-audit-2026-07-04.md`, and a
-new `docs/backlog/competitor-features.md` per the Fix section above.
+**Status:** Decided against, deliberately. The Fix below was **not** adopted; the repo went the
+other way. `.claude/PRPs/` stays gitignored, and the 51 files that were still tracked from before
+`.gitignore:34` existed were untracked (`git rm --cached`, files kept on disk). The half-tracked
+state is what this resolves: committed plans kept updating while every new plan, report and review
+was invisible, so a fresh clone got an arbitrary 2026-era slice and nothing since.
+
+**Do not re-propose committing `.claude/PRPs/`.** If a planning artifact matters beyond the session
+that wrote it, the destination is `docs/` — `docs/HANDOFF.md` is the living example and is where
+this trail now lands. Promoting a file out of `.claude/PRPs/` by hand remains fine; the blanket
+policy is what was rejected.
+
+**The three files worth keeping were rescued into `docs/` on 2026-08-08, and `.claude/PRPs/` was
+then deleted entirely** (74 files: completed per-tool plans, per-PR reviews of long-merged PRs,
+April/May widget reports). What survived, and where it now lives:
+
+| Was | Now |
+|---|---|
+| `.claude/PRPs/plans/fable-audit-fixes.plan.md` | `docs/backlog/fable-audit-fixes.plan.md` |
+| `.claude/PRPs/HANDOFF-fable-audit-2026-07-04.md` | `docs/backlog/fable-audit-handoff-2026-07-04.md` |
+| `.claude/PRPs/reports/cso-security-audit.md` | `docs/security-audit-2026-04-21.md` |
+
+So the re-discovery problem described below is **solved for the parts that mattered** — Phases 2-4
+and the competitor research are now tracked and greppable, which is what this item actually wanted.
+The rejected part was the mechanism, not the goal: `docs/`, not an un-ignored `.claude/PRPs/`.
+
+Two notes for whoever reads those files. The security audit is dated **2026-04-21** in its header
+despite a 2026-08-05 mtime — the mtime is a touch, not an edit, and every finding in it is marked
+FIXED, so treat it as history rather than an open list. And the 51 files that were tracked before
+the untrack are recoverable at `git show 651be87^:<path>`; the other 74 were never tracked and are
+gone.
 
 **Problem:** `.claude/PRPs/reports/` and `.claude/PRPs/plans/` are gitignored
 (`.gitignore:23`). This repo has a rich history of prior audits, phased fix plans, and
@@ -294,15 +344,29 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
 - **Robolectric adoption** for Context/Room/DataStore/ConnectivityManager-dependent
   code — highest structural leverage for verification gaps but repo-wide in scope
   (touches `build-logic/convention`); needs its own scoped plan.
-- **Compose screenshot/snapshot tests** — there are none anywhere in the repo. **Cost demonstrated
-  2026-07-28:** a duplicate-`LazyColumn`-key crash on the Wi-Fi survey's primary path shipped
-  through three review passes, an adversarial round and 750 green unit tests, and was found by a
-  two-minute manual walk (`dc03409`). Compose runtime invariants — duplicate keys, composition
-  errors, measure/layout failures — are invisible to every check this repo currently runs. Would
-  let an agent verify UI regressions (e.g. DESIGN.md's typography/spacing rules)
-  without a device. Consider `Paparazzi` (no emulator required, JVM-only, matches the
-  "no physical device" constraint) over `Screenshot Testing for Compose` (needs a
-  device/emulator).
+- **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
+  read "there are none anywhere in the repo", which is no longer true; read the split below
+  before planning against it, because only half of what was asked for exists.
+  **Cost that motivated it, 2026-07-28:** a duplicate-`LazyColumn`-key crash on the Wi-Fi
+  survey's primary path shipped through three review passes, an adversarial round and 750 green
+  unit tests, and was found by a two-minute manual walk (`dc03409`).
+  - **Done — composition smoke tests.** `Paparazzi` was chosen (JVM-only, no emulator, matches
+    the "no physical device" constraint) and wired as the `netlens.android.screenshot`
+    convention plugin. Eleven `*RenderTest.kt` files across ten modules render a screen on the
+    JVM and fail if it cannot compose, which closes the duplicate-key / composition-error /
+    measure-failure class that motivated the entry. Covered: home, devices, dns, lanscan
+    (`HostDetailSheet`, `ScanLocationSection`), monitor, ping, portscan, traceroute, wifi
+    (`WifiSurveyTab`), and `core:ui`'s `ResultActions`.
+  - **Still open — visual regression.** **No golden images are recorded**, nothing is committed,
+    and `verifyPaparazzi` never runs. So the original goal of letting an agent verify
+    *appearance* regressions (DESIGN.md's typography and spacing rules) is **not** met — a
+    screen that composes fine but renders wrong still passes. Adopting goldens is a separate
+    decision with real cost: committed PNGs, and font/renderer drift making them flaky across
+    environments. Do not assume the existing tests provide it.
+  - **Also still open:** the remaining screens have no render test at all. Mechanics and the two
+    traps (the render exception escapes via the JUnit rule, so asserting inside `snapshot { }`
+    silently passes; screens taking `hiltViewModel()` must have their list lifted into a
+    stateless `internal fun *Content(...)` first) are documented in `CLAUDE.md` under "Testing".
 - **Recorded network-scan fixture corpus** — no captured real-world ARP tables, SSDP
   responses, DNS response bytes, WHOIS text, or TLS handshakes exist anywhere in the
   repo as replay fixtures. An agent asked to reproduce "LAN scan doesn't find my
@@ -340,8 +404,48 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
 - **Pro-gating patterns** (3 coexisting variants) are documented in both `CLAUDE.md`
   and `DESIGN.md` with explicit "choose based on screen architecture" guidance — this
   is exactly the kind of tribal knowledge that's supposed to be codified, and it is.
-- **SSRF-guard discipline** — already fixed and documented per the prior audit handoff
-  (`configureSecureDefaults()` pattern in `httptester` and `monitor`); one known
-  deferred low-priority instance remains at `feature/lanscan/.../SsdpScanner.kt:74`
-  (LAN-local SSDP spoofing, different threat model, explicitly deferred — not a new
-  finding, just noting it's tracked).
+- **SSRF-guard discipline** — **the outbound-HTTP half only.** The `configureSecureDefaults()`
+  pattern in `httptester` and `monitor` is settled and needs no further attention.
+  **The SSDP half has been REMOVED from this section — see the warning below.** It was listed here
+  as a "known deferred low-priority instance… not a new finding, just noting it's tracked", which
+  turned out to be the single most misleading line in this file.
+
+---
+
+## The SSDP LOCATION guard — the opposite of "don't re-litigate" (added 2026-08-08)
+
+`SsdpScannerImpl.isSafeLocationUrl` (`core/scan/.../engine/SsdpScanner.kt:72` — the file moved out
+of `feature/lanscan` into `core:scan`, so the old path in this document's history is dead) decides
+whether the app will fetch an attacker-supplied URL. **Any device on the LAN can answer an M-SEARCH
+and choose that URL.**
+
+This entry exists because the "Not a gap" section told a future agent that this code was tracked,
+deferred and low-priority. On 2026-08-08 it produced **five security findings in one session**, and
+that framing is part of why they sat there:
+
+| # | Finding | Found by |
+|---|---|---|
+| 1 | DNS rebinding — resolved once to validate, `openConnection` resolved again to connect | scoping pass |
+| 2 | Cross-host SSRF — nothing tied the URL to the responder, so `LOCATION: http://192.168.1.1/admin` was fetched | scoping pass |
+| 3 | Redirects were never disabled; `HttpURLConnection` follows them by default, so the new host check was bypassable in one hop | `/review` |
+| 4 | The loopback/link-local rejection was **deleted** while fixing 1-2 — replaced by the responder match rather than added to | `/codex review` |
+| 5 | Device-supplied hostnames could forge rows in exported text (`DisplayText.flatten`, `core:network`) | mDNS data-flow review |
+
+**Three of the five were introduced while fixing the first two.** The rules that came out of it,
+which generalise past this file:
+
+- **When tightening a security predicate, ADD the check — never let it replace the old one.** Both
+  conditions were necessary; neither was sufficient. UDP source addresses are forgeable, so
+  `host == responderIp` proves nothing, and another app on the same device can answer from
+  `127.0.0.1`.
+- **A test can encode the vulnerability as intended behaviour.** The test for finding 4 was named
+  *"loopback and link-local stay rejected UNLESS they are the responder"* and asserted only the
+  cases that still passed. It went green against the hole it described. A sibling test used
+  `fe80::1` — itself link-local — to assert a special address was fetchable.
+- **Run two independent reviewers on anything security-shaped, before merge.** `/review` (plus a
+  security specialist subagent) and `/codex review` covered the same 137-line diff and found four
+  real issues with **zero overlap**: one asked "is the new guard bypassable?", the other asked "what
+  did the old guard do that the new one no longer does?" The specialist shared the first blind spot.
+
+Current coverage: `SsdpLocationUrlTest` and `SsdpHostileInputTest` in `core/scan/src/test/`. Treat
+this function as high-risk on every edit. **Do not restore it to "Not a gap".**
