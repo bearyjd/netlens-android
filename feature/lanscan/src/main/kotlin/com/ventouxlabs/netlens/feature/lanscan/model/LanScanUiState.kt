@@ -11,6 +11,8 @@ data class LanScanUiState(
     val progress: Float = 0f,
     val error: String? = null,
     val deviceCount: Int = 0,
+    /** Why the last scan came back empty, when "empty" is not an answer worth trusting. */
+    val emptyScanReason: EmptyScanReason? = null,
     val rangeMode: ScanRangeMode = ScanRangeMode.AUTO,
     val customRange: String = "",
     val manualLatitude: String = "",
@@ -38,6 +40,15 @@ data class LanScanUiState(
  * either way.
  */
 enum class LocationStatus { IDLE, CAPTURING, FOUND, UNAVAILABLE }
+
+/**
+ * NETWORK_UNREACHABLE is a first-class outcome, not an error, in the same way as
+ * [LocationStatus.UNAVAILABLE]: nothing failed, the scan simply had no route to the LAN — typically
+ * a VPN that does not carry the local subnet — so its probes could never have found anything.
+ * Without this the result is indistinguishable from a genuinely empty network, which is the half of
+ * issue #152 that the binding fix did not address.
+ */
+enum class EmptyScanReason { NETWORK_UNREACHABLE }
 
 enum class LanScanTab { SCAN, HISTORY, INVENTORY, SAVED }
 

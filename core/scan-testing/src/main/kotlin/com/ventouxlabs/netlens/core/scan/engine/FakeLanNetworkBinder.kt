@@ -17,11 +17,17 @@ class FakeLanNetworkBinder : LanNetworkBinder {
     var bindCount: Int = 0
         private set
 
-    override suspend fun <T> withLanNetwork(block: suspend () -> T): T {
+    /**
+     * Whether a local network exists to bind to. Set to false to reproduce the VPN-with-no-local-
+     * route case, where the real binder falls back to running the block unbound.
+     */
+    var lanNetworkAvailable: Boolean = true
+
+    override suspend fun <T> withLanNetwork(block: suspend (bound: Boolean) -> T): T {
         bindCount++
-        isBound = true
+        isBound = lanNetworkAvailable
         return try {
-            block()
+            block(lanNetworkAvailable)
         } finally {
             isBound = false
         }

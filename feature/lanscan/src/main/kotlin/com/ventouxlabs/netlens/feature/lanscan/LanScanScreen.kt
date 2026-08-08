@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
@@ -83,6 +84,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
+import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -419,7 +421,7 @@ private fun LanScanContent(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ScanTabContent(
+internal fun ScanTabContent(
     uiState: LanScanUiState,
     showCustomField: Boolean,
     onRangeModeChanged: (ScanRangeMode) -> Unit,
@@ -533,6 +535,42 @@ private fun ScanTabContent(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
+    }
+
+    // Deliberately not styled as an error: an unreachable LAN is a first-class outcome, in the
+    // same way as LocationStatus.UNAVAILABLE. The scan did not fail, it simply had no route.
+    // The ViewModel only sets this once a scan has finished, but guard on isScanning anyway so a
+    // stale reason can never surface mid-scan.
+    if (uiState.emptyScanReason == EmptyScanReason.NETWORK_UNREACHABLE &&
+        uiState.devices.isEmpty() &&
+        !uiState.isScanning &&
+        uiState.error == null
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.lanscan_empty_scan_unreachable),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
     }
 
     LazyColumn(

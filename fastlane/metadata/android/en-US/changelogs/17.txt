@@ -1,0 +1,5 @@
+New in 1.3.3:
+
+- Fixed LAN Scan finding zero devices whenever a VPN was active, including on-device ad-blockers and private-DNS apps like Blokada, NextDNS and AdGuard. If it still can't reach the local network, it now tells you instead of just showing zero devices.
+- Hardened LAN discovery against a malicious device on the network: rejects loopback/link-local addresses, binds discovery to the device that answered, stops following redirects, and sanitizes device-supplied names in exports.
+- Faster app startup — baseline profile regenerated.
