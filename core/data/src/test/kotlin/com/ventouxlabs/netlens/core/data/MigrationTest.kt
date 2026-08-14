@@ -4,6 +4,8 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ventouxlabs.netlens.core.data.di.DataModule
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,8 +37,11 @@ class MigrationTest {
         FrameworkSQLiteOpenHelperFactory(),
     )
 
+    // Schema-shape only: creates the v4 DB empty, so this validates that TableInfo matches at
+    // every step but does NOT exercise row-preserving migrations (e.g. MIGRATION_11_12's
+    // known_devices rename-and-copy). That needs its own data-integrity test as a follow-up.
     @Test
-    fun `migrate full chain 4 through 16`() {
+    fun `migrate full chain 4 through 16 preserves schema shape`() {
         helper.createDatabase(TEST_DB, 4).close()
         helper.runMigrationsAndValidate(TEST_DB, 16, true, *allMigrations)
     }
@@ -57,11 +62,11 @@ class MigrationTest {
         val migrated = helper.runMigrationsAndValidate(TEST_DB, 15, true, DataModule.MIGRATION_14_15)
 
         migrated.query("SELECT tags, notes, location FROM known_devices").use { cursor ->
-            org.junit.Assert.assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.moveToFirst())
             // Additive migration: pre-existing rows get NULL for the new columns, not a crash.
-            org.junit.Assert.assertTrue(cursor.isNull(0))
-            org.junit.Assert.assertTrue(cursor.isNull(1))
-            org.junit.Assert.assertTrue(cursor.isNull(2))
+            assertTrue(cursor.isNull(0))
+            assertTrue(cursor.isNull(1))
+            assertTrue(cursor.isNull(2))
         }
 
         migrated.query(
@@ -70,7 +75,7 @@ class MigrationTest {
         ).use { cursor ->
             var tableCount = 0
             while (cursor.moveToNext()) tableCount++
-            org.junit.Assert.assertEquals(2, tableCount)
+            assertEquals(2, tableCount)
         }
     }
 

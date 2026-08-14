@@ -16,10 +16,11 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Exercises [KnownDeviceDao]'s real `@Query` statements against a real Room database under
- * Robolectric (real Context, real Android SQLite) — see [AndroidRobolectricConventionPlugin] for
- * why this is the one DAO in the repo tested this way instead of against a hand-written fake.
- * Every other DAO test in this repo runs against a fake, which can agree with a broken SQL string;
- * this is the one place the SQL itself is checked.
+ * Robolectric (real Context, real Android SQLite) — see `netlens.android.robolectric`
+ * (`build-logic/convention/.../AndroidRobolectricConventionPlugin.kt`) for why this is the one DAO
+ * in the repo tested this way instead of against a hand-written fake. Every other DAO test in this
+ * repo runs against a fake, which can agree with a broken SQL string; this is the one place the SQL
+ * itself is checked.
  */
 @RunWith(RobolectricTestRunner::class)
 class KnownDeviceDaoTest {
@@ -126,7 +127,9 @@ class KnownDeviceDaoTest {
 
         assertEquals(listOf("printer.local"), dao.search("print").first().map { it.hostname })
         assertEquals(listOf("router-main"), dao.search("Netgear").first().map { it.hostname })
-        // Substring match: 192.168.1.50 does not contain "192.168.1.1", so only the router matches.
+        // Confirms the OR across columns picks the ip field specifically — not a substring-
+        // semantics check (see the "inter" case below for that). These two fixture IPs happen not
+        // to overlap; don't read more into this than "vendor/hostname search also matches on ip".
         assertEquals(listOf("router-main"), dao.search("192.168.1.1").first().map { it.hostname })
         assertEquals(emptyList<String>(), dao.search("nonexistent").first().map { it.hostname })
         // Mid-string only — distinguishes a real substring LIKE '%x%' from a prefix LIKE 'x%'
