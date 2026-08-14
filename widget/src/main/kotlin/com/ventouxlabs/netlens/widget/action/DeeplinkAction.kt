@@ -17,11 +17,17 @@ val DeeplinkUriKey = ActionParameters.Key<String>("deeplink_uri")
 val CopyTextKey = ActionParameters.Key<String>("copy_text")
 val CopyLabelKey = ActionParameters.Key<String>("copy_label")
 
+// Security boundary: only a URI whose scheme AND host match ours may be launched. Anything
+// else — including scheme/host confusion tricks (a spoofed userinfo component, wrong host with
+// a matching-looking path) — must be refused. See DeeplinkActionTest for the adversarial cases.
+internal fun isAllowedDeeplinkUri(uri: Uri): Boolean =
+    uri.scheme == Deeplink.SCHEME && uri.host == Deeplink.HOST
+
 class OpenDeeplinkAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val raw = parameters[DeeplinkUriKey] ?: return
         val uri = Uri.parse(raw)
-        if (uri.scheme != Deeplink.SCHEME || uri.host != Deeplink.HOST) return
+        if (!isAllowedDeeplinkUri(uri)) return
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

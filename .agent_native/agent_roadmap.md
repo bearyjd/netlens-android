@@ -387,6 +387,19 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
   zero-cost win: `parseCapabilities` (already `internal`, pure, zero prior tests). All new tests
   mutation-checked — each one deliberately broken and confirmed to fail exactly the right test.
 
+  **`DeeplinkAction`'s allowlist check — DONE (2026-08-14).** Turned out not to need a new Glance
+  `ActionCallback` testing pattern beyond what `netlens.android.robolectric` already provides —
+  `Uri.parse` is a genuine stub in the compileSdk 35 `android.jar` (confirmed via `javap`), so this
+  needed Robolectric, unlike `WidgetRefreshTest`'s plain-JUnit5 path. The check
+  (`uri.scheme == Deeplink.SCHEME && uri.host == Deeplink.HOST`) was pulled into a named
+  `internal fun isAllowedDeeplinkUri` and covered by `DeeplinkActionTest`, including the adversarial
+  case that actually matters: userinfo/authority confusion (`netlens://feature@evil.com/...` vs
+  `netlens://evil.com@feature/...`) — confirmed `Uri.host` resolves the real authority host, not
+  something a naive string check would be fooled by. Also confirmed (not assumed) the check is
+  case-sensitive — `Uri` does not normalize scheme/host case — recorded as a fact, not "fixed."
+  Mutation-checked: dropped the host check, flipped `&&`→`||`, and removed the guard from
+  `onAction` entirely — each broke exactly the predicted test(s).
+
   **Deliberately left open, still a gap:**
   - `NetworkCollector.kt` (147 lines, flat object, no seam — `ConnectivityManager`/`WifiManager`/
     `TelephonyManager`) — big enough to be its own pilot.
@@ -395,9 +408,6 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
     seams before it's testable at all.
   - `detectEncryptionType` (`WidgetRefreshWorker.kt:349`) — real `WifiInfo` construction under
     Robolectric is awkward (final class, hidden constructor); untested.
-  - `DeeplinkAction`'s scheme/host allowlist check (`OpenDeeplinkAction`) — the highest-value
-    untested *security* assertion in the module; needs its own investigation into Glance
-    `ActionCallback` testing, which has no existing pattern in this repo yet.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.
