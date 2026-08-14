@@ -35,7 +35,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DataModule {
 
-    private val MIGRATION_4_5 = object : Migration(4, 5) {
+    internal val MIGRATION_4_5 = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 "CREATE INDEX IF NOT EXISTS `index_network_events_timestamp` ON `network_events` (`timestamp`)",
@@ -43,13 +43,13 @@ object DataModule {
         }
     }
 
-    private val MIGRATION_6_7 = object : Migration(6, 7) {
+    internal val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE history_ping ADD COLUMN mode TEXT NOT NULL DEFAULT 'FIXED'")
         }
     }
 
-    private val MIGRATION_7_8 = object : Migration(7, 8) {
+    internal val MIGRATION_7_8 = object : Migration(7, 8) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS `history_traceroute` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `host` TEXT NOT NULL, `hopCount` INTEGER NOT NULL, `hopsJson` TEXT NOT NULL)""")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_traceroute_timestamp` ON `history_traceroute` (`timestamp`)")
@@ -68,7 +68,7 @@ object DataModule {
         }
     }
 
-    private val MIGRATION_5_6 = object : Migration(5, 6) {
+    internal val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS `history_ping` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `host` TEXT NOT NULL, `sentCount` INTEGER NOT NULL, `receivedCount` INTEGER NOT NULL, `minMs` REAL NOT NULL, `avgMs` REAL NOT NULL, `maxMs` REAL NOT NULL)""")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_ping_timestamp` ON `history_ping` (`timestamp`)")
@@ -90,14 +90,14 @@ object DataModule {
         }
     }
 
-    private val MIGRATION_8_9 = object : Migration(8, 9) {
+    internal val MIGRATION_8_9 = object : Migration(8, 9) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS `history_speedtest` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `downloadMbps` REAL NOT NULL, `uploadMbps` REAL NOT NULL, `latencyMs` INTEGER NOT NULL, `serverName` TEXT NOT NULL)""")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_history_speedtest_timestamp` ON `history_speedtest` (`timestamp`)")
         }
     }
 
-    private val MIGRATION_9_10 = object : Migration(9, 10) {
+    internal val MIGRATION_9_10 = object : Migration(9, 10) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """CREATE TABLE IF NOT EXISTS `known_devices` (`macAddress` TEXT NOT NULL, `hostname` TEXT, `ip` TEXT NOT NULL, `vendor` TEXT, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, `isKnown` INTEGER NOT NULL DEFAULT 0, `deviceType` TEXT, `osGuess` TEXT, PRIMARY KEY(`macAddress`))""",
@@ -107,7 +107,7 @@ object DataModule {
         }
     }
 
-    private val MIGRATION_10_11 = object : Migration(10, 11) {
+    internal val MIGRATION_10_11 = object : Migration(10, 11) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 "ALTER TABLE monitored_endpoints ADD COLUMN latencyThresholdMs INTEGER NOT NULL DEFAULT 1000",
@@ -120,7 +120,7 @@ object DataModule {
     // devices, or devices absent from /proc/net/arp) was silently dropped
     // and never persisted to inventory. Switches identity to an autoGenerate
     // id with macAddress nullable, falling back to IP-based matching.
-    private val MIGRATION_11_12 = object : Migration(11, 12) {
+    internal val MIGRATION_11_12 = object : Migration(11, 12) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """CREATE TABLE IF NOT EXISTS `known_devices_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `macAddress` TEXT, `hostname` TEXT, `ip` TEXT NOT NULL, `vendor` TEXT, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, `isKnown` INTEGER NOT NULL DEFAULT 0, `deviceType` TEXT, `osGuess` TEXT)""",
@@ -140,7 +140,7 @@ object DataModule {
 
     // v13: custom device names + watched-network identity (gateway MAC).
     // Additive only — new columns are nullable, new table is independent.
-    private val MIGRATION_12_13 = object : Migration(12, 13) {
+    internal val MIGRATION_12_13 = object : Migration(12, 13) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE known_devices ADD COLUMN customName TEXT")
             db.execSQL("ALTER TABLE known_devices ADD COLUMN networkId INTEGER")
@@ -154,7 +154,7 @@ object DataModule {
     // Latency methodology changed in v14: old rows timed a full HTTPS HEAD, new rows time a raw
     // TCP connect. The DEFAULT tags every pre-existing row as LEGACY_HTTP; Room writes the explicit
     // TCP_CONNECT value on all inserts after this migration.
-    private val MIGRATION_13_14 = object : Migration(13, 14) {
+    internal val MIGRATION_13_14 = object : Migration(13, 14) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE history_speedtest ADD COLUMN latencyMethod TEXT NOT NULL DEFAULT 'LEGACY_HTTP'")
         }
@@ -163,7 +163,7 @@ object DataModule {
     // v15: user-authored device details (tags/notes/location) + Wi-Fi survey storage.
     // Additive only — the new known_devices columns are nullable so existing rows keep their
     // scan-derived values untouched, and the two survey tables are independent of everything else.
-    private val MIGRATION_14_15 = object : Migration(14, 15) {
+    internal val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE known_devices ADD COLUMN tags TEXT")
             db.execSQL("ALTER TABLE known_devices ADD COLUMN notes TEXT")
@@ -184,7 +184,7 @@ object DataModule {
 
     // v16: LAN scan history becomes a complete, exportable event record. Saved inventories are
     // independent snapshots so future scans can never alter an inventory the user preserved.
-    private val MIGRATION_15_16 = object : Migration(15, 16) {
+    internal val MIGRATION_15_16 = object : Migration(15, 16) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE history_lanscan ADD COLUMN latitude REAL")
             db.execSQL("ALTER TABLE history_lanscan ADD COLUMN longitude REAL")

@@ -341,9 +341,40 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
   green, committed, and invisible. Before recording any module as "untested", check whether the
   tests exist and are simply not being *run*; and when adding a flavored source set, add its task
   to `ci.yml` in the same change. Everything in `src/test*` that no CI task names is decoration.
-- **Robolectric adoption** for Context/Room/DataStore/ConnectivityManager-dependent
-  code — highest structural leverage for verification gaps but repo-wide in scope
-  (touches `build-logic/convention`); needs its own scoped plan.
+- **Robolectric adoption — DONE, scoped to `core:data` only (2026-08-14).** Superseded the framing
+  below. This is the one place in the repo Robolectric is the correct tool: real Room `@Query`
+  execution and `Migration` validation need a real `Context` and real SQLite, which no interface
+  seam can substitute for. It directly reopens item 3's 2026-08-08 correction, which said zero
+  Robolectric usage was "a deliberate outcome rather than a gap" — that call was right for every
+  case it covered (celltower, wifiaudit, history, widgetsettings all got interface seams instead)
+  but wrong that it covered everything: no test anywhere exercised a real `@Query`, and all 12
+  migrations (4→5 … 15→16) were untested. `core:data`'s `KnownDeviceDao.updateLastSeen`/
+  `updateUserDetails` column-disjointness invariant — previously enforced only by a code comment —
+  now has a real test (`KnownDeviceDaoTest`), as does the full migration chain and `MIGRATION_14_15`
+  specifically (`MigrationTest`).
+
+  **Dead end worth recording so it isn't re-attempted:** Room's Kotlin-Multiplatform JVM testing API
+  (`Room.inMemoryDatabaseBuilder<T>()`, no `Context`, real SQL on the plain JVM with no Robolectric
+  at all) was tried first and looked like the better answer — Android's own docs actively discourage
+  Robolectric for Room in favor of it. It doesn't work here: that no-Context builder only ships in
+  Room's `-jvm`-target artifact (confirmed by decompiling `room-runtime-android-2.7.2.jar` — only the
+  `Context`-requiring overloads exist there), and a plain `com.android.library` module (not KMP)
+  resolves the `-android` variant everywhere, including its test classpath. Bolting the `-jvm`
+  coordinate on separately creates a duplicate-`androidx.room.Room`-class hazard, not a working test.
+  Converting `core:data` to Kotlin Multiplatform would unlock it but is a much larger, separate
+  decision — module graph, Hilt's `DataModule`, every consumer — not attempted here.
+
+  Mechanism used instead: the classic, pre-KMP `MigrationTestHelper` constructor
+  (`Instrumentation, Class<out RoomDatabase>, ...`), which Robolectric has supported for years via
+  `InstrumentationRegistry` and which Room 2.7's KMP release removed — so `core:data` stays pinned to
+  Room 2.6.1 deliberately, not as an oversight. New opt-in convention plugin
+  `netlens.android.robolectric` (`build-logic/convention/.../AndroidRobolectricConventionPlugin.kt`),
+  applied only to `core:data`; every other module stays at zero Robolectric, which remains the
+  correct default per item 3's original finding.
+
+  **`widget/` remains the other genuine Robolectric case, not done.** Its Glance/`AppWidgetManager`/
+  WorkManager surface — including an unverified shipped cross-render fix in
+  `widget/.../WidgetRefresh.kt:47-59` — needs its own separate plan; nothing here touches it.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.
