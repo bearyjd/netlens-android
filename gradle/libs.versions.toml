@@ -23,7 +23,9 @@ baselineprofile = "1.4.0"
 profileinstaller = "1.4.1"
 uiautomator = "2.3.0"
 androidx-test-ext-junit = "1.2.1"
+androidx-test-core = "1.6.1"
 espresso = "3.6.1"
+robolectric = "4.16"
 
 [libraries]
 # Compose
@@ -51,6 +53,9 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+# Classic instrumentation-based MigrationTestHelper — Robolectric-only, core:data scoped.
+# Room 2.7+'s KMP release removed this constructor, so this stays pinned to `room` (2.6.1).
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 
 # Ktor
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
@@ -102,7 +107,10 @@ benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro
 profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+androidx-test-core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "androidx-test-core" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+# Robolectric-backed Room testing for core:data only — see AndroidRobolectricConventionPlugin.
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 # Core Android
 core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.15.0" }

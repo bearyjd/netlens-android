@@ -37,5 +37,9 @@ gradlePlugin {
             id = "netlens.android.screenshot"
             implementationClass = "AndroidScreenshotConventionPlugin"
         }
+        register("androidRobolectric") {
+            id = "netlens.android.robolectric"
+            implementationClass = "AndroidRobolectricConventionPlugin"
+        }
     }
 }
