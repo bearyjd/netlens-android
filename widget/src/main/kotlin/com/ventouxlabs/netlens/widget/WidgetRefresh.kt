@@ -7,6 +7,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * authoritative source of the receiver→widget mapping — the same wiring declared in
  * each receiver's `glanceAppWidget` override and in the manifest.
  */
-private val WIDGET_RECEIVERS: List<Pair<Class<out GlanceAppWidgetReceiver>, () -> GlanceAppWidget>> =
+internal val WIDGET_RECEIVERS: List<Pair<Class<out GlanceAppWidgetReceiver>, () -> GlanceAppWidget>> =
     listOf(
         CompactWidgetReceiver::class.java to ::CompactWidget,
         StandardWidgetReceiver::class.java to ::StandardWidget,
@@ -47,14 +48,30 @@ private val WIDGET_RECEIVERS: List<Pair<Class<out GlanceAppWidgetReceiver>, () -
 suspend fun refreshAllWidgets(context: Context) {
     val appWidgetManager = AppWidgetManager.getInstance(context)
     val glanceManager = GlanceAppWidgetManager(context)
-    WIDGET_RECEIVERS.forEach { (receiver, widgetFactory) ->
-        val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, receiver))
+    refreshWidgets(
+        idsFor = { receiver -> appWidgetManager.getAppWidgetIds(ComponentName(context, receiver)) },
+        glanceIdFor = { id -> glanceManager.getGlanceIdBy(id) },
+        update = { widget, glanceId -> widget.update(context, glanceId) },
+    )
+}
+
+/**
+ * The bug-class logic behind [refreshAllWidgets], pulled out so it can be tested without any
+ * Android framework dependency: given each receiver's own widget ids (however they're looked
+ * up), never let one receiver's ids reach another receiver's widget instance. That crossing is
+ * exactly what the historical `updateAll()` bug did — see [refreshAllWidgets]'s doc comment.
+ */
+internal suspend fun refreshWidgets(
+    receivers: List<Pair<Class<out GlanceAppWidgetReceiver>, () -> GlanceAppWidget>> = WIDGET_RECEIVERS,
+    idsFor: (Class<out GlanceAppWidgetReceiver>) -> IntArray,
+    glanceIdFor: (Int) -> GlanceId,
+    update: suspend (GlanceAppWidget, GlanceId) -> Unit,
+) {
+    receivers.forEach { (receiver, widgetFactory) ->
+        val ids = idsFor(receiver)
         if (ids.isEmpty()) return@forEach
         val widget = widgetFactory()
-        ids.forEach { appWidgetId ->
-            val glanceId = glanceManager.getGlanceIdBy(appWidgetId)
-            widget.update(context, glanceId)
-        }
+        ids.forEach { id -> update(widget, glanceIdFor(id)) }
     }
 }
 
