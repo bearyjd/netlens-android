@@ -372,9 +372,32 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
   applied only to `core:data`; every other module stays at zero Robolectric, which remains the
   correct default per item 3's original finding.
 
-  **`widget/` remains the other genuine Robolectric case, not done.** Its Glance/`AppWidgetManager`/
-  WorkManager surface — including an unverified shipped cross-render fix in
-  `widget/.../WidgetRefresh.kt:47-59` — needs its own separate plan; nothing here touches it.
+  **`widget/` — DONE too (2026-08-14), scoped pilot.** `netlens.android.robolectric` applied to
+  `widget/`. The headline fix — `refreshAllWidgets`'s cross-render bug guard — needed **no
+  Robolectric at all**: its bug-class logic (never let one receiver's widget ids reach another
+  receiver's widget instance) was pulled into an injectable `internal suspend fun refreshWidgets`
+  (`WidgetRefresh.kt`) and pinned with a plain JUnit5 test (`WidgetRefreshTest`) using fakes —
+  mirrors the repo's `ArpTableReaderImpl.parseArpTable`-style "extract the pure logic, test that
+  hard" pattern. Robolectric covers what's genuinely Android-framework-bound instead: the
+  `ConnectivityManager.NetworkCallback` register/unregister lifecycle including the
+  private-static-companion double-registration hazard (`WidgetRefreshLifecycleTest`,
+  `CompactWidgetReceiverTest` — one receiver stands in for all four, which are byte-identical
+  apart from class name), and WorkManager enqueue shape via the officially-supported
+  `androidx.work:work-testing` (`REPLACE`/`KEEP` policy, unique work names). Also added a trivial
+  zero-cost win: `parseCapabilities` (already `internal`, pure, zero prior tests). All new tests
+  mutation-checked — each one deliberately broken and confirmed to fail exactly the right test.
+
+  **Deliberately left open, still a gap:**
+  - `NetworkCollector.kt` (147 lines, flat object, no seam — `ConnectivityManager`/`WifiManager`/
+    `TelephonyManager`) — big enough to be its own pilot.
+  - `WidgetRefreshWorker.doWork()` end-to-end (434 lines: Hilt `EntryPoint`-resolved Room DAO,
+    DataStore, a live Ktor call to `ipinfo.io`, a raw `Socket` to `8.8.8.8:53`) — needs interface
+    seams before it's testable at all.
+  - `detectEncryptionType` (`WidgetRefreshWorker.kt:349`) — real `WifiInfo` construction under
+    Robolectric is awkward (final class, hidden constructor); untested.
+  - `DeeplinkAction`'s scheme/host allowlist check (`OpenDeeplinkAction`) — the highest-value
+    untested *security* assertion in the module; needs its own investigation into Glance
+    `ActionCallback` testing, which has no existing pattern in this repo yet.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.

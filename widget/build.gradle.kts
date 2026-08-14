@@ -3,6 +3,7 @@ plugins {
     id("netlens.android.library")
     id("netlens.android.compose")
     id("netlens.hilt")
+    id("netlens.android.robolectric")
 }
 
 android {
@@ -30,4 +31,8 @@ dependencies {
 
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
+
+    // Robolectric-backed receiver lifecycle / WorkManager enqueue tests — see
+    // netlens.android.robolectric.
+    testImplementation(libs.work.testing)
 }
