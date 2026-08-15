@@ -1,17 +1,17 @@
-# Session Handoff — Robolectric adoption complete, v1.3.3 still current (2026-08-14)
+# Session Handoff — Robolectric adoption complete, v1.3.3 still current (2026-08-14/15)
 
 Supersedes the v1.3.3 handoff below on everything except release status, which is unchanged —
 **v1.3.3 is still the released version**; nothing this session reaches users until the next tag.
 
 ## TL;DR
 
-- **Three PRs merged (#155-#157), master `3c35121`, CI green, no open PRs.** All three
+- **Four PRs merged (#155-#158), master `89cdf72`, CI green, no open PRs.** All four
   branches auto-deleted on merge and confirmed gone via `git fetch --prune` (their
   remote-tracking refs briefly lingered locally — that's a stale-ref artifact, not a real branch
   still existing on origin; don't re-investigate that if you see it again elsewhere).
-- **The roadmap's longest-standing item — "Robolectric adoption" — is done**, in the two places
-  it was actually needed. `.agent_native/agent_roadmap.md`'s entry has the full detail; this is
-  the summary.
+- **The roadmap's longest-standing item — "Robolectric adoption" — is done**, in the places it was
+  actually needed. `.agent_native/agent_roadmap.md`'s entry has the full detail; this is the
+  summary.
 - **`spike/baseline-journey-extension` remains open on origin, untouched** — same as every prior
   handoff. It's an intentionally-preserved dead end (see the roadmap and the 2026-08-07 handoff
   further down), not forgotten work. Stop re-flagging it.
@@ -52,28 +52,63 @@ this test: userinfo/authority confusion in the raw URI string (`netlens://featur
 `netlens://evil.com@feature`) — confirmed `Uri.host` resolves the true authority, not something a
 naive string check would be fooled by.
 
+**#158 — `NetworkCollector`'s derivations.** Zero tests despite its single 113-line `collect()`
+producing every value the widget renders. Three pure derivations extracted and covered without
+Robolectric (`cellGenerationFor` — a 15-branch constant mapping; `isVpnInterfaceName`;
+`cellularLinkSpeedMbps`); `collect()`'s reachable branches covered under Robolectric.
+
 ## The pattern worth repeating
 
-Every new test across all three PRs was **mutation-checked, not just written**: break the
+Every new test across all four PRs was **mutation-checked, not just written**: break the
 invariant in real production code (not the test fixture), confirm the predicted test — and only
-that test — fails, then revert. This caught a real gap once: `KnownDeviceDaoTest`'s original
-search assertion couldn't distinguish a substring `LIKE` from a prefix `LIKE` bug, because every
-fixture string happened to match at position 0. Fixed before merge, not after.
+that test — fails, then revert. This caught real defects twice, both before merge:
 
-**Before reaching for Robolectric, check whether the logic can be pulled out pure first.** Two of
-the three PRs' headline fixes (`refreshWidgets`'s dispatch logic, `isAllowedDeeplinkUri`) turned
-out to need zero Robolectric once separated from the Android calls around them — only the parts
-that couldn't be pulled out (`Uri.parse` itself, `ConnectivityManager`, WorkManager, real Room
-SQL) got the Robolectric convention plugin. Don't reach for it by default.
+- `KnownDeviceDaoTest`'s original search assertion couldn't distinguish a substring `LIKE` from a
+  prefix `LIKE` bug, because every fixture string happened to match at position 0.
+- **In #158 it caught a defect in the refactor itself.** The first extraction pass left
+  `detectCellGeneration` and `collect()` still using their own inline copies of the logic that had
+  supposedly been extracted — so the new tests would have passed green while production ran a
+  different copy. The mutation surfaced it by hitting *two* source sites instead of one. This is
+  the "double drifted from production" failure mode this repo already has a note about
+  (`.omc/skills/unenforced-verification-expertise.md`), in a new costume: an *extracted* function
+  drifting from the original it was supposed to replace. **After extracting, grep for the old
+  expression** — if it still appears anywhere, the extraction isn't finished.
+
+**Before reaching for Robolectric, check whether the logic can be pulled out pure first.** Most of
+these PRs' headline fixes (`refreshWidgets`'s dispatch logic, `isAllowedDeeplinkUri`, all three of
+#158's derivations) turned out to need zero Robolectric once separated from the Android calls
+around them — only the parts that couldn't be pulled out (`Uri.parse` itself,
+`ConnectivityManager`, WorkManager, real Room SQL) got the Robolectric convention plugin. Don't
+reach for it by default.
+
+## Robolectric shadow limits, confirmed empirically (#158)
+
+Worth knowing before scoping anything else that touches network state — each was verified with a
+throwaway spike rather than assumed, and each *reduced scope* rather than getting a workaround:
+
+- `LinkProperties.interfaceName` and `setDnsServers` work. **`LinkAddress` is not constructible**
+  (package-private constructor, no public `addLinkAddress`) → `localIp`/`hasIpv6` untestable.
+- **`WifiInfo` does not implement `TransportInfo` in Robolectric's SDK sandbox**, so
+  `NetworkCapabilities.setTransportInfo(wifiInfo)` throws `ClassCastException`. `ShadowWifiInfo`
+  itself is fine (`newInstance`/`setRssi`/`setLinkSpeed` all exist) — the *cast* is what fails.
+- **`WifiManager.calculateSignalLevel(rssi, 5)` is stubbed to a constant** — `-55` and `-95` both
+  return `4`. Asserting `rssiLevel` would have been green and meaningless.
 
 ## What's still open in `widget/`
 
-Three items, explicitly deferred with reasons, not silently dropped — see
-`.agent_native/agent_roadmap.md` for the full detail:
-- `NetworkCollector.kt` (147 lines, flat object, no seam) — big enough to be its own pilot.
+Two items, explicitly deferred with reasons, not silently dropped — see
+`.agent_native/agent_roadmap.md` for full detail:
 - `WidgetRefreshWorker.doWork()` end-to-end (434 lines, live network + raw socket calls) — needs
   interface seams before it's testable at all.
-- `detectEncryptionType` — real `WifiInfo` construction under Robolectric is awkward.
+- `detectEncryptionType` — **re-check this against #158's `TransportInfo` finding before planning
+  it.** It was originally deferred as "real `WifiInfo` construction is awkward," but the actual
+  blocker looks broader than that framing: it reads `WifiInfo` *via* `NetworkCapabilities.transportInfo`,
+  which is precisely the cast that fails. It may be blocked outright rather than merely awkward.
+
+Also recorded in the roadmap, deliberately unfixed because both are decisions rather than test
+changes: `collect()`'s pre-Q WiFi fallback is **dead code** under `minSdk 29` (`Q` *is* 29), and
+its outer `catch (_: Exception)` renders any internal bug as a normal-looking empty widget rather
+than an error state.
 
 None of these are urgent. Nothing is broken; this is backlog, not a live gap.
 
