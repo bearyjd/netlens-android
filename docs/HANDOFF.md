@@ -1,3 +1,84 @@
+# Session Handoff — Robolectric adoption complete, v1.3.3 still current (2026-08-14)
+
+Supersedes the v1.3.3 handoff below on everything except release status, which is unchanged —
+**v1.3.3 is still the released version**; nothing this session reaches users until the next tag.
+
+## TL;DR
+
+- **Three PRs merged (#155-#157), master `3c35121`, CI green, no open PRs.** All three
+  branches auto-deleted on merge and confirmed gone via `git fetch --prune` (their
+  remote-tracking refs briefly lingered locally — that's a stale-ref artifact, not a real branch
+  still existing on origin; don't re-investigate that if you see it again elsewhere).
+- **The roadmap's longest-standing item — "Robolectric adoption" — is done**, in the two places
+  it was actually needed. `.agent_native/agent_roadmap.md`'s entry has the full detail; this is
+  the summary.
+- **`spike/baseline-journey-extension` remains open on origin, untouched** — same as every prior
+  handoff. It's an intentionally-preserved dead end (see the roadmap and the 2026-08-07 handoff
+  further down), not forgotten work. Stop re-flagging it.
+
+## What shipped, in order
+
+**#155 — `core:data` real Room SQL (JVM/Robolectric split).** The roadmap's own audit had
+correctly closed most Robolectric-motivating cases via interface seams, but missed that **no test
+anywhere ran a real Room `@Query`** — every DAO test ran against a hand-written fake, so a broken
+SQL string could still ship green. Tried the "no Robolectric at all" path first
+(`Room.inMemoryDatabaseBuilder<T>()`, which Android's own docs now recommend over Robolectric for
+Room) — **it doesn't work for a non-KMP `com.android.library` module**: that reified builder only
+ships in Room's `-jvm`-target artifact, and bolting it onto the `-android` artifact this repo's
+production build needs creates a duplicate-class hazard, not a working test. Confirmed by
+decompiling `room-runtime-android-2.7.2.jar`. Fell back to the classic, pre-KMP
+`MigrationTestHelper` constructor under Robolectric — which is why `core:data` stays pinned to
+Room 2.6.1 *deliberately*, not from neglect: 2.7's KMP release removed that constructor. New
+opt-in convention plugin `netlens.android.robolectric`, applied only to `core:data`. Real tests
+now cover the `known_devices` write-path disjointness invariant (previously a code comment, not a
+test) and all 12 migrations.
+
+**#156 — `widget/`'s cross-render regression + lifecycle.** The other genuinely-Robolectric case:
+Glance/`AppWidgetManager`/WorkManager/`ConnectivityManager` code with a real shipped bug
+(`refreshAllWidgets`'s doc comment records a Pixel 10 incident — `updateAll()`'s stale
+`providerToReceiver` map pushed one widget's RemoteViews onto another instance) and zero
+regression coverage. **The fix itself needed no Robolectric** — the bug-class logic was pulled
+into an injectable `internal suspend fun refreshWidgets` and pinned with plain JUnit5 fakes,
+mirroring the repo's `ArpTableReaderImpl.parseArpTable` pattern. Robolectric (the same convention
+plugin, applied to `widget/` this time) covers what's genuinely framework-bound: the
+`ConnectivityManager.NetworkCallback` register/unregister lifecycle — including a
+private-static-companion double-registration hazard the inventory pass caught — and WorkManager
+enqueue shape via the officially-supported `androidx.work:work-testing`.
+
+**#157 — the security check the #156 inventory flagged and deferred.** `OpenDeeplinkAction`'s
+scheme/host allowlist was the module's one untested security boundary. Extracted to
+`isAllowedDeeplinkUri`, tested including the adversarial case that's the actual point of having
+this test: userinfo/authority confusion in the raw URI string (`netlens://feature@evil.com` vs
+`netlens://evil.com@feature`) — confirmed `Uri.host` resolves the true authority, not something a
+naive string check would be fooled by.
+
+## The pattern worth repeating
+
+Every new test across all three PRs was **mutation-checked, not just written**: break the
+invariant in real production code (not the test fixture), confirm the predicted test — and only
+that test — fails, then revert. This caught a real gap once: `KnownDeviceDaoTest`'s original
+search assertion couldn't distinguish a substring `LIKE` from a prefix `LIKE` bug, because every
+fixture string happened to match at position 0. Fixed before merge, not after.
+
+**Before reaching for Robolectric, check whether the logic can be pulled out pure first.** Two of
+the three PRs' headline fixes (`refreshWidgets`'s dispatch logic, `isAllowedDeeplinkUri`) turned
+out to need zero Robolectric once separated from the Android calls around them — only the parts
+that couldn't be pulled out (`Uri.parse` itself, `ConnectivityManager`, WorkManager, real Room
+SQL) got the Robolectric convention plugin. Don't reach for it by default.
+
+## What's still open in `widget/`
+
+Three items, explicitly deferred with reasons, not silently dropped — see
+`.agent_native/agent_roadmap.md` for the full detail:
+- `NetworkCollector.kt` (147 lines, flat object, no seam) — big enough to be its own pilot.
+- `WidgetRefreshWorker.doWork()` end-to-end (434 lines, live network + raw socket calls) — needs
+  interface seams before it's testable at all.
+- `detectEncryptionType` — real `WifiInfo` construction under Robolectric is awkward.
+
+None of these are urgent. Nothing is broken; this is backlog, not a live gap.
+
+---
+
 # Session Handoff — v1.3.3 shipped (2026-08-08)
 
 Supersedes the "five security findings" handoff below on the release status: **v1.3.3 is
