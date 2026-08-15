@@ -400,14 +400,46 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
   Mutation-checked: dropped the host check, flipped `&&`→`||`, and removed the guard from
   `onAction` entirely — each broke exactly the predicted test(s).
 
+  **`NetworkCollector` — DONE (2026-08-15), partially.** Three pure derivations extracted to
+  `internal` top-level functions and covered without Robolectric (`NetworkCollectorPureTest`):
+  `cellGenerationFor` (a 15-branch constant mapping with no prior coverage), `isVpnInterfaceName`,
+  and `cellularLinkSpeedMbps`. `collect()`'s reachable branches covered under Robolectric
+  (`NetworkCollectorTest`): both early-return guards, cellular link-speed derivation, `isMetered`,
+  all three `isCaptivePortal` combinations, VPN detection + tunnel-interface naming, and
+  `dnsServers`.
+
+  **Robolectric shadow limits, each confirmed empirically rather than assumed** — worth knowing
+  before re-scoping anything else in this module:
+  - `LinkProperties.interfaceName` and `setDnsServers` work. **`LinkAddress` is not constructible**
+    (package-private constructor, no public `addLinkAddress`), so `localIp` and `hasIpv6` are
+    untestable in a unit test.
+  - **`WifiInfo` does not implement `TransportInfo` in Robolectric's SDK sandbox**, so
+    `NetworkCapabilities.setTransportInfo(wifiInfo)` throws `ClassCastException`. This blocks real
+    `rssi`/`linkSpeedMbps` on the WiFi branch — and it is a *different, broader* blocker than the
+    one recorded below for `detectEncryptionType` (which is about `currentSecurityType`
+    specifically). `ShadowWifiInfo.newInstance()`/`setRssi`/`setLinkSpeed` do exist; the cast is
+    what fails.
+  - **`WifiManager.calculateSignalLevel(rssi, 5)` is stubbed to a constant** — `-55` and `-95` both
+    return `4`. Asserting `rssiLevel` would have been a green test proving nothing, so it isn't
+    asserted.
+
+  **Two findings recorded, deliberately not fixed here** (both are separate decisions, not test
+  changes):
+  - **Dead code:** `collect()` branches on `Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q` for the
+    WiFi path, but `minSdk = 29` *is* `Q` — the pre-Q `WifiManager.connectionInfo` fallback is
+    unreachable on every supported device.
+  - **Silent degradation:** `collect()`'s outer `catch (_: Exception) { CollectedNetworkData() }`
+    means any bug in its 113 lines renders as a normal-looking empty widget rather than an error.
+    Changing that is a product decision about widget failure UX.
+
   **Deliberately left open, still a gap:**
-  - `NetworkCollector.kt` (147 lines, flat object, no seam — `ConnectivityManager`/`WifiManager`/
-    `TelephonyManager`) — big enough to be its own pilot.
   - `WidgetRefreshWorker.doWork()` end-to-end (434 lines: Hilt `EntryPoint`-resolved Room DAO,
     DataStore, a live Ktor call to `ipinfo.io`, a raw `Socket` to `8.8.8.8:53`) — needs interface
     seams before it's testable at all.
-  - `detectEncryptionType` (`WidgetRefreshWorker.kt:349`) — real `WifiInfo` construction under
-    Robolectric is awkward (final class, hidden constructor); untested.
+  - `detectEncryptionType` (`WidgetRefreshWorker.kt:349`) — needs `WifiInfo.currentSecurityType`;
+    see the `TransportInfo` cast limitation above, which likely blocks it independently.
+  - `NetworkCollector.readCellularSignal` — needs `TelephonyManager.signalStrength` /
+    `CellSignalStrength` construction. Its pure half is covered via `cellGenerationFor`.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.

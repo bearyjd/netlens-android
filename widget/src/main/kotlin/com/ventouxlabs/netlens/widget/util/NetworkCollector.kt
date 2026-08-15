@@ -27,9 +27,40 @@ data class CollectedNetworkData(
     val dnsServers: List<String> = emptyList(),
 )
 
-object NetworkCollector {
+private val VPN_INTERFACE_PREFIXES = listOf("tun", "wg", "ppp", "ipsec")
 
-    private val VPN_INTERFACE_PREFIXES = listOf("tun", "wg", "ppp", "ipsec")
+/**
+ * Prefix match, not an exact one — a VPN client is free to name its interface `tun0`, `wg-home`
+ * etc. Consequence worth knowing: any name merely *starting* with a prefix matches.
+ */
+internal fun isVpnInterfaceName(iface: String?): Boolean =
+    iface != null && VPN_INTERFACE_PREFIXES.any { prefix -> iface.startsWith(prefix) }
+
+/**
+ * Cellular has no per-link speed, so this falls back to the kernel's downstream bandwidth
+ * estimate. Note the integer division: a sub-1-Mbps link reports `0`, not `-1` (unknown).
+ */
+internal fun cellularLinkSpeedMbps(downstreamKbps: Int): Int =
+    if (downstreamKbps > 0) downstreamKbps / 1000 else -1
+
+/** Maps [TelephonyManager] network-type constants to a display generation. */
+internal fun cellGenerationFor(networkType: Int): String = when (networkType) {
+    TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
+    TelephonyManager.NETWORK_TYPE_NR -> "5G"
+    TelephonyManager.NETWORK_TYPE_HSPAP,
+    TelephonyManager.NETWORK_TYPE_HSPA,
+    TelephonyManager.NETWORK_TYPE_HSDPA,
+    TelephonyManager.NETWORK_TYPE_HSUPA -> "3G+"
+    TelephonyManager.NETWORK_TYPE_UMTS,
+    TelephonyManager.NETWORK_TYPE_EVDO_0,
+    TelephonyManager.NETWORK_TYPE_EVDO_A,
+    TelephonyManager.NETWORK_TYPE_EVDO_B -> "3G"
+    TelephonyManager.NETWORK_TYPE_EDGE,
+    TelephonyManager.NETWORK_TYPE_GPRS -> "2G"
+    else -> ""
+}
+
+object NetworkCollector {
 
     suspend fun collect(context: Context): CollectedNetworkData = withContext(Dispatchers.IO) {
         try {
@@ -54,9 +85,7 @@ object NetworkCollector {
                 ?.address?.hostAddress.orEmpty()
 
             val vpnInterfaceName = if (isVpn) {
-                activeLinkProps?.interfaceName?.takeIf { iface ->
-                    VPN_INTERFACE_PREFIXES.any { prefix -> iface.startsWith(prefix) }
-                }.orEmpty()
+                activeLinkProps?.interfaceName?.takeIf { isVpnInterfaceName(it) }.orEmpty()
             } else {
                 ""
             }
@@ -85,11 +114,7 @@ object NetworkCollector {
                     val (cellDbm, cellLevel) = readCellularSignal(context)
                     rssi = cellDbm
                     rssiLevel = cellLevel
-                    // Cellular has no per-link speed; fall back to the kernel's downstream
-                    // bandwidth estimate (kbps → Mbps). This is what NetworkCapabilities
-                    // exposes for non-WiFi transports.
-                    val downstreamKbps = physicalCaps.linkDownstreamBandwidthKbps
-                    linkSpeedMbps = if (downstreamKbps > 0) downstreamKbps / 1000 else -1
+                    linkSpeedMbps = cellularLinkSpeedMbps(physicalCaps.linkDownstreamBandwidthKbps)
                 }
                 else -> {
                     rssi = -1000
@@ -168,21 +193,7 @@ object NetworkCollector {
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
                 ?: return ""
             @Suppress("DEPRECATION")
-            when (tm.networkType) {
-                TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
-                TelephonyManager.NETWORK_TYPE_NR -> "5G"
-                TelephonyManager.NETWORK_TYPE_HSPAP,
-                TelephonyManager.NETWORK_TYPE_HSPA,
-                TelephonyManager.NETWORK_TYPE_HSDPA,
-                TelephonyManager.NETWORK_TYPE_HSUPA -> "3G+"
-                TelephonyManager.NETWORK_TYPE_UMTS,
-                TelephonyManager.NETWORK_TYPE_EVDO_0,
-                TelephonyManager.NETWORK_TYPE_EVDO_A,
-                TelephonyManager.NETWORK_TYPE_EVDO_B -> "3G"
-                TelephonyManager.NETWORK_TYPE_EDGE,
-                TelephonyManager.NETWORK_TYPE_GPRS -> "2G"
-                else -> ""
-            }
+            cellGenerationFor(tm.networkType)
         } catch (_: SecurityException) {
             ""
         } catch (_: Exception) {
