@@ -1,3 +1,88 @@
+# Session Handoff — the two open `widget/` items are closed (2026-08-16)
+
+Supersedes the "What's still open in `widget/`" section of the handoff below. Release status is
+unchanged: **v1.3.3 is still the released version**, and everything since it is tests and docs, so
+there is nothing user-facing waiting to ship.
+
+## The prediction was half right, and the half it got wrong is the useful part
+
+Both items were framed by the previous session as *blocked pending a workaround*. Neither actually
+was — but not for the reason either entry gave.
+
+- **`doWork()` did not need interface seams.** The entry said it "needs interface seams before it's
+  testable at all", meaning wrap the Room DAO, Ktor client and raw `Socket` in interfaces and
+  inject fakes. That machinery was never the obstacle, because **almost none of the logic that
+  decides what the widget shows is in the I/O** — it is in the derivations between the reads and
+  the DataStore write. Extracting those (`WidgetSnapshot.kt`: `resolveWidgetScore`,
+  `resolveIpDisplay`, `applyWidgetSnapshot`) yields 17 framework-free tests and leaves `doWork()` a
+  thin shell. This is the same lesson #156–#158 kept producing, one level up: **check whether the
+  logic can be pulled out pure before deciding what the test infrastructure must support.**
+- **`detectEncryptionType` is blocked outright — for the branch nobody was asking about.** The
+  suspicion about `TransportInfo` was right for API 31+: `transportInfo` can only ever be null
+  under Robolectric, so every S+ assertion reduces to "returns null", which is true with or without
+  the logic beneath it. That branch needs a real device. But the entry treated the whole function
+  as blocked, and **the pre-S branch is live code** — `minSdk` is 29, so API 29/30 devices take it
+  — and it tests fine. Three tests now cover the BSSID match and the transport guard.
+
+## Two traps worth carrying forward
+
+- **A test can pass because it never reached the code it claims to test.** The transport-guard test
+  passed with the guard *deleted*, because at the default SDK it took the S+ branch and returned
+  null for an unrelated reason. Only running it at SDK 29, against a WiFi state that would resolve
+  to WPA3 without the guard, makes it real. Same family as #158's "extracted function drifted from
+  production": the test is green, the reason is wrong.
+- **`git checkout` is the wrong revert tool for mutation loops — in both directions.** On an
+  *untracked* file it silently no-ops: a loop reverting between mutations accumulated all six
+  instead, which happened to stay readable (each round's failures were a superset of the last) but
+  hid that one mutation was never killed — an "org without an ASN" test that claimed to pin the
+  `ifBlank` fallback but could not, since `substringAfter(" ")` returns the whole string when the
+  delimiter is absent. On a *tracked* file with **uncommitted changes** it does the opposite and
+  worse: reverting a mutation on 2026-08-17 also destroyed the uncommitted `isEncryptionSecure`
+  signature fix sitting in the same file — and the suite stayed green without it, because the fix
+  was precisely the kind whose absence no test can detect (a removed null branch nothing calls).
+  **Use `cp file /tmp/x.bak` before mutating and `cp` back after — never `git checkout` — and
+  re-grep the file for your uncommitted change after any restore.**
+- **A mutation that fails to compile proves nothing.** The first attempt at the activeNetwork-guard
+  mutation broke the S+ branch's types, "failed" at `compileDebugKotlin`, and could have been
+  misread as the test catching it. The test only counts as verified when the mutant *compiles and
+  runs* and the predicted test — not the compiler — kills it.
+
+## Verification
+
+All six mutations on the new code are killed by exactly their predicted test, plus two more
+(`PING_MS` dropped, `rssiLevel` swapped for `rssi`) confirming the write-coverage assertions catch
+a dropped or mis-mapped key — the specific regression this extraction risks. A separate reviewer
+pass compared all 26 DataStore writes against the pre-refactor body key by key, condition by
+condition, and found no unintended divergence. `assembleFossDebug` plus all three CI test tasks
+pass.
+
+Two intentional behavior changes, both outside the preservation claim:
+
+1. `LAST_SCAN_TIMESTAMP` and `LAST_REFRESH_MS` now share a single `nowMs` rather than two
+   `System.currentTimeMillis()` calls microseconds apart. Nothing compares or subtracts them.
+2. **Revoking ipinfo consent now clears the cached public IP block.** It previously did not — see
+   below.
+
+## The privacy defect the extraction surfaced
+
+Worth reading even if you never touch `widget/`, because of *how* it was found rather than what it
+was. `applyWidgetSnapshot` is the only writer of `PUBLIC_IP`/`ISP_NAME`/`ASN_NAME`/`COUNTRY_*`, and
+nothing anywhere removed them. Revoking ipinfo consent in Widget Settings therefore left the last
+public IP and ISP sitting on the home screen indefinitely.
+
+**It was invisible until the retention rule was written down.** Pulling the write path out meant
+documenting *why* each key is cleared or kept, and the moment that KDoc said "a missing score keeps
+the previous grade deliberately", the public-IP block sat in the same clause — and it obviously did
+not belong there. A stale grade is cosmetic; a stale public IP after withdrawn consent is not the
+same kind of thing. The code could not tell the two cases apart because a revoked consent and a
+failed fetch both arrive as a null `ipDisplay`; `WidgetSnapshot.ipConsentGranted` now separates
+them, and the two cases are pinned by tests that fail on *different* mutations.
+
+The general lesson: **an extraction that forces you to state the rule will surface rules that are
+wrong.** The bug had been there the whole time, through every prior review of this file.
+
+---
+
 # Session Handoff — Robolectric adoption complete, v1.3.3 still current (2026-08-14/15)
 
 Supersedes the v1.3.3 handoff below on everything except release status, which is unchanged —
@@ -96,8 +181,8 @@ throwaway spike rather than assumed, and each *reduced scope* rather than gettin
 
 ## What's still open in `widget/`
 
-Two items, explicitly deferred with reasons, not silently dropped — see
-`.agent_native/agent_roadmap.md` for full detail:
+**Both items below were closed on 2026-08-16 — see the section at the top of this file.** The
+original text is kept here only because the resolutions correct it:
 - `WidgetRefreshWorker.doWork()` end-to-end (434 lines, live network + raw socket calls) — needs
   interface seams before it's testable at all.
 - `detectEncryptionType` — **re-check this against #158's `TransportInfo` finding before planning
