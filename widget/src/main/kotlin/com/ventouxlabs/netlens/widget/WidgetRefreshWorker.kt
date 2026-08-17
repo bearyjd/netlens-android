@@ -19,7 +19,6 @@ import com.ventouxlabs.netlens.widget.util.DnsLeakDetector
 import com.ventouxlabs.netlens.widget.util.NetworkCollector
 import com.ventouxlabs.netlens.widget.util.PingMeasurement
 import com.ventouxlabs.netlens.widget.util.gateSsidForTransport
-import com.ventouxlabs.netlens.widget.util.toFlagEmoji
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -93,27 +92,25 @@ class WidgetRefreshWorker(
                 0
             }
 
-            val score = if (isConnected) {
-                val persisted = try {
-                    entryPoint.userPreferencesRepository()
-                        .postureScore.first()
+            // Kept outside resolveWidgetScore — as before the extraction — so the offline path
+            // still skips the DataStore round-trip it would never use.
+            val persistedScore = if (isConnected) {
+                try {
+                    entryPoint.userPreferencesRepository().postureScore.first()
                 } catch (_: Exception) {
                     null
-                }
-                if (persisted != null && (System.currentTimeMillis() - persisted.timestampMs) < 30 * 60 * 1000L) {
-                    WidgetScore(
-                        grade = persisted.grade,
-                        colorArgb = gradeColorArgb(persisted.grade),
-                        issueCount = persisted.issueCount,
-                        topIssue = persisted.topIssue,
-                        topIssueId = null,
-                    )
-                } else {
-                    computeWidgetScore(encryptionType, deviceCount, vpnState)
                 }
             } else {
                 null
             }
+            val score = resolveWidgetScore(
+                isConnected = isConnected,
+                persisted = persistedScore,
+                nowMs = System.currentTimeMillis(),
+                encryptionType = encryptionType,
+                deviceCount = deviceCount,
+                vpnState = vpnState,
+            )
 
             val consentGranted = try {
                 entryPoint.userPreferencesRepository()
@@ -165,81 +162,25 @@ class WidgetRefreshWorker(
                 null
             }
 
+            val snapshot = WidgetSnapshot(
+                isConnected = isConnected,
+                ssid = ssid,
+                encryptionType = encryptionType,
+                score = score,
+                ipDisplay = resolveIpDisplay(ipData),
+                latencyMs = latencyMs,
+                pingMs = pingResult ?: -1,
+                deviceCount = deviceCount,
+                vpnState = vpnState,
+                collected = collected,
+                dnsServers = dnsServers,
+                routingMode = routingMode,
+                isDnsLeaking = isDnsLeaking,
+                nowMs = System.currentTimeMillis(),
+            )
+
             val dataStore = WidgetStateDefinition.getDataStore(appContext, "")
-            dataStore.edit { prefs ->
-                prefs[WidgetStateDefinition.IS_CONNECTED] = isConnected
-                if (ssid != null) {
-                    prefs[WidgetStateDefinition.SSID] = ssid
-                } else {
-                    // Explicitly remove so a previously-connected SSID does not
-                    // linger in the widget after switching to cellular or going offline.
-                    prefs.remove(WidgetStateDefinition.SSID)
-                }
-                prefs[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] = System.currentTimeMillis()
-                prefs[WidgetStateDefinition.IS_SCAN_RUNNING] = false
-
-                if (encryptionType != null) {
-                    prefs[WidgetStateDefinition.ENCRYPTION_TYPE] = encryptionType
-                    prefs[WidgetStateDefinition.IS_ENCRYPTION_SECURE] = isEncryptionSecure(encryptionType)
-                } else {
-                    // Same stale-data class as SSID: detectEncryptionType returns null
-                    // when the device is off WiFi, so a previously-cached "WPA3" would
-                    // otherwise linger on the cellular widget.
-                    prefs.remove(WidgetStateDefinition.ENCRYPTION_TYPE)
-                    prefs.remove(WidgetStateDefinition.IS_ENCRYPTION_SECURE)
-                }
-
-                if (score != null) {
-                    prefs[WidgetStateDefinition.SCORE_GRADE] = score.grade
-                    prefs[WidgetStateDefinition.SCORE_COLOR_ARGB] = score.colorArgb
-                    prefs[WidgetStateDefinition.ISSUE_COUNT] = score.issueCount
-                    if (score.topIssue != null) {
-                        prefs[WidgetStateDefinition.TOP_ISSUE] = score.topIssue
-                    } else {
-                        prefs.remove(WidgetStateDefinition.TOP_ISSUE)
-                    }
-                    if (score.topIssueId != null) {
-                        prefs[WidgetStateDefinition.TOP_ISSUE_ID] = score.topIssueId
-                    } else {
-                        prefs.remove(WidgetStateDefinition.TOP_ISSUE_ID)
-                    }
-                }
-
-                ipData?.takeIf { IP_PATTERN.matches(it.ip) }?.let { ip ->
-                    val asNumber = ip.org.substringBefore(" ").takeIf { it.startsWith("AS") } ?: ""
-                    val orgName = ip.org.substringAfter(" ").ifBlank { ip.org }
-                    prefs[WidgetStateDefinition.PUBLIC_IP] = ip.ip
-                    prefs[WidgetStateDefinition.COUNTRY_FLAG] = ip.country.toFlagEmoji()
-                    prefs[WidgetStateDefinition.COUNTRY_NAME] = java.util.Locale("", ip.country).displayCountry
-                    prefs[WidgetStateDefinition.COUNTRY_CODE] = ip.country
-                    prefs[WidgetStateDefinition.ISP_NAME] = orgName
-                    prefs[WidgetStateDefinition.ASN_NAME] = asNumber
-                }
-
-                prefs[WidgetStateDefinition.LATENCY_MS] = latencyMs
-                prefs[WidgetStateDefinition.LATENCY_HISTORY] = appendLatencySample(
-                    existingCsv = prefs[WidgetStateDefinition.LATENCY_HISTORY],
-                    sample = latencyMs.takeIf { it >= 0L }?.toInt(),
-                )
-                prefs[WidgetStateDefinition.DEVICE_COUNT] = deviceCount
-                prefs[WidgetStateDefinition.VPN_STATE] = vpnState.serialize()
-
-                prefs[WidgetStateDefinition.LOCAL_IP] = collected.localIp
-                prefs[WidgetStateDefinition.PING_MS] = pingResult ?: -1
-                prefs[WidgetStateDefinition.HAS_IPV6] = collected.hasIpv6
-                prefs[WidgetStateDefinition.VPN_INTERFACE_NAME] = collected.vpnInterfaceName
-                prefs[WidgetStateDefinition.RSSI] = collected.rssi
-                prefs[WidgetStateDefinition.RSSI_LEVEL] = collected.rssiLevel
-                prefs[WidgetStateDefinition.LINK_SPEED_MBPS] = collected.linkSpeedMbps
-                prefs[WidgetStateDefinition.CELL_GENERATION] = collected.cellGeneration
-                prefs[WidgetStateDefinition.IS_METERED] = collected.isMetered
-                prefs[WidgetStateDefinition.IS_CAPTIVE_PORTAL] = collected.isCaptivePortal
-                prefs[WidgetStateDefinition.HAS_PRIVATE_DNS] = collected.hasPrivateDns
-                prefs[WidgetStateDefinition.DNS_SERVERS] = dnsServers.joinToString(",")
-                prefs[WidgetStateDefinition.ROUTING_MODE] = routingMode
-                prefs[WidgetStateDefinition.IS_DNS_LEAKING] = isDnsLeaking
-                prefs[WidgetStateDefinition.LAST_REFRESH_MS] = System.currentTimeMillis()
-            }
+            dataStore.edit { prefs -> prefs.applyWidgetSnapshot(snapshot) }
 
             refreshAllWidgets(appContext)
 
@@ -408,8 +349,6 @@ internal fun appendLatencySample(existingCsv: String?, sample: Int?, cap: Int = 
     if (sample == null) return existing.joinToString(",")
     return (existing + sample).takeLast(cap).joinToString(",")
 }
-
-private val IP_PATTERN = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
 private val httpClient = HttpClient(CIO) {
     install(ContentNegotiation) {

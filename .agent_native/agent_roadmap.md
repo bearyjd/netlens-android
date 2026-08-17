@@ -432,14 +432,56 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
     means any bug in its 113 lines renders as a normal-looking empty widget rather than an error.
     Changing that is a product decision about widget failure UX.
 
-  **Deliberately left open, still a gap:**
-  - `WidgetRefreshWorker.doWork()` end-to-end (434 lines: Hilt `EntryPoint`-resolved Room DAO,
-    DataStore, a live Ktor call to `ipinfo.io`, a raw `Socket` to `8.8.8.8:53`) — needs interface
-    seams before it's testable at all.
-  - `detectEncryptionType` (`WidgetRefreshWorker.kt:349`) — needs `WifiInfo.currentSecurityType`;
-    see the `TransportInfo` cast limitation above, which likely blocks it independently.
-  - `NetworkCollector.readCellularSignal` — needs `TelephonyManager.signalStrength` /
-    `CellSignalStrength` construction. Its pure half is covered via `cellGenerationFor`.
+  **Both `widget/` items below were closed on 2026-08-16** — read the resolutions before
+  re-planning either; each turned out to be a different shape than this entry predicted.
+
+  - **`WidgetRefreshWorker.doWork()` — DONE, by extraction rather than by seaming the I/O.**
+    This entry said it "needs interface seams before it's testable at all", which framed the work
+    as *wrap the Room DAO / Ktor client / Socket in interfaces and inject fakes*. That is a lot of
+    machinery for little return, because **almost none of the logic that decides what the widget
+    shows lives in the I/O.** It lives in the derivations between the reads and the write. Those
+    are now in `WidgetSnapshot.kt` — `resolveWidgetScore` (the 30-minute posture-score freshness
+    window), `resolveIpDisplay` (the `ipinfo.io` validation and `org`-field split), and
+    `applyWidgetSnapshot` (the DataStore write) — all framework-free and covered by 17 tests, with
+    `doWork()` left as a thin shell that gathers inputs and calls them. The refactor was verified
+    key-by-key as behavior-preserving against the pre-refactor `dataStore.edit { }` body; the one
+    intentional change is that `LAST_SCAN_TIMESTAMP` and `LAST_REFRESH_MS` now share a single
+    `nowMs` instead of two `System.currentTimeMillis()` calls microseconds apart.
+    **What is still uncovered, and needs an instrumentation test:** `doWork()`'s own I/O — the
+    `EntryPointAccessors` resolution, the `ConnectivityManager`/`WifiManager` reads, the live
+    `ipinfo.io` call, the socket latency probe, and its `IOException`→`retry` / `Exception`→
+    `failure` result mapping.
+    **The `remove` calls in `applyWidgetSnapshot` are the subtle part** — SSID, encryption and the
+    two top-issue keys must be *cleared* when absent (else a café's WPA3 badge survives onto the
+    cellular widget), while a missing score or IP block deliberately leaves the previous value on
+    screen so an offline blip doesn't blank the grade. That asymmetry is now pinned by tests rather
+    than by comments.
+  - **`detectEncryptionType` — DONE for the branch that is reachable; the other is blocked
+    outright, not merely awkward.** The prediction above ("likely blocks it independently") was
+    correct for the **API 31+ branch**: it reads `WifiInfo` via `NetworkCapabilities.transportInfo`,
+    which is exactly the cast that throws, so `transportInfo` can only ever be null under
+    Robolectric and every S+ assertion collapses to "returns null" — true with or without the logic
+    under it. That branch needs a real API 31+ device.
+    **What the prediction missed: the pre-S branch is live code, not legacy.** `minSdk` is 29, so
+    API 29/30 devices take it, and it is fully testable — `DetectEncryptionTypeTest` covers the
+    BSSID match (with a decoy AP listed first, so a "take the first scan result" bug fails) and the
+    stale-WiFi transport guard.
+    **Two traps found while writing it, both worth keeping:**
+    - Robolectric fetches its `android-all` SDK jars on demand. Only the SDKs already in
+      `~/.m2/repository/org/robolectric/android-all-instrumented/` work offline (29/33/34/35 on
+      this machine); `@Config(sdk = [30])` tried to hit the network and failed. Prefer `sdk = [29]`
+      for the pre-S path — it is `minSdk` and therefore the more meaningful target anyway.
+    - **The transport guard cannot be asserted at the default SDK.** A first version of that test
+      passed with the guard deleted, because at SDK 35 it took the S+ branch and returned null for
+      an unrelated reason. It has to run at SDK 29 against a WiFi state that *would* resolve to
+      WPA3 if the guard were gone.
+  - `NetworkCollector.readCellularSignal` — **still open.** Needs `TelephonyManager.signalStrength`
+    / `CellSignalStrength` construction. Its pure half is covered via `cellGenerationFor`.
+  - **Noted, deliberately not fixed** (pre-existing, unchanged by the extraction): a persisted
+    posture score with a *future* timestamp is treated as fresh forever, because the freshness
+    check is `(nowMs - timestampMs) < WINDOW` and any negative delta satisfies it. Reachable only
+    via a clock rollback. `resolveWidgetScore` is now the one place to fix it if it is ever worth
+    fixing — `in 0 until POSTURE_SCORE_FRESHNESS_MS`.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.
