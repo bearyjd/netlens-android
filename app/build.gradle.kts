@@ -64,6 +64,16 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    dependenciesInfo {
+        // F-Droid's `check apk` rejects any binary carrying Google's "Dependency
+        // metadata" signing block (a Play-encrypted dependency list AGP adds by
+        // default), so it must be off for the APK or reproducible-build publishing
+        // fails. Kept on for the bundle: only Play consumes the AAB, and the block
+        // feeds Play Console's SDK insights.
+        includeInApk = false
+        includeInBundle = true
+    }
+
     buildTypes {
         debug {
             // Debug installs alongside a release build instead of replacing it. Without this
