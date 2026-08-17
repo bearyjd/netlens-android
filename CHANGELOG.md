@@ -5,6 +5,16 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.5] - 2026-08-17
+
+### Changed
+- **Release APKs no longer embed Google Play's dependency metadata.** Android's build
+  tooling silently adds an encrypted list of the app's dependencies to every APK, readable
+  only by Google. F-Droid rejects binaries carrying it, so removing it is what allows
+  F-Droid to verify our builds are reproducible and ship them signed with our own key.
+  The Play Store bundle keeps its copy, which is what Play Console's SDK insights read.
+  No user-facing behavior changes.
+
 ## [1.3.4] - 2026-08-17
 
 ### Added

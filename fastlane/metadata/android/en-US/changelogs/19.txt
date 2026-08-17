@@ -1,0 +1,1 @@
+Release APKs no longer embed Google Play's encrypted dependency-metadata block. No user-facing changes — this is what enables F-Droid to verify builds as reproducible and publish them under the developer's own signing key.
