@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.widget
 
 import android.content.Context
+import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiInfo
@@ -83,6 +84,41 @@ class DetectEncryptionTypeTest {
         )
 
         assertNull(detectEncryptionType(context, capabilities(NetworkCapabilities.TRANSPORT_WIFI)))
+    }
+
+    // The caps-not-passed overload: detectEncryptionType(context) must resolve the active
+    // network's capabilities itself. Same WiFi state as the two-arg tests, so a broken fallback
+    // (null caps short-circuiting to null) fails here and nowhere else.
+    @Test
+    @Config(sdk = [29])
+    fun `omitting capabilities falls back to the active network's own`() {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = requireNotNull(cm.activeNetwork)
+        shadowOf(cm).setNetworkCapabilities(network, capabilities(NetworkCapabilities.TRANSPORT_WIFI))
+        associate(
+            bssid = "aa:bb:cc:dd:ee:ff",
+            scanResults = listOf(scanResult("aa:bb:cc:dd:ee:ff", "[RSN-SAE-CCMP]")),
+        )
+
+        assertEquals("WPA3", detectEncryptionType(context))
+    }
+
+    // The guard one step before the fallback: no active network at all must mean null, even
+    // though WifiManager still reports the last association (it does, long after disconnect —
+    // same stale-data class as the transport guard). If the fallback ever consulted WifiManager
+    // without the activeNetwork check, an airplane-mode device would report its last café's
+    // encryption; this WiFi state would resolve to WPA3 if that guard leaked.
+    @Test
+    @Config(sdk = [29])
+    fun `no active network yields null despite a live WifiManager association`() {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        shadowOf(cm).clearAllNetworks()
+        associate(
+            bssid = "aa:bb:cc:dd:ee:ff",
+            scanResults = listOf(scanResult("aa:bb:cc:dd:ee:ff", "[RSN-SAE-CCMP]")),
+        )
+
+        assertNull(detectEncryptionType(context))
     }
 
     // Stale-WiFi guard: WifiManager keeps reporting the last association after the device moves to

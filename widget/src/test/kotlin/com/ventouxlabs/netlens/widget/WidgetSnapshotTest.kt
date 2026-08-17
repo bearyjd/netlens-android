@@ -91,6 +91,41 @@ class WidgetSnapshotTest {
         assertNull(score?.topIssueId)
     }
 
+    // Clock rollback: the persisted timestamp is *ahead* of now, so the delta is negative. A bare
+    // `< WINDOW` accepts every negative delta and would pin this grade until the clock catches
+    // up; the closed-below range treats future-dated as stale and recomputes.
+    @Test
+    fun `a persisted score with a future timestamp is stale, not eternally fresh`() {
+        val score = resolveWidgetScore(
+            isConnected = true,
+            persisted = persisted(grade = "D", issueCount = 4, timestampMs = now + 1),
+            nowMs = now,
+            encryptionType = "WPA3",
+            deviceCount = 1,
+            vpnState = VpnState.FullTunnel,
+        )
+
+        assertEquals("A", score?.grade)
+        assertNull(score?.topIssue)
+    }
+
+    // Delta of exactly zero (persisted in the same millisecond) is the freshest possible score
+    // and must stay inside the window — `in 0 until` includes it, an accidental `in 1 until`
+    // or an exclusive lower bound would not.
+    @Test
+    fun `a persisted score from this exact millisecond is fresh`() {
+        val score = resolveWidgetScore(
+            isConnected = true,
+            persisted = persisted(grade = "D", issueCount = 4),
+            nowMs = now,
+            encryptionType = "WPA3",
+            deviceCount = 1,
+            vpnState = VpnState.FullTunnel,
+        )
+
+        assertEquals("D", score?.grade)
+    }
+
     @Test
     fun `no persisted score falls back to the computed one`() {
         val score = resolveWidgetScore(

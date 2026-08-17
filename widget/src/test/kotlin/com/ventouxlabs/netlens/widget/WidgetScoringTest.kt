@@ -119,10 +119,10 @@ class WidgetScoringTest {
         assertFalse(isEncryptionSecure("WPA"))
     }
 
-    @Test
-    fun `isEncryptionSecure returns true for null (not on WiFi)`() {
-        assertTrue(isEncryptionSecure(null))
-    }
+    // No null case: isEncryptionSecure deliberately takes a non-nullable String. It used to
+    // accept null and return true — fail-open on a security predicate — and the fix was to make
+    // the case uncallable, not to flip the default. "Unknown" is expressed by removing the
+    // IS_ENCRYPTION_SECURE key (see WidgetSnapshotTest's clearing tests), never by passing null.
 
     @Test
     fun `parseCapabilities detects WPA3 from SAE`() {

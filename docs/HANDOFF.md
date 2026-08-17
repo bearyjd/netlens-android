@@ -31,13 +31,21 @@ was — but not for the reason either entry gave.
   null for an unrelated reason. Only running it at SDK 29, against a WiFi state that would resolve
   to WPA3 without the guard, makes it real. Same family as #158's "extracted function drifted from
   production": the test is green, the reason is wrong.
-- **`git checkout` cannot revert an untracked file.** A mutation-check loop reverting between
-  mutations silently accumulated all six instead, because `WidgetSnapshot.kt` was new and unstaged.
-  It happened to still be readable — each round's failures were a superset of the last — but it
-  also hid that one mutation was never killed. **`git add -N` a new file before mutation-testing
-  it, or copy it aside.** The mutation it hid: an "org without an ASN" test that claimed to pin the
+- **`git checkout` is the wrong revert tool for mutation loops — in both directions.** On an
+  *untracked* file it silently no-ops: a loop reverting between mutations accumulated all six
+  instead, which happened to stay readable (each round's failures were a superset of the last) but
+  hid that one mutation was never killed — an "org without an ASN" test that claimed to pin the
   `ifBlank` fallback but could not, since `substringAfter(" ")` returns the whole string when the
-  delimiter is absent. The fallback only matters for an org that is *nothing but* an ASN.
+  delimiter is absent. On a *tracked* file with **uncommitted changes** it does the opposite and
+  worse: reverting a mutation on 2026-08-17 also destroyed the uncommitted `isEncryptionSecure`
+  signature fix sitting in the same file — and the suite stayed green without it, because the fix
+  was precisely the kind whose absence no test can detect (a removed null branch nothing calls).
+  **Use `cp file /tmp/x.bak` before mutating and `cp` back after — never `git checkout` — and
+  re-grep the file for your uncommitted change after any restore.**
+- **A mutation that fails to compile proves nothing.** The first attempt at the activeNetwork-guard
+  mutation broke the S+ branch's types, "failed" at `compileDebugKotlin`, and could have been
+  misread as the test catching it. The test only counts as verified when the mutant *compiles and
+  runs* and the predicted test — not the compiler — kills it.
 
 ## Verification
 

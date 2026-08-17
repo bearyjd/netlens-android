@@ -486,15 +486,20 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
     `WidgetSnapshot.ipConsentGranted` now distinguishes them — failed fetch keeps the last values,
     revocation clears the block. **This is a behavior change**, not part of the extraction's
     behavior-preservation claim.
-  - **Noted, deliberately not fixed** (pre-existing, unchanged by the extraction): a persisted
-    posture score with a *future* timestamp is treated as fresh forever, because the freshness
-    check is `(nowMs - timestampMs) < WINDOW` and any negative delta satisfies it. Reachable only
-    via a clock rollback. `resolveWidgetScore` is now the one place to fix it if it is ever worth
-    fixing — `in 0 until POSTURE_SCORE_FRESHNESS_MS`.
-  - **Also noted, not fixed:** `isEncryptionSecure(null)` returns **`true`** — it fails *open* on a
-    security-adjacent predicate. Unreachable through the widget today (`applyWidgetSnapshot` only
-    calls it inside a non-null branch), but it is `internal`, so the next caller inherits the wrong
-    default. Changing it is a behavior change and may move `WidgetScoringTest`.
+  - **Fixed (2026-08-17): the future-timestamp freshness hole.** `resolveWidgetScore` now uses
+    `(nowMs - timestampMs) in 0 until POSTURE_SCORE_FRESHNESS_MS`; a clock rollback makes the
+    delta negative, and a bare `<` accepted every negative delta — pinning a possibly-days-old
+    grade until the clock caught up. Both bounds are mutation-pinned (`< `, `in 1 until`, and
+    `in 0..` each fail exactly one test).
+  - **Fixed (2026-08-17): `isEncryptionSecure`'s fail-open null.** Not by flipping `null → false`
+    but by **removing the nullable parameter** — the null case was unreachable (the caller guards
+    non-null, the UI renders the flag only when an encryption type is present), so the right fix
+    was making the wrong default unrepresentable rather than choosing a different wrong default.
+    "Unknown encryption" is expressed by removing the `IS_ENCRYPTION_SECURE` key, never by a null
+    argument. Note the *read* side still defaults absent-to-true (`toWidgetState`'s `?: true`),
+    which is fine because the UI never renders the flag without a type — but if a future consumer
+    reads `isEncryptionSecure` without checking `encryptionType.isNotEmpty()`, that default
+    becomes the same trap one layer up.
   - **Known untestable hazard:** `WidgetSnapshot` has 14 constructor params including two
     same-typed adjacent pairs (`latencyMs`/`nowMs` as `Long`, `pingMs`/`deviceCount` as `Int`).
     `WidgetSnapshotTest` catches a transposition inside `applyWidgetSnapshot` (every key asserted

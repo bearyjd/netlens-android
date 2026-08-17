@@ -27,6 +27,11 @@ internal const val POSTURE_SCORE_FRESHNESS_MS = 30 * 60 * 1000L
  * A score persisted by the Security Posture screen is a real audit and outranks the widget's own
  * three-signal estimate — but only while it is fresh, otherwise a scan from days ago would pin the
  * grade. Offline yields `null` (no grade at all) rather than a computed-from-nothing "F".
+ *
+ * Freshness is a **closed-below** range check, not a plain `< WINDOW`: a persisted timestamp in
+ * the *future* (clock rollback, restored backup) makes the delta negative, and a bare `<` would
+ * treat it as fresh until the clock catches back up — pinning a possibly-days-old grade
+ * indefinitely. A future-dated score is stale, and the widget recomputes.
  */
 internal fun resolveWidgetScore(
     isConnected: Boolean,
@@ -37,7 +42,7 @@ internal fun resolveWidgetScore(
     vpnState: VpnState,
 ): WidgetScore? {
     if (!isConnected) return null
-    if (persisted != null && (nowMs - persisted.timestampMs) < POSTURE_SCORE_FRESHNESS_MS) {
+    if (persisted != null && (nowMs - persisted.timestampMs) in 0 until POSTURE_SCORE_FRESHNESS_MS) {
         return WidgetScore(
             grade = persisted.grade,
             colorArgb = gradeColorArgb(persisted.grade),

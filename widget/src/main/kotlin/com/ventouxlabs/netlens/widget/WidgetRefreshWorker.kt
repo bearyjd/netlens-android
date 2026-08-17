@@ -281,8 +281,15 @@ internal fun deviceCountScore(count: Int): Int = when {
     else -> 40
 }
 
-internal fun isEncryptionSecure(type: String?): Boolean {
-    if (type == null) return true
+/**
+ * Non-nullable on purpose. This used to take `String?` and return `true` for null — failing
+ * *open* on a security-adjacent predicate. The null case was unreachable (the one caller guards
+ * non-null, and the UI only renders the flag when an encryption type is present), but an
+ * `internal` function with a wrong default is a trap for the next caller, so the case is now
+ * unrepresentable instead of wrongly defaulted. "Unknown encryption" is expressed by *removing*
+ * `IS_ENCRYPTION_SECURE`, never by passing null here.
+ */
+internal fun isEncryptionSecure(type: String): Boolean {
     val upper = type.uppercase()
     return upper.contains("WPA3") || upper.contains("WPA2") || upper.contains("OWE")
 }
