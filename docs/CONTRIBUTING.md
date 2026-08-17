@@ -36,7 +36,8 @@ Multi-module Gradle project: `app` + 24 `feature:*` modules + 9 `core:*` modules
 - HTTP-touching code uses Ktor `MockEngine` (see `HttpRequesterImplTest.kt`). To assert the SSRF guard use `SsrfRedirectProbe` from `core:network-testing` rather than hand-rolling a redirect engine — get the scheme wrong and Ktor's own https→http protection makes the test pass whether or not the guard exists.
 - Composition smoke tests (Paparazzi, via `netlens.android.screenshot`) render a screen on the JVM and fail if it cannot compose — catching duplicate `LazyColumn` keys and measure/layout crashes. No golden images are recorded or committed. Only state-driven composables work, which is why screen-level `Content` functions are `internal` rather than `private`.
 - CI picks up tests in any module with a `src/test` tree automatically — no workflow edits needed.
-- No Robolectric or instrumentation tests exist; code touching `Context`/system services needs an interface seam to be testable (see `.agent_native/agent_roadmap.md` for known gaps).
+- Robolectric is **opt-in and deliberately scoped**: the `netlens.android.robolectric` convention plugin is applied only to `core:data` (real Room SQL + migration tests) and `widget` (framework-bound lifecycle tests). Everywhere else, code touching `Context`/system services gets an interface seam instead — extract the pure logic and test that hard before reaching for Robolectric. Known shadow limits (what Robolectric *cannot* test here) are recorded in `.agent_native/agent_roadmap.md`.
+- No instrumentation (`androidTest`) tests exist; anything needing a real device (live `WifiInfo` via `transportInfo`, `SignalStrength` dbm extraction) is flagged in the roadmap rather than faked.
 
 ## Code Style
 

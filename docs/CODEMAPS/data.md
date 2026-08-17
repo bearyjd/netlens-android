@@ -1,4 +1,4 @@
-<!-- Generated: 2026-08-04 | Files scanned: core:data (22 entities, 19 DAOs, schema v16) | Token estimate: ~1040 -->
+<!-- Generated: 2026-08-17 | Files scanned: core:data (22 entities, 19 DAOs, schema v16) | Token estimate: ~1080 -->
 
 # Data Layer
 
@@ -15,6 +15,11 @@ latency rows from new TCP-connect-RTT rows); v15 = Wi-Fi coverage survey
 
 **Every schema change needs a `Migration`** — the builder falls back destructively only on
 *downgrade*. Schemas are committed under `core/data/schemas/` (`1.json` … `16.json`).
+
+Migrations and real `@Query` SQL are covered by Robolectric tests (`MigrationTest`,
+`KnownDeviceDaoTest` — via the opt-in `netlens.android.robolectric` plugin, PR #155).
+Room stays pinned to 2.6.1 deliberately: the tests use the classic `MigrationTestHelper`
+constructor that Room 2.7's KMP release removed.
 
 ```
 core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
@@ -63,6 +68,7 @@ core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 `location`) belong to the Devices detail sheet via `KnownDeviceDao.updateUserDetails`.
 Keep them disjoint — a re-scan must never clobber what the user typed. Tags are a
 normalised comma-separated column; always go through `DeviceTags` and `KnownDeviceSearch`.
+The disjointness invariant is pinned against the real SQL by `KnownDeviceDaoTest`.
 
 ## Data Flow
 

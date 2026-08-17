@@ -1,4 +1,4 @@
-<!-- Generated: 2026-08-04 | Files scanned: libs.versions.toml + build-logic + .github/workflows | Token estimate: ~580 -->
+<!-- Generated: 2026-08-17 | Files scanned: libs.versions.toml + build-logic + .github/workflows | Token estimate: ~620 -->
 
 # Dependencies
 
@@ -37,6 +37,9 @@
 | Turbine (1.2.0) | Flow/StateFlow testing |
 | kotlinx-coroutines-test | TestDispatcher, runTest |
 | Ktor MockEngine | HTTP client mocking |
+| Robolectric (4.16) | Real `Context`/SQLite in JVM tests — opt-in, only `core:data` + `widget` |
+| work-testing | WorkManager enqueue assertions (`widget`) |
+| Paparazzi (1.3.5) | Composition smoke tests, no golden images |
 
 ## Convention Plugins (build-logic/)
 
@@ -48,6 +51,7 @@
 | `netlens.hilt` | Hilt plugin + KSP + hilt-android + hilt-compiler |
 | `netlens.android.feature` | library + compose + hilt + lifecycle + nav + core:billing + core:ui |
 | `netlens.android.screenshot` | Paparazzi + JUnit4 vintage engine — composition smoke tests, no golden images |
+| `netlens.android.robolectric` | Robolectric + JUnit4 vintage engine — opt-in, applied to `core:data` and `widget` only |
 
 ## CI
 

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-08-04 | Files scanned: 36 modules | Token estimate: ~850 -->
+<!-- Generated: 2026-08-17 | Files scanned: 36 modules | Token estimate: ~870 -->
 
 # Architecture
 
@@ -11,8 +11,10 @@ app (single Activity)
 ├── feature:* × 24      (all apply netlens.android.feature = library + compose +
 │                        hilt + lifecycle + nav + core:billing + core:ui;
 │                        per-tool index lives in features.md, not duplicated here)
-├── widget              (Glance home screen widget)
-├── core:network        (connectivity, SSRF guard, ResultExporter)
+├── widget              (Glance home screen widget; pure derivations extracted to
+│                        WidgetSnapshot.kt / WidgetRefresh.kt for JVM testing)
+├── core:network        (connectivity, SSRF guard, ResultExporter, DisplayText.flatten —
+│                        sanitises network-supplied names at ingestion)
 ├── core:data           (Room DB v16, 22 entities, 19 DAOs)
 ├── core:scan           (LAN scan engines + DeviceInventoryRepository + NewDeviceNotifier
 │                        + port/service domain: PortScanner, PortResult, PortRiskLevel,
@@ -70,6 +72,7 @@ Flavor sources: `app/src/foss/` and `app/src/gplay/` (BillingModule + GplayProSt
 | `netlens.hilt` | Hilt + KSP |
 | `netlens.android.feature` | library + compose + hilt + lifecycle + nav + billing + core:ui |
 | `netlens.android.screenshot` | Paparazzi composition smoke tests (no golden images) |
+| `netlens.android.robolectric` | Opt-in Robolectric (JUnit4) — applied only to `core:data` and `widget` |
 
 ## Navigation
 

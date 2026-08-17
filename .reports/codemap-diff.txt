@@ -1,89 +1,37 @@
-Codemap + docs refresh — 2026-08-04
+Codemap diff — 2026-08-17 (previous scan: 2026-08-04)
 
-Trigger: /update-codemaps + /update-docs after the anti-slop cleanup pass (PR #129)
-landed on master. Previous scan: 2026-07-19/20.
+Scope of drift since last scan (PRs #155-#161, v1.3.1 → v1.3.4):
 
-Modules: 36 gradle projects (was 32): app, widget, baselineprofile, 9 core, 24 feature.
-  + core:scan-testing     NEW — shared Fake* engine doubles (testImplementation only)
-  + core:data-testing     NEW — FakeNetworkEventDao (testImplementation only)
-  + core:network-testing  NEW — SsrfRedirectProbe (testImplementation only)
-  + baselineprofile       now ON MASTER (settings.gradle.kts:55). The previous report
-                          said "branch perf/baseline-profile / draft PR #108 only —
-                          NOT on master". That is no longer true. [architecture.md]
+architecture.md  UPDATED (~5% diff)
+  - core:network now includes DisplayText.flatten (ingestion-level name sanitisation, #160)
+  - widget: pure derivations extracted to WidgetSnapshot.kt / WidgetRefresh.kt
+  - convention plugin table: added netlens.android.robolectric (opt-in, core:data + widget)
 
-Module graph: feature:lanscan -> feature:portscan REMOVED.
-  This was the only feature->feature edge in the repo. Nine shared port types
-  (PortScanner, PortScannerImpl, ServiceIntentLauncher, PortResult, PortRiskLevel,
-  PortRiskClassifier, WellKnownPorts, ServiceLaunch, ServiceLauncher) moved to
-  core:scan. bindPortScanner folded into ScanModule; PortScanModule deleted.
-  The graph is now flat: feature:* -> core:* only. [architecture.md]
+data.md          UPDATED (~6% diff)
+  - Migrations + real @Query SQL now covered by Robolectric tests (MigrationTest,
+    KnownDeviceDaoTest, PR #155); Room 2.6.1 pin documented as deliberate
+  - known_devices write-path disjointness invariant now pinned against real SQL
 
-New shared component: core:ui/ResultActions.kt — TopAppBar copy/share row replacing a
-  ~15-line inline block duplicated across 14 screens. isPro is a required parameter
-  with no default, so a call site cannot silently expose the Pro-only share action.
-  [architecture.md, features.md]
+dependencies.md  UPDATED (~8% diff)
+  - Test deps: added Robolectric 4.16, work-testing, Paparazzi 1.3.5
+  - Convention plugin table: added netlens.android.robolectric
+  - Library/toolchain versions: NO drift (AGP 8.9.0, Kotlin 2.1.0, Room 2.6.1,
+    Ktor 3.0.3, Compose BOM 2024.12.01 all unchanged)
 
-New convention plugin: netlens.android.screenshot (Paparazzi composition smoke tests,
-  no golden images recorded or committed). [architecture.md, dependencies.md]
+features.md      SKIPPED (no structural changes; ping watchdog #161 is
+                 ViewModel-internal, module index unchanged)
 
-Build config: testLogging added to AndroidLibraryConventionPlugin + app/build.gradle.kts.
-  Previously NO testLogging existed anywhere — Gradle printed only a failing test's
-  name, with no exception or stack trace, in every module.
+CONTRIBUTING.md  UPDATED
+  - "No Robolectric anywhere" claim was stale since #155/#156 — replaced with the
+    opt-in/scoped policy and the seam-first guidance
 
-Data layer: Room version 14 -> 16. 22 entities (was 19), 19 DAOs (was 17).
-  + WifiSurveySessionEntity, WifiSurveyPointEntity + WifiSurveyDao (v15) — coverage survey
-  + LanScanInventoryEntry + LanScanInventoryDao (v16) — saved LAN scan collections
-  + MIGRATION_14_15, MIGRATION_15_16; schemas 15.json, 16.json
-  + core/data/repository/ — HistoryRepository split into interface + Impl so
-    HistoryViewModel could be unit tested (@Binds in RepositoryModule)
+RUNBOOK.md       DELIBERATELY NOT CREATED
+  - docs/RELEASING.md + .claude/skills/android-release/SKILL.md are the release
+    runbook (single source of truth); duplicating them would create drift
 
-Dependencies: no new runtime libraries. core:ui gained compose-material-icons (for
-  ResultActions); core:scan gained the kotlin-serialization plugin + json (PortRiskLevel
-  is @Serializable and moved in).
+Schema: still v16 (no migrations since last scan)
+Module count: unchanged (24 feature, 6 core runtime, 3 core test-only, app,
+widget, baselineprofile)
 
-CORRECTED CLAIMS — docs were wrong, not merely stale:
-  CI test command
-    was documented: ./gradlew testFossDebugUnitTest testDebugUnitTest
-    actual:         ./gradlew testFossDebugUnitTest testGplayDebugUnitTest testDebugUnitTest
-    Only the gplay task reaches src/testGplay, where GplayProStatusTest's 12 billing
-    tests live. A two-task run skips them SILENTLY rather than failing. Measured:
-    858 tests (2 tasks) vs 895 (3 tasks). ci.yml:36-41 carries the same warning.
-    Fixed in CLAUDE.md, docs/CONTRIBUTING.md, dependencies.md, agent_roadmap.md.
-  Result export: "13 tool ViewModels" -> 18.
-  Pro-gating: "3 patterns, 11 screens direct if (isPro)" -> ResultActions (14 screens)
-    + nullable lambda (lanscan, mdns) + boolean param (WiFi channel graph).
-  Fake location: CONTRIBUTING said to copy the Fake* pattern from
-    feature/lanscan/src/test/.../engine/ — a path that no longer exists, prescribing
-    exactly the copying that produced three drifted fakes. Actively harmful; replaced.
-
-Per-file:
-  architecture.md  MODIFIED  9 core modules, test-only modules, port domain in core:scan,
-                             ResultActions in core:ui, flat-graph rule, baselineprofile
-                             on master, +netlens.android.screenshot, header 32->36 modules
-  data.md          MODIFIED  Room 14->16, 22 entities / 19 DAOs, +3 entities +2 DAOs,
-                             +2 migrations, repository/ package, write-path ownership
-  features.md      MODIFIED  pro-gating rewritten around ResultActions, export 13->18,
-                             NetLog export exception noted; 24-row module index unchanged
-  dependencies.md  MODIFIED  CI runs three test tasks, +netlens.android.screenshot
-  backend.md/frontend.md  N/A (Android app; no backend/route or web-frontend codemaps)
-
-OPEN FINDINGS — not fixed by this pass:
-  FakeDataStore is duplicated in two feature test files rather than living in
-  core:data-testing: feature/ipinfo/.../IpInfoViewModelTest.kt and
-  feature/widgetsettings/.../WidgetSettingsViewModelTest.kt. Same copied-fake pattern
-  that produced the drifted FakeOuiLookup, FakeNetworkEventDao and two FakePortScanner
-  copies. Worth consolidating.
-
-  DevicesViewModelTest > "watchCurrentNetwork is a no-op when gateway is unresolvable"
-  is a live flake: failed twice under full-suite runs, then did not reproduce in 26
-  attempts (12 idle module, 8 CPU-saturated module, 6 full-suite). Unfixed by design —
-  no root cause established. Failures now print full stack traces, so the next firing
-  is diagnosable rather than another dead end.
-
-Current app version: 1.3.1 (versionCode 15).
-
-Staleness warnings (>90 days): none. Oldest tracked doc is docs/PRIVACY_POLICY.md at
-  20 days. Deliberately NOT rewritten (dated historical records — editing them would
-  destroy the record): docs/superpowers/plans/**, docs/superpowers/specs/**,
-  .omc/skills/unenforced-verification-expertise.md, and the problem statements in
-  .agent_native/agent_roadmap.md (dated correction appended beneath instead).
+Staleness check (90+ days): none. Oldest doc is PRIVACY_POLICY.md (2026-07-14,
+34 days) — within window.
