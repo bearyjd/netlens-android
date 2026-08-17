@@ -475,8 +475,27 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
       passed with the guard deleted, because at SDK 35 it took the S+ branch and returned null for
       an unrelated reason. It has to run at SDK 29 against a WiFi state that *would* resolve to
       WPA3 if the guard were gone.
-  - `NetworkCollector.readCellularSignal` — **still open.** Needs `TelephonyManager.signalStrength`
-    / `CellSignalStrength` construction. Its pure half is covered via `cellGenerationFor`.
+  - `NetworkCollector.readCellularSignal` — **closed as far as it can go (2026-08-17), one dbm
+    assertion permanently out of reach.** Robolectric 4.16 ships **no `ShadowSignalStrength` at
+    all** (confirmed against `shadows-framework-4.16.jar`, not assumed), so a `SignalStrength`'s
+    `cellSignalStrengths` list cannot be populated without reflecting into hidden framework
+    constructors — which these tests deliberately don't do, same ruling as `LinkAddress` and
+    `TransportInfo`. What IS covered: `ShadowTelephonyManager.setSignalStrength` works, so the
+    branch's *wiring* is pinned (present-but-empty signal → dbm sentinel `-1000` + real `level`
+    `0`; absent signal → both sentinels), and `setNetworkType` works, so `detectCellGeneration`'s
+    wiring is pinned end-to-end ("LTE"). The dbm *extraction* itself needs a real device.
+  - Two collector decisions from the "deliberately unfixed" list were **made and shipped
+    (2026-08-17)**: the pre-Q WiFi fallback and the `>= P` private-DNS gate are deleted (dead
+    under `minSdk 29`), and the outer `catch` now logs (`Log.w`, tag `NetworkCollector`) before
+    degrading to empty data — the widget UX is unchanged, but "widget looks empty" is now
+    diagnosable from logcat. The log-and-degrade path has a regression test driven by a
+    throwing `ContextWrapper`.
+  - **New confirmed Robolectric/JVM limits (2026-08-17)**, recorded so nobody re-spikes them:
+    `NsdServiceInfo` is not constructible in a plain JVM test (`core:scan` has no Robolectric, and
+    android.jar stubs throw), so `LanMdnsScannerImpl`'s flatten-at-ingestion call site is a tested
+    function (`DisplayText.flatten`) behind an untestable one-line callback; and
+    `LinkProperties.isPrivateDnsActive` has no public or shadow setter, so `hasPrivateDns` remains
+    assertion-free on both sides of its (deleted, always-true) SDK gate.
   - **Fixed while extracting — a privacy defect the extraction surfaced.** `applyWidgetSnapshot`
     is the **only** writer of `PUBLIC_IP`/`ISP_NAME`/`ASN_NAME`/`COUNTRY_*`, and nothing anywhere
     removed them. `doWork()` sets `ipData = null` when `ipInfoConsentGranted` is false, so revoking

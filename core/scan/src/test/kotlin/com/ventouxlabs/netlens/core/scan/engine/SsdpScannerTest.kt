@@ -93,4 +93,25 @@ class SsdpScannerTest {
         val result = SsdpScannerImpl.readCapped(content.reader().buffered(), 1000)
         assertEquals(1000, result.length)
     }
+
+    // Ingestion-level flattening: every tag is device-controlled, and before 2026-08-17 a newline
+    // in a friendlyName reached Compose, the notification and Room as-is — the exact forged-row
+    // payload DisplayText's doc describes reached every sink that didn't flatten for itself.
+    @Test
+    fun `parseDeviceXml flattens control characters in device-supplied tags`() {
+        val xml = "<friendlyName>nas)\n192.168.1.1 (Router</friendlyName>" +
+            "<manufacturer>Acme\u0000Corp</manufacturer>"
+
+        val device = SsdpScannerImpl.parseDeviceXml("10.0.0.9", xml)
+
+        assertEquals("nas) 192.168.1.1 (Router", device.friendlyName)
+        assertEquals("Acme Corp", device.manufacturer)
+    }
+
+    @Test
+    fun `parseDeviceXml treats a tag of pure control characters as absent`() {
+        val device = SsdpScannerImpl.parseDeviceXml("10.0.0.9", "<friendlyName>\u0001\u0002</friendlyName>")
+
+        assertNull(device.friendlyName)
+    }
 }

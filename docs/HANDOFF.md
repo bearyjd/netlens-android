@@ -378,11 +378,18 @@ real `@Query`. **Grep the interface name, not the `Fake` prefix.**
    the PM handoff.
 5. **`DevicesViewModelTest` flake** — still unfixed by design. Wait for the stack trace
    `testLogging` now gives; do not chase it cold.
-6. **Display sinks still receive unflattened strings.** Compose `Text` and the notification
-   get raw hostnames. A newline there wraps rather than forges, so it is cosmetic — but a
-   future line-oriented sink inherits the bug. Ingestion-level flattening would close the
-   class; the construction points are scattered across `LanScanViewModel`, so it is separate
-   work.
+6. **Display sinks still receive unflattened strings.** — **DONE (2026-08-17), and the fix
+   landed one layer lower than this entry predicted.** The construction points are *not* where
+   the flattening belongs: the right chokepoints are the four `core:scan` engines where network
+   bytes first become model strings (`SubnetScannerImpl`'s reverse-DNS result, `SsdpScanner`'s
+   `extractTag`, `NetBiosProber`'s 15 wire bytes, `LanMdnsScannerImpl`'s `serviceName`), so
+   every sink — Compose, the notification, Room, exports — inherits `DisplayText.flatten` at
+   once. Two caveats a future reader needs: rows persisted *before* the change still hold raw
+   values until the next rescan overwrites them, which is why `LanScanViewModel`'s export-site
+   flatten calls are load-bearing, not redundant (the comment there now says "Do not remove");
+   and one pre-existing fuzz test (`control characters and bidi overrides survive verbatim`)
+   pinned the *old* contract on purpose and was inverted, not deleted — bidi overrides still
+   survive, because they are not control characters and remain a sink-side concern.
 7. **F-Droid: still never listed.** MR #42628 is the initial-inclusion request. No tag reaches
    an F-Droid user until a maintainer merges it.
 

@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.core.scan.engine
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -45,5 +46,24 @@ class SubnetScannerImplTest {
         assertEquals(254, range.size)
         assertEquals("10.0.1.1", range.first())
         assertEquals("10.0.1.254", range.last())
+    }
+
+    // A PTR record is shaped by whoever answers reverse DNS on this network — flatten at
+    // ingestion so every sink inherits it.
+    @Test
+    fun `sanitizeResolvedHostname flattens a hostile reverse-dns result`() {
+        val name = SubnetScannerImpl.sanitizeResolvedHostname("10.0.0.9", "nas)\n10.0.0.1 (Router)")
+
+        assertEquals("nas) 10.0.0.1 (Router)", name)
+    }
+
+    @Test
+    fun `sanitizeResolvedHostname drops a resolution that merely echoes the ip`() {
+        assertNull(SubnetScannerImpl.sanitizeResolvedHostname("10.0.0.9", "10.0.0.9"))
+    }
+
+    @Test
+    fun `sanitizeResolvedHostname keeps an ordinary hostname`() {
+        assertEquals("printer.lan", SubnetScannerImpl.sanitizeResolvedHostname("10.0.0.9", "printer.lan"))
     }
 }

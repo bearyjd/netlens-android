@@ -191,6 +191,67 @@ class NetworkCollectorTest {
         assertEquals("", data.vpnInterfaceName)
     }
 
+    // The outer catch deliberately degrades to empty data (a widget has no error surface), but
+    // it must (a) actually degrade rather than crash the worker, and (b) no longer be silent —
+    // the Log.w is what makes "widget looks empty" diagnosable from a bug report.
+    @Test
+    fun `an internal failure degrades to empty data and logs the exception`() = runBlocking {
+        val throwingContext = object : android.content.ContextWrapper(context) {
+            override fun getSystemService(name: String): Any = error("boom: injected failure")
+        }
+
+        val data = NetworkCollector.collect(throwingContext)
+
+        assertEquals(CollectedNetworkData(), data)
+        val logged = org.robolectric.shadows.ShadowLog.getLogsForTag("NetworkCollector")
+        assertTrue(logged.any { it.throwable?.message == "boom: injected failure" })
+    }
+
+    // What IS assertable for cellular signal, and what is not: Robolectric 4.16 ships no
+    // ShadowSignalStrength (confirmed against shadows-framework-4.16.jar), so a SignalStrength's
+    // cellSignalStrengths list cannot be populated without reflecting into hidden framework
+    // constructors — which this module's tests deliberately don't do (same ruling as
+    // LinkAddress and TransportInfo). So `dbm` extraction is untestable here; what this pins is
+    // that the cellular branch *consults* TelephonyManager.signalStrength and maps its `level` —
+    // a present-but-empty signal yields level 0, not the -1 "no signal object" sentinel.
+    @Test
+    fun `a present cellular signal reports its level, not the no-signal sentinel`() = runBlocking {
+        val network = requireNotNull(cm.activeNetwork)
+        register(network, capabilities(NetworkCapabilities.TRANSPORT_CELLULAR))
+        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        val strength = org.robolectric.shadow.api.Shadow.newInstanceOf(android.telephony.SignalStrength::class.java)
+        shadowOf(tm).setSignalStrength(strength)
+
+        val data = NetworkCollector.collect(context)
+
+        assertEquals(-1000, data.rssi) // empty cellSignalStrengths -> dbm unavailable
+        assertEquals(0, data.rssiLevel) // but the signal object's own level IS read
+    }
+
+    @Test
+    fun `a missing cellular signal reports both no-signal sentinels`() = runBlocking {
+        val network = requireNotNull(cm.activeNetwork)
+        register(network, capabilities(NetworkCapabilities.TRANSPORT_CELLULAR))
+        // No setSignalStrength: TelephonyManager.signalStrength stays null.
+
+        val data = NetworkCollector.collect(context)
+
+        assertEquals(-1000, data.rssi)
+        assertEquals(-1, data.rssiLevel)
+    }
+
+    // SPIKE: cell generation via the shadow's network-type setter.
+    @Test
+    fun `cellular network reports its generation from the telephony network type`() = runBlocking {
+        val network = requireNotNull(cm.activeNetwork)
+        register(network, capabilities(NetworkCapabilities.TRANSPORT_CELLULAR))
+        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        @Suppress("DEPRECATION")
+        shadowOf(tm).setNetworkType(android.telephony.TelephonyManager.NETWORK_TYPE_LTE)
+
+        assertEquals("LTE", NetworkCollector.collect(context).cellGeneration)
+    }
+
     @Test
     fun `dns servers are read from the active link properties`() = runBlocking {
         val network = requireNotNull(cm.activeNetwork)
