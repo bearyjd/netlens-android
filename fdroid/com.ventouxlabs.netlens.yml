@@ -19,7 +19,8 @@ AutoName: NetLens
 
 RepoType: git
 Repo: https://github.com/bearyjd/netlens-android.git
-Binaries: https://github.com/bearyjd/netlens-android/releases/download/v%v/app-foss-release.apk
+Binaries: 
+  https://github.com/bearyjd/netlens-android/releases/download/v%v/app-foss-release.apk
 
 Builds:
   - versionName: 1.3.4
@@ -33,7 +34,7 @@ AllowedAPKSigningKeys: 8fdfc928f8f04c6fbca94d4712a599570b5262b71897f4f576f090aa0
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
-UpdateCheckData:
+UpdateCheckData: 
   gradle.properties|netlens\.versionCode=(\d+)|gradle.properties|netlens\.versionName=(.*)
 CurrentVersion: 1.3.4
 CurrentVersionCode: 18
