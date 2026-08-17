@@ -1,3 +1,16 @@
+# Session Handoff — v1.3.4 tagged and released (2026-08-17)
+
+**v1.3.4 / versionCode 18 was tagged and pushed on 2026-08-17** (bump commit `5defa66`, tagged on
+the commit after PR #161 merged). Recorded at tag time per the release skill's rule — v1.3.1 went
+unrecorded and a later session shipped from a tree whose version was already taken. Contents: ping
+timeout visibility (#161), the widget consent-withdrawal privacy fix and freshness clock-rollback
+fix (#159), ingestion-level name flattening (#160), plus the #155–#158 test infrastructure. Cert
+continuity verified against the documented baseline (`8fdfc9…`, exact match, both flavors). The
+CHANGELOG `[1.3.4]` block and `fastlane/.../changelogs/18.txt` exist. F-Droid: still not listed —
+MR !42628 remains the gate; the tag reaches no F-Droid user until it merges.
+
+---
+
 # Session Handoff — the two open `widget/` items are closed (2026-08-16)
 
 Supersedes the "What's still open in `widget/`" section of the handoff below. Release status is
