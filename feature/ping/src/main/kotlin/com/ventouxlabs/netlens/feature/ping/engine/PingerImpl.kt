@@ -28,6 +28,9 @@ class PingerImpl @Inject constructor() : Pinger {
         return runPingProcess(listOf("ping", "-c", count.toString(), "--", sanitized))
     }
 
+    // The 1s send interval (explicit -i 1 here, the default for the fixed run above) is
+    // mirrored by PingViewModel.WATCHDOG_INTERVAL_MS — change one and the watchdog paints
+    // phantom timeouts. No test can link a process argument to a ViewModel constant.
     override fun pingContinuous(host: String): Flow<PingResult> {
         val sanitized = validateHost(host)
         return runPingProcess(listOf("ping", "-i", "1", "--", sanitized))

@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import com.ventouxlabs.netlens.core.data.dao.PingHistoryDao
 import com.ventouxlabs.netlens.core.data.model.PingHistoryEntry
 import com.ventouxlabs.netlens.feature.ping.engine.Pinger
+import com.ventouxlabs.netlens.feature.ping.engine.PingTimeoutFiller
 import com.ventouxlabs.netlens.feature.ping.model.PingMode
 import com.ventouxlabs.netlens.feature.ping.model.PingResult
 import com.ventouxlabs.netlens.feature.ping.model.PingSummary
@@ -37,9 +38,11 @@ class PingViewModel @Inject constructor(
 
     private var pingJob: Job? = null
     private var elapsedJob: Job? = null
+    private var watchdogJob: Job? = null
     private var startTime: Long = 0
     private var serviceActive = false
     private var pingSessionId = 0
+    private var fixedCount = 0
 
     private var cumulativeMinMs = Float.MAX_VALUE
     private var cumulativeMaxMs = 0f
@@ -68,6 +71,7 @@ class PingViewModel @Inject constructor(
     fun startPing(host: String, count: Int) {
         pingJob?.cancel()
         elapsedJob?.cancel()
+        watchdogJob?.cancel()
         if (serviceActive) {
             serviceActive = false
             serviceController.stop()
@@ -91,6 +95,9 @@ class PingViewModel @Inject constructor(
 
         startTime = System.currentTimeMillis()
         val isContinuous = _state.value.mode == PingMode.CONTINUOUS
+        // The screen passes its count selector regardless of mode; a continuous run has no
+        // packet budget, and a stale fixed count must not cap its watchdog.
+        fixedCount = if (isContinuous) 0 else count
 
         if (isContinuous) {
             serviceActive = true
@@ -104,9 +111,17 @@ class PingViewModel @Inject constructor(
             pinger.ping(host, count)
         }
 
+        restartWatchdog(currentSessionId, isContinuous, host)
+
         pingJob = viewModelScope.launch {
+            // `.catch` swallows the failure, so the downstream `.onCompletion` sees a null
+            // cause on the error path too — this flag is what actually distinguishes "ran to
+            // the end" from "blew up", and the completion fill must only run for the former.
+            var failed = false
             flow
                 .catch { e ->
+                    failed = true
+                    watchdogJob?.cancel()
                     _state.update {
                         it.copy(
                             isPinging = false,
@@ -114,15 +129,32 @@ class PingViewModel @Inject constructor(
                         )
                     }
                 }
-                .onCompletion {
+                .onCompletion { cause ->
+                    // Session guard around the WHOLE body, not just the service stop: job
+                    // cancellation resumes this collector asynchronously, so a stale session's
+                    // completion can run after a new startPing has installed its own watchdog
+                    // and elapsed jobs — and would otherwise cancel them. The Start button's
+                    // isPinging gate happens to prevent that today, but that invariant lives in
+                    // the UI layer, which this block cannot rely on.
+                    if (currentSessionId != pingSessionId) return@onCompletion
+                    watchdogJob?.cancel()
                     elapsedJob?.cancel()
+                    // A fixed run that ended on its own with fewer rows than packets got no
+                    // reply for the remainder — Android's ping prints nothing for those, so
+                    // the loss is derived here. Not on cancellation: the user stopping the
+                    // run means the missing packets were never sent, not lost.
+                    if (cause == null && !failed && !isContinuous) {
+                        applyReconciling(isContinuous = false, host = host) {
+                            PingTimeoutFiller.completionFill(it, fixedCount)
+                        }
+                    }
                     _state.update { current ->
                         current.copy(
                             isPinging = false,
                             summary = current.summary ?: computeSummary(current),
                         )
                     }
-                    if (currentSessionId == pingSessionId && serviceActive) {
+                    if (serviceActive) {
                         serviceActive = false
                         serviceController.stop()
                     }
@@ -131,52 +163,119 @@ class PingViewModel @Inject constructor(
                     }
                 }
                 .collect { result ->
-                    if (result.latencyMs != null) {
+                    val reconciled = applyReconciling(isContinuous, host) {
+                        PingTimeoutFiller.reconcile(it, result)
+                    }
+                    // AFTER reconciliation, gated on a reply actually being counted: ping emits
+                    // `(DUP!)` lines that the unanchored reply regex parses into a same-seq
+                    // result, which reconcile then drops — its latency must not pollute the
+                    // min/avg/max that feed the notification and ping history. receivedDelta > 0
+                    // is exactly "this reply was newly counted" (append or late upgrade).
+                    // Mutating these inside the transform lambda would double-count on a CAS
+                    // retry, so they update here and the summary is refreshed below — that
+                    // refresh is a pure recomputation, safe to retry.
+                    if (result.latencyMs != null && reconciled.receivedDelta > 0) {
                         cumulativeLatencySum += result.latencyMs
                         cumulativeLatencyCount++
                         if (result.latencyMs < cumulativeMinMs) cumulativeMinMs = result.latencyMs
                         if (result.latencyMs > cumulativeMaxMs) cumulativeMaxMs = result.latencyMs
-                    }
-                    _state.update { current ->
-                        val newResults = if (current.mode == PingMode.CONTINUOUS) {
-                            (current.results + result).takeLast(ROLLING_BUFFER_SIZE)
-                        } else {
-                            current.results + result
+                        if (isContinuous) {
+                            _state.update {
+                                it.copy(summary = computeLiveSummary(it.results, it.totalSent, it.totalReceived))
+                            }
                         }
-                        val newSent = current.totalSent + 1
-                        val newReceived = current.totalReceived + if (!result.isTimeout) 1 else 0
-                        current.copy(
-                            results = newResults,
-                            totalSent = newSent,
-                            totalReceived = newReceived,
-                            summary = if (current.mode == PingMode.CONTINUOUS) {
-                                computeLiveSummary(newResults, newSent, newReceived)
-                            } else {
-                                null
-                            },
-                        )
                     }
-                    if (isContinuous) {
-                        val s = _state.value
-                        serviceController.updateNotification(
-                            host,
-                            s.totalSent,
-                            s.summary?.lossPercent ?: 0f,
-                        )
-                    }
+                    restartWatchdog(currentSessionId, isContinuous, host)
                 }
+        }
+    }
+
+    /**
+     * Reconciles against the current result list and applies the outcome, atomically.
+     *
+     * [transform] runs *inside* the `update` lambda, against the list the compare-and-set is
+     * actually about to replace — deriving the reconciled list outside and writing it in would
+     * silently re-apply a stale read if `update` ever retried, and it would only be safe because
+     * everything runs on `Main.immediate` with no suspension, an invariant this function has no
+     * control over.
+     *
+     * Counters move by the reconciler's deltas, not by +1 per event: one reply can account for
+     * several packets at once (gap-filled timeouts), and a late reply upgrades a timeout row
+     * without any new packet having been sent.
+     */
+    private fun applyReconciling(
+        isContinuous: Boolean,
+        host: String,
+        transform: (List<PingResult>) -> PingTimeoutFiller.Reconciled,
+    ): PingTimeoutFiller.Reconciled {
+        var applied: PingTimeoutFiller.Reconciled? = null
+        _state.update { current ->
+            val reconciled = transform(current.results)
+            applied = reconciled
+            val newResults = if (isContinuous) {
+                reconciled.results.takeLast(ROLLING_BUFFER_SIZE)
+            } else {
+                reconciled.results
+            }
+            val newSent = current.totalSent + reconciled.sentDelta
+            val newReceived = current.totalReceived + reconciled.receivedDelta
+            current.copy(
+                results = newResults,
+                totalSent = newSent,
+                totalReceived = newReceived,
+                summary = if (isContinuous) {
+                    computeLiveSummary(newResults, newSent, newReceived)
+                } else {
+                    current.summary
+                },
+            )
+        }
+        if (isContinuous) {
+            val s = _state.value
+            serviceController.updateNotification(
+                host,
+                s.totalSent,
+                s.summary?.lossPercent ?: 0f,
+            )
+        }
+        return checkNotNull(applied) { "update ran at least once" }
+    }
+
+    /**
+     * Paints a timeout row when the stream goes silent — the case no reply can ever reveal.
+     *
+     * Android's ping prints nothing for a lost packet, so a completely dead host produces no
+     * output at all: without this, a continuous ping against it shows an empty list forever and
+     * a fixed run shows nothing until the process finally exits. First synthetic row after
+     * [WATCHDOG_SILENCE_MS] of silence, then one per [WATCHDOG_INTERVAL_MS], matching the 1s
+     * send interval. Every real result restarts the clock; a fixed run stops at [fixedCount]
+     * rows (the completion fill owns the remainder).
+     */
+    private fun restartWatchdog(sessionId: Int, isContinuous: Boolean, host: String) {
+        watchdogJob?.cancel()
+        watchdogJob = viewModelScope.launch {
+            delay(WATCHDOG_SILENCE_MS)
+            while (isActive && sessionId == pingSessionId && _state.value.isPinging) {
+                if (!isContinuous && _state.value.results.size >= fixedCount) break
+                applyReconciling(isContinuous, host) {
+                    PingTimeoutFiller.reconcile(it, PingTimeoutFiller.nextWatchdogTimeout(it))
+                }
+                delay(WATCHDOG_INTERVAL_MS)
+            }
         }
     }
 
     fun stopPing() {
         pingJob?.cancel()
         elapsedJob?.cancel()
+        watchdogJob?.cancel()
     }
 
     override fun onCleared() {
         super.onCleared()
         pingJob?.cancel()
         elapsedJob?.cancel()
+        watchdogJob?.cancel()
         if (serviceActive) {
             serviceActive = false
             serviceController.stop()
@@ -325,5 +424,16 @@ class PingViewModel @Inject constructor(
     companion object {
         private const val ROLLING_BUFFER_SIZE = 100
         private const val MAX_CONTINUOUS_DURATION_MS = 3_600_000L
+
+        /** Silence before the first synthetic timeout: 1s send interval + generous reply grace. */
+        private const val WATCHDOG_SILENCE_MS = 3_000L
+
+        /**
+         * Cadence of further synthetic timeouts while silent. MUST match the real send interval
+         * — `PingerImpl` pings with `-i 1` (continuous) and the 1s default (fixed). If that
+         * interval ever changes, this drifts silently and paints phantom timeouts; there is no
+         * test that can link the two, so `PingerImpl` carries the mirror comment.
+         */
+        private const val WATCHDOG_INTERVAL_MS = 1_000L
     }
 }

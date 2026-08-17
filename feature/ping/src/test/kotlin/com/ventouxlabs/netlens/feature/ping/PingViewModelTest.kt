@@ -6,6 +6,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -52,11 +53,13 @@ class PingViewModelTest {
         var startCalled = false
         var stopCalled = false
         var lastNotificationSent = 0
+        var lastNotificationLoss = -1f
         override fun start(host: String) { startCalled = true }
         override fun stop() { stopCalled = true }
         override fun requestStop() { _stopRequested.value = true }
         override fun updateNotification(host: String, sent: Int, lossPercent: Float) {
             lastNotificationSent = sent
+            lastNotificationLoss = lossPercent
         }
     }
 
@@ -377,5 +380,227 @@ class PingViewModelTest {
             assertEquals(150, summary.transmitted)
             assertEquals(150, summary.received)
         }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Timeout visibility: Android's ping prints NOTHING for a lost packet, so every case below
+    // is one the parser alone can never surface — the ViewModel has to derive the loss.
+    // ------------------------------------------------------------------------------------------
+
+    // The original complaint: a dead host in fixed mode used to end with an empty list and no
+    // summary — the screen showed nothing at all.
+    @Test
+    fun `a dead host in fixed mode shows every packet as a timeout`() = runTest {
+        fakePinger.results = emptyList()
+
+        viewModel.startPing("10.255.255.1", 4)
+
+        val state = viewModel.state.value
+        assertEquals(4, state.results.size)
+        assertTrue(state.results.all { it.isTimeout })
+        assertEquals(listOf(1, 2, 3, 4), state.results.map { it.sequenceNumber })
+        assertEquals(4, state.totalSent)
+        assertEquals(0, state.totalReceived)
+        assertEquals(100f, state.summary?.lossPercent)
+        assertFalse(state.isPinging)
+    }
+
+    @Test
+    fun `a skipped sequence number appears as a timeout row between its neighbours`() = runTest {
+        fakePinger.results = listOf(
+            PingResult(sequenceNumber = 1, latencyMs = 10f, ttl = 56, ip = "1.1.1.1"),
+            PingResult(sequenceNumber = 3, latencyMs = 12f, ttl = 56, ip = "1.1.1.1"),
+        )
+
+        viewModel.startPing("example.com", 3)
+
+        val state = viewModel.state.value
+        assertEquals(listOf(1, 2, 3), state.results.map { it.sequenceNumber })
+        assertTrue(state.results[1].isTimeout)
+        assertEquals(3, state.totalSent)
+        assertEquals(2, state.totalReceived)
+    }
+
+    // PingScreen keys its list on sequenceNumber; a duplicate row here would be the repo's
+    // known LazyColumn duplicate-key crash. The late reply must replace, not append.
+    @Test
+    fun `a late reply upgrades its synthetic timeout row without duplicating the key`() = runTest {
+        fakePinger.results = listOf(
+            PingResult(sequenceNumber = 1, latencyMs = 10f, ttl = 56, ip = "1.1.1.1"),
+            PingResult(sequenceNumber = 4, latencyMs = 11f, ttl = 56, ip = "1.1.1.1"),
+            PingResult(sequenceNumber = 2, latencyMs = 900f, ttl = 56, ip = "1.1.1.1"),
+        )
+
+        viewModel.startPing("example.com", 4)
+
+        val state = viewModel.state.value
+        assertEquals(listOf(1, 2, 3, 4), state.results.map { it.sequenceNumber })
+        assertEquals(state.results.size, state.results.map { it.sequenceNumber }.distinct().size)
+        assertEquals(900f, state.results[1].latencyMs)
+        assertTrue(state.results[2].isTimeout)
+        assertEquals(4, state.totalSent)
+        assertEquals(3, state.totalReceived)
+    }
+
+    // Total silence with the stream still open — no later reply ever reveals the gap, so only
+    // the watchdog can paint it. Virtual time: first synthetic row after 3s, then 1/s.
+    @Test
+    fun `continuous silence paints watchdog timeout rows`() = runTest {
+        try {
+            fakePinger.holdOpen = true
+            fakePinger.continuousResults = emptyList()
+            viewModel.onModeChanged(PingMode.CONTINUOUS)
+
+            viewModel.startPing("10.255.255.1", 0)
+            advanceTimeBy(3_001)
+            assertEquals(1, viewModel.state.value.results.size)
+
+            advanceTimeBy(2_000)
+            val state = viewModel.state.value
+            assertEquals(3, state.results.size)
+            assertTrue(state.results.all { it.isTimeout })
+            assertEquals(listOf(1, 2, 3), state.results.map { it.sequenceNumber })
+            assertEquals(3, state.totalSent)
+            assertEquals(100f, state.summary?.lossPercent)
+            // Watchdog synthetics drive the foreground notification too — a dead host must
+            // show 100% loss there, not a frozen last-known value.
+            assertEquals(3, fakeServiceController.lastNotificationSent)
+            assertEquals(100f, fakeServiceController.lastNotificationLoss)
+        } finally {
+            // A failed assertion must still stop the watchdog — its self-perpetuating
+            // delay loop otherwise hangs runTest's advance-until-idle cleanup forever.
+            viewModel.stopPing()
+        }
+    }
+
+    // A real reply restarts the silence clock. The reply is delayed to t=1500 so the two
+    // behaviours diverge: with the reset, the next synthetic row lands at t=4500; without it,
+    // the watchdog started at t=0 would fire at t=3000 — which the mid-window assertion catches.
+    @Test
+    fun `a reply resets the watchdog silence window`() = runTest {
+        try {
+            fakePinger.holdOpen = true
+            fakePinger.emitDelayMs = 1_500
+            fakePinger.continuousResults = listOf(
+                PingResult(sequenceNumber = 1, latencyMs = 10f, ttl = 56, ip = "1.1.1.1"),
+            )
+            viewModel.onModeChanged(PingMode.CONTINUOUS)
+
+            viewModel.startPing("example.com", 0)
+            advanceTimeBy(3_100)
+            // t=3100: an un-reset watchdog would have fired at t=3000; the reset one waits to 4500.
+            assertEquals(1, viewModel.state.value.results.size)
+
+            advanceTimeBy(1_500)
+            val state = viewModel.state.value
+            assertEquals(2, state.results.size)
+            assertTrue(state.results[1].isTimeout)
+        } finally {
+            // A failed assertion must still stop the watchdog — its self-perpetuating
+            // delay loop otherwise hangs runTest's advance-until-idle cleanup forever.
+            viewModel.stopPing()
+        }
+    }
+
+    // A hung fixed run paints progressively but never invents more packets than were asked for.
+    @Test
+    fun `watchdog rows stop at the fixed count`() = runTest {
+        try {
+            fakePinger.holdOpen = true
+            fakePinger.results = emptyList()
+
+            viewModel.startPing("10.255.255.1", 2)
+            advanceTimeBy(10_000)
+
+            assertEquals(2, viewModel.state.value.results.size)
+            assertTrue(viewModel.state.value.results.all { it.isTimeout })
+        } finally {
+            // A failed assertion must still stop the watchdog — its self-perpetuating
+            // delay loop otherwise hangs runTest's advance-until-idle cleanup forever.
+            viewModel.stopPing()
+        }
+    }
+
+    // Stopping is not losing: the un-pinged remainder of a cancelled fixed run was never sent,
+    // so nothing may be fabricated for it.
+    @Test
+    fun `cancelling a fixed run does not fabricate trailing timeouts`() = runTest {
+        fakePinger.holdOpen = true
+        fakePinger.results = listOf(
+            PingResult(sequenceNumber = 1, latencyMs = 10f, ttl = 56, ip = "1.1.1.1"),
+        )
+
+        viewModel.startPing("example.com", 4)
+        viewModel.stopPing()
+
+        assertEquals(1, viewModel.state.value.results.size)
+        assertEquals(1, viewModel.state.value.totalSent)
+    }
+
+    // Some ping variants DO print a per-packet failure line ("no answer", "Destination Host
+    // Unreachable"), which the parser emits as a real isTimeout result. If the watchdog already
+    // painted that seq, the parser's copy must be dropped — one lost packet, one row, once.
+    @Test
+    fun `a parser timeout for a watchdog-painted seq does not double count`() = runTest {
+        fakePinger.holdOpen = true
+        fakePinger.emitDelayMs = 3_500
+        fakePinger.continuousResults = listOf(
+            PingResult(sequenceNumber = 1, isTimeout = true),
+        )
+        viewModel.onModeChanged(PingMode.CONTINUOUS)
+
+        try {
+            viewModel.startPing("10.255.255.1", 0)
+            advanceTimeBy(3_100)
+            // Watchdog painted seq 1 at t=3000.
+            assertEquals(1, viewModel.state.value.results.size)
+
+            advanceTimeBy(500)
+            // t=3600: the parser's own timeout for seq 1 arrived at t=3500 — and changed nothing.
+            val state = viewModel.state.value
+            assertEquals(1, state.results.count { it.sequenceNumber == 1 })
+            assertEquals(1, state.totalSent)
+            assertEquals(0, state.totalReceived)
+        } finally {
+            viewModel.stopPing()
+        }
+    }
+
+    // A duplicated reply — ping prints "(DUP!)" lines the unanchored reply regex still parses —
+    // is dropped by reconcile, and its latency must not leak into the cumulative min/max that
+    // feed the live summary and ping history.
+    @Test
+    fun `a dropped duplicate reply does not pollute the cumulative stats`() = runTest {
+        fakePinger.continuousResults = listOf(
+            PingResult(sequenceNumber = 1, latencyMs = 10f, ttl = 56, ip = "1.1.1.1"),
+            PingResult(sequenceNumber = 1, latencyMs = 9_000f, ttl = 56, ip = "1.1.1.1"),
+            PingResult(sequenceNumber = 2, latencyMs = 20f, ttl = 56, ip = "1.1.1.1"),
+        )
+        viewModel.onModeChanged(PingMode.CONTINUOUS)
+
+        viewModel.startPing("example.com", 0)
+
+        val summary = checkNotNull(viewModel.state.value.summary)
+        assertEquals(20f, summary.maxMs)
+        assertEquals(2, summary.transmitted)
+        assertEquals(2, summary.received)
+    }
+
+    // Continuous mode keeps a 100-row window; crossing it must not confuse the gap logic or
+    // the counters, and the window must hold the LAST 100 rows.
+    @Test
+    fun `crossing the rolling buffer keeps the last 100 rows and exact totals`() = runTest {
+        fakePinger.continuousResults = (1..150).map {
+            PingResult(sequenceNumber = it, latencyMs = it.toFloat(), ttl = 56, ip = "1.1.1.1")
+        }
+        viewModel.onModeChanged(PingMode.CONTINUOUS)
+
+        viewModel.startPing("example.com", 0)
+
+        val state = viewModel.state.value
+        assertEquals(100, state.results.size)
+        assertEquals((51..150).toList(), state.results.map { it.sequenceNumber })
+        assertEquals(150, state.totalSent)
+        assertEquals(150, state.totalReceived)
     }
 }
