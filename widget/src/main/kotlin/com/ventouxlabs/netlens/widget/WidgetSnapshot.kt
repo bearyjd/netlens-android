@@ -89,15 +89,31 @@ internal data class WidgetSnapshot(
     val encryptionType: String?,
     val score: WidgetScore?,
     val ipDisplay: WidgetIpDisplay?,
+    /**
+     * Whether the user still consents to the `ipinfo.io` lookup.
+     *
+     * Needed because a revoked consent and a failed fetch both arrive as a null [ipDisplay], and
+     * they must be handled differently — see [applyWidgetSnapshot].
+     */
+    val ipConsentGranted: Boolean,
     val latencyMs: Long,
     val pingMs: Int,
     val deviceCount: Int,
     val vpnState: VpnState,
     val collected: CollectedNetworkData,
-    val dnsServers: List<String>,
     val routingMode: String,
     val isDnsLeaking: Boolean,
     val nowMs: Long,
+)
+
+/** The public-IP block, written and cleared as a unit. */
+private val IP_KEYS = listOf(
+    WidgetStateDefinition.PUBLIC_IP,
+    WidgetStateDefinition.COUNTRY_FLAG,
+    WidgetStateDefinition.COUNTRY_NAME,
+    WidgetStateDefinition.COUNTRY_CODE,
+    WidgetStateDefinition.ISP_NAME,
+    WidgetStateDefinition.ASN_NAME,
 )
 
 /**
@@ -108,6 +124,11 @@ internal data class WidgetSnapshot(
  * whatever was written last — so leaving them alone shows the café's WPA3 badge on a cellular
  * widget. A missing score is different: it leaves the previous grade in place deliberately, so an
  * offline blip does not blank the grade the user last saw.
+ *
+ * The public-IP block splits that decision on *why* it is missing, which is why
+ * [WidgetSnapshot.ipConsentGranted] exists: a failed fetch keeps the last values (same reasoning as
+ * the score), but a **withdrawn consent clears them**, because that is personal data the user just
+ * revoked permission for and the widget would otherwise display it indefinitely.
  */
 internal fun MutablePreferences.applyWidgetSnapshot(snapshot: WidgetSnapshot) {
     this[WidgetStateDefinition.IS_CONNECTED] = snapshot.isConnected
@@ -145,13 +166,23 @@ internal fun MutablePreferences.applyWidgetSnapshot(snapshot: WidgetSnapshot) {
         }
     }
 
-    snapshot.ipDisplay?.let { ip ->
-        this[WidgetStateDefinition.PUBLIC_IP] = ip.ip
-        this[WidgetStateDefinition.COUNTRY_FLAG] = ip.countryFlag
-        this[WidgetStateDefinition.COUNTRY_NAME] = ip.countryName
-        this[WidgetStateDefinition.COUNTRY_CODE] = ip.countryCode
-        this[WidgetStateDefinition.ISP_NAME] = ip.ispName
-        this[WidgetStateDefinition.ASN_NAME] = ip.asnName
+    val ip = snapshot.ipDisplay
+    when {
+        ip != null -> {
+            this[WidgetStateDefinition.PUBLIC_IP] = ip.ip
+            this[WidgetStateDefinition.COUNTRY_FLAG] = ip.countryFlag
+            this[WidgetStateDefinition.COUNTRY_NAME] = ip.countryName
+            this[WidgetStateDefinition.COUNTRY_CODE] = ip.countryCode
+            this[WidgetStateDefinition.ISP_NAME] = ip.ispName
+            this[WidgetStateDefinition.ASN_NAME] = ip.asnName
+        }
+        // Consent withdrawn: the cached public IP, ISP and country are personal data the user
+        // just revoked permission for, so they must go — a stale grade is a cosmetic problem,
+        // a stale public IP sitting on the home screen is not the same kind of problem.
+        !snapshot.ipConsentGranted -> IP_KEYS.forEach { remove(it) }
+        // Consent still granted, fetch failed: keep the last known values rather than blanking
+        // the row on a transient network error.
+        else -> Unit
     }
 
     this[WidgetStateDefinition.LATENCY_MS] = snapshot.latencyMs
@@ -173,7 +204,7 @@ internal fun MutablePreferences.applyWidgetSnapshot(snapshot: WidgetSnapshot) {
     this[WidgetStateDefinition.IS_METERED] = snapshot.collected.isMetered
     this[WidgetStateDefinition.IS_CAPTIVE_PORTAL] = snapshot.collected.isCaptivePortal
     this[WidgetStateDefinition.HAS_PRIVATE_DNS] = snapshot.collected.hasPrivateDns
-    this[WidgetStateDefinition.DNS_SERVERS] = snapshot.dnsServers.joinToString(",")
+    this[WidgetStateDefinition.DNS_SERVERS] = snapshot.collected.dnsServers.joinToString(",")
     this[WidgetStateDefinition.ROUTING_MODE] = snapshot.routingMode
     this[WidgetStateDefinition.IS_DNS_LEAKING] = snapshot.isDnsLeaking
     this[WidgetStateDefinition.LAST_REFRESH_MS] = snapshot.nowMs

@@ -48,9 +48,30 @@ pass compared all 26 DataStore writes against the pre-refactor body key by key, 
 condition, and found no unintended divergence. `assembleFossDebug` plus all three CI test tasks
 pass.
 
-The one intentional behavior change: `LAST_SCAN_TIMESTAMP` and `LAST_REFRESH_MS` now share a single
-`nowMs` rather than two `System.currentTimeMillis()` calls microseconds apart. Nothing compares or
-subtracts them.
+Two intentional behavior changes, both outside the preservation claim:
+
+1. `LAST_SCAN_TIMESTAMP` and `LAST_REFRESH_MS` now share a single `nowMs` rather than two
+   `System.currentTimeMillis()` calls microseconds apart. Nothing compares or subtracts them.
+2. **Revoking ipinfo consent now clears the cached public IP block.** It previously did not — see
+   below.
+
+## The privacy defect the extraction surfaced
+
+Worth reading even if you never touch `widget/`, because of *how* it was found rather than what it
+was. `applyWidgetSnapshot` is the only writer of `PUBLIC_IP`/`ISP_NAME`/`ASN_NAME`/`COUNTRY_*`, and
+nothing anywhere removed them. Revoking ipinfo consent in Widget Settings therefore left the last
+public IP and ISP sitting on the home screen indefinitely.
+
+**It was invisible until the retention rule was written down.** Pulling the write path out meant
+documenting *why* each key is cleared or kept, and the moment that KDoc said "a missing score keeps
+the previous grade deliberately", the public-IP block sat in the same clause — and it obviously did
+not belong there. A stale grade is cosmetic; a stale public IP after withdrawn consent is not the
+same kind of thing. The code could not tell the two cases apart because a revoked consent and a
+failed fetch both arrive as a null `ipDisplay`; `WidgetSnapshot.ipConsentGranted` now separates
+them, and the two cases are pinned by tests that fail on *different* mutations.
+
+The general lesson: **an extraction that forces you to state the rule will surface rules that are
+wrong.** The bug had been there the whole time, through every prior review of this file.
 
 ---
 

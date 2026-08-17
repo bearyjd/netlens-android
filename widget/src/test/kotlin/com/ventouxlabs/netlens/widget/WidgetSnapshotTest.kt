@@ -83,7 +83,12 @@ class WidgetSnapshotTest {
             vpnState = VpnState.FullTunnel,
         )
 
+        // Every field, not just the grade — a stale branch that leaked the persisted issue text
+        // into the computed score would pass a grade-only assertion.
         assertEquals("A", score?.grade)
+        assertEquals(0, score?.issueCount)
+        assertNull(score?.topIssue)
+        assertNull(score?.topIssueId)
     }
 
     @Test
@@ -165,6 +170,7 @@ class WidgetSnapshotTest {
         encryptionType: String? = "WPA3",
         score: WidgetScore? = null,
         ipDisplay: WidgetIpDisplay? = null,
+        ipConsentGranted: Boolean = true,
         latencyMs: Long = 25L,
         pingMs: Int = 12,
     ) = WidgetSnapshot(
@@ -173,12 +179,12 @@ class WidgetSnapshotTest {
         encryptionType = encryptionType,
         score = score,
         ipDisplay = ipDisplay,
+        ipConsentGranted = ipConsentGranted,
         latencyMs = latencyMs,
         pingMs = pingMs,
         deviceCount = 7,
         vpnState = VpnState.None,
         collected = collected,
-        dnsServers = listOf("1.1.1.1", "9.9.9.9"),
         routingMode = "full",
         isDnsLeaking = false,
         nowMs = now,
@@ -200,7 +206,7 @@ class WidgetSnapshotTest {
         isMetered = true,
         isCaptivePortal = true,
         hasPrivateDns = true,
-        dnsServers = listOf("ignored-by-the-write-path"),
+        dnsServers = listOf("1.1.1.1", "9.9.9.9"),
     )
 
     /** Applies [snapshots] in order to one set of preferences, as consecutive refreshes would. */
@@ -256,8 +262,6 @@ class WidgetSnapshotTest {
         assertEquals(true, prefs[WidgetStateDefinition.IS_CAPTIVE_PORTAL])
         assertEquals(true, prefs[WidgetStateDefinition.HAS_PRIVATE_DNS])
 
-        // The snapshot's own dnsServers, not collected.dnsServers — doWork() resolves the two
-        // separately and only the former reaches the widget.
         assertEquals("1.1.1.1,9.9.9.9", prefs[WidgetStateDefinition.DNS_SERVERS])
         assertEquals("full", prefs[WidgetStateDefinition.ROUTING_MODE])
         assertEquals(false, prefs[WidgetStateDefinition.IS_DNS_LEAKING])
@@ -306,18 +310,51 @@ class WidgetSnapshotTest {
         assertFalse(prefs.contains(WidgetStateDefinition.TOP_ISSUE_ID))
     }
 
-    // No IP block is written when there is nothing valid to write — but unlike SSID the previous
-    // one is kept, which is worth pinning so a future change to either is a deliberate one.
+    private val ipDisplay =
+        WidgetIpDisplay("1.1.1.1", "🇺🇸", "United States", "US", "Cloudflare", "AS13335")
+
+    // A fetch that failed while consent still stands keeps the last known values, rather than
+    // blanking the row on a transient network error.
     @Test
-    fun `a missing ip display leaves the previous public ip in place`() {
-        val display = WidgetIpDisplay("1.1.1.1", "🇺🇸", "United States", "US", "Cloudflare", "AS13335")
+    fun `a failed lookup with consent still granted leaves the previous public ip in place`() {
         val prefs = preferencesAfter(
-            snapshot(ipDisplay = display),
-            snapshot(ipDisplay = null),
+            snapshot(ipDisplay = ipDisplay),
+            snapshot(ipDisplay = null, ipConsentGranted = true),
         )
 
         assertEquals("1.1.1.1", prefs[WidgetStateDefinition.PUBLIC_IP])
         assertEquals("AS13335", prefs[WidgetStateDefinition.ASN_NAME])
+    }
+
+    // The other half of the same null: consent withdrawn. The cached public IP, ISP and country
+    // are personal data the user just revoked permission for, and nothing else in the app clears
+    // these keys — without this the widget shows them on the home screen indefinitely.
+    @Test
+    fun `withdrawing consent clears the whole cached public ip block`() {
+        val prefs = preferencesAfter(
+            snapshot(ipDisplay = ipDisplay),
+            snapshot(ipDisplay = null, ipConsentGranted = false),
+        )
+
+        assertFalse(prefs.contains(WidgetStateDefinition.PUBLIC_IP))
+        assertFalse(prefs.contains(WidgetStateDefinition.COUNTRY_FLAG))
+        assertFalse(prefs.contains(WidgetStateDefinition.COUNTRY_NAME))
+        assertFalse(prefs.contains(WidgetStateDefinition.COUNTRY_CODE))
+        assertFalse(prefs.contains(WidgetStateDefinition.ISP_NAME))
+        assertFalse(prefs.contains(WidgetStateDefinition.ASN_NAME))
+    }
+
+    // Revocation must not take the rest of the widget down with it.
+    @Test
+    fun `withdrawing consent leaves every non-ip key intact`() {
+        val prefs = preferencesAfter(
+            snapshot(ipDisplay = ipDisplay, score = WidgetScore("A", 1, 0, null, null)),
+            snapshot(ipDisplay = null, ipConsentGranted = false),
+        )
+
+        assertEquals("A", prefs[WidgetStateDefinition.SCORE_GRADE])
+        assertEquals("HomeWiFi", prefs[WidgetStateDefinition.SSID])
+        assertEquals("192.168.1.5", prefs[WidgetStateDefinition.LOCAL_IP])
     }
 
     @Test

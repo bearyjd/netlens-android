@@ -477,11 +477,30 @@ gained tests (item 3's pass) — its gap was a duplicated `FakeNetworkEventDao`,
       WPA3 if the guard were gone.
   - `NetworkCollector.readCellularSignal` — **still open.** Needs `TelephonyManager.signalStrength`
     / `CellSignalStrength` construction. Its pure half is covered via `cellGenerationFor`.
+  - **Fixed while extracting — a privacy defect the extraction surfaced.** `applyWidgetSnapshot`
+    is the **only** writer of `PUBLIC_IP`/`ISP_NAME`/`ASN_NAME`/`COUNTRY_*`, and nothing anywhere
+    removed them. `doWork()` sets `ipData = null` when `ipInfoConsentGranted` is false, so revoking
+    ipinfo consent in Widget Settings left the last-known public IP and ISP on the home screen
+    indefinitely (and readable via `DeeplinkAction.kt:51`). The bug was that a *revoked consent*
+    and a *failed fetch* both arrive as a null `ipDisplay` and the code could not tell them apart;
+    `WidgetSnapshot.ipConsentGranted` now distinguishes them — failed fetch keeps the last values,
+    revocation clears the block. **This is a behavior change**, not part of the extraction's
+    behavior-preservation claim.
   - **Noted, deliberately not fixed** (pre-existing, unchanged by the extraction): a persisted
     posture score with a *future* timestamp is treated as fresh forever, because the freshness
     check is `(nowMs - timestampMs) < WINDOW` and any negative delta satisfies it. Reachable only
     via a clock rollback. `resolveWidgetScore` is now the one place to fix it if it is ever worth
     fixing — `in 0 until POSTURE_SCORE_FRESHNESS_MS`.
+  - **Also noted, not fixed:** `isEncryptionSecure(null)` returns **`true`** — it fails *open* on a
+    security-adjacent predicate. Unreachable through the widget today (`applyWidgetSnapshot` only
+    calls it inside a non-null branch), but it is `internal`, so the next caller inherits the wrong
+    default. Changing it is a behavior change and may move `WidgetScoringTest`.
+  - **Known untestable hazard:** `WidgetSnapshot` has 14 constructor params including two
+    same-typed adjacent pairs (`latencyMs`/`nowMs` as `Long`, `pingMs`/`deviceCount` as `Int`).
+    `WidgetSnapshotTest` catches a transposition inside `applyWidgetSnapshot` (every key asserted
+    against a distinct sentinel value), but **nothing catches a transposition at the
+    `WidgetSnapshot(...)` construction in `doWork()`**, because no unit test can construct it the
+    way `doWork` does. That risk transfers to the instrumentation test whenever it gets written.
 - **Compose screenshot/snapshot tests** — **PARTIALLY DONE (2026-08-01).** This entry used to
   read "there are none anywhere in the repo", which is no longer true; read the split below
   before planning against it, because only half of what was asked for exists.
