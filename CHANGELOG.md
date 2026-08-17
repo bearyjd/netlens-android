@@ -5,6 +5,19 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] - 2026-08-17
+
+### Added
+- **Ping now shows lost packets.** Android's ping reports nothing at all when a packet gets no reply, so lost packets simply didn't appear — pinging an unreachable host showed an empty screen with no summary. Every packet that gets no reply now shows as a timeout row: a fixed run against a dead host lists all of its packets as lost with a 100% loss summary, continuous mode paints a timeout after a few seconds of silence instead of sitting empty, and packet loss feeds the live loss statistics and the notification. A reply that arrives late upgrades its timeout row in place.
+
+### Fixed
+- **Withdrawing the public-IP lookup consent now clears the cached IP from the home-screen widget.** Previously the widget kept showing the last public IP, network operator and country indefinitely after consent was revoked; a failed lookup with consent still granted keeps the last known values as before.
+- **The widget's security grade can no longer get stuck after a clock change.** A saved security-posture score stamped in the future (clock rollback, restored backup) was treated as fresh forever and pinned a stale grade; it is now recomputed.
+- **Device-supplied names are sanitized the moment they enter the app.** Names a device broadcasts about itself (mDNS, SSDP, NetBIOS, reverse DNS) are now cleaned of control characters before they reach any screen, the new-device notification, or the device database — previously only shared text exports were protected, and a hostile device could aim a crafted name at the other surfaces.
+
+### Changed
+- The home-screen widget logs an internal failure instead of silently rendering as empty, so "widget shows nothing" is diagnosable from a bug report.
+
 ## [1.3.3] - 2026-08-08
 
 ### Fixed

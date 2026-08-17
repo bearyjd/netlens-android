@@ -1,0 +1,6 @@
+New in 1.3.4:
+
+- Ping now shows lost packets: timeouts appear as rows with live loss stats, instead of nothing at all. An unreachable host shows 100% loss rather than an empty screen.
+- Withdrawing the public-IP consent now clears the cached IP from the widget.
+- Device-supplied names (mDNS/SSDP/NetBIOS/DNS) are sanitized before reaching any screen, notification, or the device database.
+- Fixed the widget's security grade sticking after a clock change.
