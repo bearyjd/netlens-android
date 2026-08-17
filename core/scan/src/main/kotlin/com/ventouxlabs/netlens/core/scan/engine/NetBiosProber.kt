@@ -7,6 +7,7 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
 
 interface NetBiosProber {
@@ -104,11 +105,14 @@ class NetBiosProberImpl @Inject constructor() : NetBiosProber {
                 val flags = ((data[offset + 16].toInt() and 0xFF) shl 8) or
                     (data[offset + 17].toInt() and 0xFF)
                 val isGroup = (flags and 0x8000) != 0
-                val name = String(nameBytes).trim()
+                // Flattened at ingestion: these 15 bytes come straight off the wire and nothing
+                // stops a hostile responder putting control characters in them. A name that
+                // flattens to nothing is treated as absent, not as an empty name.
+                val name = DisplayText.flatten(String(nameBytes))
 
-                if (nameType == 0x00 && !isGroup && computerName == null) {
+                if (name != null && nameType == 0x00 && !isGroup && computerName == null) {
                     computerName = name
-                } else if (nameType == 0x00 && isGroup && workgroup == null) {
+                } else if (name != null && nameType == 0x00 && isGroup && workgroup == null) {
                     workgroup = name
                 }
                 offset += 18

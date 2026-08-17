@@ -585,7 +585,11 @@ class LanScanViewModel @Inject constructor(
         val legacyIps = if (snapshots == null) runCatching { Json.decodeFromString<List<String>>(devicesJson) }.getOrDefault(emptyList()) else emptyList()
         snapshots.orEmpty().forEach { device ->
             // Flattened: hostname/vendor are device-supplied, and a control character in one
-            // splits this row in two. See DisplayText.
+            // splits this row in two. See DisplayText. Since 2026-08-17 the scan engines flatten
+            // at ingestion too, but these calls are NOT redundant: rows persisted before that
+            // change (scan history, known_devices until the next rescan overwrites them) still
+            // hold raw values, and this export is the one sink where a newline forges rather
+            // than wraps. Do not remove.
             val host = DisplayText.flatten(device.hostname)?.let { " ($it)" } ?: ""
             val mac = DisplayText.flatten(device.macAddress)?.let { "  MAC=$it" } ?: ""
             val vendor = DisplayText.flatten(device.vendor)?.let { "  Vendor=$it" } ?: ""

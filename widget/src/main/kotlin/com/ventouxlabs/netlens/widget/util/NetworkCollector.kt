@@ -5,8 +5,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.telephony.TelephonyManager
+import android.util.Log
 import com.ventouxlabs.netlens.core.network.getPhysicalNetwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,12 +95,10 @@ object NetworkCollector {
             val linkSpeedMbps: Int
             when {
                 physicalCaps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> {
-                    val wifiInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        physicalCaps.transportInfo as? WifiInfo
-                    } else {
-                        @Suppress("DEPRECATION")
-                        (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.connectionInfo
-                    }
+                    // No pre-Q fallback: minSdk is 29 and Q *is* 29, so transportInfo always
+                    // exists. A WifiManager.connectionInfo branch sat here until 2026-08-17,
+                    // unreachable on every supported device.
+                    val wifiInfo = physicalCaps.transportInfo as? WifiInfo
                     rssi = wifiInfo?.rssi ?: -1000
                     rssiLevel = if (rssi > -1000) {
                         @Suppress("DEPRECATION")
@@ -139,12 +137,9 @@ object NetworkCollector {
             val isCaptivePortal = !activeCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
                 activeCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 
-            val hasPrivateDns = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                activeLinkProps?.isPrivateDnsActive == true ||
-                    activeLinkProps?.privateDnsServerName != null
-            } else {
-                false
-            }
+            // No SDK gate: isPrivateDnsActive is API 28 and minSdk is 29.
+            val hasPrivateDns = activeLinkProps?.isPrivateDnsActive == true ||
+                activeLinkProps?.privateDnsServerName != null
 
             val dnsServers = activeLinkProps?.dnsServers
                 ?.mapNotNull { it.hostAddress }
@@ -166,10 +161,17 @@ object NetworkCollector {
             )
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // Degrading to empty data (an offline-looking widget) is deliberate — a widget has no
+            // error surface worth building — but doing it *silently* was not: it made any internal
+            // bug in the ~100 lines above indistinguishable from airplane mode. The log line is
+            // the difference between "widget looks empty" being diagnosable and not.
+            Log.w(TAG, "collect() failed; rendering empty widget data", e)
             CollectedNetworkData()
         }
     }
+
+    private const val TAG = "NetworkCollector"
 
     private fun readCellularSignal(context: Context): Pair<Int, Int> {
         return try {

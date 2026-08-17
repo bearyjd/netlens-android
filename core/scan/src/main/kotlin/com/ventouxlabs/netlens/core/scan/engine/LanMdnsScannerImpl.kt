@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import javax.inject.Inject
@@ -113,7 +114,10 @@ class LanMdnsScannerImpl @Inject constructor(
                                 ?.removePrefix(".")
                                 ?.removeSuffix(".")
                                 ?: "unknown"
-                            val hostname = info.serviceName
+                            // Flattened at ingestion: an mDNS service name is whatever the
+                            // device broadcast. Legitimate names like "Brian's MacBook Pro"
+                            // survive — flatten strips control characters, it does not validate.
+                            val hostname = DisplayText.flatten(info.serviceName)
                             cont.resume(Triple(ip, serviceType, hostname))
                         } else if (cont.isActive) {
                             cont.resume(null)

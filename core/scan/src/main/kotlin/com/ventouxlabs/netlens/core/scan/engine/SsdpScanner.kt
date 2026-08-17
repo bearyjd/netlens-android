@@ -14,6 +14,7 @@ import java.net.InetAddress
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 
 interface SsdpScanner {
@@ -226,7 +227,11 @@ class SsdpScannerImpl @Inject constructor() : SsdpScanner {
                 // fully controls. It was masked only by the catch-all in fetchDeviceDescription.
                 val end = xml.indexOf(close, start + open.length)
                 if (end < 0) return null
-                return xml.substring(start + open.length, end).trim().ifEmpty { null }
+                // Flattened at ingestion: every tag here is device-controlled XML, and a newline
+                // in a friendlyName otherwise reaches Compose, the notification and Room as-is.
+                // DisplayText.flatten also trims and nulls-on-empty, replacing the old
+                // `.trim().ifEmpty { null }`.
+                return DisplayText.flatten(xml.substring(start + open.length, end))
             }
             return SsdpDevice(
                 ip = ip,

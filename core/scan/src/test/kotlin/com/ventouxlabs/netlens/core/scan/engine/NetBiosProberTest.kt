@@ -60,6 +60,27 @@ class NetBiosProberTest {
         assertEquals("WORKGROUP", result?.workgroup)
     }
 
+    // The 15 name bytes come straight off the wire; flatten at ingestion so a control
+    // character never reaches a display or persistence sink.
+    @Test
+    fun `parse response flattens control characters out of both names`() {
+        val response = buildNetBiosResponse("EVIL\u0001\nNAME", "WORK\u0007GROUP")
+
+        val result = NetBiosProberImpl.parseResponse(response, response.size)
+
+        assertEquals("EVIL NAME", result?.name)
+        assertEquals("WORK GROUP", result?.workgroup)
+    }
+
+    // A name that flattens to nothing is absent, not an empty string — and with no computer
+    // name the whole response is worthless, exactly as if the entry were missing.
+    @Test
+    fun `a computer name of pure control characters yields no result`() {
+        val response = buildNetBiosResponse("\u0001\u0002\u0003", "WORKGROUP")
+
+        assertNull(NetBiosProberImpl.parseResponse(response, response.size))
+    }
+
     private fun buildNetBiosResponse(computerName: String, workgroup: String): ByteArray {
         val buf = ByteArray(200)
         // Header (12 bytes) — response flags
