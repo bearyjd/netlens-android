@@ -1,3 +1,22 @@
+# Session Handoff — v1.3.5 tagged and released (2026-08-17)
+
+**v1.3.5 / versionCode 19 was tagged and pushed on 2026-08-17** (bump commit `3e236bf`), hours
+after v1.3.4. Single change: `dependenciesInfo.includeInApk = false` — F-Droid's `check apk`
+rejected the v1.3.4 binary for carrying Google's encrypted dependency-metadata signing block
+(`0x504b4453`), which blocked the reproducible-build path on MR !42628. The AAB keeps the
+block (Play Console SDK insights read it). Cert continuity verified (`8fdfc9…`, exact match,
+both flavors), and the rebuilt APKs verified block-free by parsing the APK Signing Block.
+
+**Reproducible-build evidence (2026-08-17):** a clean `assembleFossRelease` at the v1.3.4 tag
+byte-matched the CI-built release APK in every file with signatures stripped — across JDK 21
+local vs Temurin 17 CI. RB is now enabled on MR !42628 (`Binaries:` + `AllowedAPKSigningKeys`),
+per maintainer request and explicit user decision: F-Droid will publish under our own key.
+After the v1.3.5 release assets exist, the MR's pinned build moves to 1.3.5/19/`3e236bf` —
+`check apk` can only pass against a block-free published binary, so v1.3.4 was never
+verifiable and 1.3.5 is the first version that is.
+
+---
+
 # Session Handoff — v1.3.4 tagged and released (2026-08-17)
 
 **v1.3.4 / versionCode 18 was tagged and pushed on 2026-08-17** (bump commit `5defa66`, tagged on
