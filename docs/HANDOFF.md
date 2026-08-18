@@ -1,3 +1,38 @@
+# Session Handoff — v1.3.6 tagged and released, found by on-device testing (2026-08-18)
+
+**v1.3.6 / versionCode 20 was tagged and pushed on 2026-08-18** (bump commit `d67d1ef`), the
+day after v1.3.5. Single fix: `WidgetSettingsViewModel.refreshWidgets()` — wired to the
+"Refresh now" button — called `refreshAllWidgets(context)`, which only **repaints** a widget
+from whatever's cached in DataStore. It never fetched anything. The actual fetch-and-write
+path, including the v1.3.4 consent-based public-IP clearing, lives in
+`WidgetRefreshWorker.doWork()`, reached only via `enqueueWidgetRefresh()` — nothing in Widget
+Settings called it. Net effect: revoking "Show public IP" consent and tapping Refresh now left
+the stale IP on the widget until the next ~30-minute periodic cycle, silently defeating the
+immediacy of the v1.3.4 privacy fix.
+
+**Found by on-device testing, not code review.** Placed the widget on a physical Pixel 9 Pro
+Fold, ran the exact repro from the v1.3.4 fix (revoke consent → Refresh now), and the WAN block
+didn't clear. Traced it to the wrong function call. Fixed by swapping to
+`enqueueWidgetRefresh(context)`, which internally fetches, writes, and repaints — confirmed
+after the fix on the same device: WAN row disappears immediately. `WidgetSettingsViewModelTest`
+had 3 tests, all for the consent toggle; `refreshWidgets()` itself was untested, which is how
+this shipped in every prior widget-refactor pass without being caught. Added
+`WidgetSettingsViewModelRefreshTest` (Robolectric + WorkManagerTestInitHelper, mirroring
+`widget`'s own `WidgetRefreshLifecycleTest`) asserting the `widget_refresh` unique work is
+actually enqueued.
+
+**Two device-navigation near-misses during this session, worth carrying forward as a rule:**
+adb `keyevent`-chain back-navigation and blind `KEYCODE_HOME` on a real device with the owner's
+personal apps installed twice landed in unrelated apps (a receipt scanner, then a notes app) —
+both times a stray screenshot was deleted immediately and nothing was read into or acted on, but
+navigate a real device by exact coordinates verified via `uiautomator dump`, or better, ask the
+device owner to look/tap themselves, rather than chaining guessed taps or back-presses.
+
+Cert continuity verified (`8fdfc9…`, exact match, both flavors). F-Droid MR !42628 re-pinned to
+this build after publishing.
+
+---
+
 # Session Handoff — v1.3.5 tagged and released (2026-08-17)
 
 **v1.3.5 / versionCode 19 was tagged and pushed on 2026-08-17** (bump commit `3e236bf`), hours
