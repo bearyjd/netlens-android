@@ -1,0 +1,1 @@
+Fixed: "Refresh now" in Widget Settings now actually refreshes the widget instead of just repainting stale data. In particular, turning off "Show public IP" and tapping Refresh now now clears the stale IP immediately instead of leaving it until the next automatic refresh.

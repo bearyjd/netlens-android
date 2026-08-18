@@ -5,6 +5,16 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.6] - 2026-08-18
+
+### Fixed
+- **"Refresh now" in Widget Settings now actually refreshes.** It previously only repainted
+  the home screen widget from whatever was already cached, without fetching anything new.
+  In particular, turning off "Show public IP" and tapping Refresh now left the stale public
+  IP on the widget instead of clearing it — you had to wait for the next automatic refresh
+  (up to ~30 minutes). Refresh now correctly fetches fresh data and applies your current
+  settings immediately.
+
 ## [1.3.5] - 2026-08-17
 
 ### Changed
