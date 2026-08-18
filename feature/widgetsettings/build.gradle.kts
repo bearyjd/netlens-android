@@ -1,5 +1,6 @@
 plugins {
     id("netlens.android.feature")
+    id("netlens.android.robolectric")
 }
 
 android {
@@ -14,4 +15,8 @@ dependencies {
     testImplementation(libs.datastore.preferences)
 
     testImplementation(project(":core:data-testing"))
+
+    // Robolectric-backed WorkManager enqueue test for refreshWidgets() — see
+    // netlens.android.robolectric.
+    testImplementation(libs.work.testing)
 }

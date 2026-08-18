@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
-import com.ventouxlabs.netlens.widget.refreshAllWidgets
+import com.ventouxlabs.netlens.widget.enqueueWidgetRefresh
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,8 +30,6 @@ class WidgetSettingsViewModel @Inject constructor(
     }
 
     fun refreshWidgets() {
-        viewModelScope.launch {
-            refreshAllWidgets(context)
-        }
+        enqueueWidgetRefresh(context)
     }
 }
