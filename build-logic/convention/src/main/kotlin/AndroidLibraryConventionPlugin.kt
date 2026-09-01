@@ -73,6 +73,16 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     showCauses = true
                     showStackTraces = true
                 }
+
+                // Bounded, not left at the JVM's own default max heap. Each Test task still
+                // forks exactly one worker (Gradle's own default — do NOT raise
+                // maxParallelForks here: across ~20+ modules with test sources, that multiplies
+                // *per task*, on top of Gradle's own project-level parallelism across tasks,
+                // and was confirmed to make total concurrent-fork counts far worse, not better,
+                // when tried). Bounding each fork's heap keeps its footprint predictable under
+                // load without touching how many forks run at once.
+                minHeapSize = "256m"
+                maxHeapSize = "1536m"
             }
         }
     }

@@ -126,6 +126,12 @@ tasks.withType<Test>().configureEach {
         showCauses = true
         showStackTraces = true
     }
+
+    // Mirrors AndroidLibraryConventionPlugin — see its comment for why: bound each fork's
+    // heap, but do not raise maxParallelForks above Gradle's own default of 1 per task, or
+    // total concurrent-fork counts across ~20+ modules multiply instead of shrinking.
+    minHeapSize = "256m"
+    maxHeapSize = "1536m"
 }
 
 baselineProfile {
