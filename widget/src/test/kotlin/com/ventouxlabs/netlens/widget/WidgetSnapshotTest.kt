@@ -208,6 +208,7 @@ class WidgetSnapshotTest {
         ipConsentGranted: Boolean = true,
         latencyMs: Long = 25L,
         pingMs: Int = 12,
+        favoriteRoutes: Set<String> = setOf("ping", "lanscan"),
     ) = WidgetSnapshot(
         isConnected = isConnected,
         ssid = ssid,
@@ -219,6 +220,7 @@ class WidgetSnapshotTest {
         pingMs = pingMs,
         deviceCount = 7,
         vpnState = VpnState.None,
+        favoriteRoutes = favoriteRoutes,
         collected = collected,
         routingMode = "full",
         isDnsLeaking = false,
@@ -285,6 +287,11 @@ class WidgetSnapshotTest {
         assertEquals(12, prefs[WidgetStateDefinition.PING_MS])
         assertEquals(7, prefs[WidgetStateDefinition.DEVICE_COUNT])
         assertEquals(VpnState.None.serialize(), prefs[WidgetStateDefinition.VPN_STATE])
+        // Set iteration order isn't guaranteed, so compare as sets rather than a fixed CSV string.
+        assertEquals(
+            setOf("ping", "lanscan"),
+            prefs[WidgetStateDefinition.CHIP_ROUTES]?.split(",")?.toSet(),
+        )
 
         assertEquals("192.168.1.5", prefs[WidgetStateDefinition.LOCAL_IP])
         assertEquals(true, prefs[WidgetStateDefinition.HAS_IPV6])

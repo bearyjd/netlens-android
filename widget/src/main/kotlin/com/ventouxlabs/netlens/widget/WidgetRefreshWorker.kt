@@ -119,6 +119,13 @@ class WidgetRefreshWorker(
                 false
             }
 
+            val favoriteRoutes = try {
+                entryPoint.userPreferencesRepository()
+                    .favoriteToolRoutes.first()
+            } catch (_: Exception) {
+                UserPreferencesRepository.DEFAULT_FAVORITES
+            }
+
             val ipData: WidgetIpResponse? = if (isConnected && consentGranted) {
                 try {
                     fetchIpInfo()
@@ -173,6 +180,7 @@ class WidgetRefreshWorker(
                 pingMs = pingResult ?: -1,
                 deviceCount = deviceCount,
                 vpnState = vpnState,
+                favoriteRoutes = favoriteRoutes,
                 collected = collected,
                 routingMode = routingMode,
                 isDnsLeaking = isDnsLeaking,

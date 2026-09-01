@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.state.GlanceStateDefinition
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.core.network.VpnState
 import java.io.File
 
@@ -39,6 +40,7 @@ object WidgetStateDefinition : GlanceStateDefinition<Preferences> {
 
     val LATENCY_MS = longPreferencesKey("latency_ms")
     val LATENCY_HISTORY = stringPreferencesKey("latency_history")
+    val CHIP_ROUTES = stringPreferencesKey("chip_routes")
     val DEVICE_COUNT = intPreferencesKey("device_count")
     val VPN_STATE = stringPreferencesKey("vpn_state")
 
@@ -103,6 +105,13 @@ fun Preferences.toWidgetState(): WidgetState = WidgetState(
         ?.split(",")
         ?.mapNotNull { it.toIntOrNull() }
         .orEmpty(),
+    // Pre-first-refresh (CHIP_ROUTES not yet written), fall back to the same default the
+    // favoriteToolRoutes repository Flow itself uses — not an empty list — so a widget that
+    // renders before doWork() has completed even once shows something rather than nothing.
+    chipRoutes = this[WidgetStateDefinition.CHIP_ROUTES]
+        ?.split(",")
+        ?.filter { it.isNotEmpty() }
+        ?: UserPreferencesRepository.DEFAULT_FAVORITES.toList(),
     deviceCount = this[WidgetStateDefinition.DEVICE_COUNT] ?: 0,
     vpnState = VpnState.deserialize(this[WidgetStateDefinition.VPN_STATE]),
     lastScanTimestamp = this[WidgetStateDefinition.LAST_SCAN_TIMESTAMP] ?: 0L,

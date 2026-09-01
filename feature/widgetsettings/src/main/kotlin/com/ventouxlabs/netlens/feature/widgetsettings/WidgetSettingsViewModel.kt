@@ -23,9 +23,18 @@ class WidgetSettingsViewModel @Inject constructor(
     val ipInfoConsent: StateFlow<Boolean> = userPreferencesRepository.ipInfoConsentGranted
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val favoriteRoutes: StateFlow<Set<String>> = userPreferencesRepository.favoriteToolRoutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     fun setIpInfoConsent(granted: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setIpInfoConsent(granted)
+        }
+    }
+
+    fun toggleChip(route: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.toggleFavorite(route)
         }
     }
 

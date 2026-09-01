@@ -105,6 +105,7 @@ internal data class WidgetSnapshot(
     val pingMs: Int,
     val deviceCount: Int,
     val vpnState: VpnState,
+    val favoriteRoutes: Set<String>,
     val collected: CollectedNetworkData,
     val routingMode: String,
     val isDnsLeaking: Boolean,
@@ -197,6 +198,7 @@ internal fun MutablePreferences.applyWidgetSnapshot(snapshot: WidgetSnapshot) {
     )
     this[WidgetStateDefinition.DEVICE_COUNT] = snapshot.deviceCount
     this[WidgetStateDefinition.VPN_STATE] = snapshot.vpnState.serialize()
+    this[WidgetStateDefinition.CHIP_ROUTES] = snapshot.favoriteRoutes.joinToString(",")
 
     this[WidgetStateDefinition.LOCAL_IP] = snapshot.collected.localIp
     this[WidgetStateDefinition.PING_MS] = snapshot.pingMs
