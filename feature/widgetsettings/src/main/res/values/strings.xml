@@ -10,5 +10,8 @@
     <string name="widget_settings_ipinfo_label">Show public IP</string>
     <string name="widget_settings_ipinfo_description">Fetches your public IP from ipinfo.io</string>
 
+    <string name="widget_settings_section_chips">Widget Chips</string>
+    <string name="widget_settings_chips_description">Shown as shortcuts on your home screen widget, up to 4 at a time. These are the same favorites shown on the Home screen.</string>
+
     <string name="widget_settings_button_refresh">Refresh now</string>
 </resources>

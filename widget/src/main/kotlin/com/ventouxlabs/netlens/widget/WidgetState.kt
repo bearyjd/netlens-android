@@ -27,6 +27,7 @@ data class WidgetState(
 
     val latencyMs: Long = -1L,
     val latencyHistoryMs: List<Int> = emptyList(),
+    val chipRoutes: List<String> = emptyList(),
     val deviceCount: Int = 0,
     val vpnState: VpnState = VpnState.None,
 

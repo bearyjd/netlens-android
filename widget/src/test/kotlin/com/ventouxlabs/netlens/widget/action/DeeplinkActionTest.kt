@@ -6,6 +6,7 @@ import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.test.core.app.ApplicationProvider
+import com.ventouxlabs.netlens.widget.util.ChipCatalog
 import com.ventouxlabs.netlens.widget.util.Deeplink
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -75,6 +76,18 @@ class DeeplinkActionTest {
     fun `extra path and query on an otherwise-valid uri is still allowed`() {
         assertTrue(isAllowedDeeplinkUri(Uri.parse(Deeplink.lanScanForDevice("10.0.0.5"))))
         assertTrue(isAllowedDeeplinkUri(Uri.parse(Deeplink.issue("abc-123"))))
+    }
+
+    // Deeplink.forRoute (widget chips) isn't exercised by isAllowedDeeplinkUri's other cases
+    // above, which all use hand-built URIs — this proves the two actually compose correctly for
+    // every real catalog entry: each route survives Uri.parse and then passes the allow-check,
+    // not just in theory.
+    @Test
+    fun `every ChipCatalog route builds an allowed, parseable deeplink`() {
+        ChipCatalog.ELIGIBLE.forEach { chip ->
+            val uri = Uri.parse(Deeplink.forRoute(chip.route))
+            assertTrue("Route '${chip.route}' failed the allow-check", isAllowedDeeplinkUri(uri))
+        }
     }
 
     // --- OpenDeeplinkAction.onAction: the guard actually fires, not just the predicate ---

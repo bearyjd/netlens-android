@@ -21,4 +21,12 @@ object Deeplink {
     fun lanScanForDevice(ip: String): String = "$DEVICES?device=$ip"
     fun dnsWithServer(server: String): String = "$DNS?server=$server"
     fun issue(issueId: String): String = "$SCHEME://$HOST/issue/$issueId"
+
+    /**
+     * Generic deeplink for a plain [ToolDestination.route][com.ventouxlabs.netlens.navigation.ToolDestination] — used for widget chips built from [com.ventouxlabs.netlens.widget.util.ChipCatalog].
+     *
+     * [route] must be a literal from a closed, developer-controlled list (e.g. [ChipCatalog.ELIGIBLE])
+     * — it is not encoded, so never pass user-controlled or externally-sourced text here.
+     */
+    fun forRoute(route: String): String = "$SCHEME://$HOST/$route"
 }

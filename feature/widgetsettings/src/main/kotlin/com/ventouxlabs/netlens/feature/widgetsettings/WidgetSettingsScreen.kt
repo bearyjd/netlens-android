@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +34,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.ui.Spacing
+import com.ventouxlabs.netlens.widget.util.ChipCatalog
+import com.ventouxlabs.netlens.widget.util.ChipDefinition
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +44,7 @@ fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel = hiltViewModel(),
 ) {
     val ipInfoConsent by viewModel.ipInfoConsent.collectAsStateWithLifecycle()
+    val favoriteRoutes by viewModel.favoriteRoutes.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -73,6 +77,18 @@ fun WidgetSettingsScreen(
             IpInfoConsentCard(
                 checked = ipInfoConsent,
                 onCheckedChange = viewModel::setIpInfoConsent,
+            )
+
+            SectionTitle(stringResource(R.string.widget_settings_section_chips))
+            Text(
+                text = stringResource(R.string.widget_settings_chips_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ChipPickerCard(
+                chips = ChipCatalog.ELIGIBLE,
+                selectedRoutes = favoriteRoutes,
+                onToggle = viewModel::toggleChip,
             )
 
             Button(
@@ -114,6 +130,44 @@ private fun InfoCard() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = Spacing.sm),
             )
+        }
+    }
+}
+
+@Composable
+private fun ChipPickerCard(
+    chips: List<ChipDefinition>,
+    selectedRoutes: Set<String>,
+    onToggle: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column {
+            chips.forEach { chip ->
+                val checked = chip.route in selectedRoutes
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = checked,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggle(chip.route) },
+                        )
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = chip.shortLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Checkbox(checked = checked, onCheckedChange = null)
+                }
+            }
         }
     }
 }

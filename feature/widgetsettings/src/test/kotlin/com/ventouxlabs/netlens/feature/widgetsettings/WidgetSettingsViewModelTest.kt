@@ -65,6 +65,33 @@ class WidgetSettingsViewModelTest {
             assertEquals(false, awaitItem())
         }
     }
+
+    @Test
+    fun `favoriteRoutes defaults to DEFAULT_FAVORITES`() = runTest {
+        viewModel.favoriteRoutes.test {
+            assertEquals(UserPreferencesRepository.DEFAULT_FAVORITES, awaitItem())
+        }
+    }
+
+    @Test
+    fun `toggleChip adds a route not already favorited`() = runTest {
+        viewModel.favoriteRoutes.test {
+            val initial = awaitItem()
+            assertEquals(false, "speedtest" in initial)
+            viewModel.toggleChip("speedtest")
+            assertEquals(true, "speedtest" in awaitItem())
+        }
+    }
+
+    @Test
+    fun `toggleChip removes a route already favorited`() = runTest {
+        viewModel.favoriteRoutes.test {
+            val initial = awaitItem()
+            assertEquals(true, "ping" in initial)
+            viewModel.toggleChip("ping")
+            assertEquals(false, "ping" in awaitItem())
+        }
+    }
 }
 
 

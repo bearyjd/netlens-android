@@ -24,7 +24,22 @@ import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.action.OpenPortalAction
+import com.ventouxlabs.netlens.widget.util.ChipCatalog
+import com.ventouxlabs.netlens.widget.util.ChipDefinition
 import com.ventouxlabs.netlens.widget.util.Deeplink
+
+/**
+ * Resolves [chipRoutes] against [ChipCatalog.ELIGIBLE], always in the catalog's declaration
+ * order — never the input list's order — so the chip row stays visually stable across periodic
+ * widget refreshes regardless of the `Set<String>` iteration order the routes were collected
+ * from. Capped at [ChipCatalog.MAX_WIDGET_CHIPS].
+ */
+internal fun resolveToolChips(chipRoutes: List<String>): List<ChipDefinition> {
+    val selected = chipRoutes.toSet()
+    return ChipCatalog.ELIGIBLE
+        .filter { it.route in selected }
+        .take(ChipCatalog.MAX_WIDGET_CHIPS)
+}
 
 @Composable
 fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
@@ -39,42 +54,32 @@ fun ToolChipsRow(state: WidgetState, modifier: GlanceModifier = GlanceModifier) 
         NetLensWidgetColors.onAccentSoft
     }
 
+    val chipRows = resolveToolChips(state.chipRoutes).chunked(2)
+
     Column(
         modifier = modifier
             .fillMaxHeight()
             .padding(start = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ToolChip(
-                label = "LAN",
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
-                ),
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-            )
-            Spacer(GlanceModifier.width(4.dp))
-            ToolChip(
-                label = "Ping",
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
-                ),
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-            )
+        chipRows.forEachIndexed { rowIndex, rowChips ->
+            if (rowIndex > 0) Spacer(GlanceModifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                rowChips.forEachIndexed { index, chip ->
+                    if (index > 0) Spacer(GlanceModifier.width(4.dp))
+                    ToolChip(
+                        label = chip.shortLabel,
+                        action = actionRunCallback<OpenDeeplinkAction>(
+                            actionParametersOf(DeeplinkUriKey to Deeplink.forRoute(chip.route)),
+                        ),
+                        background = NetLensWidgetColors.accentSoft,
+                        onBackground = NetLensWidgetColors.onAccentSoft,
+                    )
+                }
+            }
         }
-        Spacer(GlanceModifier.height(4.dp))
+        if (chipRows.isNotEmpty()) Spacer(GlanceModifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ToolChip(
-                label = "DNS",
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
-                ),
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-            )
-            Spacer(GlanceModifier.width(4.dp))
             ToolChip(
                 label = "Portal",
                 action = actionRunCallback<OpenPortalAction>(),
