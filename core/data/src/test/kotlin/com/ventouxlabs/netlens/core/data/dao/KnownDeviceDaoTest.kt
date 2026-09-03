@@ -71,6 +71,8 @@ class KnownDeviceDaoTest {
             lastSeen = 999L,
             deviceType = "router",
             osGuess = "linux",
+            fingerprintConfidence = 90,
+            fingerprintEvidence = "mDNS: googlecast",
         )
 
         val row = dao.getById(id)
@@ -80,6 +82,8 @@ class KnownDeviceDaoTest {
         assertEquals("NewVendor", row.vendor)
         assertEquals("router", row.deviceType)
         assertEquals("linux", row.osGuess)
+        assertEquals(90, row.fingerprintConfidence)
+        assertEquals("mDNS: googlecast", row.fingerprintEvidence)
         // User-authored columns must survive untouched.
         assertEquals("Old Name", row.customName)
         assertEquals("old,tags", row.tags)

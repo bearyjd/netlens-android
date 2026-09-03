@@ -338,6 +338,12 @@ internal fun HostDetailSheet(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                    if (state.fingerprintConfidence > 0) {
+                        Text(
+                            text = stringResource(R.string.lanscan_confidence_label, state.fingerprintConfidence),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.lanscan_evidence_label),
                         style = MaterialTheme.typography.labelMedium,

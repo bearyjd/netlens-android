@@ -75,4 +75,122 @@ class DeviceInventoryRepositoryTest {
         )
         assertEquals(42L, dao.getByMac("AA:BB:CC:DD:EE:05")?.networkId)
     }
+
+    // --- confidence-aware cross-scan merge (the actual cross-subnet-relevant scenario) ---
+
+    @Test
+    fun `second scan with higher confidence upgrades deviceType and osGuess`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.70", macAddress = "AA:BB:CC:DD:EE:70",
+                    deviceType = "Phone", osGuess = "iOS", fingerprintConfidence = 40,
+                    fingerprintEvidence = listOf("hostname: some-phone"),
+                ),
+            ),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.71", macAddress = "AA:BB:CC:DD:EE:70",
+                    deviceType = "Chromecast", osGuess = "Android", fingerprintConfidence = 90,
+                    fingerprintEvidence = listOf("mDNS: googlecast"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        val updated = dao.getByMac("AA:BB:CC:DD:EE:70")
+        assertEquals("Chromecast", updated?.deviceType)
+        assertEquals("Android", updated?.osGuess)
+        assertEquals(90, updated?.fingerprintConfidence)
+    }
+
+    @Test
+    fun `second scan with lower confidence does not downgrade deviceType or osGuess`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.72", macAddress = "AA:BB:CC:DD:EE:72",
+                    deviceType = "Chromecast", osGuess = "Android", fingerprintConfidence = 90,
+                    fingerprintEvidence = listOf("mDNS: googlecast"),
+                ),
+            ),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.73", macAddress = "AA:BB:CC:DD:EE:72",
+                    deviceType = "Phone", osGuess = "iOS", fingerprintConfidence = 40,
+                    fingerprintEvidence = listOf("hostname: some-phone"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        val updated = dao.getByMac("AA:BB:CC:DD:EE:72")
+        assertEquals("Chromecast", updated?.deviceType)
+        assertEquals("Android", updated?.osGuess)
+        assertEquals(90, updated?.fingerprintConfidence)
+    }
+
+    @Test
+    fun `fingerprintEvidence unions across scans rather than replacing`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.74", macAddress = "AA:BB:CC:DD:EE:74",
+                    fingerprintConfidence = 90, fingerprintEvidence = listOf("mDNS: googlecast"),
+                ),
+            ),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.74", macAddress = "AA:BB:CC:DD:EE:74",
+                    fingerprintConfidence = 80, fingerprintEvidence = listOf("port 8008"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        assertEquals("mDNS: googlecast, port 8008", dao.getByMac("AA:BB:CC:DD:EE:74")?.fingerprintEvidence)
+    }
+
+    @Test
+    fun `a device with no prior classification still picks up a fresh low-confidence signal`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(LanDevice(ip = "192.168.1.75", macAddress = "AA:BB:CC:DD:EE:75")),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.75", macAddress = "AA:BB:CC:DD:EE:75",
+                    deviceType = "Printer", osGuess = null, fingerprintConfidence = 40,
+                    fingerprintEvidence = listOf("hostname: office-printer"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        val updated = dao.getByMac("AA:BB:CC:DD:EE:75")
+        assertEquals("Printer", updated?.deviceType)
+        assertEquals(40, updated?.fingerprintConfidence)
+    }
 }

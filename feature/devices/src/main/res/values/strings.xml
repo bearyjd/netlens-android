@@ -18,6 +18,8 @@
     <string name="devices_detail_vendor">Vendor: %1$s</string>
     <string name="devices_detail_type">Type: %1$s</string>
     <string name="devices_detail_os">OS: %1$s</string>
+    <string name="devices_detail_confidence">Confidence: %1$d%%</string>
+    <string name="devices_detail_evidence">Why: %1$s</string>
     <string name="devices_detail_location">Location</string>
     <string name="devices_detail_location_hint">Where it lives (e.g. Garage)</string>
     <string name="devices_detail_tags">Tags</string>

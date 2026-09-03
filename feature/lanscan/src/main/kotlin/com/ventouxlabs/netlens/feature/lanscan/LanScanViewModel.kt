@@ -35,12 +35,14 @@ import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
+import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinterImpl
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
+import com.ventouxlabs.netlens.feature.lanscan.engine.strongerFingerprint
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
@@ -336,20 +338,16 @@ class LanScanViewModel @Inject constructor(
             }
 
             suspend fun mergeDevice(device: LanDevice) {
-                val fingerprinted = fingerprinter.fingerprint(device)
+                // fingerprint() re-derives deviceType/osGuess from hostname/services alone, so a
+                // device that already arrived with a real classification (e.g. SSDP, confidence
+                // CONFIDENCE_SSDP) must not have that silently overwritten by a weaker re-guess —
+                // keep whichever of the two is actually stronger.
+                val reclassified = fingerprinter.fingerprint(device)
+                val fingerprinted = strongerFingerprint(device, reclassified)
                 discoveredLock.withLock {
                     val existing = discovered[fingerprinted.ip]
                     discovered[fingerprinted.ip] = if (existing != null) {
-                        existing.copy(
-                            hostname = existing.hostname ?: fingerprinted.hostname,
-                            discoveryMethod = DiscoveryMethod.MULTIPLE,
-                            services = (existing.services + fingerprinted.services).distinct(),
-                            deviceType = existing.deviceType ?: fingerprinted.deviceType,
-                            osGuess = existing.osGuess ?: fingerprinted.osGuess,
-                            latencyMs = maxOf(existing.latencyMs, fingerprinted.latencyMs),
-                            macAddress = existing.macAddress ?: fingerprinted.macAddress,
-                            vendor = existing.vendor ?: fingerprinted.vendor,
-                        )
+                        strongerFingerprint(existing, fingerprinted)
                     } else {
                         fingerprinted
                     }
@@ -400,6 +398,14 @@ class LanScanViewModel @Inject constructor(
                                     deviceType = type,
                                     osGuess = os,
                                     vendor = ssdpDevice.manufacturer,
+                                    fingerprintConfidence = if (type != null || os != null) {
+                                        DeviceFingerprinterImpl.CONFIDENCE_SSDP
+                                    } else {
+                                        DeviceFingerprinterImpl.CONFIDENCE_NONE
+                                    },
+                                    fingerprintEvidence = listOfNotNull(
+                                        ssdpDevice.deviceType?.let { "SSDP: $it" },
+                                    ),
                                 )
                                 mergeDevice(device)
                             }
@@ -499,6 +505,16 @@ class LanScanViewModel @Inject constructor(
                                 if (it.ip == device.ip) it.copy(
                                     hostname = it.hostname ?: nbInfo.name,
                                     osGuess = it.osGuess ?: os,
+                                    fingerprintConfidence = if (os != null) {
+                                        maxOf(it.fingerprintConfidence, DeviceFingerprinterImpl.CONFIDENCE_NETBIOS)
+                                    } else {
+                                        it.fingerprintConfidence
+                                    },
+                                    fingerprintEvidence = if (os != null) {
+                                        (it.fingerprintEvidence + "NetBIOS: ${nbInfo.name}").distinct()
+                                    } else {
+                                        it.fingerprintEvidence
+                                    },
                                 ) else it
                             },
                         )
@@ -692,6 +708,7 @@ class LanScanViewModel @Inject constructor(
                         enrichedType = fp.deviceType,
                         enrichedOs = fp.osGuess,
                         fingerprintEvidence = fp.evidence,
+                        fingerprintConfidence = fp.confidence,
                     )
                 }
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {

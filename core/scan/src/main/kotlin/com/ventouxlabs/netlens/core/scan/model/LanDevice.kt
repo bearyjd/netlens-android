@@ -11,4 +11,6 @@ data class LanDevice(
     val services: List<String> = emptyList(),
     val macAddress: String? = null,
     val vendor: String? = null,
+    val fingerprintConfidence: Int = 0,
+    val fingerprintEvidence: List<String> = emptyList(),
 )

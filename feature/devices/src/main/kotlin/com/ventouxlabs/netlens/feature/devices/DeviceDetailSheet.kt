@@ -83,6 +83,15 @@ fun DeviceDetailSheet(
             device.vendor?.let { Text(stringResource(R.string.devices_detail_vendor, it)) }
             device.deviceType?.let { Text(stringResource(R.string.devices_detail_type, it)) }
             device.osGuess?.let { Text(stringResource(R.string.devices_detail_os, it)) }
+            device.fingerprintConfidence?.let {
+                Text(stringResource(R.string.devices_detail_confidence, it))
+            }
+            device.fingerprintEvidence?.let {
+                Text(
+                    text = stringResource(R.string.devices_detail_evidence, it),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Text(stringResource(R.string.devices_first_seen, formatSeenTimestamp(device.firstSeen)))
             Text(stringResource(R.string.devices_last_seen, formatSeenTimestamp(device.lastSeen)))
 

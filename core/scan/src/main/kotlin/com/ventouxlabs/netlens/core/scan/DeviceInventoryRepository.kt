@@ -33,14 +33,18 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                 if (mac != null && existing.macAddress == null) {
                     knownDeviceDao.setMacAddress(existing.id, mac)
                 }
+                val existingConfidence = existing.fingerprintConfidence ?: 0
+                val candidateWins = device.fingerprintConfidence > existingConfidence
                 knownDeviceDao.updateLastSeen(
                     id = existing.id,
                     hostname = device.hostname ?: existing.hostname,
                     ip = device.ip,
                     vendor = device.vendor ?: existing.vendor,
                     lastSeen = now,
-                    deviceType = device.deviceType ?: existing.deviceType,
-                    osGuess = device.osGuess ?: existing.osGuess,
+                    deviceType = if (candidateWins) device.deviceType else existing.deviceType ?: device.deviceType,
+                    osGuess = if (candidateWins) device.osGuess else existing.osGuess ?: device.osGuess,
+                    fingerprintConfidence = maxOf(device.fingerprintConfidence, existingConfidence),
+                    fingerprintEvidence = mergeEvidence(existing.fingerprintEvidence, device.fingerprintEvidence),
                 )
                 if (networkId != null && existing.networkId != networkId) {
                     knownDeviceDao.setNetworkId(existing.id, networkId)
@@ -56,6 +60,8 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                     isKnown = false,
                     deviceType = device.deviceType,
                     osGuess = device.osGuess,
+                    fingerprintConfidence = device.fingerprintConfidence,
+                    fingerprintEvidence = device.fingerprintEvidence.joinToString(", ").ifEmpty { null },
                     networkId = networkId,
                 )
                 val insertResult = knownDeviceDao.insertIfNew(entity)
@@ -65,4 +71,11 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             }
         }
     }
+}
+
+/** Joins persisted (", "-delimited) evidence with a fresh scan's evidence list, de-duplicated. */
+private fun mergeEvidence(existingJoined: String?, freshList: List<String>): String? {
+    val existingList = existingJoined?.split(", ")?.filter { it.isNotEmpty() }.orEmpty()
+    val merged = (existingList + freshList).distinct()
+    return merged.joinToString(", ").ifEmpty { null }
 }

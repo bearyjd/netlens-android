@@ -206,6 +206,18 @@ class DeviceFingerprinterTest {
         assertNull(os)
     }
 
+    // Regression: evidence used to always cite services.firstOrNull(), so an unclassified
+    // service listed before the classified one produced a misleading "Why" (e.g. "mDNS: http"
+    // for a device correctly identified as a Chromecast via the second entry).
+    @Test
+    fun `evidence cites the service that actually matched, not the first one listed`() = runTest {
+        val dev = device(hostname = "generic-host").copy(services = listOf("_http._tcp", "_googlecast._tcp"))
+        val result = fp.fingerprint(dev)
+        assertEquals("Chromecast", result.deviceType)
+        assertTrue(result.fingerprintEvidence.any { "mDNS: googlecast" in it })
+        assertTrue(result.fingerprintEvidence.none { "mDNS: http" in it })
+    }
+
     // --- SSDP classification ---
 
     @Test
@@ -385,5 +397,46 @@ class DeviceFingerprinterTest {
         assertNull(result.deviceType)
         assertNull(result.osGuess)
         assertTrue(result.evidence.isEmpty())
+    }
+
+    // --- confidence scoring ---
+
+    @Test
+    fun `fingerprint via mDNS service sets CONFIDENCE_MDNS_SERVICE`() = runTest {
+        val dev = device(hostname = "generic-host").copy(services = listOf("_googlecast._tcp"))
+        val result = fp.fingerprint(dev)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE, result.fingerprintConfidence)
+    }
+
+    @Test
+    fun `fingerprint via hostname guess sets CONFIDENCE_HOSTNAME_GUESS`() = runTest {
+        val result = fp.fingerprint(device(hostname = "my-gateway"))
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_HOSTNAME_GUESS, result.fingerprintConfidence)
+    }
+
+    @Test
+    fun `fingerprint with no signal at all sets CONFIDENCE_NONE and empty evidence`() = runTest {
+        val result = fp.fingerprint(device())
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.fingerprintConfidence)
+        assertTrue(result.fingerprintEvidence.isEmpty())
+    }
+
+    @Test
+    fun `fingerprintWithPorts sets CONFIDENCE_PORT_SPECIFIC for printer port`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(631))
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.confidence)
+    }
+
+    @Test
+    fun `fingerprintWithPorts sets CONFIDENCE_PORT_GENERIC for bare web ports`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(80))
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_GENERIC, result.confidence)
+    }
+
+    @Test
+    fun `fingerprintWithPorts sets CONFIDENCE_NONE when neither type nor os is newly set`() {
+        val printerDevice = device().copy(deviceType = "Printer")
+        val result = fp.fingerprintWithPorts(printerDevice, listOf(80, 443))
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.confidence)
     }
 }

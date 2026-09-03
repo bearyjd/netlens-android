@@ -29,7 +29,8 @@ interface KnownDeviceDao {
 
     @Query(
         "UPDATE known_devices SET hostname = :hostname, ip = :ip, vendor = :vendor, " +
-            "lastSeen = :lastSeen, deviceType = :deviceType, osGuess = :osGuess " +
+            "lastSeen = :lastSeen, deviceType = :deviceType, osGuess = :osGuess, " +
+            "fingerprintConfidence = :fingerprintConfidence, fingerprintEvidence = :fingerprintEvidence " +
             "WHERE id = :id",
     )
     suspend fun updateLastSeen(
@@ -40,6 +41,8 @@ interface KnownDeviceDao {
         lastSeen: Long,
         deviceType: String?,
         osGuess: String?,
+        fingerprintConfidence: Int?,
+        fingerprintEvidence: String?,
     )
 
     @Query("UPDATE known_devices SET macAddress = :mac WHERE id = :id")
