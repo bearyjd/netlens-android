@@ -27,7 +27,7 @@ android {
     defaultConfig {
         // Macrobenchmark requires API 23+; the app's minSdk is 29.
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // :app is flavored (foss/gplay on the "distribution" dimension). We only
