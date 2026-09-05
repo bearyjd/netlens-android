@@ -80,6 +80,39 @@ class FingerprintMergeTest {
         assertEquals(listOf("_googlecast._tcp", "_http._tcp"), result.services)
     }
 
+    // Regression: a winning candidate used to overwrite BOTH deviceType and osGuess based on a
+    // single whole-record confidence comparison, so a candidate that only had an opinion on one
+    // field (e.g. SSDP: deviceType but not osGuess) silently erased the other field's existing,
+    // independently-sourced value instead of leaving it alone.
+    @Test
+    fun `winning candidate's null field does not erase existing value for that field`() {
+        val existing = device(deviceType = null, osGuess = "Linux", confidence = 40)
+        val candidate = device(deviceType = "Router", osGuess = null, confidence = 90)
+
+        val result = strongerFingerprint(existing, candidate)
+
+        assertEquals("Router", result.deviceType)
+        assertEquals("Linux", result.osGuess)
+        assertEquals(90, result.fingerprintConfidence)
+    }
+
+    // Regression: caught by an independent codex review of the fix above. The guard on
+    // deviceType/osGuess only fixed the "candidate wins but lacks a field" direction; a
+    // winner that lacks a field still needs to fall back to the LOSER's value for that field
+    // rather than leaving it null, as long as this isn't a genuine tie (see the zero-zero
+    // test below, which must NOT gain this fallback).
+    @Test
+    fun `stricter existing winner's null field is filled from the losing candidate`() {
+        val existing = device(deviceType = "Router", osGuess = null, confidence = 90)
+        val candidate = device(deviceType = null, osGuess = "Linux", confidence = 40)
+
+        val result = strongerFingerprint(existing, candidate)
+
+        assertEquals("Router", result.deviceType)
+        assertEquals("Linux", result.osGuess)
+        assertEquals(90, result.fingerprintConfidence)
+    }
+
     @Test
     fun `resulting confidence is always the max of the two inputs`() {
         val existing = device(deviceType = "Router", confidence = 90)

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
+import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_LOCATION_LENGTH
@@ -88,7 +89,7 @@ fun DeviceDetailSheet(
             }
             device.fingerprintEvidence?.let {
                 Text(
-                    text = stringResource(R.string.devices_detail_evidence, it),
+                    text = stringResource(R.string.devices_detail_evidence, FingerprintEvidence.formatForDisplay(it)),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.core.scan
 
+import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -7,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class DeviceInventoryRepositoryTest {
@@ -166,7 +168,80 @@ class DeviceInventoryRepositoryTest {
             networkId = null,
         )
 
-        assertEquals("mDNS: googlecast, port 8008", dao.getByMac("AA:BB:CC:DD:EE:74")?.fingerprintEvidence)
+        assertEquals(
+            listOf("mDNS: googlecast", "port 8008"),
+            FingerprintEvidence.parse(dao.getByMac("AA:BB:CC:DD:EE:74")?.fingerprintEvidence),
+        )
+    }
+
+    // Regression: evidence used to be persisted as a raw ", "-joined string and split back on
+    // that same delimiter — an SSDP friendly name or mDNS label containing a literal comma would
+    // fracture into bogus extra entries on the next merge. FingerprintEvidence strips the
+    // separator at write time instead, so a comma inside an entry survives round-trip.
+    @Test
+    fun `evidence containing a comma survives the merge round-trip intact`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.76", macAddress = "AA:BB:CC:DD:EE:76",
+                    fingerprintConfidence = 90,
+                    fingerprintEvidence = listOf("SSDP: Marantz SR7013, Zone 2"),
+                ),
+            ),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.76", macAddress = "AA:BB:CC:DD:EE:76",
+                    fingerprintConfidence = 40,
+                    fingerprintEvidence = listOf("hostname: marantz"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        val evidence = FingerprintEvidence.parse(dao.getByMac("AA:BB:CC:DD:EE:76")?.fingerprintEvidence)
+        assertEquals(2, evidence.size)
+        assertTrue(evidence.any { it.startsWith("SSDP: Marantz SR7013") })
+    }
+
+    // Regression: a second scan winning overall on confidence used to overwrite BOTH deviceType
+    // and osGuess, so a candidate with an opinion on only one field (e.g. SSDP: deviceType but
+    // not osGuess) silently erased the other field's existing value instead of leaving it alone.
+    @Test
+    fun `higher-confidence scan's null field does not erase the existing value for that field`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val notifier = RecordingNewDeviceNotifier()
+        val r = repo(dao, notifier)
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.77", macAddress = "AA:BB:CC:DD:EE:77",
+                    deviceType = null, osGuess = "Linux", fingerprintConfidence = 40,
+                    fingerprintEvidence = listOf("hostname: some-router"),
+                ),
+            ),
+            networkId = null,
+        )
+        r.persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.77", macAddress = "AA:BB:CC:DD:EE:77",
+                    deviceType = "Router", osGuess = null, fingerprintConfidence = 90,
+                    fingerprintEvidence = listOf("SSDP: WAP Router"),
+                ),
+            ),
+            networkId = null,
+        )
+
+        val updated = dao.getByMac("AA:BB:CC:DD:EE:77")
+        assertEquals("Router", updated?.deviceType)
+        assertEquals("Linux", updated?.osGuess)
+        assertEquals(90, updated?.fingerprintConfidence)
     }
 
     @Test

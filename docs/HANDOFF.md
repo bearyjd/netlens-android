@@ -69,9 +69,58 @@ every task — neither shipped un-caught. One Test-Executor-crash flake reproduc
 run and disappeared on isolated re-run — the known environmental flakiness from the
 `gradle-test-executor-connect-timeout-under-host-contention` learning below, not a real failure.
 
-**Still open:** not committed, not pushed, no PR yet. Whoever picks this up next: `git status` on
-`feat/composite-device-fingerprinting` to see the full uncommitted diff, and `/code-review` hasn't
-been run on the post-codex-fix state yet — only the pre-fix state got Claude's own review.
+## Post-commit devil's-advocate review found a fourth real bug (2026-09-04)
+
+Committed as `c4b3803` and reviewed with a simulated adversarial pass (`/devils-advocate`) rather
+than a single-pass read. Same lesson as the codex round: a shared merge helper reused in a new
+context needs every field it touches audited, not just the one the change was about.
+
+**The bug:** `strongerFingerprint()` and `DeviceInventoryRepositoryImpl`'s persisted-merge path
+both decided `deviceType` *and* `osGuess` together from one whole-record confidence comparison.
+SSDP frequently supplies only one of the two (UPnP device descriptions rarely say anything about
+OS), but its confidence constant (`CONFIDENCE_SSDP = 90`) is assigned whenever *either* field is
+non-null. Concretely: a ping-discovered device with `osGuess = "Linux"` (confidence 40, from a
+hostname guess) meets an SSDP reading with `deviceType = "Router", osGuess = null` (confidence 90).
+The old merge took the winning candidate's fields wholesale — `osGuess` became `null`, silently
+erasing a real, independently-sourced signal the new reading had nothing to say about. Exactly the
+mirror image of the bug this PR set out to fix, in the fix itself.
+
+Fixed by guarding the overwrite on the winning candidate's field being non-null in both merge
+sites, matching the pattern already used for `services`/`fingerprintEvidence` in the same
+functions (union unconditionally, never let "who won overall" discard information you don't have
+a replacement for). Two new regression tests added in the exact mixed-field shape
+(`FingerprintMergeTest`, `DeviceInventoryRepositoryTest`) — the existing tests all set both fields
+together on both sides of every case, so none of them could have caught this.
+
+**Two secondary findings from the same pass, also fixed:**
+- `mergeEvidence`'s persisted format round-tripped evidence through a raw `", "`-joined string,
+  split back on that same delimiter — an SSDP friendly name or mDNS label containing a literal
+  comma would fracture into bogus extra entries on the next merge. Replaced with `FingerprintEvidence`
+  (`core/data/model/`), a normalizer mirroring the existing `DeviceTags` convention: strip the
+  separator character from each entry at write time instead of assuming a delimiter can't appear
+  in vendor-supplied text. Covered by a new comma-round-trip test.
+- `MIGRATION_16_17` was wired into `DataModule`'s migration list but never added to
+  `MigrationTest.kt`'s covered migrations — the only untested migration in that file. Added, plus a
+  dedicated data-integrity test (mirroring the `14→15` pattern) asserting a pre-existing row
+  migrates both new columns to `NULL`, not a crash or a value that looks like a real reading.
+
+**Deliberately deferred, not dropped:** `PortFingerprint`/`DeviceFingerprinterImpl.fingerprintWithPorts`
+has the same single-scalar-covers-two-fields shape (e.g. RDP's port 3389 only informs `os`, but the
+whole `PortFingerprint.confidence` gets attributed to `deviceType` too when both are eventually
+shown together in `HostDetailSheet`'s "Confidence: N%" label). This is display-only today (feeds
+`HostDetailState`, not the persisted `LanDevice`), so it doesn't lose data the way the two bugs
+above did, but it can show a misleadingly high confidence for a classification that's actually a
+blend of a strong and a weak signal. Full fix is splitting `PortFingerprint` into
+`typeConfidence`/`osConfidence`, which touches the ViewModel, both detail sheets, and their tests —
+scoped out of this pass given it doesn't lose data, but flagged here so it isn't rediscovered from
+scratch.
+
+**Still open:** the two commits (`df97e69` billing/SDK compliance, `c4b3803` fingerprinting) were
+pushed as separate PRs — `df97e69` is PR #165 (billing/SDK) against `master`. `c4b3803` and this
+fix pass are still local-only on `feat/composite-device-fingerprinting`, not pushed, no PR yet.
+Whoever picks this up next: `git log` on that branch for the fix commit, and this branch still
+hasn't had a fresh review pass on top of *this* round of fixes — only the pre-fix state got the
+devil's-advocate review above.
 
 ---
 

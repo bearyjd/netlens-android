@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.core.scan
 
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
+import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import javax.inject.Inject
@@ -41,10 +42,24 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                     ip = device.ip,
                     vendor = device.vendor ?: existing.vendor,
                     lastSeen = now,
-                    deviceType = if (candidateWins) device.deviceType else existing.deviceType ?: device.deviceType,
-                    osGuess = if (candidateWins) device.osGuess else existing.osGuess ?: device.osGuess,
+                    // A winning candidate only replaces the fields it actually has an opinion
+                    // on — e.g. an SSDP reading that supplies deviceType but not osGuess must
+                    // not blank out an existing (lower-confidence, but real) osGuess.
+                    deviceType = if (candidateWins && device.deviceType != null) {
+                        device.deviceType
+                    } else {
+                        existing.deviceType ?: device.deviceType
+                    },
+                    osGuess = if (candidateWins && device.osGuess != null) {
+                        device.osGuess
+                    } else {
+                        existing.osGuess ?: device.osGuess
+                    },
                     fingerprintConfidence = maxOf(device.fingerprintConfidence, existingConfidence),
-                    fingerprintEvidence = mergeEvidence(existing.fingerprintEvidence, device.fingerprintEvidence),
+                    fingerprintEvidence = FingerprintEvidence.merge(
+                        existing.fingerprintEvidence,
+                        device.fingerprintEvidence,
+                    ),
                 )
                 if (networkId != null && existing.networkId != networkId) {
                     knownDeviceDao.setNetworkId(existing.id, networkId)
@@ -61,7 +76,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                     deviceType = device.deviceType,
                     osGuess = device.osGuess,
                     fingerprintConfidence = device.fingerprintConfidence,
-                    fingerprintEvidence = device.fingerprintEvidence.joinToString(", ").ifEmpty { null },
+                    fingerprintEvidence = FingerprintEvidence.format(device.fingerprintEvidence),
                     networkId = networkId,
                 )
                 val insertResult = knownDeviceDao.insertIfNew(entity)
@@ -71,11 +86,4 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             }
         }
     }
-}
-
-/** Joins persisted (", "-delimited) evidence with a fresh scan's evidence list, de-duplicated. */
-private fun mergeEvidence(existingJoined: String?, freshList: List<String>): String? {
-    val existingList = existingJoined?.split(", ")?.filter { it.isNotEmpty() }.orEmpty()
-    val merged = (existingList + freshList).distinct()
-    return merged.joinToString(", ").ifEmpty { null }
 }
