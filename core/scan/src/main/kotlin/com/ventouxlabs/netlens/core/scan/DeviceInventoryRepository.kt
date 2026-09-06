@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.core.scan
 
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
+import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import javax.inject.Inject
@@ -33,14 +34,32 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                 if (mac != null && existing.macAddress == null) {
                     knownDeviceDao.setMacAddress(existing.id, mac)
                 }
+                val existingConfidence = existing.fingerprintConfidence ?: 0
+                val candidateWins = device.fingerprintConfidence > existingConfidence
                 knownDeviceDao.updateLastSeen(
                     id = existing.id,
                     hostname = device.hostname ?: existing.hostname,
                     ip = device.ip,
                     vendor = device.vendor ?: existing.vendor,
                     lastSeen = now,
-                    deviceType = device.deviceType ?: existing.deviceType,
-                    osGuess = device.osGuess ?: existing.osGuess,
+                    // A winning candidate only replaces the fields it actually has an opinion
+                    // on — e.g. an SSDP reading that supplies deviceType but not osGuess must
+                    // not blank out an existing (lower-confidence, but real) osGuess.
+                    deviceType = if (candidateWins && device.deviceType != null) {
+                        device.deviceType
+                    } else {
+                        existing.deviceType ?: device.deviceType
+                    },
+                    osGuess = if (candidateWins && device.osGuess != null) {
+                        device.osGuess
+                    } else {
+                        existing.osGuess ?: device.osGuess
+                    },
+                    fingerprintConfidence = maxOf(device.fingerprintConfidence, existingConfidence),
+                    fingerprintEvidence = FingerprintEvidence.merge(
+                        existing.fingerprintEvidence,
+                        device.fingerprintEvidence,
+                    ),
                 )
                 if (networkId != null && existing.networkId != networkId) {
                     knownDeviceDao.setNetworkId(existing.id, networkId)
@@ -56,6 +75,8 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                     isKnown = false,
                     deviceType = device.deviceType,
                     osGuess = device.osGuess,
+                    fingerprintConfidence = device.fingerprintConfidence,
+                    fingerprintEvidence = FingerprintEvidence.format(device.fingerprintEvidence),
                     networkId = networkId,
                 )
                 val insertResult = knownDeviceDao.insertIfNew(entity)

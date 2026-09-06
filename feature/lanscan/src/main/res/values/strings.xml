@@ -39,6 +39,7 @@
     <string name="lanscan_fingerprint_section">Fingerprint</string>
     <string name="lanscan_profile_label">Profile: %1$s</string>
     <string name="lanscan_os_label">OS: %1$s</string>
+    <string name="lanscan_confidence_label">Confidence: %1$d%%</string>
     <string name="lanscan_evidence_label">Evidence</string>
     <string name="lanscan_open_count">%1$d open</string>
     <string name="lanscan_scanned_count">%1$d scanned</string>

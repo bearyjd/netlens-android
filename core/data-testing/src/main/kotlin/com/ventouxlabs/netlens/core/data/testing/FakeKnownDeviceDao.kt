@@ -71,6 +71,8 @@ class FakeKnownDeviceDao : KnownDeviceDao {
         lastSeen: Long,
         deviceType: String?,
         osGuess: String?,
+        fingerprintConfidence: Int?,
+        fingerprintEvidence: String?,
     ) = mutate(id) {
         it.copy(
             hostname = hostname,
@@ -79,6 +81,8 @@ class FakeKnownDeviceDao : KnownDeviceDao {
             lastSeen = lastSeen,
             deviceType = deviceType,
             osGuess = osGuess,
+            fingerprintConfidence = fingerprintConfidence,
+            fingerprintEvidence = fingerprintEvidence,
         )
     }
 

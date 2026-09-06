@@ -14,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Runs every real [DataModule] migration against the exported schema JSONs
  * (`core/data/schemas/com.ventouxlabs.netlens.core.data.NetLensDatabase/`) under Robolectric. This
- * is the only place any of the 12 migrations (4→5 … 15→16) get exercised — previously they were
+ * is the only place any of the 13 migrations (4→5 … 16→17) get exercised — previously they were
  * hand-checked only, per `.omc/skills/room-migration-schema-default-expertise.md`.
  *
  * Note: schema `3.json` is not exported (migrations start at 4→5), so the chain below starts at 4.
@@ -27,6 +27,7 @@ class MigrationTest {
         DataModule.MIGRATION_7_8, DataModule.MIGRATION_8_9, DataModule.MIGRATION_9_10,
         DataModule.MIGRATION_10_11, DataModule.MIGRATION_11_12, DataModule.MIGRATION_12_13,
         DataModule.MIGRATION_13_14, DataModule.MIGRATION_14_15, DataModule.MIGRATION_15_16,
+        DataModule.MIGRATION_16_17,
     )
 
     @get:Rule
@@ -41,9 +42,9 @@ class MigrationTest {
     // every step but does NOT exercise row-preserving migrations (e.g. MIGRATION_11_12's
     // known_devices rename-and-copy). That needs its own data-integrity test as a follow-up.
     @Test
-    fun `migrate full chain 4 through 16 preserves schema shape`() {
+    fun `migrate full chain 4 through 17 preserves schema shape`() {
         helper.createDatabase(TEST_DB, 4).close()
-        helper.runMigrationsAndValidate(TEST_DB, 16, true, *allMigrations)
+        helper.runMigrationsAndValidate(TEST_DB, 17, true, *allMigrations)
     }
 
     // v15 adds tags/notes/location to known_devices and the two wifi_survey_* tables — the
@@ -76,6 +77,28 @@ class MigrationTest {
             var tableCount = 0
             while (cursor.moveToNext()) tableCount++
             assertEquals(2, tableCount)
+        }
+    }
+
+    // v17 adds fingerprintConfidence/fingerprintEvidence to known_devices for confidence-scored
+    // device fingerprinting — additive only, so a pre-existing row must migrate to NULL on both
+    // new columns rather than a crash or a default value that looks like a real reading.
+    @Test
+    fun `migrate 16 to 17 adds fingerprint confidence and evidence columns`() {
+        helper.createDatabase(TEST_DB, 16).apply {
+            execSQL(
+                "INSERT INTO known_devices (ip, firstSeen, lastSeen, isKnown) VALUES " +
+                    "('192.168.1.1', 0, 0, 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 17, true, DataModule.MIGRATION_16_17)
+
+        migrated.query("SELECT fingerprintConfidence, fingerprintEvidence FROM known_devices").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+            assertTrue(cursor.isNull(1))
         }
     }
 

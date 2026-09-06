@@ -1,3 +1,129 @@
+# Session Handoff — composite device fingerprinting built, codex review caught a real SSDP scoring bug (2026-09-03)
+
+**Not released — branch `feat/composite-device-fingerprinting` is uncommitted and un-PR'd.** Scope:
+LAN Scan's device classification (`deviceType`/`osGuess`) used to be "first signal wins", both
+within one scan (`DeviceFingerprinterImpl`'s five classification methods) and across concurrent
+discovery jobs (`LanScanViewModel.mergeDevice`). Concrete bug this fixes: ping, mDNS, and SSDP
+discovery run on three concurrent coroutines that all call `mergeDevice()` on the same device as
+they resolve; the merge was `deviceType = existing.deviceType ?: fingerprinted.deviceType` — plain
+null-coalescing. Whichever job's result landed in the `discovered` map first permanently occupied
+the slot, even when a far more reliable signal (an mDNS `_googlecast._tcp` record) arrived 200ms
+behind a weak hostname substring guess that happened to resolve first via the ping sweep. Now every
+classification path produces a confidence score (0-100) via `DeviceFingerprinterImpl`'s
+`CONFIDENCE_*` constants, `strongerFingerprint()` (new, `feature/lanscan/.../engine/`) keeps the
+higher-confidence result instead of whichever arrived first, and the score + evidence persist on
+`KnownDeviceEntity` (migration 16→17) so the Inventory tab and both detail sheets can show *why* a
+device is classified the way it is, not just the bare guess.
+
+**Deliberately out of scope**, per an explicit user decision made before planning started: automatic
+cross-subnet device identity *linking* — recognizing "this is the same phone with a different
+randomized MAC on another network" — and MAC-randomization detection itself (confirmed absent from
+the codebase entirely; searched for "randomiz"/"LAA"/"locally administered", zero hits). This plan
+only strengthens the signal a future linking feature would need; it does not attempt the linking.
+
+## `/codex review` caught a real bug, and fixing it surfaced a second one
+
+Ran `codex review --base master` before committing. Gate came back FAIL on 1 `[P1]` + 2 `[P2]`. The
+P1 ("missing file, won't compile") was a false positive specific to reviewing an uncommitted branch
+— `git diff` never shows untracked files regardless of scope, and the helper file in question
+genuinely existed, compiled, and had 6 passing tests. Verified before dismissing it, not assumed.
+
+Both P2s were real:
+
+1. **`CONFIDENCE_SSDP` was dead code.** SSDP-discovered devices carry no `services`, so the
+   `mergeDevice()` path's unconditional call to `fingerprinter.fingerprint(device)` re-derived
+   `deviceType`/`osGuess` from hostname alone — discarding the SSDP classification `classifyFromSsdp()`
+   had already produced, before it ever reached the new confidence-aware merge. The constant existed
+   with exactly one reference in the whole codebase: its own declaration.
+2. **Evidence cited the wrong service.** For a device advertising `[_http._tcp, _googlecast._tcp]`,
+   `classifyFromServices` correctly finds Chromecast from the *second* entry, but the evidence string
+   was built from `services.firstOrNull()` — recording "mDNS: http" for a device correctly identified
+   as a Chromecast.
+
+Fixing #1 (attach confidence to the SSDP-constructed `LanDevice`, then reconcile it against
+`fingerprint()`'s re-guess via `strongerFingerprint()` instead of letting the re-guess win
+unconditionally) **surfaced a third bug that wasn't in codex's findings**: `strongerFingerprint()`
+stamped `discoveryMethod = MULTIPLE` unconditionally, which was correct for its original call site
+(reconciling two genuinely different discovery jobs) but wrong for the new one (reconciling a single
+device's own pre- and post-`fingerprint()` state — the same discovery event, not multiple sources).
+Every single-source device would have shown "Multi" in the UI on its very first classification pass.
+Fixed by only escalating to `MULTIPLE` when the two inputs' `discoveryMethod` actually differ.
+
+**The lesson worth carrying forward:** reusing a shared merge/reconciliation helper in a *new*
+context needs an audit of every field it touches, not just the one you meant to fix. The confidence
+field was the intended change; `discoveryMethod` was collateral damage from calling the same
+function with inputs that violate an assumption ("these two readings came from different sources")
+the original call site's design had silently baked in. Fixed and covered by 2 new tests
+(`same discoveryMethod on both inputs is not promoted to MULTIPLE` /
+`different discoveryMethod ... is promoted to MULTIPLE`) — neither existed before this session,
+because the original code only ever had one call site for the function.
+
+## Verification
+
+19 new/extended tests across `core/scan` and `feature/lanscan`, all passing; all pre-existing
+`DeviceFingerprinterTest` (~50 cases) and `DeviceInventoryRepositoryTest`/`DeviceInventoryTest`
+cases pass unmodified. Full three-flavor CI suite green. Two files the plan's own research missed
+(`FakeKnownDeviceDao` in `core:data-testing`, one direct call site in `KnownDeviceDaoTest`) broke
+compilation the moment the DAO signature changed and were caught immediately by validating after
+every task — neither shipped un-caught. One Test-Executor-crash flake reproduced in the full-module
+run and disappeared on isolated re-run — the known environmental flakiness from the
+`gradle-test-executor-connect-timeout-under-host-contention` learning below, not a real failure.
+
+## Post-commit devil's-advocate review found a fourth real bug (2026-09-04)
+
+Committed as `c4b3803` and reviewed with a simulated adversarial pass (`/devils-advocate`) rather
+than a single-pass read. Same lesson as the codex round: a shared merge helper reused in a new
+context needs every field it touches audited, not just the one the change was about.
+
+**The bug:** `strongerFingerprint()` and `DeviceInventoryRepositoryImpl`'s persisted-merge path
+both decided `deviceType` *and* `osGuess` together from one whole-record confidence comparison.
+SSDP frequently supplies only one of the two (UPnP device descriptions rarely say anything about
+OS), but its confidence constant (`CONFIDENCE_SSDP = 90`) is assigned whenever *either* field is
+non-null. Concretely: a ping-discovered device with `osGuess = "Linux"` (confidence 40, from a
+hostname guess) meets an SSDP reading with `deviceType = "Router", osGuess = null` (confidence 90).
+The old merge took the winning candidate's fields wholesale — `osGuess` became `null`, silently
+erasing a real, independently-sourced signal the new reading had nothing to say about. Exactly the
+mirror image of the bug this PR set out to fix, in the fix itself.
+
+Fixed by guarding the overwrite on the winning candidate's field being non-null in both merge
+sites, matching the pattern already used for `services`/`fingerprintEvidence` in the same
+functions (union unconditionally, never let "who won overall" discard information you don't have
+a replacement for). Two new regression tests added in the exact mixed-field shape
+(`FingerprintMergeTest`, `DeviceInventoryRepositoryTest`) — the existing tests all set both fields
+together on both sides of every case, so none of them could have caught this.
+
+**Two secondary findings from the same pass, also fixed:**
+- `mergeEvidence`'s persisted format round-tripped evidence through a raw `", "`-joined string,
+  split back on that same delimiter — an SSDP friendly name or mDNS label containing a literal
+  comma would fracture into bogus extra entries on the next merge. Replaced with `FingerprintEvidence`
+  (`core/data/model/`), a normalizer mirroring the existing `DeviceTags` convention: strip the
+  separator character from each entry at write time instead of assuming a delimiter can't appear
+  in vendor-supplied text. Covered by a new comma-round-trip test.
+- `MIGRATION_16_17` was wired into `DataModule`'s migration list but never added to
+  `MigrationTest.kt`'s covered migrations — the only untested migration in that file. Added, plus a
+  dedicated data-integrity test (mirroring the `14→15` pattern) asserting a pre-existing row
+  migrates both new columns to `NULL`, not a crash or a value that looks like a real reading.
+
+**Deliberately deferred, not dropped:** `PortFingerprint`/`DeviceFingerprinterImpl.fingerprintWithPorts`
+has the same single-scalar-covers-two-fields shape (e.g. RDP's port 3389 only informs `os`, but the
+whole `PortFingerprint.confidence` gets attributed to `deviceType` too when both are eventually
+shown together in `HostDetailSheet`'s "Confidence: N%" label). This is display-only today (feeds
+`HostDetailState`, not the persisted `LanDevice`), so it doesn't lose data the way the two bugs
+above did, but it can show a misleadingly high confidence for a classification that's actually a
+blend of a strong and a weak signal. Full fix is splitting `PortFingerprint` into
+`typeConfidence`/`osConfidence`, which touches the ViewModel, both detail sheets, and their tests —
+scoped out of this pass given it doesn't lose data, but flagged here so it isn't rediscovered from
+scratch.
+
+**Still open:** the two commits (`df97e69` billing/SDK compliance, `c4b3803` fingerprinting) were
+pushed as separate PRs — `df97e69` is PR #165 (billing/SDK) against `master`. `c4b3803` and this
+fix pass are still local-only on `feat/composite-device-fingerprinting`, not pushed, no PR yet.
+Whoever picks this up next: `git log` on that branch for the fix commit, and this branch still
+hasn't had a fresh review pass on top of *this* round of fixes — only the pre-fix state got the
+devil's-advocate review above.
+
+---
+
 # Session Handoff — v1.3.6 tagged and released, found by on-device testing (2026-08-18)
 
 **v1.3.6 / versionCode 20 was tagged and pushed on 2026-08-18** (bump commit `d67d1ef`), the

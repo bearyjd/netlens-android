@@ -22,6 +22,11 @@ data class KnownDeviceEntity(
     val isKnown: Boolean = false,
     val deviceType: String? = null,
     val osGuess: String? = null,
+    // Confidence (0-100) behind deviceType/osGuess, and the evidence that produced them —
+    // see DeviceFingerprinterImpl's CONFIDENCE_* constants. Null on rows from before this
+    // column existed; not backfilled, since there's no way to reconstruct historical evidence.
+    val fingerprintConfidence: Int? = null,
+    val fingerprintEvidence: String? = null,
     // User-supplied friendly name; display precedence is customName ?: hostname ?: vendor ?: ip.
     val customName: String? = null,
     // Watched-network this row was last tagged against (null = unwatched/legacy).

@@ -11,6 +11,7 @@ data class PortFingerprint(
     val deviceType: String?,
     val osGuess: String?,
     val evidence: List<String>,
+    val confidence: Int = 0,
 )
 
 interface DeviceFingerprinter {
@@ -29,6 +30,7 @@ class DeviceFingerprinterImpl @Inject constructor(
     override suspend fun fingerprint(device: LanDevice): LanDevice {
         val hostname = device.hostname?.lowercase() ?: ""
         val serviceType = classifyFromServices(device.services)
+        val fromService = serviceType.first != null || serviceType.second != null
         val deviceType = serviceType.first ?: guessDeviceType(hostname)
         val osGuess = serviceType.second ?: guessOs(hostname)
         val vendor = if (device.macAddress != null) {
@@ -36,7 +38,33 @@ class DeviceFingerprinterImpl @Inject constructor(
         } else {
             null
         }
-        return device.copy(deviceType = deviceType, osGuess = osGuess, vendor = vendor)
+        val confidence = when {
+            deviceType == null && osGuess == null -> CONFIDENCE_NONE
+            fromService -> CONFIDENCE_MDNS_SERVICE
+            else -> CONFIDENCE_HOSTNAME_GUESS
+        }
+        val evidence = when {
+            confidence == CONFIDENCE_NONE -> emptyList()
+            // The service that actually matched, not just the first one in the list —
+            // a device advertising [_http._tcp, _googlecast._tcp] is classified from the
+            // second entry, and the evidence must say so, not name the first.
+            fromService -> listOfNotNull(
+                device.services
+                    .firstOrNull { svc ->
+                        val mapping = SERVICE_TYPE_MAP[svc.trim('.').lowercase()]
+                        mapping != null && (mapping.first != null || mapping.second != null)
+                    }
+                    ?.let { "mDNS: ${it.trim('.').removePrefix("_")}" },
+            )
+            else -> listOfNotNull(device.hostname?.let { "hostname: $it" })
+        }
+        return device.copy(
+            deviceType = deviceType,
+            osGuess = osGuess,
+            vendor = vendor,
+            fingerprintConfidence = confidence,
+            fingerprintEvidence = evidence,
+        )
     }
 
     override fun classifyFromServices(services: List<String>): Pair<String?, String?> {
@@ -95,25 +123,39 @@ class DeviceFingerprinterImpl @Inject constructor(
         val evidence = mutableListOf<String>()
         var type = device.deviceType
         var os = device.osGuess
+        var confidence = CONFIDENCE_NONE
 
         if (631 in openPorts || 9100 in openPorts) {
-            if (type == null) type = "Printer"
+            if (type == null) {
+                type = "Printer"
+                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+            }
             evidence.add("port ${if (631 in openPorts) "631 (IPP)" else "9100 (raw print)"}")
         }
         if (3389 in openPorts) {
-            if (os == null) os = "Windows"
+            if (os == null) {
+                os = "Windows"
+                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+            }
             evidence.add("port 3389 (RDP)")
         }
         if (548 in openPorts) {
-            if (os == null) os = "macOS"
+            if (os == null) {
+                os = "macOS"
+                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+            }
             evidence.add("port 548 (AFP)")
         }
         if (22 in openPorts && 53 in openPorts) {
-            if (type == null) type = "Router"
+            if (type == null) {
+                type = "Router"
+                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+            }
             evidence.add("ports 22+53 (SSH+DNS)")
         }
         if (openPorts.any { it in listOf(80, 443, 8080) } && type == null) {
             type = "Web Server"
+            confidence = maxOf(confidence, CONFIDENCE_PORT_GENERIC)
             evidence.add("web ports open")
         }
 
@@ -124,7 +166,7 @@ class DeviceFingerprinterImpl @Inject constructor(
         device.hostname?.let { evidence.add("hostname: $it") }
         device.vendor?.let { evidence.add("vendor: $it") }
 
-        return PortFingerprint(type, os, evidence)
+        return PortFingerprint(type, os, evidence, confidence)
     }
 
     private fun guessDeviceType(hostname: String): String? {
@@ -154,6 +196,14 @@ class DeviceFingerprinterImpl @Inject constructor(
     }
 
     companion object {
+        const val CONFIDENCE_MDNS_SERVICE = 90
+        const val CONFIDENCE_SSDP = 90
+        const val CONFIDENCE_NETBIOS = 85
+        const val CONFIDENCE_PORT_SPECIFIC = 80
+        const val CONFIDENCE_PORT_GENERIC = 50
+        const val CONFIDENCE_HOSTNAME_GUESS = 40
+        const val CONFIDENCE_NONE = 0
+
         private val SERVICE_TYPE_MAP: Map<String, Pair<String?, String?>> = mapOf(
             "_airplay._tcp" to ("Smart TV" to "iOS"),
             "_raop._tcp" to ("AirPlay Speaker" to null),
