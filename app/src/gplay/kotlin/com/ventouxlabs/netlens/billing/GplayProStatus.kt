@@ -109,7 +109,17 @@ class GplayProStatus @Inject constructor(
 
         billingClient.queryProductDetailsAsync(params) { result, details ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
-            val productDetails = details.firstOrNull() ?: return@queryProductDetailsAsync
+            val productDetails = details.productDetailsList.firstOrNull() ?: run {
+                logWarning("Product unfetched: ${details.unfetchedProductList}")
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.billing_product_unavailable),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                return@queryProductDetailsAsync
+            }
 
             val flowParams = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="billing_connecting">Connecting to Play Store, please try again shortly</string>
+    <string name="billing_product_unavailable">Upgrade is temporarily unavailable, please try again later</string>
 </resources>
