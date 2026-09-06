@@ -1,3 +1,18 @@
+# Session Handoff — v1.3.7 tagged and released (2026-09-06)
+
+**v1.3.7 / versionCode 21 was tagged and pushed on 2026-09-06** (bump commit `448bbc9`, tag on
+top of merge `b289192`). Contents: configurable widget chips + Speed Test chip (PR #162, was
+already on master), confidence-scored device fingerprinting (PR #166), and the Play-compliance
+bumps — Billing Library 8.0.0 + targetSdk 36 (PR #165, satisfies the Play deadline with the
+Nov 1 2026 extension window). Cert continuity verified against the documented baseline
+(`8fdfc928…86ae2b4`) before tagging; local signed build produced all four artifacts. Baseline
+profile was stale at tag time (last regenerated 2026-08-06, predates v1.3.6) — warned, shipped
+anyway per the skill's degrade-gracefully rule; regenerate before v1.3.8. Release workflow run:
+34038964425. Note for Play Console: the gplay purchase flow (Billing 8 migration) still has no
+unit coverage on the queryProductDetailsAsync path — device-QA a real pro_unlock purchase.
+
+---
+
 # Session Handoff — composite device fingerprinting built, codex review caught a real SSDP scoring bug (2026-09-03)
 
 **Not released — branch `feat/composite-device-fingerprinting` is uncommitted and un-PR'd.** Scope:
