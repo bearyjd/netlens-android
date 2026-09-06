@@ -1,0 +1,1 @@
+Added: LAN Scan and Devices now show a confidence score and the evidence behind each device classification, so a strong signal (like mDNS or SSDP) can no longer be permanently blocked by a weaker one that happened to arrive first. Home-screen widget shortcut chips are now configurable in Widget Settings, with Speed Test added as a selectable chip.

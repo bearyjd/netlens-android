@@ -5,6 +5,26 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.7] - 2026-09-06
+
+### Added
+- **Home-screen widget shortcut chips are now user-configurable.** The 4 chips were
+  previously hardcoded (LAN/Ping/DNS/Portal); Widget Settings now has a "Widget Chips"
+  checklist driven by the same favorites preference the Home screen's star toggle already
+  uses, and Speed Test is now a selectable chip. Portal keeps its existing always-rendered,
+  captive-portal-colored behavior.
+- **LAN Scan and Devices now show a confidence score and the evidence behind each device
+  classification.** Device type/OS guesses used to be "whichever signal arrives first
+  wins" — a weak hostname guess could permanently block a far more reliable mDNS or SSDP
+  signal that resolved moments later. Classifications are now scored by confidence and the
+  stronger signal wins, with the score and supporting evidence (e.g. "mDNS: googlecast")
+  visible in both detail sheets.
+
+### Changed
+- **Google Play Billing Library bumped to 8.0.0 and target API level to 36 (Android 16)**,
+  to meet Google Play's compliance deadline for app updates. No user-visible change to the
+  purchase flow.
+
 ## [1.3.6] - 2026-08-18
 
 ### Fixed
