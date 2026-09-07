@@ -7,6 +7,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.cornerRadius
+import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -41,7 +43,45 @@ fun StandardWidgetContent(state: WidgetState) {
         Spacer(modifier = GlanceModifier.height(8.dp))
         StatsRow(state)
         Spacer(modifier = GlanceModifier.defaultWeight())
+        ChipsRow(state)
+        Spacer(modifier = GlanceModifier.height(6.dp))
         FooterRow(state)
+    }
+}
+
+// User-selected shortcut chips (Widget Chips setting, same chipRoutes preference the 4x1
+// and 4x2 read). The 2x2 is half the width of those, so only the first two selections fit
+// on its single chip row — weighted so two chips split the card evenly.
+@Composable
+private fun ChipsRow(state: WidgetState) {
+    val chips = resolveToolChips(state.chipRoutes).take(2)
+    if (chips.isEmpty()) return
+    Row(
+        modifier = GlanceModifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        chips.forEachIndexed { index, chip ->
+            if (index > 0) Spacer(modifier = GlanceModifier.width(4.dp))
+            Text(
+                text = chip.shortLabel,
+                style = TextStyle(
+                    color = NetLensWidgetColors.onAccentSoft,
+                    fontSize = widgetSp(12f),
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+                modifier = GlanceModifier
+                    .defaultWeight()
+                    .cornerRadius(6.dp)
+                    .background(NetLensWidgetColors.accentSoft)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .clickable(
+                        actionRunCallback<OpenDeeplinkAction>(
+                            actionParametersOf(DeeplinkUriKey to Deeplink.forRoute(chip.route)),
+                        ),
+                    ),
+            )
+        }
     }
 }
 

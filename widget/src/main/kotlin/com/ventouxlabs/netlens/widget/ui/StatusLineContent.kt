@@ -57,7 +57,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
                 text = deviceText,
                 style = TextStyle(
                     color = NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(11f),
+                    fontSize = widgetSp(12f),
                 ),
                 maxLines = 1,
             )
@@ -67,7 +67,7 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
                     text = " · ${state.encryptionType}",
                     style = TextStyle(
                         color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
-                        fontSize = widgetSp(11f),
+                        fontSize = widgetSp(12f),
                     ),
                     maxLines = 1,
                 )

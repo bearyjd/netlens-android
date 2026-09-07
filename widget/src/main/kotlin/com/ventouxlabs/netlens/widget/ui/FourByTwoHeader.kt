@@ -78,7 +78,7 @@ fun FourByTwoHeader(state: WidgetState, modifier: GlanceModifier = GlanceModifie
             style = TextStyle(
                 color = issueColor,
                 fontWeight = FontWeight.Medium,
-                fontSize = widgetSp(11f),
+                fontSize = widgetSp(12f),
             ),
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight().clickable(postureAction),
@@ -89,7 +89,7 @@ fun FourByTwoHeader(state: WidgetState, modifier: GlanceModifier = GlanceModifie
                 text = "Scanned $elapsed",
                 style = TextStyle(
                     color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(10f),
+                    fontSize = widgetSp(12f),
                 ),
                 maxLines = 1,
             )

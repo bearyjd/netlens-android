@@ -68,7 +68,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "WAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -96,7 +96,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "LAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -205,41 +205,25 @@ fun DashboardFullContent(state: WidgetState) {
             }
         }
 
-        // Row 3: action chips
+        // Row 3: action chips — user-selected via the Widget Chips setting (same
+        // chipRoutes preference the 4x2 reads), plus the always-rendered Portal chip
+        // with its captive-portal coloring.
         Row(
             modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BigChip(
-                label = "LAN",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            BigChip(
-                label = "Ping",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            BigChip(
-                label = "DNS",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            resolveToolChips(state.chipRoutes).forEach { chip ->
+                BigChip(
+                    label = chip.shortLabel,
+                    background = NetLensWidgetColors.accentSoft,
+                    onBackground = NetLensWidgetColors.onAccentSoft,
+                    action = actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.forRoute(chip.route)),
+                    ),
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                Spacer(modifier = GlanceModifier.width(4.dp))
+            }
             BigChip(
                 label = "Portal",
                 background = if (state.isCaptivePortal) {

@@ -104,7 +104,7 @@ fun DashboardWidgetContent(
                             text = "!",
                             style = TextStyle(
                                 color = NetLensWidgetColors.onAccentFill,
-                                fontSize = widgetSp(10f),
+                                fontSize = widgetSp(12f),
                                 fontWeight = FontWeight.Bold,
                             ),
                             modifier = GlanceModifier.padding(start = 14.dp, bottom = 14.dp),
@@ -116,7 +116,7 @@ fun DashboardWidgetContent(
                     text = vpnLabel,
                     style = TextStyle(
                         color = backdropColor,
-                        fontSize = widgetSp(10f),
+                        fontSize = widgetSp(12f),
                         fontWeight = FontWeight.Bold,
                     ),
                     maxLines = 1,
@@ -126,7 +126,7 @@ fun DashboardWidgetContent(
                         text = "●",
                         style = TextStyle(
                             color = NetLensWidgetColors.accent,
-                            fontSize = widgetSp(10f),
+                            fontSize = widgetSp(12f),
                         ),
                     )
                 }
@@ -166,7 +166,7 @@ fun DashboardWidgetContent(
                         text = state.ispName,
                         style = TextStyle(
                             color = NetLensWidgetColors.inkSoft,
-                            fontSize = widgetSp(10f),
+                            fontSize = widgetSp(12f),
                         ),
                         maxLines = 1,
                     )

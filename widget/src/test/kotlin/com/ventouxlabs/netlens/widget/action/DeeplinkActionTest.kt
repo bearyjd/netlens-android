@@ -108,6 +108,10 @@ class DeeplinkActionTest {
         requireNotNull(started)
         assertEquals(android.content.Intent.ACTION_VIEW, started.action)
         assertEquals(Uri.parse(Deeplink.HOME), started.data)
+        // Regression: unpinned, this intent resolved into the OTHER build variant when debug
+        // and release are installed side by side — a release widget's chip opened the debug
+        // app. The intent must always target the package the widget itself belongs to.
+        assertEquals(context.packageName, started.`package`)
     }
 
     @Test
