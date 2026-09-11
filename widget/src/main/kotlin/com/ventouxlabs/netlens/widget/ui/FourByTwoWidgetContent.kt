@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -19,8 +20,26 @@ import androidx.glance.layout.width
 import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.widget.WidgetState
 
+/**
+ * Dispatches on the responsive size bucket `LocalSize` reports. Both trees survive a
+ * short box; the bucket only decides which one reads better. See [FourByTwoVariant].
+ */
 @Composable
 fun FourByTwoWidgetContent(state: WidgetState) {
+    when (fourByTwoVariant(LocalSize.current.height)) {
+        FourByTwoVariant.COMPACT -> FourByTwoCompactContent(state = state)
+        FourByTwoVariant.FULL -> FourByTwoFullContent(state = state)
+    }
+}
+
+/**
+ * The design layout. Every section sits at its natural height: nothing in this Column
+ * carries vertical weight, so an overrun clips from the bottom instead of deleting
+ * children. See [FourByTwoVariant] for the invariant and the measurements from when
+ * these sections were weighted.
+ */
+@Composable
+private fun FourByTwoFullContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -31,28 +50,17 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             modifier = GlanceModifier.padding(horizontal = 10.dp, vertical = 2.dp),
         )
 
-        Spacer(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(NetLensWidgetColors.line),
-        )
+        WidgetSectionDivider()
 
         DashboardWidgetContent(
             state = state,
             showHeader = false,
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .defaultWeight()
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         )
 
-        Spacer(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(NetLensWidgetColors.line),
-        )
+        WidgetSectionDivider()
 
         if (state.latencyHistoryMs.size >= 2) {
             LatencySparkline(
@@ -63,30 +71,40 @@ fun FourByTwoWidgetContent(state: WidgetState) {
             )
         }
 
-        Row(
+        StatusAndChipsRow(state = state)
+
+    }
+}
+
+/** DNS/device status beside the shortcut chips, split down the middle by a hairline. */
+@Composable
+private fun StatusAndChipsRow(state: WidgetState) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StatusLineContent(
+            state = state,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+
+        // The one surviving fillMaxHeight, and a different failure class: this is a child
+        // of a *horizontal* container, so its height is the Row's own resolved content
+        // height, not a share of a contested column. Nothing competes for it, and
+        // dropping it would leave the divider zero-height, i.e. invisible.
+        Spacer(
             modifier = GlanceModifier
-                .fillMaxWidth()
-                .defaultWeight()
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StatusLineContent(
-                state = state,
-                modifier = GlanceModifier.defaultWeight(),
-            )
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(NetLensWidgetColors.line),
+        )
 
-            Spacer(
-                modifier = GlanceModifier
-                    .width(1.dp)
-                    .fillMaxHeight()
-                    .background(NetLensWidgetColors.line),
-            )
-
-            ToolChipsRow(
-                state = state,
-                modifier = GlanceModifier.defaultWeight(),
-            )
-        }
+        ToolChipsRow(
+            state = state,
+            modifier = GlanceModifier.defaultWeight(),
+        )
     }
 }
 

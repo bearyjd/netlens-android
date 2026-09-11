@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
+import androidx.glance.background
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
@@ -11,6 +12,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -57,4 +59,15 @@ internal fun WidgetIpRow(state: WidgetState, showCountryName: Boolean = false) {
             )
         }
     }
+}
+
+/** Full-width hairline rule between widget sections. */
+@Composable
+internal fun WidgetSectionDivider() {
+    Spacer(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(NetLensWidgetColors.line),
+    )
 }
