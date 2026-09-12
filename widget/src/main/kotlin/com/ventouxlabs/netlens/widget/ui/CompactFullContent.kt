@@ -33,6 +33,17 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
 
 /**
  * 2x1 widget content — flag · VPN lock · WAN IP / signal · LAN IP, filling the cell.
+ *
+ * Neither Row carries vertical weight. Glance lowers a Column child's `defaultWeight()`
+ * to `height=0dp` + `layout_weight=1`, and a RemoteViews LinearLayout resolves such a
+ * child to zero under overrun and drops it from the view tree outright — where a
+ * fixed-height child merely clips. `widget_compact_info.xml` declares `minHeight="40dp"`,
+ * so the launcher may legally hand this layout a box shorter than its two rows. See the
+ * invariant and the measured failure in [FourByTwoVariant].
+ *
+ * The even two-band look the weights used to give comes from the childless [SectionGap]
+ * spacers instead, which may carry vertical weight precisely because they have nothing to
+ * lose when driven to zero.
  */
 @Composable
 fun CompactFullContent(state: WidgetState) {
@@ -42,9 +53,12 @@ fun CompactFullContent(state: WidgetState) {
             .widgetBackground()
             .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
-        val rowModifier = GlanceModifier.fillMaxWidth().defaultWeight()
+        val rowModifier = GlanceModifier.fillMaxWidth()
+        SectionGap()
         TopRow(state, rowModifier)
+        SectionGap()
         BottomRow(state, rowModifier)
+        SectionGap()
     }
 }
 

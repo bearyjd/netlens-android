@@ -9,21 +9,32 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
 
+/**
+ * DNS/routing status, with a device count and encryption type beneath it.
+ *
+ * [compact] keeps only the status line. Neither path asks for height: this Column is a
+ * child of a horizontal Row, where a `fillMaxHeight` would lower to `match_parent` and
+ * inflate to every pixel left in the card. See the invariant in [FourByTwoVariant].
+ */
 @Composable
-fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
+fun StatusLineContent(
+    state: WidgetState,
+    compact: Boolean = false,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    val (statusText, statusColor) = dnsStatusLine(state)
     Column(
         modifier = modifier
-            .fillMaxHeight()
             .padding(end = 6.dp)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
@@ -32,16 +43,6 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val (statusText, statusColor) = when {
-            state.isCaptivePortal -> "Captive portal" to NetLensWidgetColors.warn
-            state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to NetLensWidgetColors.warn
-            state.vpnState is VpnState.FullTunnel ->
-                "DNS → ${state.primaryDns} · VPN routed" to NetLensWidgetColors.accent
-            state.vpnState is VpnState.SplitTunnel ->
-                "DNS → ${state.primaryDns} · Split" to NetLensWidgetColors.warn
-            state.isConnected -> "DNS → ${state.primaryDns} · Direct" to NetLensWidgetColors.inkSoft
-            else -> "No network" to NetLensWidgetColors.stamp
-        }
         Text(
             text = statusText,
             style = TextStyle(
@@ -51,27 +52,46 @@ fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModif
             maxLines = 1,
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val deviceText = "${state.deviceCount} device${if (state.deviceCount != 1) "s" else ""}"
+        if (!compact) {
+            DeviceEncryptionRow(state = state)
+        }
+    }
+}
+
+/** Which DNS server is in use and how traffic reaches it, with its severity color. */
+private fun dnsStatusLine(state: WidgetState): Pair<String, ColorProvider> = when {
+    state.isCaptivePortal -> "Captive portal" to NetLensWidgetColors.warn
+    state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to NetLensWidgetColors.warn
+    state.vpnState is VpnState.FullTunnel ->
+        "DNS → ${state.primaryDns} · VPN routed" to NetLensWidgetColors.accent
+    state.vpnState is VpnState.SplitTunnel ->
+        "DNS → ${state.primaryDns} · Split" to NetLensWidgetColors.warn
+    state.isConnected -> "DNS → ${state.primaryDns} · Direct" to NetLensWidgetColors.inkSoft
+    else -> "No network" to NetLensWidgetColors.stamp
+}
+
+@Composable
+private fun DeviceEncryptionRow(state: WidgetState) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val deviceText = "${state.deviceCount} device${if (state.deviceCount != 1) "s" else ""}"
+        Text(
+            text = deviceText,
+            style = TextStyle(
+                color = NetLensWidgetColors.inkSoft,
+                fontSize = widgetSp(12f),
+            ),
+            maxLines = 1,
+        )
+        if (state.encryptionType.isNotEmpty()) {
+            val secure = state.isEncryptionSecure
             Text(
-                text = deviceText,
+                text = " · ${state.encryptionType}",
                 style = TextStyle(
-                    color = NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(11f),
+                    color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
+                    fontSize = widgetSp(12f),
                 ),
                 maxLines = 1,
             )
-            if (state.encryptionType.isNotEmpty()) {
-                val secure = state.isEncryptionSecure
-                Text(
-                    text = " · ${state.encryptionType}",
-                    style = TextStyle(
-                        color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
-                        fontSize = widgetSp(11f),
-                    ),
-                    maxLines = 1,
-                )
-            }
         }
     }
 }

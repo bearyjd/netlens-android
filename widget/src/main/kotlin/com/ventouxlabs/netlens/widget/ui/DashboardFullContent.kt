@@ -39,10 +39,22 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
 /**
  * 4x1 widget content — three rows: WAN/LAN big IPs, flag/lock/DNS, action chips.
  *
+ * None of the three Rows carries vertical weight. Glance lowers a Column child's
+ * `defaultWeight()` to `height=0dp` + `layout_weight=1`, and a RemoteViews LinearLayout
+ * resolves such a child to zero under overrun and drops it from the view tree outright —
+ * where a fixed-height child merely clips. `widget_dashboard_info.xml` declares
+ * `minHeight="50dp"`, so the launcher may legally hand this layout a box far shorter than
+ * its content. See the invariant and the measured failure in [FourByTwoVariant].
+ *
+ * The even three-band look the weights used to give comes from the childless
+ * [SectionGap] spacers instead, which may carry vertical weight precisely because they
+ * have nothing to lose when driven to zero.
+ *
  * Row content is intentionally inlined into the outer Column rather than split into
- * private composables. Extracting Rows that carry `defaultWeight()` modifiers caused
- * the widget to render blank on device — Glance's weight attribute does not survive
- * being constructed in one composable's scope and consumed in another.
+ * private composables. Extracting Rows that carried `defaultWeight()` modifiers once
+ * made the widget render blank on device — Glance's weight attribute does not survive
+ * being constructed in one composable's scope and consumed in another. The Rows no
+ * longer carry weight themselves, but their children still do, so leave them inlined.
  */
 @Composable
 fun DashboardFullContent(state: WidgetState) {
@@ -52,9 +64,11 @@ fun DashboardFullContent(state: WidgetState) {
             .widgetBackground()
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
+        SectionGap()
+
         // Row 1: WAN + LAN (big)
         Row(
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
@@ -68,7 +82,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "WAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -96,7 +110,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "LAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -122,9 +136,11 @@ fun DashboardFullContent(state: WidgetState) {
             )
         }
 
+        SectionGap()
+
         // Row 2: flag + VPN lock + DNS status
         Row(
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val (backdrop, lockDrawable, vpnLabel) = when (state.vpnState) {
@@ -205,41 +221,27 @@ fun DashboardFullContent(state: WidgetState) {
             }
         }
 
-        // Row 3: action chips
+        SectionGap()
+
+        // Row 3: action chips — user-selected via the Widget Chips setting (same
+        // chipRoutes preference the 4x2 reads), plus the always-rendered Portal chip
+        // with its captive-portal coloring.
         Row(
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BigChip(
-                label = "LAN",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            BigChip(
-                label = "Ping",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.pingHost("8.8.8.8")),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            BigChip(
-                label = "DNS",
-                background = NetLensWidgetColors.accentSoft,
-                onBackground = NetLensWidgetColors.onAccentSoft,
-                action = actionRunCallback<OpenDeeplinkAction>(
-                    actionParametersOf(DeeplinkUriKey to Deeplink.DNS_LEAK),
-                ),
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            resolveToolChips(state.chipRoutes).forEach { chip ->
+                BigChip(
+                    label = chip.shortLabel,
+                    background = NetLensWidgetColors.accentSoft,
+                    onBackground = NetLensWidgetColors.onAccentSoft,
+                    action = actionRunCallback<OpenDeeplinkAction>(
+                        actionParametersOf(DeeplinkUriKey to Deeplink.forRoute(chip.route)),
+                    ),
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                Spacer(modifier = GlanceModifier.width(4.dp))
+            }
             BigChip(
                 label = "Portal",
                 background = if (state.isCaptivePortal) {
@@ -256,6 +258,8 @@ fun DashboardFullContent(state: WidgetState) {
                 modifier = GlanceModifier.defaultWeight(),
             )
         }
+
+        SectionGap()
     }
 }
 

@@ -16,11 +16,13 @@ import androidx.glance.LocalContext
  * the platform clock/weather widgets behave.
  *
  * [maxScale] caps how much the widget honors the user's preference before clamping:
- * `1f` pins fully (never grows), `1.15f` allows up to 15% growth. The default pins,
- * because the 4x2 is dense enough that any growth reintroduces overflow.
+ * `1f` pins fully (never grows), `1.15f` allows up to 15% growth. The default allows
+ * 15%: a full pin rendered every label ~13% smaller than the launcher text around it on
+ * a 1.15x device, which read as "can't see the fonts" rather than as tidy density. The
+ * cap still holds the line against the 1.3x+ scales that actually overflow the card.
  */
 @Composable
-fun widgetSp(designSp: Float, maxScale: Float = 1f): TextUnit {
+fun widgetSp(designSp: Float, maxScale: Float = 1.15f): TextUnit {
     val fontScale = LocalContext.current.resources.configuration.fontScale
     if (fontScale <= 1f) return designSp.sp
     val effectiveScale = minOf(fontScale, maxScale)

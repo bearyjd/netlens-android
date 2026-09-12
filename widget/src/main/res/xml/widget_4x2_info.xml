@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  minHeight/minResizeHeight are 200dp, not the legacy `70 * rows - 30` formula's 110dp.
+  110dp is a single row on a modern launcher grid — the Pixel 9 Pro Fold outer display
+  uses 158dp rows — so it let the launcher legally place a 4x2 as a 1-row strip, at
+  which point the RemoteViews LinearLayouts ran out of height and silently dropped
+  children (both IP addresses among them). 200dp forces two rows on both fold-outer
+  (158dp rows) and typical phone (110-125dp rows) grids.
+
+  minResizeHeight must stay <= minHeight, which is why the two move together.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="200dp"
     android:minResizeWidth="250dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="200dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"

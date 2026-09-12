@@ -30,6 +30,10 @@ class OpenDeeplinkAction : ActionCallback {
         if (!isAllowedDeeplinkUri(uri)) return
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            // Pin to our own package: the netlens:// scheme is also declared by the debug
+            // build, and an unpinned ACTION_VIEW lets Android route a release widget's chip
+            // tap into com.ventouxlabs.netlens.debug (or vice versa) when both are installed.
+            setPackage(context.packageName)
         }
         context.startActivity(intent)
     }

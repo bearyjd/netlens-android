@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.monitor
 
+import app.cash.turbine.TurbineTestContext
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -97,7 +98,7 @@ class MonitorViewModelTest {
 
             viewModel.removeEndpoint(endpoint)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.endpoints.isEmpty() }
             assertNull(finalState.selectedEndpoint)
             assertTrue(finalState.checks.isEmpty())
             assertTrue(finalState.endpoints.isEmpty())
@@ -160,8 +161,7 @@ class MonitorViewModelTest {
 
             viewModel.checkNow(endpoint)
 
-            val finalState = expectMostRecentItem()
-            assertFalse(finalState.isChecking)
+            val finalState = awaitStateWhere { !it.isChecking && it.checks.isNotEmpty() }
             assertNull(finalState.error)
             assertEquals(1, finalState.checks.size)
             assertEquals(endpoint.id, finalState.checks[0].endpointId)
@@ -182,7 +182,7 @@ class MonitorViewModelTest {
 
             viewModel.checkNow(endpoint)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isChecking && it.error != null }
             assertEquals("Connection refused", finalState.error)
             assertFalse(finalState.isChecking)
         }
@@ -246,7 +246,7 @@ class MonitorViewModelTest {
 
             viewModel.checkNow(endpoint)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.latestChecksByEndpointId.isNotEmpty() }
             assertEquals(1, finalState.latestChecksByEndpointId.size)
             assertTrue(finalState.latestChecksByEndpointId[endpoint.id]?.isSuccess == true)
         }
@@ -263,12 +263,14 @@ class MonitorViewModelTest {
 
             checker.result = EndpointCheck(endpointId = 0, statusCode = 500, latencyMs = 10, isSuccess = false)
             viewModel.checkNow(endpoint)
-            expectMostRecentItem()
+            awaitStateWhere { it.latestChecksByEndpointId[endpoint.id]?.statusCode == 500 }
 
             checker.result = EndpointCheck(endpointId = 0, statusCode = 200, latencyMs = 20, isSuccess = true)
             viewModel.checkNow(endpoint)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere {
+                it.latestChecksByEndpointId[endpoint.id]?.statusCode == 200
+            }
             assertEquals(1, finalState.latestChecksByEndpointId.size)
             assertTrue(finalState.latestChecksByEndpointId[endpoint.id]?.isSuccess == true)
             assertEquals(200, finalState.latestChecksByEndpointId[endpoint.id]?.statusCode)
@@ -313,4 +315,26 @@ class MonitorViewModelTest {
             assertNull(cleared.error)
         }
     }
+}
+
+/**
+ * Awaits the first emitted state satisfying [predicate].
+ *
+ * `expectMostRecentItem()` samples whatever has been emitted so far — it does not wait.
+ * `checkNow` and `removeEndpoint` launch on `viewModelScope`, and their results reach
+ * state through the DAO flow, so the emission carrying the result can land *after* the
+ * sample. With `UnconfinedTestDispatcher` the launch only runs eagerly up to its first
+ * real suspension, so whether the sample wins is a race — one that passes on an idle
+ * dev machine and fails on a loaded CI runner (`:feature:monitor`, 33 tests, 1 failed,
+ * at the `latestChecksByEndpointId` assertion).
+ *
+ * Waiting for the state that actually carries the result makes the assertion
+ * deterministic. Turbine's own timeout bounds the loop if it never arrives.
+ */
+private suspend fun TurbineTestContext<MonitorUiState>.awaitStateWhere(
+    predicate: (MonitorUiState) -> Boolean,
+): MonitorUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

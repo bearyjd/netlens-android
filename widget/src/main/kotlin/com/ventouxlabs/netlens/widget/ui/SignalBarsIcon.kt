@@ -1,7 +1,6 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -17,7 +16,7 @@ fun SignalBarsIcon(level: Int, modifier: GlanceModifier = GlanceModifier) {
         text = bars,
         style = TextStyle(
             color = NetLensWidgetColors.rssiColor(level),
-            fontSize = 10.sp,
+            fontSize = widgetSp(10f),
         ),
         modifier = modifier,
     )
