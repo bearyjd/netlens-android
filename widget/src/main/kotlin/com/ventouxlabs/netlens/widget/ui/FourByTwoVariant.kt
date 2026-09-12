@@ -14,11 +14,11 @@ import androidx.compose.ui.unit.dp
  * and `fillMaxHeight()` on a *Row* child is always fine, since it lowers to
  * `match_parent` where nothing competes for height.
  *
- * This tree takes no advantage of the Spacer carve-out — it contains no weighted views
- * on the vertical axis at all — so the check a reviewer actually runs is unconditional:
- * no `defaultWeight()` on any Column child, anywhere in the 4x2. Surplus height is left
- * as a band at the bottom rather than distributed, which is a deliberate trade of a
- * cosmetic for an invariant that needs no case analysis.
+ * So the check a reviewer runs is: grep `defaultWeight()` across `widget/.../ui`, and for
+ * every hit ask which axis it divides. On a Row child it divides width and is fine. On a
+ * Column child it divides height, and the only legal carriers are the childless
+ * `SectionGap` spacers — used by the 4x2 FULL tree, the 4x1 and the 2x1 to spread surplus
+ * evenly between sections without letting any content view bid for height.
  *
  * Nothing enforces it. It is a review rule, not a CI check: a JVM test cannot observe
  * RemoteViews collapse, because the collapse happens in the launcher's LinearLayout
@@ -67,14 +67,15 @@ import androidx.compose.ui.unit.dp
  * chip row instead of two.
  *
  * FULL's height requirement has never been measured on a device. Adding up natural
- * heights puts it near 261dp at `fontScale` 1.0 and near 285dp at `fontScale` >= 1.15,
- * where [widgetSp]'s ceiling stops scaling text but the 28dp VPN badge and 16dp
- * sparkline stay fixed. Both figures are estimates and both are larger than the 220dp
- * that used to be asserted here without a source — treat them as a reason to measure,
- * not as a target.
+ * heights put it near 261dp at `fontScale` 1.0 and near 285dp at `fontScale` >= 1.15,
+ * where [widgetSp]'s ceiling stops scaling text but the VPN badge and the 16dp sparkline
+ * stay fixed. Slimming [FourByTwoVpnColumn] took roughly 27dp off both, so read them as
+ * ~234dp and ~258dp. Every one of those figures is arithmetic on natural text heights —
+ * treat them as a reason to measure, not as a target.
  *
- * Note where that height comes from: [FourByTwoVpnColumn] stacks six children for
- * roughly 106dp, against roughly 56dp for the address column beside it. A flag glyph
+ * Note where that height comes from: [FourByTwoVpnColumn] stacks the flag, badge and
+ * caption for roughly 80dp, against roughly 56dp for the address column beside it. It
+ * was ~106dp before the slimming, and it is still the taller of the two: a flag glyph
  * and a three-valued enum caption set the floor, not the payload.
  */
 internal enum class FourByTwoVariant { COMPACT, FULL }

@@ -9,6 +9,7 @@ import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxWidth
@@ -59,6 +60,22 @@ internal fun WidgetIpRow(state: WidgetState, showCountryName: Boolean = false) {
             )
         }
     }
+}
+
+/**
+ * Absorbs surplus height so it is shared between a Column's sections instead of pooling
+ * in a dead band at the bottom edge. Interleave one between and around the sections — N
+ * sections take N+1 gaps — to get the even distribution that weighting the sections
+ * themselves would give.
+ *
+ * This is the one sanctioned vertical weight: a Spacer has no children, so when an
+ * overrun drives it to zero it takes nothing with it — unlike a weighted content Column,
+ * which is deleted from the view tree along with its payload. See the invariant in
+ * [FourByTwoVariant].
+ */
+@Composable
+internal fun ColumnScope.SectionGap() {
+    Spacer(modifier = GlanceModifier.defaultWeight())
 }
 
 /** Full-width hairline rule between widget sections. */

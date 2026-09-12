@@ -22,8 +22,9 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
 /**
  * DNS/routing status, with a device count and encryption type beneath it.
  *
- * [compact] keeps only the status line. The FULL path's `fillMaxHeight` is a Row-child
- * modifier and safe — see the invariant in [FourByTwoVariant].
+ * [compact] keeps only the status line. Neither path asks for height: this Column is a
+ * child of a horizontal Row, where a `fillMaxHeight` would lower to `match_parent` and
+ * inflate to every pixel left in the card. See the invariant in [FourByTwoVariant].
  */
 @Composable
 fun StatusLineContent(

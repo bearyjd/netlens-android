@@ -25,8 +25,9 @@ import com.ventouxlabs.netlens.widget.WidgetState
  * view tree. [FourByTwoVariant] has the full measurement and the invariant.
  *
  * Its `verticalAlignment` is unaffected by that removal — the Row's height is set by its
- * tallest child, the ~106dp VPN column, so the addresses are still centred against the
- * flag exactly as before. They were never centred against surplus.
+ * tallest child, the VPN column (~80dp since it was slimmed, ~106dp before), so the
+ * addresses are still centred against the flag exactly as before. They were never centred
+ * against surplus.
  */
 @Composable
 fun DashboardWidgetContent(

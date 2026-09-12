@@ -9,7 +9,6 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -33,10 +32,10 @@ fun FourByTwoWidgetContent(state: WidgetState) {
 }
 
 /**
- * The design layout. Every section sits at its natural height: nothing in this Column
- * carries vertical weight, so an overrun clips from the bottom instead of deleting
- * children. See [FourByTwoVariant] for the invariant and the measurements from when
- * these sections were weighted.
+ * The design layout. Every *section* sits at its natural height: the only vertical weight
+ * in this Column is on the childless [SectionGap] spacers, so an overrun clips from the
+ * bottom instead of deleting children. See [FourByTwoVariant] for the invariant and the
+ * measurements from when the sections themselves were weighted.
  */
 @Composable
 private fun FourByTwoFullContent(state: WidgetState) {
@@ -81,19 +80,6 @@ private fun FourByTwoFullContent(state: WidgetState) {
 
         SectionGap()
     }
-}
-
-/**
- * Absorbs surplus height so it is shared between the sections instead of pooling in a
- * dead band at the bottom edge. This is the one sanctioned vertical weight: a Spacer has
- * no children, so when an overrun drives it to zero it takes nothing with it — unlike a
- * weighted content Column, which deletes its payload. Four of them, bracketing both
- * flexible sections, reproduce the even distribution the sections had when they were
- * themselves weighted.
- */
-@Composable
-private fun ColumnScope.SectionGap() {
-    Spacer(modifier = GlanceModifier.defaultWeight())
 }
 
 /** DNS/device status beside the shortcut chips, split down the middle by a hairline. */
