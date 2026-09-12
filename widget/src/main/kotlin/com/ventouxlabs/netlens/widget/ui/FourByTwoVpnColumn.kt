@@ -13,7 +13,6 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
@@ -56,8 +55,7 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
 
     Column(
         modifier = GlanceModifier
-            .width(if (compact) 40.dp else 64.dp)
-            .then(if (compact) GlanceModifier else GlanceModifier.fillMaxHeight())
+            .width(if (compact) 40.dp else 56.dp)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.VPNSTATUS),

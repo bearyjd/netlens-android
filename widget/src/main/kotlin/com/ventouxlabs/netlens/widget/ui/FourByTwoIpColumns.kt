@@ -8,7 +8,6 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -40,7 +39,6 @@ internal fun FourByTwoWanColumn(
 ) {
     Column(
         modifier = modifier
-            .then(if (compact) GlanceModifier else GlanceModifier.fillMaxHeight())
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.IPINFO),
@@ -51,7 +49,7 @@ internal fun FourByTwoWanColumn(
         AddressLabel(text = "WAN", fontSize = widgetSp(if (compact) 11f else 13f))
         AddressValue(
             text = state.publicIp.ifEmpty { "—.—.—.—" },
-            fontSize = widgetSp(if (compact) 15f else 18f),
+            fontSize = widgetSp(if (compact) 15f else 16f),
         )
         if (!compact && state.ispName.isNotEmpty()) {
             Text(
@@ -74,7 +72,6 @@ internal fun FourByTwoLanColumn(
 ) {
     Column(
         modifier = modifier
-            .then(if (compact) GlanceModifier else GlanceModifier.fillMaxHeight())
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DEVICES),
@@ -86,7 +83,7 @@ internal fun FourByTwoLanColumn(
         AddressLabel(text = "LAN", fontSize = widgetSp(if (compact) 11f else 13f))
         AddressValue(
             text = state.localIp.ifEmpty { "—" },
-            fontSize = widgetSp(if (compact) 15f else 18f),
+            fontSize = widgetSp(if (compact) 15f else 16f),
         )
     }
 }
@@ -111,5 +108,8 @@ private fun AddressValue(text: String, fontSize: TextUnit) {
             fontWeight = FontWeight.Bold,
             fontSize = fontSize,
         ),
+        // An IPv4 address wrapping mid-value ("192.168.1.12" / "9") is worse than an
+        // ellipsis: it reads as a different address.
+        maxLines = 1,
     )
 }

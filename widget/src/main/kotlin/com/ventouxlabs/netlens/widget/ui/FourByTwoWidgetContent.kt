@@ -9,9 +9,9 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -52,6 +52,8 @@ private fun FourByTwoFullContent(state: WidgetState) {
 
         WidgetSectionDivider()
 
+        SectionGap()
+
         DashboardWidgetContent(
             state = state,
             showHeader = false,
@@ -59,6 +61,8 @@ private fun FourByTwoFullContent(state: WidgetState) {
                 .fillMaxWidth()
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         )
+
+        SectionGap()
 
         WidgetSectionDivider()
 
@@ -71,9 +75,25 @@ private fun FourByTwoFullContent(state: WidgetState) {
             )
         }
 
+        SectionGap()
+
         StatusAndChipsRow(state = state)
 
+        SectionGap()
     }
+}
+
+/**
+ * Absorbs surplus height so it is shared between the sections instead of pooling in a
+ * dead band at the bottom edge. This is the one sanctioned vertical weight: a Spacer has
+ * no children, so when an overrun drives it to zero it takes nothing with it — unlike a
+ * weighted content Column, which deletes its payload. Four of them, bracketing both
+ * flexible sections, reproduce the even distribution the sections had when they were
+ * themselves weighted.
+ */
+@Composable
+private fun ColumnScope.SectionGap() {
+    Spacer(modifier = GlanceModifier.defaultWeight())
 }
 
 /** DNS/device status beside the shortcut chips, split down the middle by a hairline. */
@@ -90,21 +110,23 @@ private fun StatusAndChipsRow(state: WidgetState) {
             modifier = GlanceModifier.defaultWeight(),
         )
 
-        // The one surviving fillMaxHeight, and a different failure class: this is a child
-        // of a *horizontal* container, so its height is the Row's own resolved content
-        // height, not a share of a contested column. Nothing competes for it, and
-        // dropping it would leave the divider zero-height, i.e. invisible.
+        // Fixed height, deliberately not fillMaxHeight. `match_parent` on a child of a
+        // *wrap_content* Row does not resolve to the row's content height: LinearLayout
+        // measures it with getChildMeasureSpec(AT_MOST(remaining), MATCH_PARENT), which
+        // returns EXACTLY(remaining) — so the child inflates to every pixel left in the
+        // column and pushes its siblings out. That is the opposite failure from a
+        // weighted child collapsing to zero, and it is why nothing on this path asks
+        // for height it cannot justify.
         Spacer(
             modifier = GlanceModifier
                 .width(1.dp)
-                .fillMaxHeight()
+                .height(STATUS_DIVIDER_HEIGHT)
                 .background(NetLensWidgetColors.line),
         )
 
-        ToolChipsRow(
-            state = state,
-            modifier = GlanceModifier.defaultWeight(),
-        )
+        // Chips wrap to their content so the status line gets the leftover width; an
+        // even split truncated "DNS -> x.x.x.x - Direct" while the chip half sat empty.
+        ToolChipsRow(state = state)
     }
 }
 
@@ -149,3 +171,6 @@ private fun sparklineBarColor(sample: Int): ColorProvider = when {
     sample > 150 -> NetLensWidgetColors.warn
     else -> NetLensWidgetColors.accent
 }
+
+/** Height of the rule between the status line and the chip stack. */
+private val STATUS_DIVIDER_HEIGHT = 36.dp

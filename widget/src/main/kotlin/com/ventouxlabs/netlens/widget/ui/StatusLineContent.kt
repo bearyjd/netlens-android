@@ -8,7 +8,6 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.Row
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
@@ -35,7 +34,6 @@ fun StatusLineContent(
     val (statusText, statusColor) = dnsStatusLine(state)
     Column(
         modifier = modifier
-            .then(if (compact) GlanceModifier else GlanceModifier.fillMaxHeight())
             .padding(end = 6.dp)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(

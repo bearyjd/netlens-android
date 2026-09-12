@@ -11,7 +11,6 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.height
@@ -104,7 +103,6 @@ private fun StackedToolChips(
 ) {
     Column(
         modifier = modifier
-            .fillMaxHeight()
             .padding(start = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
