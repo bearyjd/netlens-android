@@ -27,6 +27,56 @@ import androidx.compose.ui.unit.dp
  * the 2x1 was restructured, and carried the modifier harmlessly. Moving a view between a
  * Row and a Column silently changes what its weight does; that is the edit to watch for.
  *
+ * ── The third failure mode: more than ten children ──────────────────────────────────
+ *
+ * **A Glance container renders at most ten children. The eleventh onwards are dropped.**
+ *
+ * Glance ships *generated* layouts, one per child count, and they stop at ten. In the
+ * 1.1.1 AAR:
+ *
+ * ```
+ *   $ unzip -l glance-appwidget-1.1.1.aar | grep -oE "column_start_null_[0-9]+children"
+ *   column_start_null_0children … column_start_null_10children     <- and no further
+ * ```
+ *
+ * Eleven variants, for 0..10, and the same for every `row_*`, `box_*` and alignment
+ * combination. A composable that emits an eleventh child has nowhere to put it: no crash,
+ * no log, nothing a JVM test can observe — the same signature as the other two failures.
+ *
+ * Measured on device, with [FourByTwoWidgetContent]'s FULL Column at thirteen children
+ * (header, divider, gap, addresses, gap, status, gap, detail, gap, divider, gap, chips,
+ * gap):
+ *
+ * ```
+ *   header      y=931..1021   90px
+ *   hairline    y=1021..1023   2px
+ *   [gap 97px]
+ *   addresses   y=1120..1277 157px
+ *   [gap 97px]
+ *   status      y=1374..1433  59px
+ *   [gap 98px]
+ *   detail      y=1531..1577  46px
+ *   [gap 98px]
+ *   hairline    y=1675..1677   2px   <- child #10, the last one rendered
+ *                                    <- chips row and its two gaps: never emitted
+ * ```
+ *
+ * It is the *trailing* children that go, as with a RemoteViews row overflow, so the
+ * ordering rule the COMPACT variant already follows — payload first, negotiable content
+ * last — is the mitigation for this too.
+ *
+ * Two things to know when fixing it. Nesting buys budget: a child Column has its own ten,
+ * which is why the 4x2 groups its status and detail lines ([FourByTwoStatusBlock]) and
+ * the 2x2 groups each address pair and its foot. But nesting cannot hold a [SectionGap]:
+ * only the root Column is `fillMaxSize`, so a weighted Spacer inside a wrap-content child
+ * divides a surplus of zero. Gaps must stay in the root and are therefore the expensive
+ * thing to spend slots on — which is why both widgets now take most of their spacing from
+ * fixed vertical padding on the rows and keep only three gaps.
+ *
+ * The check a reviewer runs is to count the children each container emits, remembering
+ * that a `SectionGap`, a divider and an `if`-guarded row are each one. The counts as of
+ * this pass: 4x1 root 7, 4x2 FULL root 9, 4x2 COMPACT root 5, 2x2 root 7, 2x1 root 9.
+ *
  * Nothing enforces it. It is a review rule, not a CI check: a JVM test cannot observe
  * RemoteViews collapse, because the collapse happens in the launcher's LinearLayout
  * measure pass, and Glance composables are not renderable by Paparazzi (`:widget` does
@@ -64,29 +114,28 @@ import androidx.compose.ui.unit.dp
  *
  * The fix was to delete three vertical weights — the two sections in
  * [FourByTwoWidgetContent]'s Column and the address Row inside
- * [DashboardWidgetContent]. Both variants now clip from the bottom under overrun
+ * [FourByTwoCompactAddressRow]. Both variants now clip from the bottom under overrun
  * rather than deleting children.
+ *
+ * The sparkline in that measurement no longer exists: five 4dp bars alone in a full-width
+ * band read as a rendering artifact rather than as a chart, so FULL dropped it when it was
+ * restructured. The measurement is kept as written because it is the record of the
+ * failure, not a description of the current tree.
  *
  * ## What the variants actually differ in
  *
- * [FULL] is the design layout. [COMPACT] is the same information reduced for a short
- * box: smaller type, no sparkline, no ISP name, no VPN caption, no device count, one
- * chip row instead of two.
+ * [FULL] is the design layout, and the two are no longer the same tree with sizes turned
+ * down. FULL runs full-width stacked rows on the 4x1's pattern: the flag and lock inline
+ * in its status row, the device count and encryption on a row of their own, and every
+ * chip across one weighted row. [COMPACT] keeps the side-by-side arrangement a short box
+ * needs — [FourByTwoVpnColumn] beside the addresses, the status line beside a
+ * wrap-to-content chip row — and drops the ISP name and the device count with it.
  *
- * FULL's height requirement has never been measured on a device, and the figures below
- * predate the [WidgetType] pass — which trimmed the addresses and labels by ~1sp each but
- * added a rhythm step to the chip padding and the section padding, for something like a
- * net +15dp. Adding up natural heights put it near 261dp at `fontScale` 1.0 and near
- * 285dp at `fontScale` >= 1.15,
- * where [widgetSp]'s ceiling stops scaling text but the VPN badge and the 16dp sparkline
- * stay fixed. Slimming [FourByTwoVpnColumn] took roughly 27dp off both, so read them as
- * ~234dp and ~258dp. Every one of those figures is arithmetic on natural text heights —
- * treat them as a reason to measure, not as a target.
- *
- * Note where that height comes from: [FourByTwoVpnColumn] stacks the flag, badge and
- * caption for roughly 80dp, against roughly 56dp for the address column beside it. It
- * was ~106dp before the slimming, and it is still the taller of the two: a flag glyph
- * and a three-valued enum caption set the floor, not the payload.
+ * Neither height has been measured on a device. Adding up natural text heights puts FULL
+ * near 176dp at `fontScale` 1.15 in a 306dp box, leaving ~130dp for its six [SectionGap]s
+ * — about 22dp each, against roughly 16dp on the 4x1 it is modelled on. That is
+ * arithmetic, not a measurement: treat it as the number to check if the card reads loose,
+ * not as a target.
  */
 internal enum class FourByTwoVariant { COMPACT, FULL }
 

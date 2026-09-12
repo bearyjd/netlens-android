@@ -43,10 +43,8 @@ internal fun FourByTwoCompactContent(state: WidgetState) {
 
         WidgetSectionDivider()
 
-        DashboardWidgetContent(
+        FourByTwoCompactAddressRow(
             state = state,
-            showHeader = false,
-            compact = true,
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
@@ -64,7 +62,6 @@ internal fun FourByTwoCompactContent(state: WidgetState) {
         ) {
             StatusLineContent(
                 state = state,
-                compact = true,
                 modifier = GlanceModifier.defaultWeight(),
             )
 

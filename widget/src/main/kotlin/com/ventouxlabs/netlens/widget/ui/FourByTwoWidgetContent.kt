@@ -1,22 +1,16 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
-import androidx.glance.background
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.unit.ColorProvider
 import com.ventouxlabs.netlens.widget.WidgetState
 
 /**
@@ -32,10 +26,51 @@ fun FourByTwoWidgetContent(state: WidgetState) {
 }
 
 /**
- * The design layout. Every *section* sits at its natural height: the only vertical weight
- * in this Column is on the childless [SectionGap] spacers, so an overrun clips from the
- * bottom instead of deleting children. See [FourByTwoVariant] for the invariant and the
- * measurements from when the sections themselves were weighted.
+ * The design layout: full-width stacked rows, on [DashboardFullContent]'s pattern.
+ *
+ * ## Why it is shaped like the 4x1
+ *
+ * It used to be a side-by-side split — a 52dp flag/badge/caption column beside the
+ * addresses, and a status half beside a 2/1/1 chip stack, divided by a vertical hairline.
+ * The 4x1 read as the better-composed card because of *structure*, not type size: it runs
+ * its chips full width, keeps the flag and lock inline in its status row, and has no
+ * sparkline. This tree now does the same three things, in the same order.
+ *
+ * ## Nine children, and why the count is load-bearing
+ *
+ * **Glance ships generated container layouts for 0..10 children only** — confirmed in the
+ * 1.1.1 AAR, where `column_start_null_*children.xml` stops at `_10children`. An eleventh
+ * child is dropped with no crash and no log. This Column had thirteen and lost its chip
+ * row on device; the third failure mode in [FourByTwoVariant] records the measurement.
+ *
+ * So the budget is spent deliberately:
+ *
+ * ```
+ *   1 header        5 gap            9 chips
+ *   2 divider       6 status block
+ *   3 gap           7 gap
+ *   4 addresses     8 divider
+ * ```
+ *
+ * The status line and the device/encryption line are one nested Column rather than two
+ * children here, which buys a slot of headroom — a nested container has its own budget of
+ * ten. Only three [SectionGap]s, where six is what an even N+1 distribution would want:
+ * the space they used to fake now comes from real vertical padding on the rows, which is
+ * attached to content and therefore reads as a band rather than as a void.
+ *
+ * What a gap still buys, and why they are not all padding: only the root Column is
+ * `fillMaxSize`, so only weights *here* can absorb surplus, and they collapse to zero on
+ * a short box where fixed padding would push the chip row off the bottom. Roughly 75dp
+ * over three gaps is ~25dp each at a 306dp box — arithmetic on natural text heights, not
+ * a measurement.
+ *
+ * ## The invariant
+ *
+ * The only vertical weight in this Column is on the childless [SectionGap] spacers, so an
+ * overrun clips from the bottom instead of deleting children. Every other `defaultWeight`
+ * below and in the rows this calls is a Row child dividing *width*. The nested status
+ * block deliberately carries none: a weighted content Column is the first failure mode in
+ * [FourByTwoVariant].
  */
 @Composable
 private fun FourByTwoFullContent(state: WidgetState) {
@@ -44,130 +79,58 @@ private fun FourByTwoFullContent(state: WidgetState) {
             .fillMaxSize()
             .widgetBackground(),
     ) {
+        // 1
         FourByTwoHeader(
             state = state,
             modifier = GlanceModifier.padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
         )
 
+        // 2
         WidgetSectionDivider()
 
+        // 3
         SectionGap()
 
-        DashboardWidgetContent(
+        // 4 — the addresses, and the widget's payload. The Row is written out here rather
+        // than delegated so that both `defaultWeight()`s are constructed in the scope of
+        // the Row that consumes them: a weight built in one composable and applied in
+        // another has rendered this family blank on device before. See
+        // [DashboardFullContent].
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.LOOSE),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FourByTwoWanColumn(state = state, modifier = GlanceModifier.defaultWeight())
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.BASE))
+            FourByTwoLanColumn(state = state, modifier = GlanceModifier.defaultWeight())
+        }
+
+        // 5
+        SectionGap()
+
+        // 6
+        FourByTwoStatusBlock(
             state = state,
-            showHeader = false,
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.BASE),
         )
 
+        // 7
         SectionGap()
 
+        // 8
         WidgetSectionDivider()
 
-        if (state.latencyHistoryMs.size >= SPARKLINE_MIN_SAMPLES) {
-            LatencySparkline(
-                history = state.latencyHistoryMs,
-                modifier = GlanceModifier
-                    .fillMaxWidth()
-                    .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
-            )
-        }
-
-        SectionGap()
-
-        StatusAndChipsRow(state = state)
-
-        SectionGap()
-    }
-}
-
-/** DNS/device status beside the shortcut chips, split down the middle by a hairline. */
-@Composable
-private fun StatusAndChipsRow(state: WidgetState) {
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StatusLineContent(
+        // 9 — last, and unpadded from below, so the chip row reads as a footer bar
+        // against the bottom edge rather than floating above a void.
+        ToolChipsRow(
             state = state,
-            modifier = GlanceModifier.defaultWeight(),
-        )
-
-        // Fixed height, deliberately not fillMaxHeight. `match_parent` on a child of a
-        // *wrap_content* Row does not resolve to the row's content height: LinearLayout
-        // measures it with getChildMeasureSpec(AT_MOST(remaining), MATCH_PARENT), which
-        // returns EXACTLY(remaining) — so the child inflates to every pixel left in the
-        // column and pushes its siblings out. That is the opposite failure from a
-        // weighted child collapsing to zero, and it is why nothing on this path asks
-        // for height it cannot justify.
-        Spacer(
             modifier = GlanceModifier
-                .width(WidgetSpace.HAIRLINE)
-                .height(STATUS_DIVIDER_HEIGHT)
-                .background(NetLensWidgetColors.line),
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.LOOSE),
         )
-
-        // Chips wrap to their content so the status line gets the leftover width; an
-        // even split truncated "DNS -> x.x.x.x - Direct" while the chip half sat empty.
-        ToolChipsRow(state = state)
     }
 }
-
-/**
- * Compact bar sparkline of the most recent latency samples (ms), bottom-aligned.
- * Bars are colored by the three-state status semantics (teal/amber/red) and
- * sized 4..16dp relative to the largest sample in the visible history.
- */
-@Composable
-private fun LatencySparkline(history: List<Int>, modifier: GlanceModifier) {
-    val maxSample = (history.maxOrNull() ?: 1).coerceAtLeast(1)
-    Row(
-        modifier = modifier.height(SPARKLINE_MAX_BAR_HEIGHT),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        history.forEach { sample ->
-            Box(
-                modifier = GlanceModifier
-                    .width(SPARKLINE_BAR_WIDTH)
-                    .height(sparklineBarHeight(sample, maxSample))
-                    .background(sparklineBarColor(sample)),
-            ) {}
-            Spacer(modifier = GlanceModifier.width(SPARKLINE_BAR_SPACING))
-        }
-    }
-}
-
-/**
- * Samples needed before the sparkline reads as a trend rather than as a rendering
- * artifact. Glance state is per widget *instance*, so a freshly placed widget starts
- * with an empty history and `WidgetRefreshWorker` adds at most one sample per 30-minute
- * run (`appendLatencySample`, capped at 12). At the old threshold of 2 the first couple
- * of hours after placement drew two 4dp bars alone in a full-width band, which looks
- * like a bug rather than like a chart with little data. Five bars is the point the shape
- * carries information.
- */
-private const val SPARKLINE_MIN_SAMPLES = 5
-
-private val SPARKLINE_MIN_BAR_HEIGHT = 4.dp
-private val SPARKLINE_MAX_BAR_HEIGHT = 16.dp
-private val SPARKLINE_BAR_WIDTH = 4.dp
-private val SPARKLINE_BAR_SPACING = 2.dp
-
-/** Scales [sample] relative to [maxSample] into the 4..16dp bar height range. */
-internal fun sparklineBarHeight(sample: Int, maxSample: Int): Dp {
-    val range = SPARKLINE_MAX_BAR_HEIGHT - SPARKLINE_MIN_BAR_HEIGHT
-    val fraction = (sample.toFloat() / maxSample.coerceAtLeast(1)).coerceIn(0f, 1f)
-    return SPARKLINE_MIN_BAR_HEIGHT + range * fraction
-}
-
-private fun sparklineBarColor(sample: Int): ColorProvider = when {
-    sample > 400 -> NetLensWidgetColors.stamp
-    sample > 150 -> NetLensWidgetColors.warn
-    else -> NetLensWidgetColors.accent
-}
-
-/** Height of the rule between the status line and the chip stack. */
-private val STATUS_DIVIDER_HEIGHT = 36.dp

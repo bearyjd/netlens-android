@@ -27,5 +27,19 @@ object ChipCatalog {
         ChipDefinition("whois", "WHOIS"),
     )
 
+    /**
+     * Hard ceiling of 4 — **raising this silently breaks two widgets**.
+     *
+     * Glance ships pre-generated container layouts for 0..10 children and no further
+     * (verified in `glance-appwidget-1.1.1.aar`); a container with more renders only
+     * its first ten, with no crash, no log, and nothing a JVM test can observe. Both
+     * full-width chip rows are laid out as `Portal + n x (spacer + chip)`, so they sit
+     * at `1 + 2*4 = 9` children. At 5 chips they emit 11 and each row silently loses
+     * its last two chips.
+     *
+     * If more chips are ever needed, the row has to change shape first — drop the
+     * spacers for padding on the chips, or wrap in a nested container (each nested
+     * container gets its own budget of ten).
+     */
     const val MAX_WIDGET_CHIPS = 4
 }

@@ -25,25 +25,51 @@ import com.ventouxlabs.netlens.widget.WidgetState
 import com.ventouxlabs.netlens.widget.action.DeeplinkUriKey
 import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.action.TriggerScanAction
+import com.ventouxlabs.netlens.widget.util.ChipDefinition
 import com.ventouxlabs.netlens.widget.util.Deeplink
 import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
 /**
- * 2x2 widget content — grade and network, the public address, stats, chips, footer.
+ * 2x2 widget content — grade and network, a WAN block, a LAN block, and the card's foot.
  *
- * ## On the dead band
+ * ## What closed the dead band
  *
- * The single [SectionGap] below pools this card's surplus into one band above the chips,
- * and that band is large: ~282dp of usable height against ~150dp of content even after
- * this pass. It is a genuine mismatch between what the 2x2 shows and how tall it is, and
- * the type scale can only narrow it — the 147dp width caps the address at
- * [WidgetType.VALUE_TIGHT] and the chips at [WidgetType.LABEL], so there is no size left
- * to spend. Closing it properly needs either another row of content or a shorter box;
- * both are decisions above this file.
+ * This card is ~171x306dp, and it used to fill about half of it: a header, one address, a
+ * stats line, two chips and a footer, with everything the card could not fill pooled into
+ * a single band above the chips. The band was structural, not a spacing bug — there were
+ * five things to show in a box sized for eight.
  *
- * What the gap must *not* become is a fixed spacer. It is a childless [SectionGap]
- * precisely so an overrun collapses it instead of deleting a sibling — see the invariant
- * in [FourByTwoVariant].
+ * So the LAN address moved in, and both addresses now use [CompactFullContent]'s
+ * two-block shape at the same 171dp width: a marker row — flag and lock, or signal bars —
+ * with its section label pushed to the trailing edge, and the address on its own line
+ * beneath at the card's full width.
+ *
+ * Showing `state.localIp` here is new. It was previously held back by a "the 2x2 adds no
+ * data" rule; the value is already in [WidgetState], every sibling widget shows it, and
+ * it is the honest way to fill 180dp of dead space rather than spacing five elements
+ * further apart.
+ *
+ * ## Seven children, and why the count is load-bearing
+ *
+ * **Glance ships generated container layouts for 0..10 children only**, and drops the
+ * eleventh silently — see the third failure mode in [FourByTwoVariant]. Written flat,
+ * this card is thirteen: a header, five gaps, two marker rows, two addresses, stats,
+ * chips and a footer. Each block is therefore a nested Column with its own budget of ten
+ * — the two address pairs, and the stats/chips/footer foot — leaving the root:
+ *
+ * ```
+ *   1 header    3 WAN block    5 LAN block    7 foot
+ *   2 gap       4 gap          6 gap
+ * ```
+ *
+ * ## The invariant
+ *
+ * Three childless [SectionGap]s share the surplus between the four sections — roughly
+ * 80dp at `fontScale` 1.15, so about 27dp each, which is arithmetic on natural text
+ * heights rather than a device measurement. No content child carries vertical weight,
+ * nested blocks included: under an overrun the gaps collapse and the card clips from the
+ * bottom, where the footer is, instead of deleting a payload view. The marker rows'
+ * `defaultWeight()` spacers divide *width*. See the invariant in [FourByTwoVariant].
  */
 @Composable
 fun StandardWidgetContent(state: WidgetState) {
@@ -54,12 +80,154 @@ fun StandardWidgetContent(state: WidgetState) {
             .padding(WidgetSpace.LOOSE),
     ) {
         HeaderRow(state)
-        Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
-        IpRow(state)
-        Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
-        StatsRow(state)
         SectionGap()
-        ChipsRow(state)
+        WanBlock(state)
+        SectionGap()
+        LanBlock(state)
+        SectionGap()
+        FootBlock(state)
+    }
+}
+
+/**
+ * Flag and lock, "WAN" at the trailing edge, and the public address beneath.
+ *
+ * The marker and the label are separately clickable on purpose: one `clickable` spanning
+ * the Row would send a tap on "WAN" to VPN Status instead of IP Info.
+ */
+@Composable
+private fun WanBlock(state: WidgetState) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WidgetFlagAndLock(state = state)
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            SectionLabel(text = "WAN", deeplink = Deeplink.IPINFO)
+        }
+        AddressLine(
+            value = state.publicIp.ifEmpty { "—.—.—.—" },
+            deeplink = Deeplink.IPINFO,
+        )
+    }
+}
+
+/** Signal, "LAN" at the trailing edge, and the local address beneath. */
+@Composable
+private fun LanBlock(state: WidgetState) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SignalBlock(state)
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            SectionLabel(text = "LAN", deeplink = Deeplink.DEVICES)
+        }
+        AddressLine(
+            value = state.localIp.ifEmpty { "—" },
+            deeplink = Deeplink.DEVICES,
+        )
+    }
+}
+
+/** Signal bars, or the cell generation, or an empty-bars placeholder. */
+@Composable
+private fun SignalBlock(state: WidgetState) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (state.hasRssi) {
+            SignalBarsIcon(level = state.rssiLevel)
+        } else if (state.cellGeneration.isNotEmpty()) {
+            Text(
+                text = state.cellGeneration,
+                style = TextStyle(
+                    color = NetLensWidgetColors.inkSoft,
+                    fontSize = widgetSp(WidgetType.LABEL),
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        } else {
+            Text(
+                text = "▯▯▯▯",
+                style = TextStyle(
+                    color = NetLensWidgetColors.inkSoft,
+                    fontSize = widgetSp(WidgetType.GLYPH_BARS),
+                ),
+            )
+        }
+    }
+}
+
+/** "WAN"/"LAN" at the trailing edge of its marker row, routing where its address does. */
+@Composable
+private fun SectionLabel(text: String, deeplink: String) {
+    Text(
+        text = text,
+        style = TextStyle(
+            color = NetLensWidgetColors.inkSoft,
+            fontSize = widgetSp(WidgetType.LABEL),
+            fontWeight = FontWeight.Medium,
+        ),
+        maxLines = 1,
+        modifier = GlanceModifier.clickable(
+            actionRunCallback<OpenDeeplinkAction>(
+                actionParametersOf(DeeplinkUriKey to deeplink),
+            ),
+        ),
+    )
+}
+
+/**
+ * The address, owning the full card width.
+ *
+ * 147dp inside the card's [WidgetSpace.LOOSE] padding, against the ~141dp a 15-character
+ * public IP needs at [WidgetType.VALUE_TIGHT] on a `fontScale` 1.15 device. That is the
+ * tightest fit on this widget and there are now two of them — but it is the only
+ * arrangement in which the 2x2's payload is the 2x2's biggest text, and the marker row
+ * above is what hands it the full width.
+ *
+ * Deliberately carries no `defaultWeight()`: it is a Column child here, where the
+ * modifier would divide *height* and let a RemoteViews overrun delete the widget's
+ * payload. See [FourByTwoVariant].
+ */
+@Composable
+private fun AddressLine(value: String, deeplink: String) {
+    Text(
+        text = value,
+        style = TextStyle(
+            color = NetLensWidgetColors.ink,
+            fontWeight = FontWeight.Bold,
+            fontSize = widgetSp(WidgetType.VALUE_TIGHT),
+        ),
+        // An IPv4 wrapping mid-value ("192.168.1.12" / "9") reads as a different address.
+        maxLines = 1,
+        modifier = GlanceModifier.fillMaxWidth().clickable(
+            actionRunCallback<OpenDeeplinkAction>(
+                actionParametersOf(DeeplinkUriKey to deeplink),
+            ),
+        ),
+    )
+}
+
+/**
+ * The card's foot: latency and device count, the chips, and the scan timestamp.
+ *
+ * One nested Column rather than three children of the root — see the child-count note on
+ * [StandardWidgetContent]. Its internal spacing is fixed rather than weighted, because a
+ * nested Column wraps its content and a weighted Spacer inside one has no surplus to
+ * divide: only the root is `fillMaxSize`, so only the root's gaps absorb anything. Three
+ * children, or five with chips.
+ */
+@Composable
+private fun FootBlock(state: WidgetState) {
+    val chips = resolveToolChips(state.chipRoutes).take(2)
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        StatsRow(state)
+        if (chips.isNotEmpty()) {
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
+            ChipsRow(chips)
+        }
         Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
         FooterRow(state)
     }
@@ -74,9 +242,7 @@ fun StandardWidgetContent(state: WidgetState) {
 // Leak") already run close to that at 12sp. BODY would ellipsize labels that currently
 // fit. The weights divide width, which is safe — see [FourByTwoVariant].
 @Composable
-private fun ChipsRow(state: WidgetState) {
-    val chips = resolveToolChips(state.chipRoutes).take(2)
-    if (chips.isEmpty()) return
+private fun ChipsRow(chips: List<ChipDefinition>) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -170,11 +336,6 @@ private fun HeaderRow(state: WidgetState) {
             }
         }
     }
-}
-
-@Composable
-private fun IpRow(state: WidgetState) {
-    WidgetIpRow(state = state, showCountryName = false)
 }
 
 /**
