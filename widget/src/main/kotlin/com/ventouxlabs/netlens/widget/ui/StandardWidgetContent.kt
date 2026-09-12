@@ -2,7 +2,6 @@ package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -29,22 +28,39 @@ import com.ventouxlabs.netlens.widget.action.TriggerScanAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
 import com.ventouxlabs.netlens.widget.util.relativeTimeLabel
 
+/**
+ * 2x2 widget content — grade and network, the public address, stats, chips, footer.
+ *
+ * ## On the dead band
+ *
+ * The single [SectionGap] below pools this card's surplus into one band above the chips,
+ * and that band is large: ~282dp of usable height against ~150dp of content even after
+ * this pass. It is a genuine mismatch between what the 2x2 shows and how tall it is, and
+ * the type scale can only narrow it — the 147dp width caps the address at
+ * [WidgetType.VALUE_TIGHT] and the chips at [WidgetType.LABEL], so there is no size left
+ * to spend. Closing it properly needs either another row of content or a shorter box;
+ * both are decisions above this file.
+ *
+ * What the gap must *not* become is a fixed spacer. It is a childless [SectionGap]
+ * precisely so an overrun collapses it instead of deleting a sibling — see the invariant
+ * in [FourByTwoVariant].
+ */
 @Composable
 fun StandardWidgetContent(state: WidgetState) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .widgetBackground()
-            .padding(12.dp),
+            .padding(WidgetSpace.LOOSE),
     ) {
         HeaderRow(state)
-        Spacer(modifier = GlanceModifier.height(8.dp))
+        Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
         IpRow(state)
-        Spacer(modifier = GlanceModifier.height(8.dp))
+        Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
         StatsRow(state)
-        Spacer(modifier = GlanceModifier.defaultWeight())
+        SectionGap()
         ChipsRow(state)
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        Spacer(modifier = GlanceModifier.height(WidgetSpace.BASE))
         FooterRow(state)
     }
 }
@@ -52,6 +68,11 @@ fun StandardWidgetContent(state: WidgetState) {
 // User-selected shortcut chips (Widget Chips setting, same chipRoutes preference the 4x1
 // and 4x2 read). The 2x2 is half the width of those, so only the first two selections fit
 // on its single chip row — weighted so two chips split the card evenly.
+//
+// [WidgetType.LABEL], not BODY, and this is the one place a chip stays at the floor: two
+// chips split 147dp into ~71dp each, and the longest catalog labels ("WiFi Audit", "DNS
+// Leak") already run close to that at 12sp. BODY would ellipsize labels that currently
+// fit. The weights divide width, which is safe — see [FourByTwoVariant].
 @Composable
 private fun ChipsRow(state: WidgetState) {
     val chips = resolveToolChips(state.chipRoutes).take(2)
@@ -61,12 +82,12 @@ private fun ChipsRow(state: WidgetState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         chips.forEachIndexed { index, chip ->
-            if (index > 0) Spacer(modifier = GlanceModifier.width(4.dp))
+            if (index > 0) Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
             Text(
                 text = chip.shortLabel,
                 style = TextStyle(
                     color = NetLensWidgetColors.onAccentSoft,
-                    fontSize = widgetSp(12f),
+                    fontSize = widgetSp(WidgetType.LABEL),
                     fontWeight = FontWeight.Medium,
                 ),
                 maxLines = 1,
@@ -74,7 +95,7 @@ private fun ChipsRow(state: WidgetState) {
                     .defaultWeight()
                     .cornerRadius(6.dp)
                     .background(NetLensWidgetColors.accentSoft)
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .padding(horizontal = WidgetSpace.TIGHT, vertical = WidgetSpace.TIGHT)
                     .clickable(
                         actionRunCallback<OpenDeeplinkAction>(
                             actionParametersOf(DeeplinkUriKey to Deeplink.forRoute(chip.route)),
@@ -102,7 +123,7 @@ private fun HeaderRow(state: WidgetState) {
             style = TextStyle(
                 color = gradeColor,
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
+                fontSize = widgetSp(WidgetType.DISPLAY),
             ),
             modifier = GlanceModifier.clickable(
                 actionRunCallback<OpenDeeplinkAction>(
@@ -111,7 +132,7 @@ private fun HeaderRow(state: WidgetState) {
             ),
         )
 
-        Spacer(modifier = GlanceModifier.width(10.dp))
+        Spacer(modifier = GlanceModifier.width(WidgetSpace.BASE))
 
         Column(
             modifier = GlanceModifier.defaultWeight().clickable(
@@ -131,7 +152,7 @@ private fun HeaderRow(state: WidgetState) {
                     style = TextStyle(
                         color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
+                        fontSize = widgetSp(WidgetType.BODY),
                     ),
                     maxLines = 1,
                 )
@@ -142,7 +163,7 @@ private fun HeaderRow(state: WidgetState) {
                         text = " ${state.encryptionType}$suffix",
                         style = TextStyle(
                             color = color,
-                            fontSize = 11.sp,
+                            fontSize = widgetSp(WidgetType.LABEL),
                         ),
                     )
                 }
@@ -156,6 +177,14 @@ private fun IpRow(state: WidgetState) {
     WidgetIpRow(state = state, showCountryName = false)
 }
 
+/**
+ * Latency and device count.
+ *
+ * Held at [WidgetType.LABEL] rather than promoted to BODY. These Texts have no
+ * `maxLines`, so overflow wraps rather than clips and would break the row: at 14sp a
+ * realistic `"120 ms · 24 devices"` needs ~145dp of the card's 147dp, which three-digit
+ * values exceed. 12sp leaves ~16dp of slack on the same string.
+ */
 @Composable
 private fun StatsRow(state: WidgetState) {
     Row(
@@ -167,7 +196,7 @@ private fun StatsRow(state: WidgetState) {
             text = latencyText,
             style = TextStyle(
                 color = NetLensWidgetColors.inkSoft,
-                fontSize = 12.sp,
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
             modifier = GlanceModifier.clickable(
                 actionRunCallback<OpenDeeplinkAction>(
@@ -180,7 +209,7 @@ private fun StatsRow(state: WidgetState) {
             text = " · ",
             style = TextStyle(
                 color = NetLensWidgetColors.inkSoft,
-                fontSize = 12.sp,
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
         )
 
@@ -189,7 +218,7 @@ private fun StatsRow(state: WidgetState) {
             text = deviceText,
             style = TextStyle(
                 color = NetLensWidgetColors.inkSoft,
-                fontSize = 12.sp,
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
             modifier = GlanceModifier.clickable(
                 actionRunCallback<OpenDeeplinkAction>(
@@ -215,7 +244,7 @@ private fun FooterRow(state: WidgetState) {
         text = footerText,
         style = TextStyle(
             color = footerColor,
-            fontSize = 11.sp,
+            fontSize = widgetSp(WidgetType.LABEL),
         ),
         modifier = GlanceModifier.fillMaxWidth().clickable(
             actionRunCallback<TriggerScanAction>(),

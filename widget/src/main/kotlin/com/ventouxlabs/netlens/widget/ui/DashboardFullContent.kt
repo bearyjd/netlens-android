@@ -2,7 +2,6 @@ package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -82,7 +81,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "WAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 12.sp,
+                        fontSize = widgetSp(WidgetType.LABEL),
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -92,7 +91,7 @@ fun DashboardFullContent(state: WidgetState) {
                     style = TextStyle(
                         color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = widgetSp(WidgetType.VALUE),
                     ),
                     maxLines = 1,
                 )
@@ -110,7 +109,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "LAN",
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 12.sp,
+                        fontSize = widgetSp(WidgetType.LABEL),
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -120,7 +119,7 @@ fun DashboardFullContent(state: WidgetState) {
                     style = TextStyle(
                         color = NetLensWidgetColors.ink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = widgetSp(WidgetType.VALUE),
                     ),
                     maxLines = 1,
                 )
@@ -161,7 +160,7 @@ fun DashboardFullContent(state: WidgetState) {
             ) {
                 Text(
                     text = state.countryFlag.ifEmpty { "—" },
-                    style = TextStyle(fontSize = 16.sp),
+                    style = TextStyle(fontSize = widgetSp(WidgetType.FLAG)),
                 )
                 Spacer(modifier = GlanceModifier.width(4.dp))
                 Box(
@@ -184,7 +183,7 @@ fun DashboardFullContent(state: WidgetState) {
                 text = statusText,
                 style = TextStyle(
                     color = statusColor,
-                    fontSize = 12.sp,
+                    fontSize = widgetSp(WidgetType.LABEL),
                     fontWeight = FontWeight.Medium,
                 ),
                 maxLines = 1,
@@ -202,7 +201,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = "${state.rssi}",
                     style = TextStyle(
                         color = NetLensWidgetColors.rssiColor(state.rssiLevel),
-                        fontSize = 12.sp,
+                        fontSize = widgetSp(WidgetType.LABEL),
                         fontWeight = FontWeight.Bold,
                     ),
                     maxLines = 1,
@@ -213,7 +212,7 @@ fun DashboardFullContent(state: WidgetState) {
                     text = state.cellGeneration,
                     style = TextStyle(
                         color = NetLensWidgetColors.inkSoft,
-                        fontSize = 12.sp,
+                        fontSize = widgetSp(WidgetType.LABEL),
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
@@ -284,7 +283,7 @@ private fun BigChip(
             text = label,
             style = TextStyle(
                 color = onBackground,
-                fontSize = 12.sp,
+                fontSize = widgetSp(WidgetType.LABEL),
                 fontWeight = FontWeight.Medium,
             ),
             maxLines = 1,

@@ -20,6 +20,13 @@ import androidx.compose.ui.unit.dp
  * `SectionGap` spacers — used by the 4x2 FULL tree, the 4x1 and the 2x1 to spread surplus
  * evenly between sections without letting any content view bid for height.
  *
+ * The grep is not self-explaining, because the same call means opposite things two lines
+ * apart: [CompactFullContent] holds a `defaultWeight()` *inside* a Row — dividing width,
+ * to push a section label to the trailing edge — directly above address `Text`s that are
+ * Column children and deliberately carry none. Those addresses were Row children before
+ * the 2x1 was restructured, and carried the modifier harmlessly. Moving a view between a
+ * Row and a Column silently changes what its weight does; that is the edit to watch for.
+ *
  * Nothing enforces it. It is a review rule, not a CI check: a JVM test cannot observe
  * RemoteViews collapse, because the collapse happens in the launcher's LinearLayout
  * measure pass, and Glance composables are not renderable by Paparazzi (`:widget` does
@@ -66,8 +73,11 @@ import androidx.compose.ui.unit.dp
  * box: smaller type, no sparkline, no ISP name, no VPN caption, no device count, one
  * chip row instead of two.
  *
- * FULL's height requirement has never been measured on a device. Adding up natural
- * heights put it near 261dp at `fontScale` 1.0 and near 285dp at `fontScale` >= 1.15,
+ * FULL's height requirement has never been measured on a device, and the figures below
+ * predate the [WidgetType] pass — which trimmed the addresses and labels by ~1sp each but
+ * added a rhythm step to the chip padding and the section padding, for something like a
+ * net +15dp. Adding up natural heights put it near 261dp at `fontScale` 1.0 and near
+ * 285dp at `fontScale` >= 1.15,
  * where [widgetSp]'s ceiling stops scaling text but the VPN badge and the 16dp sparkline
  * stay fixed. Slimming [FourByTwoVpnColumn] took roughly 27dp off both, so read them as
  * ~234dp and ~258dp. Every one of those figures is arithmetic on natural text heights —

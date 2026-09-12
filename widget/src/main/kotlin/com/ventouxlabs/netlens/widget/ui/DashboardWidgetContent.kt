@@ -38,19 +38,19 @@ fun DashboardWidgetContent(
         .fillMaxSize()
         .cornerRadius(16.dp)
         .background(NetLensWidgetColors.background)
-        .padding(horizontal = 10.dp, vertical = 6.dp),
+        .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.BASE),
 ) {
     Column(modifier = modifier) {
         if (showHeader) {
             WidgetHeaderRow(state = state)
-            Spacer(modifier = GlanceModifier.height(2.dp))
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
         }
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FourByTwoVpnColumn(state = state, compact = compact)
-            Spacer(modifier = GlanceModifier.width(6.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.BASE))
             // defaultWeight is RowScope-scoped, so the address columns take it from here
             // rather than building it themselves.
             FourByTwoWanColumn(
@@ -58,7 +58,7 @@ fun DashboardWidgetContent(
                 modifier = GlanceModifier.defaultWeight(),
                 compact = compact,
             )
-            Spacer(modifier = GlanceModifier.width(6.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.BASE))
             FourByTwoLanColumn(
                 state = state,
                 modifier = GlanceModifier.defaultWeight(),
@@ -66,7 +66,7 @@ fun DashboardWidgetContent(
             )
         }
         if (!compact) {
-            Spacer(modifier = GlanceModifier.height(2.dp))
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
             FourByTwoBottomRow(state = state)
         }
     }

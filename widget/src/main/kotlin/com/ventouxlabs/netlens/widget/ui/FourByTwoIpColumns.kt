@@ -1,7 +1,6 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.TextUnit
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -18,31 +17,45 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
 
 /**
  * The dashboard's two address columns — the widget's whole payload, and the pair that
- * vanished from the view tree on a short box. [FourByTwoVariant.COMPACT] keeps both and
- * merely shrinks them: 11sp labels over 15sp addresses instead of 13/17, and no ISP name.
+ * vanished from the view tree on a short box. Both variants now render at the same sizes;
+ * [FourByTwoVariant.COMPACT] differs only in dropping the ISP name, because the 1sp the
+ * old 11/15 pair saved over 13/17 was worth about 1dp of height and cost the compact
+ * variant a size of its own to reason about.
  *
  * Every modifier here is a Row-child modifier and therefore safe: the horizontal
  * `defaultWeight` in the root [modifier] divides *width*, never the scarce axis (the
- * fixed siblings are the 40/44dp flag column and two 6dp spacers, well inside even the
- * 250dp minWidth). What was unsafe was the vertical weight on the Row *above* these
- * columns; that is gone. See the invariant in [FourByTwoVariant].
+ * fixed siblings are the 40/44dp flag column and two [WidgetSpace.BASE] spacers, well
+ * inside even the 250dp minWidth). What was unsafe was the vertical weight on the Row
+ * *above* these columns; that is gone. See the invariant in [FourByTwoVariant].
  *
  * The weight comes from the caller because `defaultWeight` is `RowScope`-scoped and only
  * resolves on a direct child of the parent Row.
  *
- * ## Why the FULL address is 17sp
+ * ## Why the address is [WidgetType.VALUE_TIGHT] and not [WidgetType.VALUE]
  *
- * The two columns split what the flag column and the 6dp spacers leave: inside the 341dp
- * box these were measured on, 341 - 20 (padding) - 44 (flag) - 12 (spacers) = 265dp, or
- * ~132dp each. A 15-character IPv4 — "185.199.108.153", not just the 13-character
- * "192.168.1.129" that was on the test network — needs ~140dp at 18sp bold and ~132dp at
- * 17sp. 18sp therefore clips the longest addresses in the column it is meant to show,
- * and [AddressValue] is `maxLines = 1`, so clipping is what it would do.
+ * The two columns split what the flag column and the spacers leave: inside the 341dp box
+ * these were measured on, 341 - 16 (padding) - 44 (flag) - 16 (spacers) = 265dp, or
+ * ~132dp each. That is the same ~132dp the columns had at the old 10dp padding and 6dp
+ * spacers — the rhythm moved 4dp from the card edge into the gutters and the column
+ * budget did not change.
  *
- * Read 17sp as the largest size that fits *with no margin*: ~132dp needed against ~132dp
- * available, on advance-width arithmetic rather than a device measurement. The case to
- * put in front of a real widget is a 15-character public IP; if that ellipsizes, this is
- * the number to drop, and 16sp has ~8dp of slack.
+ * Against that 132dp, on a `fontScale` 1.15 device where [widgetSp] renders a design size
+ * at 1.15x:
+ *
+ * ```
+ *   "192.168.1.129"   13 chars   ~122dp at 16sp   ~129dp at 17sp   ~137dp at 18sp
+ *   "185.199.108.153" 15 chars   ~143dp at 16sp   ~152dp at 17sp   ~161dp at 18sp
+ * ```
+ *
+ * So [WidgetType.VALUE] never fits this column and 16sp is the role that does. The
+ * 13-character case gains real margin in the process — ~11dp, against the ~3dp it had at
+ * 17sp, which is why the previous size was described as fitting "with no margin".
+ *
+ * **A 15-character public IP still does not fit, and did not at 17sp either.** It is
+ * ~10dp over, [AddressValue] is `maxLines = 1`, and an ellipsized IP reads as a different
+ * address. Closing that needs width, not a smaller size — 14sp would fit it but would put
+ * the widget's payload below its own status line. The width to take is the 44dp flag
+ * column's; see [FourByTwoVpnColumn].
  */
 @Composable
 internal fun FourByTwoWanColumn(
@@ -59,17 +72,14 @@ internal fun FourByTwoWanColumn(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AddressLabel(text = "WAN", fontSize = widgetSp(if (compact) 11f else 13f))
-        AddressValue(
-            text = state.publicIp.ifEmpty { "—.—.—.—" },
-            fontSize = widgetSp(if (compact) 15f else 17f),
-        )
+        AddressLabel(text = "WAN")
+        AddressValue(text = state.publicIp.ifEmpty { "—.—.—.—" })
         if (!compact && state.ispName.isNotEmpty()) {
             Text(
                 text = state.ispName,
                 style = TextStyle(
                     color = NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(12f),
+                    fontSize = widgetSp(WidgetType.LABEL),
                 ),
                 maxLines = 1,
             )
@@ -93,33 +103,30 @@ internal fun FourByTwoLanColumn(
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.End,
     ) {
-        AddressLabel(text = "LAN", fontSize = widgetSp(if (compact) 11f else 13f))
-        AddressValue(
-            text = state.localIp.ifEmpty { "—" },
-            fontSize = widgetSp(if (compact) 15f else 17f),
-        )
+        AddressLabel(text = "LAN")
+        AddressValue(text = state.localIp.ifEmpty { "—" })
     }
 }
 
 @Composable
-private fun AddressLabel(text: String, fontSize: TextUnit) {
+private fun AddressLabel(text: String) {
     Text(
         text = text,
         style = TextStyle(
             color = NetLensWidgetColors.inkSoft,
-            fontSize = fontSize,
+            fontSize = widgetSp(WidgetType.LABEL),
         ),
     )
 }
 
 @Composable
-private fun AddressValue(text: String, fontSize: TextUnit) {
+private fun AddressValue(text: String) {
     Text(
         text = text,
         style = TextStyle(
             color = NetLensWidgetColors.ink,
             fontWeight = FontWeight.Bold,
-            fontSize = fontSize,
+            fontSize = widgetSp(WidgetType.VALUE_TIGHT),
         ),
         // An IPv4 address wrapping mid-value ("192.168.1.12" / "9") is worse than an
         // ellipsis: it reads as a different address.

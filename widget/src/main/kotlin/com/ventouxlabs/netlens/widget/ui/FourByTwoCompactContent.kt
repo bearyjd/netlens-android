@@ -38,7 +38,7 @@ internal fun FourByTwoCompactContent(state: WidgetState) {
     ) {
         FourByTwoHeader(
             state = state,
-            modifier = GlanceModifier.padding(horizontal = 10.dp, vertical = 1.dp),
+            modifier = GlanceModifier.padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
         )
 
         WidgetSectionDivider()
@@ -49,7 +49,7 @@ internal fun FourByTwoCompactContent(state: WidgetState) {
             compact = true,
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
         )
 
         WidgetSectionDivider()
@@ -59,7 +59,7 @@ internal fun FourByTwoCompactContent(state: WidgetState) {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StatusLineContent(

@@ -33,7 +33,8 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
  * Country flag over the VPN lock badge; the whole column opens the VPN Status screen.
  *
  * [compact] shrinks the column further for [FourByTwoVariant.COMPACT] — a 40dp column
- * with a 20sp flag and a 20dp badge — and drops the VPN caption and the private-DNS dot.
+ * with a [WidgetType.FLAG] flag and a 20dp badge — and drops the VPN caption and the
+ * private-DNS dot.
  *
  * Nothing here carries vertical weight, and nothing asks for `fillMaxHeight`: this Column
  * sits inside a *horizontal* Row, where `match_parent` height resolves to
@@ -43,9 +44,15 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
  * This column used to set FULL's vertical floor on its own: a 40sp flag, a 28dp badge and
  * a 12sp caption stacked to roughly 106dp against the ~56dp of the address column beside
  * it, and its 56dp width squeezed the addresses down to 16sp. Every element is now sized
- * down — 24sp flag, 22dp badge, 11sp caption, 44dp wide — for roughly 80dp with the
- * private-DNS dot and 67dp without. Both figures are estimates from natural text heights
- * at `fontScale` 1.0, not device measurements. It is still the tallest child of that Row.
+ * down — [WidgetType.FLAG_LARGE] flag, 22dp badge, [WidgetType.LABEL] caption, 44dp wide
+ * — for roughly 80dp with the private-DNS dot and 67dp without. Both figures are
+ * estimates from natural text heights at `fontScale` 1.0, not device measurements. It is
+ * still the tallest child of that Row.
+ *
+ * **Its 44dp is the width to take if the addresses beside it need more.** They are ~10dp
+ * short of a 15-character public IP (see [FourByTwoWanColumn]); widening this column is
+ * the wrong direction for that, and narrowing it is the only source of the missing width
+ * on this row. The caption is what stops it going below 44dp — see [VpnBadgeStyle].
  *
  * No state is dropped in the process: all three VPN states keep a visible caption, and
  * the screen reader keeps the unabbreviated wording (see [VpnBadgeStyle]).
@@ -57,8 +64,9 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
     Column(
         modifier = GlanceModifier
             // 44dp leaves the two address columns ~132dp each inside a 341dp box, which
-            // is what lets them carry a 17sp address instead of 16sp.
-            .width(if (compact) 40.dp else 44.dp)
+            // carries a [WidgetType.VALUE_TIGHT] address with ~11dp to spare on a
+            // 13-character value. See the table in [FourByTwoWanColumn].
+            .width(if (compact) 40.dp else 52.dp)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.VPNSTATUS),
@@ -69,9 +77,11 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
     ) {
         Text(
             text = state.countryFlag.ifEmpty { "—" },
-            style = TextStyle(fontSize = widgetSp(if (compact) 20f else 24f)),
+            style = TextStyle(
+                fontSize = widgetSp(if (compact) WidgetType.FLAG else WidgetType.FLAG_LARGE),
+            ),
         )
-        Spacer(modifier = GlanceModifier.height(if (compact) 2.dp else 4.dp))
+        Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
         VpnLockBadge(
             backdropColor = style.backdropColor,
             lockDrawable = style.lockDrawable,
@@ -79,7 +89,7 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
             compact = compact,
         )
         if (!compact) {
-            Spacer(modifier = GlanceModifier.height(4.dp))
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
             VpnCaptionAndDnsDot(
                 caption = style.caption,
                 captionColor = style.backdropColor,
@@ -93,10 +103,16 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
  * How one [VpnState] presents in the badge.
  *
  * [caption] and [contentDescription] are separate because only the caption pays for
- * width. At 11sp inside a 44dp column roughly six characters fit, so "Protected" and
- * "Split Tunnel" cannot be shown in full — "Split Tunnel" in fact did not fit the old
- * 56dp column either and was already being clipped mid-word. The screen reader gets the
- * full wording regardless.
+ * width, which is why "Protected" and "Split Tunnel" are not shown in full — "Split
+ * Tunnel" did not fit the old 56dp column either and was already being clipped mid-word.
+ * The screen reader gets the full wording regardless.
+ *
+ * **The caption is the tightest text in the 4x2 and is expected to clip.** Raising it to
+ * the [WidgetType.LABEL] floor costs width it did not have: "VPN On" is ~6 uppercase-led
+ * characters, roughly 3.7em, which at 12sp on a `fontScale` 1.15 device is ~50dp against
+ * this column's 44dp. It was ~46dp at the old 11sp, so it was already over — the floor
+ * makes an existing clip about 4dp worse rather than introducing one. If it reads badly
+ * on a device the fix is a shorter caption, not a smaller size: 12sp is the floor.
  */
 private data class VpnBadgeStyle(
     val backdropColor: ColorProvider,
@@ -137,7 +153,7 @@ private fun VpnCaptionAndDnsDot(
         text = caption,
         style = TextStyle(
             color = captionColor,
-            fontSize = widgetSp(CAPTION_SIZE_SP),
+            fontSize = widgetSp(WidgetType.LABEL),
             fontWeight = FontWeight.Bold,
         ),
         maxLines = 1,
@@ -149,14 +165,11 @@ private fun VpnCaptionAndDnsDot(
                 color = NetLensWidgetColors.accent,
                 // Matches the caption so the two read as one block, and so the dot costs
                 // ~13dp of the column's height rather than ~14dp.
-                fontSize = widgetSp(CAPTION_SIZE_SP),
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
         )
     }
 }
-
-/** Caption and private-DNS dot size. See [VpnBadgeStyle] for what it has to fit. */
-private const val CAPTION_SIZE_SP = 11f
 
 /** Rounded backdrop holding the lock glyph, with a "!" overlay for a split tunnel. */
 @Composable

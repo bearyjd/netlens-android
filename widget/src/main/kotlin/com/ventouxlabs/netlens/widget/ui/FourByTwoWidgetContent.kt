@@ -46,7 +46,7 @@ private fun FourByTwoFullContent(state: WidgetState) {
     ) {
         FourByTwoHeader(
             state = state,
-            modifier = GlanceModifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            modifier = GlanceModifier.padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
         )
 
         WidgetSectionDivider()
@@ -58,7 +58,7 @@ private fun FourByTwoFullContent(state: WidgetState) {
             showHeader = false,
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.BASE),
         )
 
         SectionGap()
@@ -70,7 +70,7 @@ private fun FourByTwoFullContent(state: WidgetState) {
                 history = state.latencyHistoryMs,
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                    .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
             )
         }
 
@@ -88,7 +88,7 @@ private fun StatusAndChipsRow(state: WidgetState) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusLineContent(
@@ -105,7 +105,7 @@ private fun StatusAndChipsRow(state: WidgetState) {
         // for height it cannot justify.
         Spacer(
             modifier = GlanceModifier
-                .width(1.dp)
+                .width(WidgetSpace.HAIRLINE)
                 .height(STATUS_DIVIDER_HEIGHT)
                 .background(NetLensWidgetColors.line),
         )

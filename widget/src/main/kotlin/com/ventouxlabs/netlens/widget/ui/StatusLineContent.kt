@@ -35,7 +35,7 @@ fun StatusLineContent(
     val (statusText, statusColor) = dnsStatusLine(state)
     Column(
         modifier = modifier
-            .padding(end = 6.dp)
+            .padding(end = WidgetSpace.TIGHT)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
@@ -47,7 +47,7 @@ fun StatusLineContent(
             text = statusText,
             style = TextStyle(
                 color = statusColor,
-                fontSize = widgetSp(14f),
+                fontSize = widgetSp(WidgetType.BODY),
             ),
             maxLines = 1,
         )
@@ -78,7 +78,7 @@ private fun DeviceEncryptionRow(state: WidgetState) {
             text = deviceText,
             style = TextStyle(
                 color = NetLensWidgetColors.inkSoft,
-                fontSize = widgetSp(12f),
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
             maxLines = 1,
         )
@@ -88,7 +88,7 @@ private fun DeviceEncryptionRow(state: WidgetState) {
                 text = " · ${state.encryptionType}",
                 style = TextStyle(
                     color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
-                    fontSize = widgetSp(12f),
+                    fontSize = widgetSp(WidgetType.LABEL),
                 ),
                 maxLines = 1,
             )

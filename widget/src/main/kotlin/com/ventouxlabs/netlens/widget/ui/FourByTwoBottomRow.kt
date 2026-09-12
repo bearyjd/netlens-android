@@ -41,11 +41,11 @@ internal fun FourByTwoBottomRow(state: WidgetState) {
     ) {
         if (state.hasRssi) {
             SignalBarsIcon(level = state.rssiLevel)
-            Spacer(modifier = GlanceModifier.width(3.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
         }
         if (speedLabel.isNotEmpty()) {
             BottomRowText(text = speedLabel)
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
         }
         BottomRowText(text = bottomLabel, modifier = GlanceModifier.defaultWeight())
         if (state.hasRssi) {
@@ -56,7 +56,7 @@ internal fun FourByTwoBottomRow(state: WidgetState) {
             )
         }
         if (state.isCaptivePortal) {
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
             BottomRowText(text = "Portal", color = NetLensWidgetColors.warn)
         }
     }
@@ -68,7 +68,7 @@ private fun rssiTextColor(rssi: Int): ColorProvider = when {
     else -> NetLensWidgetColors.stamp
 }
 
-/** The row's shared 14sp label style; soft ink and normal weight unless overridden. */
+/** The row's shared [WidgetType.BODY] style; soft ink and normal weight unless overridden. */
 @Composable
 private fun BottomRowText(
     text: String,
@@ -80,7 +80,7 @@ private fun BottomRowText(
         text = text,
         style = TextStyle(
             color = color,
-            fontSize = widgetSp(14f),
+            fontSize = widgetSp(WidgetType.BODY),
             fontWeight = fontWeight,
         ),
         modifier = modifier,

@@ -66,35 +66,35 @@ fun FourByTwoHeader(state: WidgetState, modifier: GlanceModifier = GlanceModifie
             style = TextStyle(
                 color = gradeColor,
                 fontWeight = FontWeight.Bold,
-                fontSize = widgetSp(20f),
+                fontSize = widgetSp(WidgetType.HERO),
             ),
             modifier = GlanceModifier
                 .cornerRadius(6.dp)
                 .clickable(postureAction),
         )
-        Spacer(modifier = GlanceModifier.width(6.dp))
+        Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
         Text(
             text = issueText,
             style = TextStyle(
                 color = issueColor,
                 fontWeight = FontWeight.Medium,
-                fontSize = widgetSp(12f),
+                fontSize = widgetSp(WidgetType.LABEL),
             ),
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight().clickable(postureAction),
         )
         if (elapsed.isNotEmpty()) {
-            Spacer(modifier = GlanceModifier.width(6.dp))
+            Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
             Text(
                 text = "Scanned $elapsed",
                 style = TextStyle(
                     color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(12f),
+                    fontSize = widgetSp(WidgetType.LABEL),
                 ),
                 maxLines = 1,
             )
         }
-        Spacer(modifier = GlanceModifier.width(6.dp))
+        Spacer(modifier = GlanceModifier.width(WidgetSpace.TIGHT))
         Image(
             provider = ImageProvider(R.drawable.ic_refresh),
             contentDescription = context.getString(R.string.widget_refresh_content_description),

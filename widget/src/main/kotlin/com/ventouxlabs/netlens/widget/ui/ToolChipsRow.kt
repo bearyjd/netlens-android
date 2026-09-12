@@ -31,10 +31,12 @@ import com.ventouxlabs.netlens.widget.util.Deeplink
  * How many tool chips the single-row compact form has width for beside [PORTAL_LABEL].
  *
  * Two, not three. [resolveToolChips] returns catalog order, so a user who selects
- * dnsleak + wifiaudit + ipinfo gets the three longest labels in the catalog — at 12sp
- * with 3dp padding and 4dp spacers those run about 240dp, against the ~203dp half-width
- * available at the 427x158dp box this variant targets. The third chip was being cut on
- * the exact box the compact layout exists for.
+ * dnsleak + wifiaudit + ipinfo gets the three longest labels in the catalog — at
+ * [WidgetType.LABEL] with [WidgetSpace.TIGHT] padding and spacers those run about 250dp,
+ * against the ~203dp half-width available at the 427x158dp box this variant targets. The
+ * third chip was being cut on the exact box the compact layout exists for. The rhythm
+ * took chip padding from 3dp to 4dp, which widens each chip by 2dp and so only reinforces
+ * the cap.
  */
 private const val COMPACT_TOOL_CHIP_COUNT = 2
 
@@ -57,8 +59,10 @@ internal fun resolveToolChips(chipRoutes: List<String>): List<ChipDefinition> {
 /**
  * Shortcut chips: up to [ChipCatalog.MAX_WIDGET_CHIPS] user-selected tools plus Portal.
  *
- * [compact] collapses the ~74dp two-per-row stack into one ~24dp row for
- * [FourByTwoVariant.COMPACT].
+ * [compact] collapses the two-per-row stack into a single row for
+ * [FourByTwoVariant.COMPACT], and drops the chip text from [WidgetType.BODY] to
+ * [WidgetType.LABEL] — the only difference between the two forms now that padding is one
+ * rhythm step everywhere.
  */
 @Composable
 fun ToolChipsRow(
@@ -103,14 +107,14 @@ private fun StackedToolChips(
 ) {
     Column(
         modifier = modifier
-            .padding(start = 6.dp),
+            .padding(start = WidgetSpace.TIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         chipRows.forEachIndexed { rowIndex, rowChips ->
-            if (rowIndex > 0) Spacer(GlanceModifier.height(4.dp))
+            if (rowIndex > 0) Spacer(GlanceModifier.height(WidgetSpace.TIGHT))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 rowChips.forEachIndexed { index, chip ->
-                    if (index > 0) Spacer(GlanceModifier.width(4.dp))
+                    if (index > 0) Spacer(GlanceModifier.width(WidgetSpace.TIGHT))
                     ToolChip(
                         label = chip.shortLabel,
                         action = deeplinkAction(chip),
@@ -120,7 +124,7 @@ private fun StackedToolChips(
                 }
             }
         }
-        if (chipRows.isNotEmpty()) Spacer(GlanceModifier.height(4.dp))
+        if (chipRows.isNotEmpty()) Spacer(GlanceModifier.height(WidgetSpace.TIGHT))
         Row(verticalAlignment = Alignment.CenterVertically) {
             ToolChip(
                 label = PORTAL_LABEL,
@@ -139,7 +143,8 @@ private fun StackedToolChips(
  * its *trailing* children. Width here is genuinely tight and varies with the placement:
  * this half is roughly 203dp at the 427dp box the compact variant targets, where two
  * chips plus Portal fit, but only about 115dp at the declared `minWidth` of 250dp, where
- * even two long labels overflow.
+ * even two long labels overflow. Chips are the one thing in the family sized by what
+ * fits rather than by what they are, which is why they sit at [WidgetType.LABEL] here.
  *
  * So an overflow is expected at narrow placements, and Portal-first decides what it
  * costs: a tool chip the user explicitly configured disappears rather than the Portal
@@ -155,7 +160,7 @@ private fun CompactToolChipsRow(
     portalOnBackground: ColorProvider,
 ) {
     Row(
-        modifier = modifier.padding(start = 6.dp),
+        modifier = modifier.padding(start = WidgetSpace.TIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ToolChip(
@@ -166,7 +171,7 @@ private fun CompactToolChipsRow(
             compact = true,
         )
         chips.forEach { chip ->
-            Spacer(GlanceModifier.width(4.dp))
+            Spacer(GlanceModifier.width(WidgetSpace.TIGHT))
             ToolChip(
                 label = chip.shortLabel,
                 action = deeplinkAction(chip),
@@ -195,10 +200,10 @@ private fun ToolChip(
         modifier = GlanceModifier
             .cornerRadius(4.dp)
             .background(background)
-            .padding(horizontal = if (compact) 3.dp else 4.dp, vertical = 2.dp)
+            .padding(horizontal = WidgetSpace.TIGHT, vertical = WidgetSpace.TIGHT)
             .clickable(action),
         style = TextStyle(
-            fontSize = widgetSp(if (compact) 12f else 14f),
+            fontSize = widgetSp(if (compact) WidgetType.LABEL else WidgetType.BODY),
             color = onBackground,
         ),
         maxLines = 1,
