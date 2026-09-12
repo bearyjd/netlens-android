@@ -71,16 +71,15 @@ internal fun FourByTwoVpnColumn(state: WidgetState, compact: Boolean = false) {
             text = state.countryFlag.ifEmpty { "—" },
             style = TextStyle(fontSize = widgetSp(if (compact) 20f else 24f)),
         )
-        Spacer(modifier = GlanceModifier.height(2.dp))
+        Spacer(modifier = GlanceModifier.height(if (compact) 2.dp else 4.dp))
         VpnLockBadge(
             backdropColor = style.backdropColor,
             lockDrawable = style.lockDrawable,
             contentDescription = style.contentDescription,
-            isSplitTunnel = state.vpnState is VpnState.SplitTunnel,
             compact = compact,
         )
         if (!compact) {
-            Spacer(modifier = GlanceModifier.height(2.dp))
+            Spacer(modifier = GlanceModifier.height(4.dp))
             VpnCaptionAndDnsDot(
                 caption = style.caption,
                 captionColor = style.backdropColor,
@@ -165,7 +164,6 @@ private fun VpnLockBadge(
     backdropColor: ColorProvider,
     lockDrawable: Int,
     contentDescription: String,
-    isSplitTunnel: Boolean,
     compact: Boolean,
 ) {
     Box(
@@ -175,28 +173,16 @@ private fun VpnLockBadge(
             .background(backdropColor),
         contentAlignment = Alignment.Center,
     ) {
+        // No split-tunnel "!" overlay. It never rendered legibly: the glyph is positioned
+        // by padding *inside* a fixed-size Box, so an offset large enough to clear the
+        // lock overflows and clips, and one small enough to fit lands on top of the lock.
+        // Split tunnel is already carried by the amber backdrop, the "Split" caption, the
+        // contentDescription, and the status line's "- Split" suffix.
         Image(
             provider = ImageProvider(lockDrawable),
             contentDescription = contentDescription,
             // 15dp inside 22dp keeps ~3.5dp of backdrop showing on each side.
             modifier = GlanceModifier.size(if (compact) 14.dp else 15.dp),
         )
-        if (isSplitTunnel) {
-            // Padding on the opposite two sides is what pushes the glyph into the
-            // top-right corner, so the offset is the badge size less the glyph's own box:
-            // a 12sp "!" occupies ~14dp, which at a 22dp badge leaves 8dp, not the 14dp
-            // a 28dp badge could afford. Overshoot here does not reposition the glyph, it
-            // overflows the fixed-size Box and clips it.
-            val overlayOffset = if (compact) 10.dp else 8.dp
-            Text(
-                text = "!",
-                style = TextStyle(
-                    color = NetLensWidgetColors.onAccentFill,
-                    fontSize = widgetSp(12f),
-                    fontWeight = FontWeight.Bold,
-                ),
-                modifier = GlanceModifier.padding(start = overlayOffset, bottom = overlayOffset),
-            )
-        }
     }
 }

@@ -65,7 +65,7 @@ private fun FourByTwoFullContent(state: WidgetState) {
 
         WidgetSectionDivider()
 
-        if (state.latencyHistoryMs.size >= 2) {
+        if (state.latencyHistoryMs.size >= SPARKLINE_MIN_SAMPLES) {
             LatencySparkline(
                 history = state.latencyHistoryMs,
                 modifier = GlanceModifier
@@ -139,6 +139,17 @@ private fun LatencySparkline(history: List<Int>, modifier: GlanceModifier) {
         }
     }
 }
+
+/**
+ * Samples needed before the sparkline reads as a trend rather than as a rendering
+ * artifact. Glance state is per widget *instance*, so a freshly placed widget starts
+ * with an empty history and `WidgetRefreshWorker` adds at most one sample per 30-minute
+ * run (`appendLatencySample`, capped at 12). At the old threshold of 2 the first couple
+ * of hours after placement drew two 4dp bars alone in a full-width band, which looks
+ * like a bug rather than like a chart with little data. Five bars is the point the shape
+ * carries information.
+ */
+private const val SPARKLINE_MIN_SAMPLES = 5
 
 private val SPARKLINE_MIN_BAR_HEIGHT = 4.dp
 private val SPARKLINE_MAX_BAR_HEIGHT = 16.dp
