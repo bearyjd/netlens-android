@@ -1,14 +1,10 @@
 package com.ventouxlabs.netlens.widget.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -20,45 +16,45 @@ import com.ventouxlabs.netlens.widget.action.OpenDeeplinkAction
 import com.ventouxlabs.netlens.widget.util.Deeplink
 
 /**
- * DNS/routing status, with a device count and encryption type beneath it.
+ * Which DNS resolver is in use and how traffic reaches it — one line, opening DNS.
  *
- * [compact] keeps only the status line. Neither path asks for height: this Column is a
- * child of a horizontal Row, where a `fillMaxHeight` would lower to `match_parent` and
- * inflate to every pixel left in the card. See the invariant in [FourByTwoVariant].
+ * It was a Column holding this line with the device count and encryption beneath it, and
+ * a `compact` flag that dropped the second half. Both 4x2 variants now place the two
+ * separately — FULL gives the detail its own full-width row ([FourByTwoDetailRow]),
+ * COMPACT drops it — so the wrapper and the flag are gone and this is the line itself.
+ *
+ * Callers give it a width: it is a weighted child in both of its rows, and the one thing
+ * on those rows that may ellipsize. It asks for no height. See the invariant in
+ * [FourByTwoVariant].
  */
 @Composable
-fun StatusLineContent(
-    state: WidgetState,
-    compact: Boolean = false,
-    modifier: GlanceModifier = GlanceModifier,
-) {
+fun StatusLineContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
     val (statusText, statusColor) = dnsStatusLine(state)
-    Column(
+    Text(
+        text = statusText,
+        style = TextStyle(
+            color = statusColor,
+            fontSize = widgetSp(WidgetType.BODY),
+        ),
+        maxLines = 1,
         modifier = modifier
-            .padding(end = 6.dp)
+            .padding(end = WidgetSpace.TIGHT)
             .clickable(
                 actionRunCallback<OpenDeeplinkAction>(
                     actionParametersOf(DeeplinkUriKey to Deeplink.DNS),
                 ),
             ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = statusText,
-            style = TextStyle(
-                color = statusColor,
-                fontSize = widgetSp(14f),
-            ),
-            maxLines = 1,
-        )
-
-        if (!compact) {
-            DeviceEncryptionRow(state = state)
-        }
-    }
+    )
 }
 
-/** Which DNS server is in use and how traffic reaches it, with its severity color. */
+/**
+ * Which DNS server is in use and how traffic reaches it, with its severity color.
+ *
+ * Deliberately not shared with [DashboardFullContent]'s `dnsStatus`, which the 4x1 uses:
+ * the two produce different strings (`"Offline"` against `"No network"`, a bare
+ * `"DNS → x"` against `"DNS → x · VPN routed"`, and an `ifEmpty { "?" }` guard the 4x1
+ * has and this does not). Unifying them would silently change one widget's wording.
+ */
 private fun dnsStatusLine(state: WidgetState): Pair<String, ColorProvider> = when {
     state.isCaptivePortal -> "Captive portal" to NetLensWidgetColors.warn
     state.isDnsLeaking -> "DNS → ${state.primaryDns} · Leak!" to NetLensWidgetColors.warn
@@ -68,30 +64,4 @@ private fun dnsStatusLine(state: WidgetState): Pair<String, ColorProvider> = whe
         "DNS → ${state.primaryDns} · Split" to NetLensWidgetColors.warn
     state.isConnected -> "DNS → ${state.primaryDns} · Direct" to NetLensWidgetColors.inkSoft
     else -> "No network" to NetLensWidgetColors.stamp
-}
-
-@Composable
-private fun DeviceEncryptionRow(state: WidgetState) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        val deviceText = "${state.deviceCount} device${if (state.deviceCount != 1) "s" else ""}"
-        Text(
-            text = deviceText,
-            style = TextStyle(
-                color = NetLensWidgetColors.inkSoft,
-                fontSize = widgetSp(12f),
-            ),
-            maxLines = 1,
-        )
-        if (state.encryptionType.isNotEmpty()) {
-            val secure = state.isEncryptionSecure
-            Text(
-                text = " · ${state.encryptionType}",
-                style = TextStyle(
-                    color = if (secure) NetLensWidgetColors.accent else NetLensWidgetColors.stamp,
-                    fontSize = widgetSp(12f),
-                ),
-                maxLines = 1,
-            )
-        }
-    }
 }

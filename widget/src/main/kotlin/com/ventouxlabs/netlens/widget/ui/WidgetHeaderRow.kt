@@ -52,7 +52,7 @@ fun WidgetHeaderRow(state: WidgetState, modifier: GlanceModifier = GlanceModifie
                 text = "Scanned $elapsed",
                 style = TextStyle(
                     color = if (stale) NetLensWidgetColors.warn else NetLensWidgetColors.inkSoft,
-                    fontSize = widgetSp(11f),
+                    fontSize = widgetSp(WidgetType.LABEL),
                 ),
                 maxLines = 1,
             )

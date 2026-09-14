@@ -16,7 +16,7 @@ fun SignalBarsIcon(level: Int, modifier: GlanceModifier = GlanceModifier) {
         text = bars,
         style = TextStyle(
             color = NetLensWidgetColors.rssiColor(level),
-            fontSize = widgetSp(10f),
+            fontSize = widgetSp(WidgetType.GLYPH_BARS),
         ),
         modifier = modifier,
     )
