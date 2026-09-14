@@ -59,8 +59,10 @@ Also required: `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. W
 
 Fully automated via CI:
 1. Push a `v*` tag (or use the bump workflow)
-2. `.github/workflows/release.yml` builds the release APK
-3. APK is uploaded to GitHub Releases with auto-generated notes
+2. `.github/workflows/release.yml` builds signed Android artifacts for the
+   authenticated CI artifact store
+3. GitHub Releases publish auto-generated notes only — never sideload an APK
+   from a GitHub release, because it cannot update through Play App Signing
 4. Edit the release on GitHub to add highlights if needed
 
 ### F-Droid
@@ -77,14 +79,9 @@ Routine updates (once the recipe is merged and the app has a real F-Droid listin
 
 ### Google Play Store
 
-1. Build a signed release APK locally:
-   ```bash
-   ./gradlew assembleRelease
-   ```
-2. Locate the APK at `app/build/outputs/apk/release/app-release.apk`
-3. Upload to Play Console > Production > Create new release
-4. Update "What's new" text from `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
-5. Submit for review (typically 5-24 hours)
+1. Ensure `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` exists
+2. Actions → **Play Publish** → choose the target track and release status
+3. Confirm the workflow is green and the release appears in the selected Play track
 
 **Required Play Store assets** (one-time setup):
 - App icon: 512x512 PNG
@@ -97,5 +94,6 @@ Routine updates (once the recipe is merged and the app has a real F-Droid listin
 
 1. Update `CHANGELOG.md` with the new version section
 2. Create the fastlane changelog file: `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
-3. Verify the GitHub Release page has the APK attached
+3. Verify the GitHub Release contains notes only; Android artifacts stay in the
+   authenticated CI artifact store
 4. Verify F-Droid build status after submission (check the merge request)
