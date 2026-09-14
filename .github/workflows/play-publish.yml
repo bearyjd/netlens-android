@@ -1,17 +1,27 @@
 name: Play Publish
 
-# Manual upload of the signed gplay AAB + store listing to Google Play via
-# fastlane supply. Requires the com.ventouxlabs.netlens app to already exist in
-# the Play Console with one prior manual upload (see docs/play-store.md), plus a
-# PLAY_SERVICE_ACCOUNT_JSON repository secret.
+# Reusable signed gplay AAB publisher. Release calls this for production only
+# after its tagged release job succeeds. Manual dispatch remains available for
+# deliberate non-production track testing.
 on:
+  workflow_call:
+    inputs:
+      track:
+        required: true
+        type: string
+      release_status:
+        required: true
+        type: string
+      production_automation:
+        required: true
+        type: boolean
   workflow_dispatch:
     inputs:
       track:
         description: "Play track"
         default: "internal"
         type: choice
-        options: [internal, alpha, beta, production]
+        options: [internal, alpha, beta]
       release_status:
         description: "Release status"
         default: "draft"
@@ -21,12 +31,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: play-${{ inputs.track }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Reject manual production publishing
+        if: inputs.track == 'production' && inputs.production_automation != true
+        run: |
+          echo "::error::Production publishing is automatic from the tagged Release workflow. Manual Play Publish is limited to test tracks."
+          exit 1
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:

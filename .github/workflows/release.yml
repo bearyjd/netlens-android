@@ -4,6 +4,12 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publish_production:
+        description: "Publish this tagged release to Google Play production after Release succeeds"
+        default: false
+        required: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -91,3 +97,18 @@ jobs:
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           generate_release_notes: true
+
+  # A human-created v* tag is the explicit production-deployment signal. The
+  # bump workflow dispatches this workflow with publish_production=true because
+  # GITHUB_TOKEN tag pushes do not otherwise trigger tag workflows.
+  publish-production:
+    needs: release
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      (github.event_name == 'push' || inputs.publish_production == true)
+    uses: ./.github/workflows/play-publish.yml
+    with:
+      track: production
+      release_status: completed
+      production_automation: true
+    secrets: inherit
