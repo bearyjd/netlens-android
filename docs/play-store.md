@@ -67,15 +67,17 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
     Options: `track:` (internal/alpha/beta/production), `release_status:`
     (draft/completed), `aab:`.
   - `listing` — upload only the store listing (no binary).
-- `.github/workflows/play-publish.yml` — `workflow_dispatch` that builds the
-  signed AAB and runs `fastlane deploy`.
+- `.github/workflows/play-publish.yml` — reusable signed-AAB publisher invoked
+  by tagged Release jobs for production, with manual dispatch retained for test
+  tracks; it runs `fastlane deploy`.
 
 ### One-time service-account setup
 
 > ✅ **Status (verified 2026-09-14):** the listing is bootstrapped, the
 > `PLAY_SERVICE_ACCOUNT_JSON` secret is configured, and the **Play Publish** workflow
-> successfully released versionCode 22 / v1.3.8 to production. Future releases use
-> Actions → **Play Publish**; no manual binary upload is needed.
+> successfully released versionCode 22 / v1.3.8 to production. Future `v*` tags
+> automatically publish a completed production release after the signed Release job
+> succeeds; no manual binary upload is needed.
 >
 > Listing inputs were verified ready on 2026-08-06: `title.txt`, `short_description.txt`
 > (78/80 chars), `full_description.txt` (1439/4000), `icon.png` 512×512,
@@ -95,7 +97,9 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
   PLAY_SERVICE_ACCOUNT_JSON=/path/to/key.json \
     bundle exec fastlane deploy track:internal release_status:draft
   ```
-- **CI:** Actions → **Play Publish** → Run workflow → pick track + release status.
+- **CI:** A version tag automatically publishes production after Release succeeds.
+  Actions → **Play Publish** remains available for deliberate internal, alpha, or
+  beta testing.
 
 ### Go-live checklist (completed 2026-09-14)
 
@@ -190,10 +194,10 @@ tracking."*
       **`PLAY_SERVICE_ACCOUNT_JSON`** = the entire JSON key contents
       (the four `RELEASE_*` signing secrets are already set)
 
-**C. First automated upload:**
-- [x] Actions → **Play Publish** → Run workflow → `track: production`,
-      `release_status: completed`
-- [x] Confirm the run is fully green and the release appears on the production track
+**C. First automated upload (historical):**
+- [x] Before tag automation existed, Actions → **Play Publish** ran with
+      `track: production`, `release_status: completed`
+- [x] Confirm the run was fully green and the release appeared on the production track
 
 ### Notes
 - The workflow reuses the existing release-signing secrets

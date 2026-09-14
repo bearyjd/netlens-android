@@ -34,7 +34,8 @@ Use the GitHub Actions workflow **or** bump manually:
 1. Go to Actions > "Bump Version & Release" > Run workflow
 2. Select bump type: `patch`, `minor`, or `major`
 3. The workflow updates `gradle.properties`, commits, tags, and pushes
-4. The `v*` tag triggers the Release workflow automatically
+4. The `v*` tag triggers the signed Release workflow, then a completed Google
+   Play production upload after the release build succeeds
 
 ### Manual
 ```bash
@@ -63,7 +64,9 @@ Fully automated via CI:
    authenticated CI artifact store
 3. GitHub Releases publish auto-generated notes only — never sideload an APK
    from a GitHub release, because it cannot update through Play App Signing
-4. Edit the release on GitHub to add highlights if needed
+4. A successful tagged release automatically invokes the completed production
+   Play upload; manual Play Publish dispatches are restricted to test tracks
+5. Edit the release on GitHub to add highlights if needed
 
 ### F-Droid
 
@@ -80,8 +83,10 @@ Routine updates (once the recipe is merged and the app has a real F-Droid listin
 ### Google Play Store
 
 1. Ensure `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` exists
-2. Actions → **Play Publish** → choose the target track and release status
-3. Confirm the workflow is green and the release appears in the selected Play track
+2. Push the `v*` tag (or use **Bump Version & Release**); this automatically
+   invokes the completed production upload after the signed Release job succeeds
+3. Confirm both the Release and called Play Publish jobs are green
+4. Use manual **Play Publish** only for deliberate internal, alpha, or beta testing
 
 **Required Play Store assets** (one-time setup):
 - App icon: 512x512 PNG
