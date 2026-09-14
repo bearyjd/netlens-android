@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
  * | [BODY]        | 14 | status lines, the 4x2 bottom row, full-width chips           |
  * | [VALUE_TIGHT] | 16 | an address in a width-constrained column                     |
  * | [VALUE]       | 18 | an address where width allows (the 4x1's full-width columns) |
+ * | [ADDRESS_FULL]| 28 | a 4x2 FULL address at the observed 341dp launcher minimum (250dp unverified) |
  * | [HERO]        | 20 | the security grade letter in the 4x2's single-line header    |
  * | [DISPLAY]     | 28 | the security grade letter as the 2x2's standalone anchor     |
  *
@@ -58,6 +59,17 @@ internal object WidgetType {
 
     /** An address owning a column wide enough for the 15-character worst case. */
     const val VALUE = 18f
+
+    /**
+     * The 4x2 FULL's full-width address at the Pixel launcher’s observed 341dp minimum.
+     *
+     * This is intentionally distinct from [DISPLAY]: it is readable payload, not a
+     * security-grade display glyph. The 325dp interior fits the ~246dp 15-character
+     * estimate at `fontScale` 1.15 and was device-verified without ellipsis. Another
+     * launcher could allocate the declared 250dp bucket (~234dp interior), where it may
+     * ellipsize; see [FourByTwoFullWidthWanAddress].
+     */
+    const val ADDRESS_FULL = 28f
 
     /** A single character carrying a whole card's headline signal, inline in a row. */
     const val HERO = 20f

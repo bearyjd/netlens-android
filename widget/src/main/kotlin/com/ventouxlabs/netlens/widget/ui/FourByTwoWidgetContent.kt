@@ -3,14 +3,12 @@ package com.ventouxlabs.netlens.widget.ui
 import androidx.compose.runtime.Composable
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
-import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
 import com.ventouxlabs.netlens.widget.WidgetState
 
 /**
@@ -91,20 +89,25 @@ private fun FourByTwoFullContent(state: WidgetState) {
         // 3
         SectionGap()
 
-        // 4 — the addresses, and the widget's payload. The Row is written out here rather
-        // than delegated so that both `defaultWeight()`s are constructed in the scope of
-        // the Row that consumes them: a weight built in one composable and applied in
-        // another has rendered this family blank on device before. See
-        // [DashboardFullContent].
-        Row(
+        // 4 — the addresses are vertically stacked, so each gets the full interior width
+        // rather than half of it. This nested container is still exactly one root child;
+        // it cannot contain a SectionGap because only the root fills the widget's height.
+        Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.LOOSE),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            FourByTwoWanColumn(state = state, modifier = GlanceModifier.defaultWeight())
-            Spacer(modifier = GlanceModifier.width(WidgetSpace.BASE))
-            FourByTwoLanColumn(state = state, modifier = GlanceModifier.defaultWeight())
+            FourByTwoFullWidthWanAddress(
+                state = state,
+                modifier = GlanceModifier.fillMaxWidth(),
+            )
+            // Fixed spacing is valid in this nested container; only weighted SectionGaps
+            // need the root Column's fillMaxSize surplus.
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
+            FourByTwoFullWidthLanAddress(
+                state = state,
+                modifier = GlanceModifier.fillMaxWidth(),
+            )
         }
 
         // 5

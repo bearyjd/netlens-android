@@ -10,9 +10,10 @@ import androidx.compose.ui.unit.dp
  *
  * A childless `Spacer` collapsing to zero under overrun costs nothing; a content
  * `Column` collapsing to zero deletes its payload from the view tree. So
- * `defaultWeight()` on a Column child is a defect unless that child is a bare Spacer —
- * and `fillMaxHeight()` on a *Row* child is always fine, since it lowers to
- * `match_parent` where nothing competes for height.
+ * `defaultWeight()` on a Column child is a defect unless that child is a bare Spacer.
+ * Likewise, `fillMaxHeight()` on a *Row* child can consume all remaining height and
+ * evict its vertical siblings; it is a defect when the Row shares a vertical container
+ * with content that must remain visible.
  *
  * So the check a reviewer runs is: grep `defaultWeight()` across `widget/.../ui`, and for
  * every hit ask which axis it divides. On a Row child it divides width and is fine. On a
@@ -131,11 +132,13 @@ import androidx.compose.ui.unit.dp
  * needs — [FourByTwoVpnColumn] beside the addresses, the status line beside a
  * wrap-to-content chip row — and drops the ISP name and the device count with it.
  *
- * Neither height has been measured on a device. Adding up natural text heights puts FULL
- * near 176dp at `fontScale` 1.15 in a 306dp box, leaving ~130dp for its six [SectionGap]s
- * — about 22dp each, against roughly 16dp on the 4x1 it is modelled on. That is
- * arithmetic, not a measurement: treat it as the number to check if the card reads loose,
- * not as a target.
+ * FULL now gives WAN and LAN separate full-width rows, with 28sp addresses. The Pixel 9
+ * Pro Fold launcher’s observed 341×317dp widget minimum leaves ~325dp of address interior;
+ * the ~246dp 15-character IPv4 estimate fits there and device verification found no
+ * ellipsis. Another launcher could allocate the declared 250dp responsive bucket, leaving
+ * ~234dp and potentially ellipsizing that address. Responsive Glance supplies the bucket
+ * rather than the actual allocation, so no width branch can make that case safe; it remains
+ * unverified.
  */
 internal enum class FourByTwoVariant { COMPACT, FULL }
 

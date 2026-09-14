@@ -12,9 +12,10 @@ import com.ventouxlabs.netlens.widget.WidgetState
  * The COMPACT 4x2's addresses: flag and lock in a column, then WAN and LAN.
  *
  * This was `DashboardWidgetContent`, shared by both 4x2 variants behind `showHeader` and
- * `compact` flags. FULL no longer uses it — it composes its own addresses Row without the
- * VPN column ([FourByTwoWidgetContent]) — so both flags had exactly one value left and
- * are gone with the branches they selected. The Row itself, and the scope its two
+ * `compact` flags. FULL no longer uses it — it composes two full-width stacked address
+ * blocks without the VPN column ([FourByTwoWidgetContent]) — so both flags had exactly
+ * one value left and are gone with the branches they selected. The Row itself, and the
+ * scope its two
  * `defaultWeight()`s are built in, are untouched: that pairing is the one thing in this
  * module that has rendered a widget blank when disturbed.
  *
