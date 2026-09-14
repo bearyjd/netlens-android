@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.map
  * Note what this still does not verify: the real DAO is generated from Room `@Query` SQL, and this
  * reimplements the intended semantics in Kotlin. A test that passes here proves the *caller* asked
  * for the right thing, not that the SQL does it — see the `known_devices` write-path note in
- * `.agent_native/agent_roadmap.md` for the same limitation stated at length.
+ * `docs/archive/agent-roadmap-2026-09-13.md` for the same limitation stated at length.
  */
 class FakeNetworkEventDao : NetworkEventDao {
 

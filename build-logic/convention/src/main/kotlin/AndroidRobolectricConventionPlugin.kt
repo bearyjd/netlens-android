@@ -8,7 +8,7 @@ import org.gradle.kotlin.dsl.dependencies
  * Robolectric-backed Room testing. **Deliberately opt-in, not part of `netlens.android.library`.**
  *
  * There is zero Robolectric elsewhere in this repo, and a 2026-08-08 audit pass
- * (`.agent_native/agent_roadmap.md`, item 3) found that every prior motivating case
+ * (`docs/archive/agent-roadmap-2026-09-13.md`, item 3) found that every prior motivating case
  * (celltower, wifiaudit, history, widgetsettings) was solved with an interface seam + hand-written
  * fake instead — that's the repo's default and should stay the default.
  *
@@ -18,7 +18,8 @@ import org.gradle.kotlin.dsl.dependencies
  * Room's `-jvm`-target artifact, which a plain (non-KMP) `com.android.library` module can't safely
  * consume alongside its production `-android` artifact (confirmed by decompiling
  * `room-runtime-android-2.7.2.jar`: the reified no-Context builder isn't there). Do not re-attempt
- * a "just add the jvm artifact" fix without re-verifying that — see `.agent_native/agent_roadmap.md`
+ * a "just add the jvm artifact" fix without re-verifying that — see
+ * `docs/archive/agent-roadmap-2026-09-13.md`
  * for the recorded dead end.
  *
  * So this module uses the classic, pre-KMP `MigrationTestHelper` constructor
