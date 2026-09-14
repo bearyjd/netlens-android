@@ -10,6 +10,11 @@ This doc has two parts:
 1. Ready-to-paste **store listing copy** for creating the new app.
 2. The **fastlane supply** automation set up in this repo for future releases.
 
+> **Distribution policy:** Google Play is the public Android distribution channel.
+> GitHub Releases intentionally publish notes only, not APK or AAB files. Play App
+> Signing re-signs its delivered APKs, so installing a GitHub-built binary for this
+> package would prevent it from updating through Play.
+
 ---
 
 ## 1. New listing copy (paste into Play Console)
@@ -50,7 +55,7 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
 > ⚠️ **Bootstrap limitation:** `supply` (the Play Developer API) **cannot create
 > a new app, and cannot perform the first-ever upload** for a package. You must
 > manually create `com.ventouxlabs.netlens` in the Play Console and upload one
-> AAB (e.g. `app-gplay-release.aab` from the v1.1.3 GitHub release) by hand. Only
+> locally built gplay AAB by hand. Only
 > *after* that can the automation below take over.
 
 ### Files in this repo
@@ -67,23 +72,10 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
 
 ### One-time service-account setup
 
-> 🚧 **Status (re-verified 2026-08-06): STILL NOT done — nothing has moved since
-> 2026-06-29.** Checked directly rather than inferred:
->
-> ```
-> gh secret list             → RELEASE_KEYSTORE_BASE64, RELEASE_KEY_ALIAS,
->                              RELEASE_KEY_PASSWORD, RELEASE_STORE_PASSWORD
->                              PLAY_SERVICE_ACCOUNT_JSON  ← absent
-> Play Publish runs, ever    → 1 (2026-06-29, failure)
-> ```
->
-> So the **Play Publish** workflow still hard-fails at "Write Play service-account key".
-> The four `RELEASE_*` signing secrets **are** set, so the signed-AAB build half does run —
-> that half is proven. The bootstrap manual upload (app creation + first AAB) is still
-> **unverified** and must happen before any automation can succeed.
->
-> **All remaining blockers are human work in Google's web consoles.** No amount of repo
-> change unblocks this; see the go-live checklist below.
+> ✅ **Status (verified 2026-09-14):** the listing is bootstrapped, the
+> `PLAY_SERVICE_ACCOUNT_JSON` secret is configured, and the **Play Publish** workflow
+> successfully released versionCode 22 / v1.3.8 to production. Future releases use
+> Actions → **Play Publish**; no manual binary upload is needed.
 >
 > Listing inputs were verified ready on 2026-08-06: `title.txt`, `short_description.txt`
 > (78/80 chars), `full_description.txt` (1439/4000), `icon.png` 512×512,
@@ -105,26 +97,22 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
   ```
 - **CI:** Actions → **Play Publish** → Run workflow → pick track + release status.
 
-### Go-live checklist (remaining manual steps)
+### Go-live checklist (completed 2026-09-14)
 
-The signed-AAB build half of the pipeline is already proven — workflow run
-[28410296295](https://github.com/bearyjd/netlens-android/actions/runs/28410296295)
-built the signed `app-gplay-release.aab` and failed only at the service-account
-step. Completing the boxes below unblocks a fully-green **Play Publish** run.
-All of these are done in Google consoles / GitHub settings, not in code.
+The following records the completed bootstrap. Play Publish run
+[34804078212](https://github.com/bearyjd/netlens-android/actions/runs/34804078212)
+uploaded versionCode 22 / v1.3.8 to production successfully.
 
 **A. Bootstrap the listing** — Google's API cannot create the app or perform the
 first upload for `com.ventouxlabs.netlens`:
-- [ ] Play Console → **Create app** → name `NetLens`, package `com.ventouxlabs.netlens`
-- [ ] Fill console-only fields: category, contact email, **privacy policy URL**
+- [x] Play Console → **Create app** → name `NetLens`, package `com.ventouxlabs.netlens`
+- [x] Fill console-only fields: category, contact email, **privacy policy URL**
       (`https://github.com/bearyjd/netlens-android/blob/master/docs/PRIVACY_POLICY.md`
       — see `docs/PRIVACY_POLICY.md`), content rating questionnaire, data safety
       form (see "Data safety form answers" below), countries/pricing (free)
-- [ ] Manually upload one AAB — `app-gplay-release.aab` from the
-      [latest release](https://github.com/bearyjd/netlens-android/releases/latest)
-      (listing copy + assets are ready in `fastlane/metadata/android/en-US/`; use the
-      latest release at bootstrap time so the listing launches with current icon/UI,
-      not whatever version this doc last mentioned)
+- [x] Manually upload the initial gplay AAB. Subsequent production uploads run through
+      **Play Publish** (listing copy + assets remain in
+      `fastlane/metadata/android/en-US/`).
 
 ### Capturing phone screenshots (proven 2026-08-06)
 
@@ -194,18 +182,18 @@ stored, or shared by the app's developer — requests go directly from the
 user's device to the third-party service. Not used for advertising or
 tracking."*
 
-**B. Service account + the missing secret:**
-- [ ] Google Cloud Console → create a **service account** → create a **JSON key**
-- [ ] Play Console → **Users & permissions** → invite the service-account email →
+**B. Service account + the repository secret:**
+- [x] Google Cloud Console → create a **service account** → create a **JSON key**
+- [x] Play Console → **Users & permissions** → invite the service-account email →
       grant **release** permissions for this app
-- [ ] GitHub → repo **Settings → Secrets and variables → Actions** → add
+- [x] GitHub → repo **Settings → Secrets and variables → Actions** → add
       **`PLAY_SERVICE_ACCOUNT_JSON`** = the entire JSON key contents
       (the four `RELEASE_*` signing secrets are already set)
 
 **C. First automated upload:**
-- [ ] Actions → **Play Publish** → Run workflow → `track: internal`,
-      `release_status: draft`
-- [ ] Confirm the run is fully green and a draft appears on the internal track
+- [x] Actions → **Play Publish** → Run workflow → `track: production`,
+      `release_status: completed`
+- [x] Confirm the run is fully green and the release appears on the production track
 
 ### Notes
 - The workflow reuses the existing release-signing secrets

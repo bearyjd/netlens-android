@@ -82,11 +82,12 @@ jobs:
             app/build/outputs/bundle/*Release/*.aab
           retention-days: 90
 
+      # Google Play re-signs production builds with its app-signing key. The APKs
+      # built above use the upload key, so publishing either kind of Android binary
+      # here creates an install that can never update through Play. Keep public
+      # releases to notes; authenticated CI artifacts remain available to maintainers.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           generate_release_notes: true
-          files: |
-            app/build/outputs/apk/*/release/*.apk
-            app/build/outputs/bundle/*Release/*.aab
