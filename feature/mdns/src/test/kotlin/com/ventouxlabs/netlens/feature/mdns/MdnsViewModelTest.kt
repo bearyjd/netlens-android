@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.mdns
 
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -159,7 +160,7 @@ class MdnsViewModelTest {
 
             errorViewModel.startScan()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertEquals("Network error", finalState.error)
         }
     }
@@ -212,6 +213,15 @@ class MdnsViewModelTest {
             expectNoEvents()
         }
     }
+}
+
+/** Awaits the first emitted mDNS state satisfying [predicate]. */
+private suspend fun TurbineTestContext<MdnsUiState>.awaitStateWhere(
+    predicate: (MdnsUiState) -> Boolean,
+): MdnsUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }
 
 private class FakeMdnsHistoryDao : MdnsHistoryDao {
