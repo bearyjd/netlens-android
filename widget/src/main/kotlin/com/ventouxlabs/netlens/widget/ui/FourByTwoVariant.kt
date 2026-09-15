@@ -87,7 +87,7 @@ import androidx.compose.ui.unit.dp
  */
 
 /**
- * Which of the 4x2 widget's two layouts to render — a purely cosmetic choice.
+ * Which of the 4x2 widget's three layouts to render — a purely cosmetic choice.
  *
  * ## The failure this is *not* the fix for
  *
@@ -125,12 +125,14 @@ import androidx.compose.ui.unit.dp
  *
  * ## What the variants actually differ in
  *
- * [FULL] is the design layout, and the two are no longer the same tree with sizes turned
+ * [FULL] is the design layout, and the three are no longer the same tree with sizes turned
  * down. FULL runs full-width stacked rows on the 4x1's pattern: the flag and lock inline
  * in its status row, the device count and encryption on a row of their own, and every
- * chip across one weighted row. [COMPACT] keeps the side-by-side arrangement a short box
- * needs — [FourByTwoVpnColumn] beside the addresses, the status line beside a
- * wrap-to-content chip row — and drops the ISP name and the device count with it.
+ * chip across one weighted row. [SHORT] preserves that header, full-width address hierarchy,
+ * status, and action footer but omits the lowest-priority device/encryption detail row.
+ * [COMPACT] keeps the side-by-side arrangement a short box needs — [FourByTwoVpnColumn]
+ * beside the addresses, the status line beside a wrap-to-content chip row — and drops the
+ * ISP name and device count with it.
  *
  * FULL now gives WAN and LAN separate full-width rows, with 28sp addresses. The Pixel 9
  * Pro Fold launcher’s observed 341×317dp widget minimum leaves ~325dp of address interior;
@@ -140,18 +142,24 @@ import androidx.compose.ui.unit.dp
  * rather than the actual allocation, so no width branch can make that case safe; it remains
  * unverified.
  */
-internal enum class FourByTwoVariant { COMPACT, FULL }
+internal enum class FourByTwoVariant { COMPACT, SHORT, FULL }
 
 /**
- * The 4x2 declares two [androidx.glance.appwidget.SizeMode.Responsive] buckets, 110dp
- * and 200dp tall, and `LocalSize` reports the *bucket* rather than the true box — so any
- * threshold strictly between the two separates them. 180dp sits in that gap.
+ * The 4x2 declares three [androidx.glance.appwidget.SizeMode.Responsive] buckets: 110dp,
+ * 200dp, and 260dp tall. `LocalSize` reports the *bucket* rather than the true box, so the
+ * thresholds select COMPACT below 200dp, SHORT from 200dp through 259dp, and FULL at 260dp
+ * and above.
  *
  * This number is not load-bearing. Since neither layout can drop children, moving the
  * threshold (or the buckets) only changes which layout you see at a given size; it
  * cannot reintroduce the collapse above. Don't "fix" it expecting a correctness effect.
  */
-private val FULL_VARIANT_MIN_HEIGHT = 180.dp
+private val SHORT_VARIANT_MIN_HEIGHT = 200.dp
+private val FULL_VARIANT_MIN_HEIGHT = 260.dp
 
 internal fun fourByTwoVariant(height: Dp): FourByTwoVariant =
-    if (height < FULL_VARIANT_MIN_HEIGHT) FourByTwoVariant.COMPACT else FourByTwoVariant.FULL
+    when {
+        height < SHORT_VARIANT_MIN_HEIGHT -> FourByTwoVariant.COMPACT
+        height < FULL_VARIANT_MIN_HEIGHT -> FourByTwoVariant.SHORT
+        else -> FourByTwoVariant.FULL
+    }
