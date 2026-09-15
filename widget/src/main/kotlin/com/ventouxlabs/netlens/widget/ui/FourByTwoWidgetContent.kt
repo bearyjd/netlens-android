@@ -19,6 +19,7 @@ import com.ventouxlabs.netlens.widget.WidgetState
 fun FourByTwoWidgetContent(state: WidgetState) {
     when (fourByTwoVariant(LocalSize.current.height)) {
         FourByTwoVariant.COMPACT -> FourByTwoCompactContent(state = state)
+        FourByTwoVariant.SHORT -> FourByTwoShortContent(state = state)
         FourByTwoVariant.FULL -> FourByTwoFullContent(state = state)
     }
 }
@@ -92,23 +93,12 @@ private fun FourByTwoFullContent(state: WidgetState) {
         // 4 — the addresses are vertically stacked, so each gets the full interior width
         // rather than half of it. This nested container is still exactly one root child;
         // it cannot contain a SectionGap because only the root fills the widget's height.
-        Column(
+        FourByTwoFullWidthAddresses(
+            state = state,
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.LOOSE),
-        ) {
-            FourByTwoFullWidthWanAddress(
-                state = state,
-                modifier = GlanceModifier.fillMaxWidth(),
-            )
-            // Fixed spacing is valid in this nested container; only weighted SectionGaps
-            // need the root Column's fillMaxSize surplus.
-            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
-            FourByTwoFullWidthLanAddress(
-                state = state,
-                modifier = GlanceModifier.fillMaxWidth(),
-            )
-        }
+        )
 
         // 5
         SectionGap()
@@ -134,6 +124,69 @@ private fun FourByTwoFullContent(state: WidgetState) {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.LOOSE),
+        )
+    }
+}
+
+/**
+ * The 200-259dp 4x2 form keeps the header, full-width addresses, status, and actions while
+ * omitting only the lowest-priority detail row. Its root has six children, below Glance's
+ * practical child-emission limit; the address column is nested rather than a root child pair.
+ */
+@Composable
+private fun FourByTwoShortContent(state: WidgetState) {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .widgetBackground(),
+    ) {
+        FourByTwoHeader(
+            state = state,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
+        )
+        WidgetSectionDivider()
+        FourByTwoFullWidthAddresses(
+            state = state,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
+        )
+        FourByTwoStatusBlock(
+            state = state,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
+            includeDetail = false,
+        )
+        WidgetSectionDivider()
+        ToolChipsRow(
+            state = state,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(horizontal = WidgetSpace.BASE, vertical = WidgetSpace.TIGHT),
+        )
+    }
+}
+
+/** Keeps WAN and LAN full-width in one nested root child for the short and full layouts. */
+@Composable
+private fun FourByTwoFullWidthAddresses(
+    state: WidgetState,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    Column(modifier = modifier) {
+        FourByTwoFullWidthWanAddress(
+            state = state,
+            modifier = GlanceModifier.fillMaxWidth(),
+        )
+        // Fixed spacing is valid in this nested container; only weighted SectionGaps need the
+        // root Column's fillMaxSize surplus.
+        Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
+        FourByTwoFullWidthLanAddress(
+            state = state,
+            modifier = GlanceModifier.fillMaxWidth(),
         )
     }
 }

@@ -28,7 +28,8 @@ import com.ventouxlabs.netlens.widget.util.formatLinkSpeed
  * The two are one nested Column rather than two children of the 4x2's root, and that is a
  * budget decision, not a visual one — Glance drops a container's eleventh child silently,
  * the root had thirteen, and these two read as one block anyway. A nested container gets
- * its own budget of ten; this one uses three. See [FourByTwoWidgetContent] for how the
+ * its own budget of ten; this one uses three when [includeDetail] is true. The SHORT 4x2
+ * variant uses only its status child. See [FourByTwoWidgetContent] for how the
  * root's nine are spent and [FourByTwoVariant] for the failure.
  *
  * It carries no vertical weight, which for a *content* Column is the invariant rather
@@ -36,11 +37,17 @@ import com.ventouxlabs.netlens.widget.util.formatLinkSpeed
  * Vertical padding comes from the caller.
  */
 @Composable
-internal fun FourByTwoStatusBlock(state: WidgetState, modifier: GlanceModifier) {
+internal fun FourByTwoStatusBlock(
+    state: WidgetState,
+    modifier: GlanceModifier,
+    includeDetail: Boolean = true,
+) {
     Column(modifier = modifier) {
         FourByTwoStatusRow(state = state)
-        Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
-        FourByTwoDetailRow(state = state)
+        if (includeDetail) {
+            Spacer(modifier = GlanceModifier.height(WidgetSpace.TIGHT))
+            FourByTwoDetailRow(state = state)
+        }
     }
 }
 

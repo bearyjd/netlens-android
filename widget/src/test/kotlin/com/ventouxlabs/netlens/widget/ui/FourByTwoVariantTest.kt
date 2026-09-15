@@ -6,9 +6,8 @@ import org.junit.jupiter.api.Test
 
 class FourByTwoVariantTest {
 
-    // The 4x2 declares two responsive height buckets, 110dp and 200dp, and LocalSize
-    // reports the bucket rather than the true box — so 110 and 200 are the only two
-    // heights this selector sees in production. The rest pin the threshold itself.
+    // The 4x2 declares three responsive height buckets: 110dp, 200dp, and 260dp. LocalSize
+    // reports a bucket rather than the true box, while the non-bucket cases pin thresholds.
     //
     // The threshold picks which layout *reads* better, not which one survives: neither
     // variant carries vertical weight on a content path, so neither can drop children.
@@ -21,8 +20,8 @@ class FourByTwoVariantTest {
     }
 
     @Test
-    fun `the 200dp bucket selects FULL`() {
-        assertEquals(FourByTwoVariant.FULL, fourByTwoVariant(200.dp))
+    fun `the 200dp bucket selects SHORT`() {
+        assertEquals(FourByTwoVariant.SHORT, fourByTwoVariant(200.dp))
     }
 
     @Test
@@ -34,14 +33,14 @@ class FourByTwoVariantTest {
     }
 
     @Test
-    fun `179dp is still COMPACT and 180dp is FULL`() {
-        assertEquals(FourByTwoVariant.COMPACT, fourByTwoVariant(179.dp))
-        assertEquals(FourByTwoVariant.FULL, fourByTwoVariant(180.dp))
+    fun `a measured 245dp allocation selects SHORT`() {
+        assertEquals(FourByTwoVariant.SHORT, fourByTwoVariant(245.dp))
     }
 
     @Test
-    fun `a tall resized box selects FULL`() {
-        assertEquals(FourByTwoVariant.FULL, fourByTwoVariant(317.dp))
+    fun `the 260dp bucket and 306dp allocation select FULL`() {
+        assertEquals(FourByTwoVariant.FULL, fourByTwoVariant(260.dp))
+        assertEquals(FourByTwoVariant.FULL, fourByTwoVariant(306.dp))
     }
 
     @Test
