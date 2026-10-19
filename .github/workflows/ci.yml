@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
       # Literal control characters in a source file make git and grep treat it as BINARY. The
       # file then silently disappears from grep, from `git diff` (shown as "Bin N -> M bytes"),
@@ -94,7 +94,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
       # Both flavors, matching what release.yml actually builds at tag time: gplay pulls in
       # Play Billing and security-crypto that foss does not, so the two can diverge under R8.
