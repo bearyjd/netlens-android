@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.ping
 
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -116,7 +117,7 @@ class PingViewModelTest {
 
             viewModel.startPing("8.8.8.8", 3)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
 
             assertFalse(finalState.isPinging)
             assertEquals(3, finalState.results.size)
@@ -144,7 +145,7 @@ class PingViewModelTest {
 
             viewModel.startPing("bad.host", 4)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging && it.error != null }
             assertFalse(finalState.isPinging)
             assertEquals("Network unreachable", finalState.error)
             assertTrue(finalState.results.isEmpty())
@@ -174,7 +175,7 @@ class PingViewModelTest {
             awaitItem()
 
             viewModel.startPing("8.8.8.8", 4)
-            expectMostRecentItem()
+            awaitStateWhere { !it.isPinging && it.error != null }
 
             fakePinger.error = null
             fakePinger.results = listOf(
@@ -183,7 +184,7 @@ class PingViewModelTest {
 
             viewModel.startPing("8.8.8.8", 1)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
             assertNull(finalState.error)
             assertEquals(1, finalState.results.size)
         }
@@ -202,7 +203,7 @@ class PingViewModelTest {
 
             viewModel.startPing("8.8.8.8", 3)
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
             val summary = finalState.summary
             assertNotNull(summary)
             assertEquals(3, summary!!.transmitted)
@@ -242,7 +243,7 @@ class PingViewModelTest {
             awaitItem() // current state (mode=CONTINUOUS)
 
             viewModel.startPing("8.8.8.8", 0)
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
 
             assertEquals(100, finalState.results.size)
             assertEquals(51, finalState.results.first().sequenceNumber)
@@ -265,7 +266,7 @@ class PingViewModelTest {
             awaitItem() // current state (mode=CONTINUOUS)
 
             viewModel.startPing("8.8.8.8", 0)
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
 
             assertNotNull(finalState.summary)
             assertEquals(3, finalState.totalSent)
@@ -372,7 +373,7 @@ class PingViewModelTest {
             awaitItem()
 
             viewModel.startPing("8.8.8.8", 0)
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isPinging }
             val summary = checkNotNull(finalState.summary)
 
             assertEquals(1.0f, summary.minMs)
@@ -603,4 +604,13 @@ class PingViewModelTest {
         assertEquals(150, state.totalSent)
         assertEquals(150, state.totalReceived)
     }
+}
+
+/** Awaits the first emitted ping state satisfying [predicate]. */
+private suspend fun TurbineTestContext<PingUiState>.awaitStateWhere(
+    predicate: (PingUiState) -> Boolean,
+): PingUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

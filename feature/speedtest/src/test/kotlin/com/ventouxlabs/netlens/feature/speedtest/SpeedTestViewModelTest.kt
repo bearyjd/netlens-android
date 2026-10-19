@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.speedtest
 
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -10,6 +11,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -38,6 +40,7 @@ class SpeedTestViewModelTest {
     private class FakeSpeedTestEngine : SpeedTestEngine {
         var latencyResult: Long = 25L
         var latencyError: Throwable? = null
+        var latencyRunsOnIo: Boolean = false
         var downloadProgress: List<SpeedProgress> = listOf(
             SpeedProgress(
                 bytesTransferred = 25_000_000L,
@@ -69,6 +72,12 @@ class SpeedTestViewModelTest {
 
         override suspend fun measureLatency(): Long {
             latencyError?.let { throw it }
+            if (latencyRunsOnIo) {
+                return withContext(Dispatchers.IO) {
+                    Thread.sleep(30)
+                    latencyResult
+                }
+            }
             return latencyResult
         }
     }
@@ -124,13 +133,27 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.phase == SpeedTestPhase.COMPLETE }
             assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
             assertFalse(finalState.isRunning)
             assertEquals(25L, finalState.latencyMs)
             assertEquals(200f, finalState.downloadMbps)
             assertEquals(80f, finalState.uploadMbps)
             assertNull(finalState.error)
+        }
+    }
+
+    @Test
+    fun `startTest waits for completion while latency runs on IO`() = runTest {
+        fakeEngine.latencyRunsOnIo = true
+
+        viewModel.state.test {
+            awaitItem() // initial IDLE
+
+            viewModel.startTest()
+
+            val finalState = awaitStateWhere { it.phase == SpeedTestPhase.COMPLETE }
+            assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
         }
     }
 
@@ -155,7 +178,7 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isRunning && it.error != null }
             assertFalse(finalState.isRunning)
             assertEquals("Connection refused", finalState.error)
         }
@@ -170,7 +193,7 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isRunning && it.error != null }
             assertFalse(finalState.isRunning)
             assertEquals("Download timeout", finalState.error)
         }
@@ -185,7 +208,7 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isRunning && it.error != null }
             assertFalse(finalState.isRunning)
             assertEquals("Upload failed", finalState.error)
         }
@@ -250,14 +273,13 @@ class SpeedTestViewModelTest {
         viewModel.state.test {
             awaitItem()
             viewModel.startTest()
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.phase == SpeedTestPhase.COMPLETE }
             assertEquals(133f, finalState.downloadMbps)
         }
     }
 
     // The ViewModel collapses every intermediate StateFlow update into the final value under
-    // UnconfinedTestDispatcher when the fake engine's flow never suspends (see the other tests in
-    // this file, which only ever assert on expectMostRecentItem()). That makes it impossible to
+    // UnconfinedTestDispatcher when the fake engine's flow never suspends. That makes it impossible to
     // observe a genuine mid-window progress emission through the full startTest() pipeline, so the
     // elapsed-time-to-progress math (H1: time-bounded, not byte-bounded, progress) is verified
     // directly against the pure function the ViewModel calls on every progress emission.
@@ -306,7 +328,7 @@ class SpeedTestViewModelTest {
 
             viewModel.confirmMeteredAndStart()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.phase == SpeedTestPhase.COMPLETE }
             assertFalse(finalState.showMeteredWarning)
             assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
             assertFalse(finalState.isRunning)
@@ -326,7 +348,7 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it.phase == SpeedTestPhase.COMPLETE }
             assertFalse(finalState.showMeteredWarning)
             assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
         }
@@ -361,10 +383,21 @@ class SpeedTestViewModelTest {
 
             viewModel.startTest()
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere {
+                !it.showMeteredWarning && it.phase == SpeedTestPhase.COMPLETE
+            }
             assertFalse(finalState.showMeteredWarning)
             assertEquals(SpeedTestPhase.COMPLETE, finalState.phase)
             assertFalse(finalState.isRunning)
         }
     }
+}
+
+/** Awaits the first emitted speed-test state satisfying [predicate]. */
+private suspend fun TurbineTestContext<SpeedTestUiState>.awaitStateWhere(
+    predicate: (SpeedTestUiState) -> Boolean,
+): SpeedTestUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

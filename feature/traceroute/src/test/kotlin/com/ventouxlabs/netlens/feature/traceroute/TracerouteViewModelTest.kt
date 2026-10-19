@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.traceroute
 
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -80,7 +81,7 @@ class TracerouteViewModelTest {
             viewModel.startTrace("8.8.8.8")
 
             // With UnconfinedTestDispatcher the flow completes eagerly.
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isTracing }
 
             assertFalse(finalState.isTracing)
             assertEquals(3, finalState.hops.size)
@@ -100,7 +101,7 @@ class TracerouteViewModelTest {
 
             viewModel.startTrace("nonexistent.host")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isTracing }
             assertFalse(finalState.isTracing)
             assertEquals("Host not found", finalState.error)
             assertTrue(finalState.hops.isEmpty())
@@ -135,7 +136,7 @@ class TracerouteViewModelTest {
             awaitItem() // initial state
 
             viewModel.startTrace("bad.host")
-            expectMostRecentItem() // error state
+            awaitStateWhere { !it.isTracing } // error state
 
             // Configure success for second run
             fakeTracer.error = null
@@ -145,7 +146,7 @@ class TracerouteViewModelTest {
 
             viewModel.startTrace("10.0.0.1")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isTracing }
             assertNull(finalState.error)
             assertEquals(1, finalState.hops.size)
         }
@@ -164,13 +165,22 @@ class TracerouteViewModelTest {
 
             viewModel.startTrace("8.8.8.8")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isTracing }
             assertEquals(3, finalState.hops.size)
             assertFalse(finalState.hops[0].isTimeout)
             assertTrue(finalState.hops[1].isTimeout)
             assertFalse(finalState.hops[2].isTimeout)
         }
     }
+}
+
+/** Awaits the first emitted traceroute state satisfying [predicate]. */
+private suspend fun TurbineTestContext<TracerouteUiState>.awaitStateWhere(
+    predicate: (TracerouteUiState) -> Boolean,
+): TracerouteUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }
 
 private class FakeHopGeolocator : HopGeolocator {

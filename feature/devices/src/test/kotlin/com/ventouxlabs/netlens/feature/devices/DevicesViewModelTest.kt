@@ -3,10 +3,12 @@ package com.ventouxlabs.netlens.feature.devices
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
+import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -96,7 +98,9 @@ class DevicesViewModelTest {
         knownDao.seed(KnownDeviceEntity(macAddress = "M2", hostname = "laptop", ip = "192.168.1.3", vendor = null))
         viewModel.setSearchQuery("print")
         viewModel.uiState.test {
-            val state = expectMostRecentItem()
+            val state = awaitStateWhere {
+                it.searchQuery == "print" && it.devices.singleOrNull()?.hostname == "printer"
+            }
             assertEquals(1, state.devices.size)
             assertEquals("printer", state.devices.first().hostname)
         }
@@ -232,4 +236,13 @@ class DevicesViewModelTest {
         viewModelStore.put("devices-standard", vm)
         return vm to standardScheduler
     }
+}
+
+/** Awaits the first emitted devices state satisfying [predicate]. */
+private suspend fun TurbineTestContext<DevicesUiState>.awaitStateWhere(
+    predicate: (DevicesUiState) -> Boolean,
+): DevicesUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

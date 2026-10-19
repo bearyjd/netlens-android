@@ -3,10 +3,12 @@ package com.ventouxlabs.netlens.feature.devices
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
+import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -147,7 +149,7 @@ class DeviceTaggingTest {
         seed(2, tags = "camera")
 
         viewModel.uiState.test {
-            val state = expectMostRecentItem()
+            val state = awaitStateWhere { it.devices.size == 2 }
             assertEquals(listOf("camera", "iot", "printer"), state.availableTags)
         }
     }
@@ -159,7 +161,9 @@ class DeviceTaggingTest {
 
         viewModel.toggleTagFilter("printer")
         viewModel.uiState.test {
-            val filtered = expectMostRecentItem()
+            val filtered = awaitStateWhere {
+                "printer" in it.activeTags && "camera" in it.availableTags
+            }
             assertEquals(1, filtered.devices.size)
             assertEquals("printer", filtered.devices.first().hostname)
             assertTrue(filtered.activeTags.contains("printer"))
@@ -167,7 +171,9 @@ class DeviceTaggingTest {
 
         viewModel.toggleTagFilter("printer")
         viewModel.uiState.test {
-            val unfiltered = expectMostRecentItem()
+            val unfiltered = awaitStateWhere {
+                it.activeTags.isEmpty() && "camera" in it.availableTags
+            }
             assertEquals(2, unfiltered.devices.size)
             assertTrue(unfiltered.activeTags.isEmpty())
         }
@@ -183,7 +189,9 @@ class DeviceTaggingTest {
         viewModel.saveDetails(1, DeviceDetailsEdit())
 
         viewModel.uiState.test {
-            val state = expectMostRecentItem()
+            val state = awaitStateWhere {
+                it.activeTags.isEmpty() && "printer" !in it.availableTags && "camera" in it.availableTags
+            }
             assertTrue(state.activeTags.isEmpty())
             assertEquals(2, state.devices.size)
         }
@@ -196,12 +204,19 @@ class DeviceTaggingTest {
 
         viewModel.setSearchQuery("storage")
         viewModel.uiState.test {
-            assertEquals(1, expectMostRecentItem().devices.size)
+            assertEquals(
+                1,
+                awaitStateWhere {
+                    it.searchQuery == "storage" && it.devices.singleOrNull()?.hostname == "nas"
+                }.devices.size,
+            )
         }
 
         viewModel.setSearchQuery("study")
         viewModel.uiState.test {
-            val state = expectMostRecentItem()
+            val state = awaitStateWhere {
+                it.searchQuery == "study" && it.devices.singleOrNull()?.hostname == "printer"
+            }
             assertEquals(1, state.devices.size)
             assertEquals("printer", state.devices.first().hostname)
         }
@@ -226,4 +241,13 @@ class DeviceTaggingTest {
         assertTrue(text.contains("Tags: printer, paper"))
         assertTrue(text.contains("Note: Toner low"))
     }
+}
+
+/** Awaits the first emitted devices state satisfying [predicate]. */
+private suspend fun TurbineTestContext<DevicesUiState>.awaitStateWhere(
+    predicate: (DevicesUiState) -> Boolean,
+): DevicesUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }
