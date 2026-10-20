@@ -6,6 +6,7 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 const val MAX_DEVICE_NAME_LENGTH = 60
 const val MAX_DEVICE_LOCATION_LENGTH = 40
 const val MAX_DEVICE_NOTES_LENGTH = 500
+const val MAX_DEVICE_OVERRIDE_LENGTH = 60
 
 /**
  * The user-authored half of a device row, as typed in the detail sheet. Kept separate from
@@ -16,6 +17,10 @@ data class DeviceDetailsEdit(
     val tagsInput: String = "",
     val location: String = "",
     val notes: String = "",
+    // Blank means "no override": the detected value shows again.
+    val deviceTypeOverride: String = "",
+    val osOverride: String = "",
+    val modelOverride: String = "",
 ) {
     /** Normalises every field to its stored form; blank fields become null. */
     fun normalized(): NormalizedDeviceDetails = NormalizedDeviceDetails(
@@ -23,7 +28,13 @@ data class DeviceDetailsEdit(
         tags = DeviceTags.formatFromInput(tagsInput),
         location = location.trim().take(MAX_DEVICE_LOCATION_LENGTH).trim().ifBlank { null },
         notes = notes.trim().take(MAX_DEVICE_NOTES_LENGTH).ifBlank { null },
+        deviceTypeOverride = deviceTypeOverride.normalizedOverride(),
+        osOverride = osOverride.normalizedOverride(),
+        modelOverride = modelOverride.normalizedOverride(),
     )
+
+    private fun String.normalizedOverride(): String? =
+        trim().take(MAX_DEVICE_OVERRIDE_LENGTH).trim().ifBlank { null }
 
     companion object {
         fun from(device: KnownDeviceEntity): DeviceDetailsEdit = DeviceDetailsEdit(
@@ -31,6 +42,9 @@ data class DeviceDetailsEdit(
             tagsInput = DeviceTags.parse(device.tags).joinToString(", "),
             location = device.location.orEmpty(),
             notes = device.notes.orEmpty(),
+            deviceTypeOverride = device.deviceTypeOverride.orEmpty(),
+            osOverride = device.osOverride.orEmpty(),
+            modelOverride = device.modelOverride.orEmpty(),
         )
     }
 }
@@ -40,4 +54,7 @@ data class NormalizedDeviceDetails(
     val tags: String?,
     val location: String?,
     val notes: String?,
+    val deviceTypeOverride: String?,
+    val osOverride: String?,
+    val modelOverride: String?,
 )

@@ -49,6 +49,10 @@ class KnownDeviceDaoTest {
         vendor = "Acme",
         deviceType = "printer",
         osGuess = "embedded",
+        model = "LaserJet 100",
+        deviceTypeOverride = "NAS",
+        osOverride = "TrueNAS",
+        modelOverride = "My Model",
         customName = "Old Name",
         tags = "old,tags",
         notes = "old notes",
@@ -59,6 +63,19 @@ class KnownDeviceDaoTest {
     // updateUserDetails (user-authored columns) must never touch each other's columns, or a
     // re-scan silently clobbers what the user typed. This was previously enforced only by a
     // code comment on KnownDeviceDao.kt.
+    @Test
+    fun `updateLastSeen with a null model writes NULL`() = runBlocking {
+        val id = dao.insertIfNew(sampleDevice().copy(model = "Chromecast"))
+
+        dao.updateLastSeen(
+            id = id, hostname = null, ip = "192.168.1.99", vendor = null, lastSeen = 999L,
+            deviceType = null, osGuess = null, fingerprintConfidence = null,
+            fingerprintEvidence = null, model = null,
+        )
+
+        assertNull(dao.getById(id)?.model)
+    }
+
     @Test
     fun `updateLastSeen does not touch user-authored columns`() = runBlocking {
         val id = dao.insertIfNew(sampleDevice())
@@ -73,6 +90,7 @@ class KnownDeviceDaoTest {
             osGuess = "linux",
             fingerprintConfidence = 90,
             fingerprintEvidence = "mDNS: googlecast",
+            model = "Chromecast",
         )
 
         val row = dao.getById(id)
@@ -84,11 +102,16 @@ class KnownDeviceDaoTest {
         assertEquals("linux", row.osGuess)
         assertEquals(90, row.fingerprintConfidence)
         assertEquals("mDNS: googlecast", row.fingerprintEvidence)
+        assertEquals("Chromecast", row.model)
         // User-authored columns must survive untouched.
         assertEquals("Old Name", row.customName)
         assertEquals("old,tags", row.tags)
         assertEquals("old notes", row.notes)
         assertEquals("Garage", row.location)
+        // Override columns are never written by a scan.
+        assertEquals("NAS", row.deviceTypeOverride)
+        assertEquals("TrueNAS", row.osOverride)
+        assertEquals("My Model", row.modelOverride)
     }
 
     @Test
@@ -101,6 +124,9 @@ class KnownDeviceDaoTest {
             tags = "new,tags",
             notes = "new notes",
             location = "Kids' room",
+            deviceTypeOverride = "Camera",
+            osOverride = null,
+            modelOverride = "Cam 3",
         )
 
         val row = dao.getById(id)
@@ -109,12 +135,16 @@ class KnownDeviceDaoTest {
         assertEquals("new,tags", row.tags)
         assertEquals("new notes", row.notes)
         assertEquals("Kids' room", row.location)
+        assertEquals("Camera", row.deviceTypeOverride)
+        assertNull(row.osOverride)
+        assertEquals("Cam 3", row.modelOverride)
         // Scan-derived columns must survive untouched.
         assertEquals("printer.local", row.hostname)
         assertEquals("192.168.1.50", row.ip)
         assertEquals("Acme", row.vendor)
         assertEquals("printer", row.deviceType)
         assertEquals("embedded", row.osGuess)
+        assertEquals("LaserJet 100", row.model)
     }
 
     @Test

@@ -30,7 +30,8 @@ interface KnownDeviceDao {
     @Query(
         "UPDATE known_devices SET hostname = :hostname, ip = :ip, vendor = :vendor, " +
             "lastSeen = :lastSeen, deviceType = :deviceType, osGuess = :osGuess, " +
-            "fingerprintConfidence = :fingerprintConfidence, fingerprintEvidence = :fingerprintEvidence " +
+            "fingerprintConfidence = :fingerprintConfidence, fingerprintEvidence = :fingerprintEvidence, " +
+            "model = :model " +
             "WHERE id = :id",
     )
     suspend fun updateLastSeen(
@@ -43,6 +44,7 @@ interface KnownDeviceDao {
         osGuess: String?,
         fingerprintConfidence: Int?,
         fingerprintEvidence: String?,
+        model: String?,
     )
 
     @Query("UPDATE known_devices SET macAddress = :mac WHERE id = :id")
@@ -65,11 +67,12 @@ interface KnownDeviceDao {
     suspend fun getById(id: Long): KnownDeviceEntity?
 
     // Writes the whole user-editable block in one statement so a save can't half-apply.
-    // Deliberately excludes the scan-derived columns (hostname/ip/vendor/deviceType/osGuess),
+    // Deliberately excludes the scan-derived columns (hostname/ip/vendor/deviceType/osGuess/model),
     // which updateLastSeen owns — a re-scan must never clobber what the user typed.
     @Query(
         "UPDATE known_devices SET customName = :customName, tags = :tags, notes = :notes, " +
-            "location = :location WHERE id = :id",
+            "location = :location, deviceTypeOverride = :deviceTypeOverride, " +
+            "osOverride = :osOverride, modelOverride = :modelOverride WHERE id = :id",
     )
     suspend fun updateUserDetails(
         id: Long,
@@ -77,6 +80,9 @@ interface KnownDeviceDao {
         tags: String?,
         notes: String?,
         location: String?,
+        deviceTypeOverride: String?,
+        osOverride: String?,
+        modelOverride: String?,
     )
 
     @Query("UPDATE known_devices SET networkId = :networkId WHERE id = :id")

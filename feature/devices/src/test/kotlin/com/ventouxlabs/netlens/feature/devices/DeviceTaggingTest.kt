@@ -119,6 +119,35 @@ class DeviceTaggingTest {
     }
 
     @Test
+    fun `saveDetails persists trimmed overrides and blank clears them without touching detection`() = runTest {
+        knownDao.seed(
+            KnownDeviceEntity(
+                id = 2, macAddress = "M2", hostname = "printer", ip = "192.168.1.2", vendor = null,
+                deviceType = "Router", osGuess = "Linux", model = "R1",
+            ),
+        )
+
+        viewModel.saveDetails(
+            2,
+            DeviceDetailsEdit(deviceTypeOverride = "  NAS ", osOverride = "TrueNAS", modelOverride = " Mine "),
+        )
+        val set = knownDao.byId(2)!!
+        assertEquals("NAS", set.deviceTypeOverride)
+        assertEquals("TrueNAS", set.osOverride)
+        assertEquals("Mine", set.modelOverride)
+        assertEquals("Router", set.deviceType)
+
+        viewModel.saveDetails(2, DeviceDetailsEdit(deviceTypeOverride = "   "))
+        val cleared = knownDao.byId(2)!!
+        assertNull(cleared.deviceTypeOverride)
+        assertNull(cleared.osOverride)
+        assertNull(cleared.modelOverride)
+        assertEquals("Router", cleared.deviceType)
+        assertEquals("Linux", cleared.osGuess)
+        assertEquals("R1", cleared.model)
+    }
+
+    @Test
     fun `saveDetails with empty fields clears them rather than storing blanks`() = runTest {
         seed(1, tags = "printer", location = "Study")
 

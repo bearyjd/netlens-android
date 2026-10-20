@@ -51,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.effectiveModel
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.ui.StampChip
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 
@@ -289,7 +291,13 @@ private fun InventoryDeviceCard(
                     )
                 }
 
-                device.vendor?.let { vendor ->
+                // Vendor plus the effective model (user override wins). Flattened: both are
+                // device-supplied, and the override is shown in place of a detected value.
+                val vendorLine = listOfNotNull(
+                    DisplayText.flatten(device.vendor),
+                    DisplayText.flatten(device.effectiveModel()),
+                ).joinToString(" · ").ifEmpty { null }
+                vendorLine?.let { vendor ->
                     Text(
                         text = vendor,
                         style = MaterialTheme.typography.bodySmall,

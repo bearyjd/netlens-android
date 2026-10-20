@@ -147,4 +147,13 @@ class FingerprintMergeTest {
 
         assertEquals(DiscoveryMethod.MULTIPLE, result.discoveryMethod)
     }
+
+    @Test
+    fun `model is kept regardless of which reading wins or arrives first`() {
+        val withModel = device(confidence = 10).copy(model = "QN90")
+        val withoutModel = device(deviceType = "TV", confidence = 90)
+
+        assertEquals("QN90", strongerFingerprint(withModel, withoutModel).model)
+        assertEquals("QN90", strongerFingerprint(withoutModel, withModel).model)
+    }
 }

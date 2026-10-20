@@ -69,7 +69,7 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         WifiSurveySessionEntity::class,
         WifiSurveyPointEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {

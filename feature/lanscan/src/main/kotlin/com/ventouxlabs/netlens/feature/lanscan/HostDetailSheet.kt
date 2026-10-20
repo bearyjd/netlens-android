@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
@@ -134,7 +135,8 @@ internal fun HostDetailSheet(
                         val typeLabel = state.enrichedType ?: state.device.deviceType
                         val osLabel = state.enrichedOs ?: state.device.osGuess
                         val vendorLabel = state.device.vendor
-                        if (typeLabel != null || osLabel != null || vendorLabel != null) {
+                        val modelLabel = DisplayText.flatten(state.device.model)
+                        if (typeLabel != null || osLabel != null || vendorLabel != null || modelLabel != null) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.padding(top = 4.dp),
@@ -146,6 +148,9 @@ internal fun HostDetailSheet(
                                     SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                                 }
                                 vendorLabel?.let {
+                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
+                                }
+                                modelLabel?.let {
                                     SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                                 }
                             }

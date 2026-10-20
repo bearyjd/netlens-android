@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -87,5 +88,52 @@ class DevicesBuildExportTextTest {
         assertTrue(text.contains("Office Printer"))
         assertTrue(text.contains("192.168.1.5"))
         assertTrue(text.contains("AA:BB"))
+    }
+
+    @Test
+    fun `export includes type OS and model, preferring the user's overrides`() = runTest {
+        knownDao.seed(
+            KnownDeviceEntity(
+                id = 1, macAddress = "AA:BB", hostname = "h", ip = "192.168.1.5", vendor = "Acme",
+                deviceType = "Router", osGuess = "Linux", model = "R1",
+                deviceTypeOverride = "NAS", modelOverride = "Mine",
+            ),
+        )
+
+        val text = viewModel.buildExportText()
+
+        // Override wins for type and model; OS has no override so the detected value shows.
+        assertTrue(text.contains("Vendor=Acme  Type=NAS  OS=Linux  Model=Mine"), text)
+        assertFalse(text.contains("Router"), text)
+    }
+
+    @Test
+    fun `a hostile model, type or OS cannot forge an export row`() = runTest {
+        knownDao.seed(
+            KnownDeviceEntity(
+                id = 1, macAddress = "AA:BB", hostname = "h", ip = "192.168.1.5", vendor = null,
+                deviceType = "TV\nFake Row 1", osGuess = "OS\nFake Row 2", model = "X\nFake Row",
+            ),
+        )
+
+        val text = viewModel.buildExportText()
+
+        assertFalse(text.lines().any { it.trim().startsWith("Fake Row") }, text)
+        assertTrue(text.contains("Model=X Fake Row"), text)
+    }
+
+    @Test
+    fun `a newline in the location cannot forge an export row`() = runTest {
+        knownDao.seed(
+            KnownDeviceEntity(
+                id = 1, macAddress = "AA:BB", hostname = "h", ip = "192.168.1.5", vendor = null,
+                location = "Garage\nFake Row",
+            ),
+        )
+
+        val text = viewModel.buildExportText()
+
+        assertFalse(text.lines().any { it.trim().startsWith("Fake Row") }, text)
+        assertTrue(text.contains("Location: Garage Fake Row"), text)
     }
 }
