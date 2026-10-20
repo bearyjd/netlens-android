@@ -336,18 +336,24 @@ internal fun HostDetailSheet(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 4.dp),
                         )
+                        if (state.enrichedTypeConfidence > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_type_confidence_label, state.enrichedTypeConfidence),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                     state.enrichedOs?.let {
                         Text(
                             text = stringResource(R.string.lanscan_os_label, it),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                    }
-                    if (state.fingerprintConfidence > 0) {
-                        Text(
-                            text = stringResource(R.string.lanscan_confidence_label, state.fingerprintConfidence),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        if (state.enrichedOsConfidence > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_os_confidence_label, state.enrichedOsConfidence),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                     Text(
                         text = stringResource(R.string.lanscan_evidence_label),
