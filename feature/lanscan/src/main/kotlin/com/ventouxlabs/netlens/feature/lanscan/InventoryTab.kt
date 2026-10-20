@@ -212,7 +212,7 @@ private fun InventoryDeviceCard(
                 Text(
                     stringResource(
                         R.string.lanscan_inventory_delete_message,
-                        device.hostname ?: device.ip,
+                        DisplayText.flatten(device.hostname) ?: device.ip,
                     ),
                 )
             },
@@ -271,10 +271,11 @@ private fun InventoryDeviceCard(
             Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                // Matches the Devices screen's precedence: a name the user typed always
+                // wins over whatever the scanner resolved.
+                val title = inventoryTitle(device.customName, device.hostname, device.ip)
                 Text(
-                    // Matches the Devices screen's precedence: a name the user typed always
-                    // wins over whatever the scanner resolved.
-                    text = device.customName ?: device.hostname ?: device.ip,
+                    text = title.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -314,7 +315,7 @@ private fun InventoryDeviceCard(
                     maxLines = 1,
                 )
 
-                if (device.customName != null || device.hostname != null) {
+                if (title.showIp) {
                     Text(
                         text = device.ip,
                         style = MaterialTheme.typography.labelSmall,

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Host detail now shows separate type and OS confidence after a port scan.** A strong
   port-derived OS (e.g. RDP) no longer makes a weakly guessed device type look just as
   certain, and a port scan that finds nothing new no longer resets confidence to zero.
+- **LAN Scan and Devices screens now sanitize device-supplied text.** Hostnames, device
+  types, OS guesses, vendors, mDNS service names and fingerprint evidence are flattened
+  before display, so a hostile device cannot inject line breaks or control characters.
 
 ## [1.3.7] - 2026-09-06
 
