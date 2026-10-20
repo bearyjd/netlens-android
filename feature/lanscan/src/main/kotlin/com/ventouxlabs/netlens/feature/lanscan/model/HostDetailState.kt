@@ -12,7 +12,8 @@ data class HostDetailState(
     val openCount: Int = 0,
     val enrichedType: String? = null,
     val enrichedOs: String? = null,
+    val enrichedTypeConfidence: Int = 0,
+    val enrichedOsConfidence: Int = 0,
     val fingerprintEvidence: List<String> = emptyList(),
-    val fingerprintConfidence: Int = 0,
     val error: String? = null,
 )

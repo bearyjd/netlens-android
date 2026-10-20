@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   overwrite them; clearing a field shows the detected value again. Inventory search matches
   both, and the text exports now include type, OS and model.
 
+### Fixed
+- **Host detail now shows separate type and OS confidence after a port scan.** A strong
+  port-derived OS (e.g. RDP) no longer makes a weakly guessed device type look just as
+  certain, and a port scan that finds nothing new no longer resets confidence to zero.
+
 ## [1.3.7] - 2026-09-06
 
 ### Added

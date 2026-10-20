@@ -715,8 +715,9 @@ class LanScanViewModel @Inject constructor(
                         progress = 1f,
                         enrichedType = fp.deviceType,
                         enrichedOs = fp.osGuess,
+                        enrichedTypeConfidence = fp.typeConfidence,
+                        enrichedOsConfidence = fp.osConfidence,
                         fingerprintEvidence = fp.evidence,
-                        fingerprintConfidence = fp.confidence,
                     )
                 }
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
