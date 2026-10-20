@@ -14,7 +14,10 @@ import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
+import com.ventouxlabs.netlens.feature.devices.model.displayModel
 import com.ventouxlabs.netlens.feature.devices.model.displayName
+import com.ventouxlabs.netlens.feature.devices.model.displayOs
+import com.ventouxlabs.netlens.feature.devices.model.displayType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,6 +138,9 @@ class DevicesViewModel @Inject constructor(
                 tags = normalized.tags,
                 notes = normalized.notes,
                 location = normalized.location,
+                deviceTypeOverride = normalized.deviceTypeOverride,
+                osOverride = normalized.osOverride,
+                modelOverride = normalized.modelOverride,
             )
         }
     }
@@ -216,10 +222,15 @@ class DevicesViewModel @Inject constructor(
             // that actually carry an adversary's choice. See DisplayText.
             val mac = DisplayText.flatten(device.macAddress) ?: "no-mac"
             val vendor = DisplayText.flatten(device.vendor)?.let { "  Vendor=$it" } ?: ""
+            val detected = listOfNotNull(
+                device.displayType()?.let { "  Type=$it" },
+                device.displayOs()?.let { "  OS=$it" },
+                device.displayModel()?.let { "  Model=$it" },
+            ).joinToString("")
             val status = if (device.isKnown) "known" else "new"
             val name = DisplayText.flatten(device.displayName()) ?: device.ip
-            sb.appendLine("$name  ${device.ip}  $mac  [$status]$vendor")
-            device.location?.let { sb.appendLine("    Location: $it") }
+            sb.appendLine("$name  ${device.ip}  $mac  [$status]$vendor$detected")
+            DisplayText.flatten(device.location)?.let { sb.appendLine("    Location: $it") }
             val tags = DeviceTags.parse(device.tags)
             if (tags.isNotEmpty()) sb.appendLine("    Tags: ${tags.joinToString(", ")}")
             device.notes?.let { notes ->

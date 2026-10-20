@@ -19,6 +19,12 @@ class KnownDeviceSearchTest {
         tags: String? = null,
         notes: String? = null,
         location: String? = null,
+        deviceType: String? = null,
+        osGuess: String? = null,
+        model: String? = null,
+        deviceTypeOverride: String? = null,
+        osOverride: String? = null,
+        modelOverride: String? = null,
     ) = KnownDeviceEntity(
         id = id,
         macAddress = mac,
@@ -29,7 +35,30 @@ class KnownDeviceSearchTest {
         tags = tags,
         notes = notes,
         location = location,
+        deviceType = deviceType,
+        osGuess = osGuess,
+        model = model,
+        deviceTypeOverride = deviceTypeOverride,
+        osOverride = osOverride,
+        modelOverride = modelOverride,
     )
+
+    @Test
+    fun `an overridden type is found and the detected type still is`() {
+        val d = device(deviceType = "Router", deviceTypeOverride = "NAS")
+        assertTrue(KnownDeviceSearch.matches(d, "nas"))
+        assertTrue(KnownDeviceSearch.matches(d, "router"))
+    }
+
+    @Test
+    fun `OS and model are searchable, overridden or detected`() {
+        val d = device(osGuess = "Linux", osOverride = "TrueNAS", model = "QN90", modelOverride = "Mine")
+        assertTrue(KnownDeviceSearch.matches(d, "truenas"))
+        assertTrue(KnownDeviceSearch.matches(d, "linux"))
+        assertTrue(KnownDeviceSearch.matches(d, "qn90"))
+        assertTrue(KnownDeviceSearch.matches(d, "mine"))
+        assertFalse(KnownDeviceSearch.matches(d, "zzz"))
+    }
 
     @Test
     fun `blank query matches everything`() {

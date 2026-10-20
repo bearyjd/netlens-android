@@ -73,6 +73,7 @@ class FakeKnownDeviceDao : KnownDeviceDao {
         osGuess: String?,
         fingerprintConfidence: Int?,
         fingerprintEvidence: String?,
+        model: String?,
     ) = mutate(id) {
         it.copy(
             hostname = hostname,
@@ -83,6 +84,7 @@ class FakeKnownDeviceDao : KnownDeviceDao {
             osGuess = osGuess,
             fingerprintConfidence = fingerprintConfidence,
             fingerprintEvidence = fingerprintEvidence,
+            model = model,
         )
     }
 
@@ -101,8 +103,19 @@ class FakeKnownDeviceDao : KnownDeviceDao {
         tags: String?,
         notes: String?,
         location: String?,
+        deviceTypeOverride: String?,
+        osOverride: String?,
+        modelOverride: String?,
     ) = mutate(id) {
-        it.copy(customName = customName, tags = tags, notes = notes, location = location)
+        it.copy(
+            customName = customName,
+            tags = tags,
+            notes = notes,
+            location = location,
+            deviceTypeOverride = deviceTypeOverride,
+            osOverride = osOverride,
+            modelOverride = modelOverride,
+        )
     }
 
     override suspend fun setNetworkId(id: Long, networkId: Long?) =

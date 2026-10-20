@@ -5,6 +5,14 @@ All notable changes to NetLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Devices keep the model reported over SSDP and let you correct a device's type, OS and
+  model.** Your corrections are stored separately from what scans detect, so rescans never
+  overwrite them; clearing a field shows the detected value again. Inventory search matches
+  both, and the text exports now include type, OS and model.
+
 ## [1.3.7] - 2026-09-06
 
 ### Added

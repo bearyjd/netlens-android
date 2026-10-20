@@ -46,6 +46,7 @@ import com.ventouxlabs.netlens.feature.lanscan.engine.strongerFingerprint
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
+import com.ventouxlabs.netlens.core.scan.model.MAX_MODEL_LENGTH
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
@@ -398,6 +399,7 @@ class LanScanViewModel @Inject constructor(
                                     deviceType = type,
                                     osGuess = os,
                                     vendor = ssdpDevice.manufacturer,
+                                    model = ssdpDevice.modelName?.take(MAX_MODEL_LENGTH),
                                     fingerprintConfidence = if (type != null || os != null) {
                                         DeviceFingerprinterImpl.CONFIDENCE_SSDP
                                     } else {
@@ -609,7 +611,10 @@ class LanScanViewModel @Inject constructor(
             val host = DisplayText.flatten(device.hostname)?.let { " ($it)" } ?: ""
             val mac = DisplayText.flatten(device.macAddress)?.let { "  MAC=$it" } ?: ""
             val vendor = DisplayText.flatten(device.vendor)?.let { "  Vendor=$it" } ?: ""
-            appendLine("${device.ip}$host$mac$vendor")
+            val type = DisplayText.flatten(device.deviceType)?.let { "  Type=$it" } ?: ""
+            val os = DisplayText.flatten(device.osGuess)?.let { "  OS=$it" } ?: ""
+            val model = DisplayText.flatten(device.model)?.let { "  Model=$it" } ?: ""
+            appendLine("${device.ip}$host$mac$vendor$type$os$model")
         }
         legacyIps.forEach(::appendLine)
     }.trimEnd()
@@ -624,7 +629,10 @@ class LanScanViewModel @Inject constructor(
             val host = DisplayText.flatten(d.hostname)?.let { " ($it)" } ?: ""
             val mac = DisplayText.flatten(d.macAddress)?.let { "  MAC=$it" } ?: ""
             val vendor = DisplayText.flatten(d.vendor)?.let { "  Vendor=$it" } ?: ""
-            sb.appendLine("${d.ip}$host$mac$vendor  ${d.latencyMs}ms")
+            val type = DisplayText.flatten(d.deviceType)?.let { "  Type=$it" } ?: ""
+            val os = DisplayText.flatten(d.osGuess)?.let { "  OS=$it" } ?: ""
+            val model = DisplayText.flatten(d.model)?.let { "  Model=$it" } ?: ""
+            sb.appendLine("${d.ip}$host$mac$vendor$type$os$model  ${d.latencyMs}ms")
         }
         return sb.toString().trimEnd()
     }
