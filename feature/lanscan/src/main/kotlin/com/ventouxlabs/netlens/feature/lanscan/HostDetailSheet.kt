@@ -95,7 +95,7 @@ internal fun HostDetailSheet(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )
-                        state.device.hostname?.let {
+                        DisplayText.flatten(state.device.hostname)?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -132,25 +132,18 @@ internal fun HostDetailSheet(
                                 modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        val typeLabel = state.enrichedType ?: state.device.deviceType
-                        val osLabel = state.enrichedOs ?: state.device.osGuess
-                        val vendorLabel = state.device.vendor
-                        val modelLabel = DisplayText.flatten(state.device.model)
-                        if (typeLabel != null || osLabel != null || vendorLabel != null || modelLabel != null) {
+                        val chipLabels = hostDetailChipLabels(
+                            type = state.enrichedType ?: state.device.deviceType,
+                            os = state.enrichedOs ?: state.device.osGuess,
+                            vendor = state.device.vendor,
+                            model = state.device.model,
+                        )
+                        if (chipLabels.isNotEmpty()) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.padding(top = 4.dp),
                             ) {
-                                typeLabel?.let {
-                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                                }
-                                osLabel?.let {
-                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                                }
-                                vendorLabel?.let {
-                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                                }
-                                modelLabel?.let {
+                                chipLabels.forEach {
                                     SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                                 }
                             }
@@ -330,7 +323,7 @@ internal fun HostDetailSheet(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    state.enrichedType?.let {
+                    DisplayText.flatten(state.enrichedType)?.let {
                         Text(
                             text = stringResource(R.string.lanscan_profile_label, it),
                             style = MaterialTheme.typography.bodyMedium,
@@ -343,7 +336,7 @@ internal fun HostDetailSheet(
                             )
                         }
                     }
-                    state.enrichedOs?.let {
+                    DisplayText.flatten(state.enrichedOs)?.let {
                         Text(
                             text = stringResource(R.string.lanscan_os_label, it),
                             style = MaterialTheme.typography.bodyMedium,
@@ -361,7 +354,7 @@ internal fun HostDetailSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
                     )
-                    state.fingerprintEvidence.forEach { ev ->
+                    hostDetailEvidenceLines(state.fingerprintEvidence).forEach { ev ->
                         Text(
                             text = "• $ev",
                             style = MaterialTheme.typography.bodySmall,
