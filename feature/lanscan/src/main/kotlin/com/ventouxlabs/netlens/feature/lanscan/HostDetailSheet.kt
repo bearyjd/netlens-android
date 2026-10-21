@@ -235,8 +235,6 @@ internal fun HostDetailSheet(
                     ) {
                         // Risk summary counts
                         val criticalCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.CRITICAL }
-                        val openCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.WARNING }
-                        val closedCount = state.enrichedResults.count { !it.isOpen }
                         if (criticalCount > 0) {
                             Text(
                                 text = stringResource(R.string.lanscan_risk_critical_count, criticalCount),
@@ -245,20 +243,19 @@ internal fun HostDetailSheet(
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
-                        if (openCount > 0) {
-                            Text(
-                                text = stringResource(R.string.lanscan_risk_open_count, openCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LocalStatusColors.current.warn,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.lanscan_scanned_count, state.portResults.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
+                    val summary = portScanSummary(state.enrichedResults)
+                    Text(
+                        text = stringResource(
+                            R.string.lanscan_closed_summary,
+                            summary.open,
+                            summary.closedOrFiltered,
+                            summary.scanned,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
                 }
             }
 
@@ -273,12 +270,8 @@ internal fun HostDetailSheet(
             }
 
             // Grouped port results by risk level
-            if (state.enrichedResults.isNotEmpty()) {
-                val grouped = state.enrichedResults
-                    .groupBy { it.riskLevel }
-                    .entries
-                    .sortedBy { it.key.sortOrder }
-
+            val grouped = openPortGroups(state.enrichedResults)
+            if (grouped.isNotEmpty()) {
                 for ((riskLevel, results) in grouped) {
                     item(key = "header_${riskLevel.name}") {
                         RiskGroupHeader(
@@ -302,6 +295,15 @@ internal fun HostDetailSheet(
                             onOpenService = onOpenService,
                         )
                     }
+                }
+            } else if (!state.isScanning && state.portResults.isNotEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.lanscan_no_open_ports),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
                 }
             } else if (!state.isScanning && state.portResults.isEmpty() && state.error == null) {
                 item {
@@ -430,7 +432,7 @@ private fun PortResultRow(
                 modifier = Modifier.width(52.dp),
             )
             Text(
-                text = result.serviceName,
+                text = portServiceNameToShow(result.port, result.serviceName).orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -454,9 +456,10 @@ private fun PortResultRow(
                 )
             }
         }
-        if (result.isOpen) {
+        val description = portDescriptionToShow(result.serviceName, result.description)
+        if (result.isOpen && description != null) {
             Text(
-                text = result.description,
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 24.dp, top = 1.dp),

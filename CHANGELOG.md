@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **LAN Scan and Devices screens now sanitize device-supplied text.** Hostnames, device
   types, OS guesses, vendors, mDNS service names and fingerprint evidence are flattened
   before display, so a hostile device cannot inject line breaks or control characters.
+- **The host detail port scan now lists only open ports.** Closed and filtered ports used to
+  fill the sheet with hundreds of rows ahead of the fingerprint; they are now summarized in a
+  single line ("4 open · 890 closed or filtered of 894 scanned"), unnamed ports show just
+  their number, and a finished scan with nothing open says so.
 
 ## [1.3.7] - 2026-09-06
 
