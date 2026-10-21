@@ -43,9 +43,9 @@
     <string name="lanscan_os_confidence_label">OS confidence: %1$d%%</string>
     <string name="lanscan_evidence_label">Evidence</string>
     <string name="lanscan_open_count">%1$d open</string>
-    <string name="lanscan_scanned_count">%1$d scanned</string>
+    <string name="lanscan_closed_summary">%1$d open · %2$d closed or filtered of %3$d scanned</string>
+    <string name="lanscan_no_open_ports">No open ports found</string>
     <string name="lanscan_risk_critical_count">%1$d Critical</string>
-    <string name="lanscan_risk_open_count">%1$d Open</string>
     <string name="lanscan_port_scan_starting">Starting port scan…</string>
     <string name="lanscan_rescan">Rescan</string>
     <string name="lanscan_chip_common">Common</string>
