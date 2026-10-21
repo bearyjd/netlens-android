@@ -52,6 +52,12 @@
     <string name="lanscan_chip_all">All (1–1024)</string>
     <string name="lanscan_tab_scan">Scan</string>
     <string name="lanscan_tab_history">History</string>
+    <plurals name="lanscan_unidentified_group">
+        <item quantity="one">%1$d unidentified device</item>
+        <item quantity="other">%1$d unidentified devices</item>
+    </plurals>
+    <string name="lanscan_unidentified_group_expanded">Expanded</string>
+    <string name="lanscan_unidentified_group_collapsed">Collapsed</string>
     <string name="lanscan_tab_inventory">Inventory</string>
     <string name="lanscan_tab_saved">Saved</string>
     <string name="lanscan_suggested_networks">Suggested networks</string>

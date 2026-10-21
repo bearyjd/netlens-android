@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fill the sheet with hundreds of rows ahead of the fingerprint; they are now summarized in a
   single line ("4 open · 890 closed or filtered of 894 scanned"), unnamed ports show just
   their number, and a finished scan with nothing open says so.
+- **The Inventory tab now puts identified devices first and tucks unidentified ones into one
+  collapsed row.** After a scan most devices on a typical network have no name, vendor or
+  type, and used to fill the list with identical "?" cards. They are now grouped under
+  "N unidentified devices" (tap to expand); a device you named, tagged or annotated is never
+  hidden, and searching shows matches directly.
 
 ## [1.3.7] - 2026-09-06
 
