@@ -70,7 +70,7 @@ Fully automated via CI:
 
 ### F-Droid
 
-**First-time submission is in flight** (as of 2026-07-16): [fdroiddata MR #42628](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/42628) is open and CI-green (`fdroid build` passes on the real buildserver image), awaiting maintainer merge. The staging branch is `add-com.ventouxlabs.netlens` on the `selector4560/fdroiddata` fork. See `docs/HANDOFF.md` for the submission history. `fdroid/com.ventouxlabs.netlens.yml` in this repo is an informational copy — the recipe F-Droid actually builds from lives in fdroiddata. Once the MR merges, F-Droid's build server takes over; allow 1-2 weeks for the first build to appear, then switch to the routine-update flow below.
+**NetLens is not listed on F-Droid.** [fdroiddata MR !42628](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/42628) was CI-green and passed the tester review, then was closed by a maintainer on 2026-10-15 for inactivity, not rejected. It was waiting on two requests from linsui: change the `UpdateCheckData` line to `gradle.properties|netlens\.versionCode=(\d+)|.|netlens\.versionName=(.*)`, and pick a better category from fdroiddata's `config/categories.yml`. To resubmit, make those two changes, re-pin the build entry to the current release's full commit hash, verify the APK is reproducible with no dependency-metadata signing block, and reopen the MR (the staging branch is `add-com.ventouxlabs.netlens` on the `selector4560/fdroiddata` fork). See `docs/HANDOFF.md` for the submission history. `fdroid/com.ventouxlabs.netlens.yml` in this repo is an informational copy — the recipe F-Droid builds from lives in fdroiddata. Once the MR merges, allow 1-2 weeks for the first build to appear, then switch to the routine-update flow below.
 
 Routine updates (once the recipe is merged and the app has a real F-Droid listing):
 1. Ensure the `v*` tag exists on GitHub (F-Droid's `UpdateCheckMode: Tags ...` picks it up automatically — this repo's `fdroid/` copy does NOT need to change for F-Droid itself to notice)
@@ -101,4 +101,4 @@ Routine updates (once the recipe is merged and the app has a real F-Droid listin
 2. Create the fastlane changelog file: `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
 3. Verify the GitHub Release contains notes only; Android artifacts stay in the
    authenticated CI artifact store
-4. Verify F-Droid build status after submission (check the merge request)
+4. If NetLens is listed on F-Droid, verify its build status; if not, nothing to do here (see the F-Droid section)

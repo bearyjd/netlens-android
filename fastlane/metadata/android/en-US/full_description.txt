@@ -1,4 +1,4 @@
-NetLens is a comprehensive network diagnostics toolkit for Android. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, fully open-source.
+NetLens is a comprehensive network diagnostics toolkit for Android. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, open source under AGPL-3.0.
 
 <b>Network Info</b>
 - IP Info — look up your public IP address and geolocation
@@ -8,13 +8,18 @@ NetLens is a comprehensive network diagnostics toolkit for Android. Inspect, dia
 - Ping — test latency and reachability with single or continuous mode
 - DNS Lookup — query A, AAAA, MX, TXT, CNAME, and other record types
 - Traceroute — trace the full network path to any host
+- Speed Test — measure download, upload, and latency
 
 <b>Discovery</b>
 - LAN Scan — discover devices on your local network with MAC vendor identification
+- Devices — a persistent inventory of devices you have seen, with your own names, tags, and notes
 - mDNS Browser — find Bonjour and .local services on the network
 - Port Scanner — scan for open TCP ports on any target
+- Wi-Fi Analyzer — nearby networks, signal strength, and channel usage
 
 <b>Security & Web</b>
+- Wi-Fi Audit — check the network you join for weak ciphers and WPS
+- VPN Status and DNS Leak Test — see whether your traffic escapes the tunnel
 - TLS Inspector — inspect SSL/TLS certificates and cipher suites
 - HTTP Tester — send custom HTTP requests and inspect responses
 
@@ -29,6 +34,12 @@ Configurable widget for at-a-glance network status right on your home screen.
 
 <b>Built with</b>
 Jetpack Compose, Material 3, and modern Android architecture. Requires Android 10+.
+
+<b>Pro</b>
+Optional Pro unlocks extras such as background watching of your home network, which notifies you when a new device joins, and sharing results. The open-source FOSS build, which you compile from source, has every feature unlocked.
+
+<b>Privacy</b>
+No accounts, analytics, or ads. Some tools send your public IP, or an address you look up, to third-party services listed in the privacy policy.
 
 <b>Open Source</b>
 Licensed under AGPL-3.0. Source code available on GitHub.

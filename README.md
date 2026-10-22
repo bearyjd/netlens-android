@@ -1,11 +1,10 @@
 # NetLens
 
-A comprehensive Android network diagnostics toolkit. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, fully open-source.
+A comprehensive Android network diagnostics toolkit. Inspect, diagnose, and monitor your network from a single app — no ads, no tracking, open source under AGPL-3.0. The FOSS build has every feature unlocked; the Google Play build sells an optional Pro tier.
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.ventouxlabs.netlens)
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=com.ventouxlabs.netlens)
 
-Install NetLens from Google Play or F-Droid. GitHub Releases contain release notes,
+Install NetLens from Google Play. NetLens is not on F-Droid yet; it may be resubmitted. GitHub Releases contain release notes,
 not Android binaries, because Play App Signing cannot update a GitHub-signed APK.
 
 ## Features
@@ -108,7 +107,7 @@ Each feature module follows: `Screen.kt` (Compose UI) + `ViewModel.kt` (StateFlo
 
 ## Privacy
 
-NetLens does not collect, store, or transmit any personal data. See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
+NetLens has no accounts, analytics, ads, or tracking, and the developer collects no data. Some tools send your public IP, or addresses you look up, to third-party services such as ipinfo.io, Cloudflare, ipwho.is, AbuseIPDB, and Google Public DNS. See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## License
 
