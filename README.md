@@ -109,6 +109,10 @@ Each feature module follows: `Screen.kt` (Compose UI) + `ViewModel.kt` (StateFlo
 
 NetLens has no accounts, analytics, ads, or tracking, and the developer collects no data. Some tools send your public IP, or addresses you look up, to third-party services such as ipinfo.io, Cloudflare, ipwho.is, AbuseIPDB, and Google Public DNS. See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
+## How this was built
+
+Most of NetLens's code was written with AI assistance (Claude Code), directed and reviewed by the maintainer and checked on a real device. The repository's agent instructions are in [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md); tests and CI run on every change. Treat it as a young project, and open an issue if something is wrong.
+
 ## License
 
 Copyright (C) 2026 Ventoux Advisory Co
