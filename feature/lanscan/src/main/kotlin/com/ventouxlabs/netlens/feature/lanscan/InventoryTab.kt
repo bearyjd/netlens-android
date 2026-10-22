@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.DeviceUnknown
@@ -41,10 +43,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,8 +83,10 @@ internal fun InventoryTabContent(
     onDeleteDevice: (Long) -> Unit,
     onClearInventory: () -> Unit,
     onEditDeviceDetails: (KnownDeviceEntity) -> Unit,
+    initialUnidentifiedExpanded: Boolean = false,
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
+    var unidentifiedExpanded by rememberSaveable { mutableStateOf(initialUnidentifiedExpanded) }
 
     if (showClearDialog) {
         AlertDialog(
@@ -164,21 +174,33 @@ internal fun InventoryTabContent(
                 )
             }
         } else {
+            val deviceCard: @Composable (KnownDeviceEntity) -> Unit = { device ->
+                InventoryDeviceCard(
+                    device = device,
+                    onToggleKnown = { onToggleKnown(device.id) },
+                    onDelete = { onDeleteDevice(device.id) },
+                    onEditDetails = { onEditDeviceDetails(device) },
+                )
+            }
+            val groups = remember(devices, searchQuery) { groupInventory(devices, searchQuery) }
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                items(
-                    items = devices,
-                    key = { it.id },
-                ) { device ->
-                    InventoryDeviceCard(
-                        device = device,
-                        onToggleKnown = { onToggleKnown(device.id) },
-                        onDelete = { onDeleteDevice(device.id) },
-                        onEditDetails = { onEditDeviceDetails(device) },
-                    )
+                val shown = if (groups.grouped) groups.identified else devices
+                items(items = shown, key = { it.id }) { device -> deviceCard(device) }
+                if (groups.grouped) {
+                    item(key = UNIDENTIFIED_GROUP_KEY) {
+                        UnidentifiedGroupHeader(
+                            count = groups.unidentified.size,
+                            expanded = unidentifiedExpanded,
+                            onToggle = { unidentifiedExpanded = !unidentifiedExpanded },
+                        )
+                    }
+                    if (unidentifiedExpanded) {
+                        items(items = groups.unidentified, key = { it.id }) { device -> deviceCard(device) }
+                    }
                 }
                 item {
                     TextButton(
@@ -190,6 +212,32 @@ internal fun InventoryTabContent(
                 }
             }
         }
+    }
+}
+
+// Device keys are Long row ids; a String key cannot collide with them in the shared LazyColumn.
+private const val UNIDENTIFIED_GROUP_KEY = "unidentified-group"
+
+@Composable
+private fun UnidentifiedGroupHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
+    val state = stringResource(
+        if (expanded) R.string.lanscan_unidentified_group_expanded else R.string.lanscan_unidentified_group_collapsed,
+    )
+    TextButton(
+        onClick = onToggle,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                role = Role.Button
+                stateDescription = state
+            },
+    ) {
+        Text(pluralStringResource(R.plurals.lanscan_unidentified_group, count, count))
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+        )
     }
 }
 
