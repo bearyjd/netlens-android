@@ -4,8 +4,9 @@ A comprehensive Android network diagnostics toolkit. Inspect, diagnose, and moni
 
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=com.ventouxlabs.netlens)
 
-Install NetLens from Google Play. NetLens is not on F-Droid yet; it may be resubmitted. GitHub Releases contain release notes,
-not Android binaries, because Play App Signing cannot update a GitHub-signed APK.
+Install NetLens from Google Play. NetLens is not on F-Droid yet; it may be resubmitted. GitHub Releases contain release notes and the
+FOSS APK (`app-foss-release.apk`). Do not sideload it over the Play version: Play App Signing
+cannot update a GitHub-signed APK, so use one source or the other.
 
 ## Features
 

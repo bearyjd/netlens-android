@@ -62,8 +62,10 @@ Fully automated via CI:
 1. Push a `v*` tag (or use the bump workflow)
 2. `.github/workflows/release.yml` builds signed Android artifacts for the
    authenticated CI artifact store
-3. GitHub Releases publish auto-generated notes only — never sideload an APK
-   from a GitHub release, because it cannot update through Play App Signing
+3. GitHub Releases publish auto-generated notes plus `app-foss-release.apk` only (the
+   F-Droid reproducible-build recipe needs it). Never attach the gplay APK or an AAB,
+   and never sideload the FOSS APK over a Play install: it cannot update through Play
+   App Signing
 4. A successful tagged release automatically invokes the completed production
    Play upload; manual Play Publish dispatches are restricted to test tracks
 5. Edit the release on GitHub to add highlights if needed
@@ -99,6 +101,6 @@ Routine updates (once the recipe is merged and the app has a real F-Droid listin
 
 1. Update `CHANGELOG.md` with the new version section
 2. Create the fastlane changelog file: `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
-3. Verify the GitHub Release contains notes only; Android artifacts stay in the
-   authenticated CI artifact store
+3. Verify the GitHub Release contains notes and only `app-foss-release.apk`; the gplay
+   APK and AABs stay in the authenticated CI artifact store
 4. If NetLens is listed on F-Droid, verify its build status; if not, nothing to do here (see the F-Droid section)
