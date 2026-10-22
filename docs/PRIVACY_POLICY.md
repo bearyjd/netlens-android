@@ -1,6 +1,6 @@
 # NetLens Privacy Policy
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-10-22_
 
 NetLens ("the app") is a network diagnostics toolkit for Android. This policy
 explains what data the app accesses, what it does with it, and what it never
@@ -45,11 +45,14 @@ uninstall.
 | Post notifications | Used for optional alerts — e.g. a continuous ping finishing, or a new device appearing during LAN Scan — only if you enable them. |
 | Foreground service | Keeps a continuous ping running reliably while you have the app open. |
 
-## Third-party network requests (user-initiated only)
+## Third-party network requests
 
-A few tools connect to third-party services to do their job. None of these
-run automatically — only when you open the relevant screen or explicitly
-enable a widget setting:
+A few tools connect to third-party services to do their job. Most run only when
+you open the relevant screen. The home-screen widget refreshes on a schedule once
+you add it: it opens a TCP connection to Google Public DNS (8.8.8.8, port 53) to
+measure latency, and fetches your public IP from ipinfo.io only after you grant
+its consent. DNS Lookup uses 8.8.8.8 as its default resolver, and the latency
+monitor pings 1.1.1.1 (Cloudflare) by default; both can be changed.
 
 - **ipinfo.io** — IP Info screen, and (if you enable it) the home-screen
   widget's public-IP display
@@ -57,8 +60,9 @@ enable a widget setting:
 - **api.abuseipdb.com** — IP reputation lookup (only if you supply your own
   API key)
 - **speed.cloudflare.com** — Speed Test tool
+- **whois.iana.org**, then the registry WHOIS server it refers to — WHOIS tool
 
-All of these connections are HTTPS and go directly from your device to that
+The HTTPS connections go directly from your device to that
 third-party service. NetLens's developer never sees or stores this traffic.
 Refer to each service's own privacy policy for how they handle requests they
 receive.
@@ -70,7 +74,7 @@ via Google Play Billing to unlock share/export features. Purchase processing,
 payment details, and receipt validation are handled entirely by Google Play —
 NetLens never sees your payment information. The app only stores whether you
 have an active purchase, encrypted, on your device, so it can unlock Pro
-features locally. (The F-Droid build of NetLens has Pro features on by
+features locally. (The open-source FOSS build, which you build from source, has Pro features on by
 default and has no billing code at all.)
 
 ## What NetLens does not do
