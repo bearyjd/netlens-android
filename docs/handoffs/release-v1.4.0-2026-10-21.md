@@ -5,8 +5,8 @@ Date: 2026-10-21. Repo: `/var/home/user/Documents/vibe-code/netlens-android`. Su
 ## State (verify before relying on it)
 
 - `master` and tag `v1.4.0` both point at `36fddc7` (`chore: bump version to 1.4.0 for release`), pushed. versionName `1.4.0`, versionCode `23`. `fastlane/.../changelogs/23.txt` and the `CHANGELOG.md` `[1.4.0] - 2026-10-21` block are in.
-- **Release workflow not confirmed.** Run 39711349392 (`release.yml`, tag `v1.4.0`) was still `queued` at 02:58Z, 32 minutes after creation. Earlier releases (v1.3.6 to v1.3.8) completed. githubstatus.com reported all systems operational and the run has no pending deployments. No GitHub release `v1.4.0` existed yet and Play publication was not observed. First action next session: `gh run view 39711349392`, then decide whether to wait, `gh run rerun`, or dispatch manually. No one has cancelled or re-run it.
-- Local checkout: clean, on `master`. The watcher that was following the run was lost when the session restarted.
+- **Release workflow completed successfully.** Run 39711349392 (`release.yml`, tag `v1.4.0`): `release` job succeeded at 03:07Z (GitHub release `v1.4.0` published, no binaries attached by design) and `publish-production` (`play-publish.yml`, track `production`, `release_status: completed`) succeeded at 03:47Z. Both jobs waited a long time for a runner (about 40 min, then about 35 min), which looked like a stuck run but was queueing, not a failure. Not verified by me: that the Play Console shows 1.4.0 (code 23) as live; check it there. The run only reports that the publish job passed.
+- Local checkout: clean, on `master`.
 
 ## Shipped in 1.4.0 (all merged via PR)
 
