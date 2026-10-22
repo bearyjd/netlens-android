@@ -1,6 +1,6 @@
 # NetLens Privacy Policy
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-10-22_
 
 NetLens ("the app") is a network diagnostics toolkit for Android. This policy
 explains what data the app accesses, what it does with it, and what it never
