@@ -88,15 +88,18 @@ jobs:
             app/build/outputs/bundle/*Release/*.aab
           retention-days: 90
 
-      # Google Play re-signs production builds with its app-signing key. The APKs
-      # built above use the upload key, so publishing either kind of Android binary
-      # here creates an install that can never update through Play. Keep public
-      # releases to notes; authenticated CI artifacts remain available to maintainers.
+      # Google Play re-signs production builds with its app-signing key. The gplay
+      # APK and the AABs use the upload key, so publishing them here would create an
+      # install that can never update through Play. Only the FOSS APK is attached:
+      # it has no Play counterpart, and F-Droid's reproducible-build recipe
+      # (`Binaries:` in fdroiddata) compares its own build against this file.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           generate_release_notes: true
+          files: app/build/outputs/apk/foss/release/app-foss-release.apk
+          fail_on_unmatched_files: true
 
   # A human-created v* tag is the explicit production-deployment signal. The
   # bump workflow dispatches this workflow with publish_production=true because
