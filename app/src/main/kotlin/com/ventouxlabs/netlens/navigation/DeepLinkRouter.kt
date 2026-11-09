@@ -3,6 +3,8 @@ package com.ventouxlabs.netlens.navigation
 import android.content.Intent
 import android.net.Uri
 
+// Every ToolDestination route must appear here as its own path (guarded by
+// DeepLinkRouterTest), plus "home" and the widget aliases at the end.
 private val PATH_TO_ROUTE = mapOf(
     "home" to "home",
     "ipinfo" to ToolDestination.IpInfo.route,
@@ -25,6 +27,11 @@ private val PATH_TO_ROUTE = mapOf(
     "vpnstatus" to ToolDestination.VpnStatus.route,
     "wifiaudit" to ToolDestination.WifiAudit.route,
     "speedtest" to ToolDestination.SpeedTest.route,
+    "mdns" to ToolDestination.Mdns.route,
+    "wifi" to ToolDestination.WifiAnalyzer.route,
+    "celltower" to ToolDestination.CellTower.route,
+    "ipcalc" to ToolDestination.IpCalc.route,
+    "history" to ToolDestination.History.route,
     "latency" to ToolDestination.Ping.route,
     "scan" to ToolDestination.LanScan.route,
 )

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `netlens://feature/{mdns,wifi,celltower,ipcalc,history}` deep links now open their screens; the router had no path for these destinations (`ipcalc` was listed as query-capable but unreachable). A unit test now fails if a `ToolDestination` has no deep-link path.
+
 ## [1.4.0] - 2026-10-21
 
 ### Added
