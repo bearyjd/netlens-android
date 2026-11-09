@@ -62,6 +62,35 @@ class DeepLinkRouterTest {
     }
 
     @Test
+    fun `resolveRoute maps every ToolDestination route to itself`() {
+        // Guards against a new NavHost destination shipping without a deep-link path.
+        for (destination in ToolDestination.entries) {
+            assertEquals(
+                destination.route,
+                resolveRoute("netlens", "feature", destination.route),
+                "ToolDestination.${destination.name} (path=${destination.route}) has no deep-link path",
+            )
+        }
+    }
+
+    @Test
+    fun `resolveRoute maps destinations that were previously unreachable`() {
+        assertEquals(ToolDestination.Mdns.route, resolveRoute("netlens", "feature", "mdns"))
+        assertEquals(ToolDestination.WifiAnalyzer.route, resolveRoute("netlens", "feature", "wifi"))
+        assertEquals(ToolDestination.CellTower.route, resolveRoute("netlens", "feature", "celltower"))
+        assertEquals(ToolDestination.IpCalc.route, resolveRoute("netlens", "feature", "ipcalc"))
+        assertEquals(ToolDestination.History.route, resolveRoute("netlens", "feature", "history"))
+    }
+
+    @Test
+    fun `resolveRoute drops the query for routes without a query argument`() {
+        // mdns/wifi/celltower/history are declared without "?query={query}" in the NavHost.
+        for (path in listOf("mdns", "wifi", "celltower", "history")) {
+            assertEquals(path, resolveRoute("netlens", "feature", path, "example.com"), "path=$path")
+        }
+    }
+
+    @Test
     fun `resolveRoute maps settings`() {
         assertEquals(ToolDestination.Settings.route, resolveRoute("netlens", "feature", "settings"))
     }
