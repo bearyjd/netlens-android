@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -29,11 +30,16 @@ import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_LOCATION_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NOTES_LENGTH
+import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_OVERRIDE_LENGTH
+import com.ventouxlabs.netlens.feature.devices.model.displayModel
 import com.ventouxlabs.netlens.feature.devices.model.displayName
+import com.ventouxlabs.netlens.feature.devices.model.displayOs
+import com.ventouxlabs.netlens.feature.devices.model.displayType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -82,8 +88,10 @@ fun DeviceDetailSheet(
                 style = MaterialTheme.typography.labelSmall,
             )
             device.vendor?.let { Text(stringResource(R.string.devices_detail_vendor, it)) }
-            device.deviceType?.let { Text(stringResource(R.string.devices_detail_type, it)) }
-            device.osGuess?.let { Text(stringResource(R.string.devices_detail_os, it)) }
+            // Effective values: the user's override wins over detection, and both are flattened.
+            device.displayType()?.let { Text(stringResource(R.string.devices_detail_type, it)) }
+            device.displayOs()?.let { Text(stringResource(R.string.devices_detail_os, it)) }
+            device.displayModel()?.let { Text(stringResource(R.string.devices_detail_model, it)) }
             device.fingerprintConfidence?.let {
                 Text(stringResource(R.string.devices_detail_confidence, it))
             }
@@ -105,6 +113,25 @@ fun DeviceDetailSheet(
                 placeholder = { Text(stringResource(R.string.devices_detail_rename_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+            )
+
+            OverrideField(
+                value = edit.deviceTypeOverride,
+                onValueChange = { edit = edit.copy(deviceTypeOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                label = R.string.devices_detail_type_override,
+                detected = device.deviceType,
+            )
+            OverrideField(
+                value = edit.osOverride,
+                onValueChange = { edit = edit.copy(osOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                label = R.string.devices_detail_os_override,
+                detected = device.osGuess,
+            )
+            OverrideField(
+                value = edit.modelOverride,
+                onValueChange = { edit = edit.copy(modelOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                label = R.string.devices_detail_model_override,
+                detected = device.model,
             )
 
             OutlinedTextField(
@@ -202,4 +229,29 @@ fun DeviceDetailSheet(
             }
         }
     }
+}
+
+/** Override input; the placeholder shows the detected value that a blank field falls back to. */
+@Composable
+private fun OverrideField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    @StringRes label: Int,
+    detected: String?,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(label)) },
+        placeholder = {
+            Text(
+                DisplayText.flatten(detected)
+                    ?.let { stringResource(R.string.devices_detail_override_detected, it) }
+                    ?: stringResource(R.string.devices_detail_override_none),
+            )
+        },
+        supportingText = { Text(stringResource(R.string.devices_detail_override_help)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

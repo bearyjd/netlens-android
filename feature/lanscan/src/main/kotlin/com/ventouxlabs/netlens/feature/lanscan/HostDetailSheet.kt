@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.ui.LocalStatusColors
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
@@ -94,7 +95,7 @@ internal fun HostDetailSheet(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )
-                        state.device.hostname?.let {
+                        DisplayText.flatten(state.device.hostname)?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -131,21 +132,18 @@ internal fun HostDetailSheet(
                                 modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        val typeLabel = state.enrichedType ?: state.device.deviceType
-                        val osLabel = state.enrichedOs ?: state.device.osGuess
-                        val vendorLabel = state.device.vendor
-                        if (typeLabel != null || osLabel != null || vendorLabel != null) {
+                        val chipLabels = hostDetailChipLabels(
+                            type = state.enrichedType ?: state.device.deviceType,
+                            os = state.enrichedOs ?: state.device.osGuess,
+                            vendor = state.device.vendor,
+                            model = state.device.model,
+                        )
+                        if (chipLabels.isNotEmpty()) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.padding(top = 4.dp),
                             ) {
-                                typeLabel?.let {
-                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                                }
-                                osLabel?.let {
-                                    SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
-                                }
-                                vendorLabel?.let {
+                                chipLabels.forEach {
                                     SuggestionChip(onClick = {}, label = { Text(it, style = MaterialTheme.typography.labelSmall) })
                                 }
                             }
@@ -237,8 +235,6 @@ internal fun HostDetailSheet(
                     ) {
                         // Risk summary counts
                         val criticalCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.CRITICAL }
-                        val openCount = state.enrichedResults.count { it.riskLevel == PortRiskLevel.WARNING }
-                        val closedCount = state.enrichedResults.count { !it.isOpen }
                         if (criticalCount > 0) {
                             Text(
                                 text = stringResource(R.string.lanscan_risk_critical_count, criticalCount),
@@ -247,20 +243,19 @@ internal fun HostDetailSheet(
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
-                        if (openCount > 0) {
-                            Text(
-                                text = stringResource(R.string.lanscan_risk_open_count, openCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LocalStatusColors.current.warn,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.lanscan_scanned_count, state.portResults.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
+                    val summary = portScanSummary(state.enrichedResults)
+                    Text(
+                        text = stringResource(
+                            R.string.lanscan_closed_summary,
+                            summary.open,
+                            summary.closedOrFiltered,
+                            summary.scanned,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
                 }
             }
 
@@ -275,12 +270,8 @@ internal fun HostDetailSheet(
             }
 
             // Grouped port results by risk level
-            if (state.enrichedResults.isNotEmpty()) {
-                val grouped = state.enrichedResults
-                    .groupBy { it.riskLevel }
-                    .entries
-                    .sortedBy { it.key.sortOrder }
-
+            val grouped = openPortGroups(state.enrichedResults)
+            if (grouped.isNotEmpty()) {
                 for ((riskLevel, results) in grouped) {
                     item(key = "header_${riskLevel.name}") {
                         RiskGroupHeader(
@@ -305,6 +296,15 @@ internal fun HostDetailSheet(
                         )
                     }
                 }
+            } else if (!state.isScanning && state.portResults.isNotEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.lanscan_no_open_ports),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
             } else if (!state.isScanning && state.portResults.isEmpty() && state.error == null) {
                 item {
                     Text(
@@ -325,24 +325,30 @@ internal fun HostDetailSheet(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    state.enrichedType?.let {
+                    DisplayText.flatten(state.enrichedType)?.let {
                         Text(
                             text = stringResource(R.string.lanscan_profile_label, it),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 4.dp),
                         )
+                        if (state.enrichedTypeConfidence > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_type_confidence_label, state.enrichedTypeConfidence),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
-                    state.enrichedOs?.let {
+                    DisplayText.flatten(state.enrichedOs)?.let {
                         Text(
                             text = stringResource(R.string.lanscan_os_label, it),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                    }
-                    if (state.fingerprintConfidence > 0) {
-                        Text(
-                            text = stringResource(R.string.lanscan_confidence_label, state.fingerprintConfidence),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        if (state.enrichedOsConfidence > 0) {
+                            Text(
+                                text = stringResource(R.string.lanscan_os_confidence_label, state.enrichedOsConfidence),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                     Text(
                         text = stringResource(R.string.lanscan_evidence_label),
@@ -350,7 +356,7 @@ internal fun HostDetailSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
                     )
-                    state.fingerprintEvidence.forEach { ev ->
+                    hostDetailEvidenceLines(state.fingerprintEvidence).forEach { ev ->
                         Text(
                             text = "• $ev",
                             style = MaterialTheme.typography.bodySmall,
@@ -426,7 +432,7 @@ private fun PortResultRow(
                 modifier = Modifier.width(52.dp),
             )
             Text(
-                text = result.serviceName,
+                text = portServiceNameToShow(result.port, result.serviceName).orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -450,9 +456,10 @@ private fun PortResultRow(
                 )
             }
         }
-        if (result.isOpen) {
+        val description = portDescriptionToShow(result.serviceName, result.description)
+        if (result.isOpen && description != null) {
             Text(
-                text = result.description,
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 24.dp, top = 1.dp),

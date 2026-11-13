@@ -4,6 +4,7 @@ import app.cash.paparazzi.Paparazzi
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.feature.lanscan.model.HostPortResult
+import com.ventouxlabs.netlens.core.scan.model.PortResult
 import com.ventouxlabs.netlens.core.scan.model.PortRiskLevel
 import org.junit.Rule
 import org.junit.Test
@@ -79,6 +80,20 @@ class HostDetailSheetRenderTest {
                     result(80, PortRiskLevel.WARNING, "http", protocol = "UDP"),
                 ),
                 openCount = 2,
+            ),
+        )
+    }
+
+    @Test
+    fun `a finished scan with many closed ports and no open ports renders`() {
+        val closed = (1..900).map { result(it, PortRiskLevel.CLOSED).copy(isOpen = false) }
+        render(
+            HostDetailState(
+                device = LanDevice(ip = "192.168.1.10"),
+                portResults = closed.map {
+                    PortResult(port = it.port, serviceName = "svc", isOpen = false)
+                },
+                enrichedResults = closed,
             ),
         )
     }

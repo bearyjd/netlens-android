@@ -80,7 +80,7 @@ pointing users to the renamed app, and/or unpublish once the new app is live.
 > succeeds; no manual binary upload is needed.
 >
 > Listing inputs were verified ready on 2026-08-06: `title.txt`, `short_description.txt`
-> (78/80 chars), `full_description.txt` (1439/4000), `icon.png` 512×512,
+> (78/80 chars), `full_description.txt` (under 4000), `icon.png` 512×512,
 > `featureGraphic.png` 1024×500, and four 1080×2160 phone screenshots. The data-safety
 > answers below are pre-written, including the paste-ready IP-address justification.
 
@@ -176,12 +176,14 @@ happens on the wire.
 | App activity | Not collected | Scan/history data (`core:data` Room DB) never leaves the device |
 | Web browsing history | Not collected | HTTP Tester sends only requests you compose; doesn't log external browsing |
 | App info & performance | Not collected | Confirmed no crash/analytics SDK in `libs.versions.toml` or anywhere in the dependency graph |
-| **Device or other IDs (IP address)** | **Collected, not shared for advertising, purpose: App functionality, user-initiated only** | IP Info, Traceroute, IP reputation lookup, and Speed Test send direct HTTP requests to `ipinfo.io`, `ipwho.is`, `api.abuseipdb.com`, `speed.cloudflare.com` — any HTTP request inherently exposes the device's IP to that server. Mirrors the F-Droid `NonFreeNet` anti-feature disclosure exactly; keeping both listings consistent. |
+| **Device or other IDs (IP address)** | **Collected, not shared for advertising, purpose: App functionality, user-initiated only** | IP Info, Traceroute, IP reputation lookup, and Speed Test send direct HTTP requests to `ipinfo.io`, `ipwho.is`, `api.abuseipdb.com`, `speed.cloudflare.com` — any HTTP request inherently exposes the device's IP to that server. The same endpoints are in the F-Droid `NonFreeNet` disclosure drafted for the fdroiddata submission (not live: the MR was closed 2026-10-15); keep the two consistent. The home screen widget also calls `ipinfo.io` on its scheduled refresh, so "user-initiated only" is not strictly true for widget users; see `PRIVACY.md`. |
 
 Free-text justification for the IP-address item (paste as-is): *"IP address
-is exposed as an inherent side effect of user-initiated HTTP requests to
-third-party diagnostic services (IP lookup, traceroute geolocation, IP
-reputation check, speed test). No IP address or other data is collected,
+is exposed as an inherent side effect of HTTP requests to third-party
+diagnostic services (IP lookup, traceroute geolocation, IP reputation check,
+speed test). These run when the user opens the tool, except that the optional
+home-screen widget refreshes its IP lookup on a schedule after the user grants
+consent. No IP address or other data is collected,
 stored, or shared by the app's developer — requests go directly from the
 user's device to the third-party service. Not used for advertising or
 tracking."*

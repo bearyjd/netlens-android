@@ -25,12 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v4
 
       - name: Verify tag matches gradle version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload artifacts
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: netlens-${{ github.ref_name }}
           path: |
@@ -88,15 +88,18 @@ jobs:
             app/build/outputs/bundle/*Release/*.aab
           retention-days: 90
 
-      # Google Play re-signs production builds with its app-signing key. The APKs
-      # built above use the upload key, so publishing either kind of Android binary
-      # here creates an install that can never update through Play. Keep public
-      # releases to notes; authenticated CI artifacts remain available to maintainers.
+      # Google Play re-signs production builds with its app-signing key. The gplay
+      # APK and the AABs use the upload key, so publishing them here would create an
+      # install that can never update through Play. Only the FOSS APK is attached:
+      # it has no Play counterpart, and F-Droid's reproducible-build recipe
+      # (`Binaries:` in fdroiddata) compares its own build against this file.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           generate_release_notes: true
+          files: app/build/outputs/apk/foss/release/app-foss-release.apk
+          fail_on_unmatched_files: true
 
   # A human-created v* tag is the explicit production-deployment signal. The
   # bump workflow dispatches this workflow with publish_production=true because

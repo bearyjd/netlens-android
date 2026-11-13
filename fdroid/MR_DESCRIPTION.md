@@ -22,13 +22,13 @@ Each rename is a genuinely different Android package as far as installs/updates 
 
 ### Anti-features
 
-`NonFreeNet` — the app makes opt-in, user-initiated HTTPS calls to a small set of third-party services, never automatically:
-- `ipinfo.io` — IP Info screen, and the home-screen widget's public-IP display (gated behind a separate consent toggle in Settings, off by default for the widget)
+`NonFreeNet` — the app makes HTTPS calls to a small set of third-party services, almost all when the user opens the tool (the one scheduled exception is the home-screen widget, below):
+- `ipinfo.io` — IP Info screen, and the home-screen widget's public-IP display (the widget fetch runs on its refresh schedule only after the user grants a separate consent in Settings; off until then)
 - `ipwho.is` — Traceroute hop geolocation
 - `api.abuseipdb.com` — IP reputation lookup, requires the user to supply their own API key
 - `speed.cloudflare.com` — Speed Test tool
 
-All other tools (ping, DNS, port scan, WHOIS, etc.) either operate on user-supplied hosts directly or talk to the local network only.
+All other tools (ping, port scan, HTTP tester, etc.) operate on user-supplied hosts or the local network. Defaults the user can change: DNS Lookup queries Google Public DNS (`8.8.8.8`) and the latency monitor pings `1.1.1.1`. WHOIS queries `whois.iana.org` and the registry server it refers to. The widget also opens a TCP connection to `8.8.8.8:53` on each scheduled refresh to measure latency, without needing the ipinfo consent.
 
 ### Build
 

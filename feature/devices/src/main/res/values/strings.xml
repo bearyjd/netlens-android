@@ -18,6 +18,13 @@
     <string name="devices_detail_vendor">Vendor: %1$s</string>
     <string name="devices_detail_type">Type: %1$s</string>
     <string name="devices_detail_os">OS: %1$s</string>
+    <string name="devices_detail_model">Model: %1$s</string>
+    <string name="devices_detail_type_override">Device type</string>
+    <string name="devices_detail_os_override">Operating system</string>
+    <string name="devices_detail_model_override">Model</string>
+    <string name="devices_detail_override_detected">Detected: %1$s</string>
+    <string name="devices_detail_override_none">Nothing detected</string>
+    <string name="devices_detail_override_help">Leave blank to use the detected value</string>
     <string name="devices_detail_confidence">Confidence: %1$d%%</string>
     <string name="devices_detail_evidence">Why: %1$s</string>
     <string name="devices_detail_location">Location</string>

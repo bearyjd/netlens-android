@@ -18,7 +18,12 @@ object KnownDeviceSearch {
             device.ip.hit(trimmed) ||
             device.macAddress.hit(trimmed) ||
             device.vendor.hit(trimmed) ||
+            device.effectiveDeviceType().hit(trimmed) ||
             device.deviceType.hit(trimmed) ||
+            device.effectiveOs().hit(trimmed) ||
+            device.osGuess.hit(trimmed) ||
+            device.effectiveModel().hit(trimmed) ||
+            device.model.hit(trimmed) ||
             device.location.hit(trimmed) ||
             device.notes.hit(trimmed) ||
             DeviceTags.matches(device.tags, trimmed)

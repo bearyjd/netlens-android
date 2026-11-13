@@ -1,0 +1,1 @@
+Added: correct a device's type, OS and model in the Devices screen; your corrections survive rescans, and SSDP-reported models are kept. The Inventory tab now lists identified devices first and tucks unidentified ones into one collapsed row. Fixed: the host detail port scan lists only open ports, shows type and OS confidence separately, and sanitizes device-supplied text.

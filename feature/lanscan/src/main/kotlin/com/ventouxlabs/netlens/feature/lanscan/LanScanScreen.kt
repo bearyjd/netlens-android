@@ -85,6 +85,7 @@ import androidx.core.content.ContextCompat
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -911,7 +912,7 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
         DiscoveryMethod.MULTIPLE -> stringResource(R.string.lanscan_discovery_both)
     }
     val secondaryLine = buildString {
-        device.osGuess?.let { append(it) }
+        DisplayText.flatten(device.osGuess)?.let { append(it) }
         if (isNotEmpty()) append(" · ")
         append(discoveryText)
     }
@@ -952,7 +953,7 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                device.hostname?.let { hostname ->
+                DisplayText.flatten(device.hostname)?.let { hostname ->
                     Text(
                         text = hostname,
                         style = MaterialTheme.typography.bodySmall,
@@ -982,7 +983,7 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Column(horizontalAlignment = Alignment.End) {
-                device.deviceType?.let { type ->
+                DisplayText.flatten(device.deviceType)?.let { type ->
                     Text(
                         text = type,
                         style = MaterialTheme.typography.labelSmall,
@@ -992,12 +993,8 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
                     )
                 }
 
-                device.services.take(3).forEach { service ->
-                    val displayName = service
-                        .trim('.')
-                        .removePrefix("_")
-                        .removeSuffix("._tcp")
-                        .removeSuffix("._udp")
+                val serviceNames = deviceCardServiceNames(device.services)
+                serviceNames.take(3).forEach { displayName ->
                     Text(
                         text = displayName,
                         style = MaterialTheme.typography.labelSmall,
@@ -1006,9 +1003,9 @@ private fun DeviceCard(device: LanDevice, onClick: () -> Unit) {
                     )
                 }
 
-                if (device.services.size > 3) {
+                if (serviceNames.size > 3) {
                     Text(
-                        text = "+${device.services.size - 3}",
+                        text = "+${serviceNames.size - 3}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )

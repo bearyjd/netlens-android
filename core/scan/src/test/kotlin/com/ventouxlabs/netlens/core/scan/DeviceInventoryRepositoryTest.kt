@@ -268,4 +268,69 @@ class DeviceInventoryRepositoryTest {
         assertEquals("Printer", updated?.deviceType)
         assertEquals(40, updated?.fingerprintConfidence)
     }
+
+    @Test
+    fun `new device persists model and a later scan without model does not erase it`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val r = repo(dao, RecordingNewDeviceNotifier())
+        r.persistScan(
+            listOf(LanDevice(ip = "192.168.1.60", macAddress = "AA:BB:CC:DD:EE:60", model = "Chromecast")),
+            networkId = null,
+        )
+        assertEquals("Chromecast", dao.getByMac("AA:BB:CC:DD:EE:60")?.model)
+
+        r.persistScan(
+            listOf(LanDevice(ip = "192.168.1.60", macAddress = "AA:BB:CC:DD:EE:60", model = null)),
+            networkId = null,
+        )
+        assertEquals("Chromecast", dao.getByMac("AA:BB:CC:DD:EE:60")?.model)
+
+        r.persistScan(
+            listOf(LanDevice(ip = "192.168.1.60", macAddress = "AA:BB:CC:DD:EE:60", model = "Chromecast Ultra")),
+            networkId = null,
+        )
+        assertEquals("Chromecast Ultra", dao.getByMac("AA:BB:CC:DD:EE:60")?.model)
+    }
+
+    @Test
+    fun `an oversized model is stored truncated on insert and on update`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        val r = repo(dao, RecordingNewDeviceNotifier())
+        val mac = "AA:BB:CC:DD:EE:70"
+        r.persistScan(listOf(LanDevice(ip = "192.168.1.70", macAddress = mac, model = "A".repeat(10_000))), networkId = null)
+        assertEquals(80, dao.getByMac(mac)?.model?.length)
+
+        r.persistScan(listOf(LanDevice(ip = "192.168.1.70", macAddress = mac, model = "B".repeat(10_000))), networkId = null)
+        assertEquals("B".repeat(80), dao.getByMac(mac)?.model)
+    }
+
+    @Test
+    fun `user overrides survive a rescan with higher fingerprint confidence`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        dao.seed(
+            KnownDeviceEntity(
+                id = 1, macAddress = "AA:BB:CC:DD:EE:61", hostname = "h", ip = "192.168.1.61", vendor = null,
+                deviceType = "Router", osGuess = "Linux", fingerprintConfidence = 20,
+                deviceTypeOverride = "NAS", osOverride = "TrueNAS", modelOverride = "Mine",
+            ),
+        )
+        repo(dao, RecordingNewDeviceNotifier()).persistScan(
+            listOf(
+                LanDevice(
+                    ip = "192.168.1.61", macAddress = "AA:BB:CC:DD:EE:61",
+                    deviceType = "Smart TV", osGuess = "Tizen", model = "QN90", fingerprintConfidence = 90,
+                ),
+            ),
+            networkId = null,
+        )
+        val row = dao.byId(1)
+        // Detected values advance...
+        assertEquals("Smart TV", row?.deviceType)
+        assertEquals("Tizen", row?.osGuess)
+        assertEquals("QN90", row?.model)
+        // ...but the user's overrides are untouched.
+        assertEquals("NAS", row?.deviceTypeOverride)
+        assertEquals("TrueNAS", row?.osOverride)
+        assertEquals("Mine", row?.modelOverride)
+    }
 }

@@ -2,6 +2,7 @@ package com.ventouxlabs.netlens.feature.portscan
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -89,7 +90,7 @@ class PortScanViewModelTest {
 
             // With UnconfinedTestDispatcher, the flow collects all items and completes
             // The final state after scan completes:
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertEquals("192.168.1.1", finalState.host)
             assertEquals(3, finalState.results.size)
             assertEquals(2, finalState.openCount)
@@ -107,7 +108,7 @@ class PortScanViewModelTest {
             awaitItem() // initial state
             viewModel.scan("192.168.1.1", listOf(80))
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertFalse(finalState.isScanning)
             assertEquals(UiText.Dynamic("Host unreachable"), finalState.error)
         }
@@ -121,7 +122,7 @@ class PortScanViewModelTest {
             awaitItem() // initial state
             viewModel.scan("192.168.1.1", listOf(80))
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertFalse(finalState.isScanning)
             assertEquals(UiText.Resource(R.string.portscan_error_scan_failed), finalState.error)
         }
@@ -143,12 +144,12 @@ class PortScanViewModelTest {
             vm.scan("192.168.1.1", listOf(80, 443))
 
             // After first emit, scan is still in progress
-            val scanning = expectMostRecentItem()
+            val scanning = awaitStateWhere { it.isScanning && it.results.isNotEmpty() }
             assertTrue(scanning.isScanning)
             assertEquals(1, scanning.results.size)
 
             vm.cancelScan()
-            val afterCancel = expectMostRecentItem()
+            val afterCancel = awaitItem()
             assertFalse(afterCancel.isScanning)
         }
     }
@@ -172,7 +173,7 @@ class PortScanViewModelTest {
             awaitItem() // state from first scan
             viewModel.scan("10.0.0.1", listOf(443, 8443))
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertEquals("10.0.0.1", finalState.host)
             assertEquals(2, finalState.results.size)
             assertEquals(1, finalState.openCount)
@@ -193,7 +194,7 @@ class PortScanViewModelTest {
             viewModel.scan("192.168.1.1", listOf(80, 443))
 
             // The final state should have full progress
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { !it.isScanning }
             assertEquals(1f, finalState.progress)
             assertEquals(2, finalState.results.size)
         }
@@ -277,4 +278,13 @@ class PortScanViewModelTest {
 
         assertEquals("10.0.0.1", restoredViewModel().state.value.host)
     }
+}
+
+/** Awaits the first emitted port-scan state satisfying [predicate]. */
+private suspend fun TurbineTestContext<PortScanUiState>.awaitStateWhere(
+    predicate: (PortScanUiState) -> Boolean,
+): PortScanUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

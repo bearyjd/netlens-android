@@ -7,12 +7,24 @@ import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Result of fingerprinting with open ports. Fields inherited from the device (not derived from a
+ * port rule) share the device's single [LanDevice.fingerprintConfidence]; per-field confidence on
+ * [LanDevice] is a known limit.
+ */
 data class PortFingerprint(
     val deviceType: String?,
     val osGuess: String?,
     val evidence: List<String>,
-    val confidence: Int = 0,
-)
+    val typeConfidence: Int = 0,
+    val osConfidence: Int = 0,
+) {
+    val confidence: Int
+        get() = maxOf(
+            if (deviceType != null) typeConfidence else 0,
+            if (osGuess != null) osConfidence else 0,
+        )
+}
 
 interface DeviceFingerprinter {
     suspend fun fingerprint(device: LanDevice): LanDevice
@@ -123,39 +135,42 @@ class DeviceFingerprinterImpl @Inject constructor(
         val evidence = mutableListOf<String>()
         var type = device.deviceType
         var os = device.osGuess
-        var confidence = CONFIDENCE_NONE
+        // An inherited field keeps the only confidence LanDevice carries; a port-derived one is
+        // re-scored by the rule that derived it, so a strong OS never lifts a weak inherited type.
+        var typeConfidence = if (type != null) device.fingerprintConfidence else CONFIDENCE_NONE
+        var osConfidence = if (os != null) device.fingerprintConfidence else CONFIDENCE_NONE
 
         if (631 in openPorts || 9100 in openPorts) {
             if (type == null) {
                 type = "Printer"
-                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+                typeConfidence = CONFIDENCE_PORT_SPECIFIC
             }
             evidence.add("port ${if (631 in openPorts) "631 (IPP)" else "9100 (raw print)"}")
         }
         if (3389 in openPorts) {
             if (os == null) {
                 os = "Windows"
-                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+                osConfidence = CONFIDENCE_PORT_SPECIFIC
             }
             evidence.add("port 3389 (RDP)")
         }
         if (548 in openPorts) {
             if (os == null) {
                 os = "macOS"
-                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+                osConfidence = CONFIDENCE_PORT_SPECIFIC
             }
             evidence.add("port 548 (AFP)")
         }
         if (22 in openPorts && 53 in openPorts) {
             if (type == null) {
                 type = "Router"
-                confidence = maxOf(confidence, CONFIDENCE_PORT_SPECIFIC)
+                typeConfidence = CONFIDENCE_PORT_SPECIFIC
             }
             evidence.add("ports 22+53 (SSH+DNS)")
         }
         if (openPorts.any { it in listOf(80, 443, 8080) } && type == null) {
             type = "Web Server"
-            confidence = maxOf(confidence, CONFIDENCE_PORT_GENERIC)
+            typeConfidence = CONFIDENCE_PORT_GENERIC
             evidence.add("web ports open")
         }
 
@@ -166,7 +181,7 @@ class DeviceFingerprinterImpl @Inject constructor(
         device.hostname?.let { evidence.add("hostname: $it") }
         device.vendor?.let { evidence.add("vendor: $it") }
 
-        return PortFingerprint(type, os, evidence, confidence)
+        return PortFingerprint(type, os, evidence, typeConfidence, osConfidence)
     }
 
     private fun guessDeviceType(hostname: String): String? {

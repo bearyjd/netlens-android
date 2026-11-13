@@ -86,13 +86,65 @@ class FakeKnownDeviceDaoTest {
         val dao = FakeKnownDeviceDao()
         dao.seed(device(mac = "AA", id = 1))
 
-        dao.updateUserDetails(1, customName = "Living Room TV", tags = "media", notes = null, location = "Lounge")
+        dao.updateUserDetails(
+            1, customName = "Living Room TV", tags = "media", notes = null, location = "Lounge",
+            deviceTypeOverride = null, osOverride = null, modelOverride = null,
+        )
 
         val saved = dao.byId(1)
         assertEquals("Living Room TV", saved?.customName)
         assertEquals("media", saved?.tags)
         assertEquals("Lounge", saved?.location)
         assertEquals("Living Room TV", dao.getAllDevices().first().single().customName)
+    }
+
+    @Test
+    fun `updateLastSeen with a null model writes null`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        dao.seed(device(mac = "AA", id = 1).copy(model = "M1"))
+
+        dao.updateLastSeen(
+            id = 1, hostname = null, ip = "192.168.1.9", vendor = null, lastSeen = 5L,
+            deviceType = null, osGuess = null, fingerprintConfidence = null,
+            fingerprintEvidence = null, model = null,
+        )
+
+        assertNull(dao.byId(1)?.model)
+    }
+
+    @Test
+    fun `updateLastSeen leaves overrides untouched and updateUserDetails leaves scan columns untouched`() = runTest {
+        val dao = FakeKnownDeviceDao()
+        dao.seed(
+            device(mac = "AA", id = 1).copy(
+                model = "M1",
+                deviceTypeOverride = "NAS",
+                osOverride = "TrueNAS",
+                modelOverride = "Mine",
+            ),
+        )
+
+        dao.updateLastSeen(
+            id = 1, hostname = "h", ip = "192.168.1.9", vendor = "v", lastSeen = 5L,
+            deviceType = "Router", osGuess = "Linux", fingerprintConfidence = 80,
+            fingerprintEvidence = "e", model = "M2",
+        )
+        val afterScan = dao.byId(1)
+        assertEquals("M2", afterScan?.model)
+        assertEquals("NAS", afterScan?.deviceTypeOverride)
+        assertEquals("TrueNAS", afterScan?.osOverride)
+        assertEquals("Mine", afterScan?.modelOverride)
+
+        dao.updateUserDetails(
+            1, customName = null, tags = null, notes = null, location = null,
+            deviceTypeOverride = null, osOverride = "BSD", modelOverride = null,
+        )
+        val afterEdit = dao.byId(1)
+        assertEquals("M2", afterEdit?.model)
+        assertEquals("Router", afterEdit?.deviceType)
+        assertNull(afterEdit?.deviceTypeOverride)
+        assertEquals("BSD", afterEdit?.osOverride)
+        assertNull(afterEdit?.modelOverride)
     }
 
     @Test

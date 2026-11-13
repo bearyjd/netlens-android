@@ -6,7 +6,7 @@ NetLens is an open-source Android application published by Ventoux Advisory Co. 
 
 ## Data Collection
 
-NetLens does **not** collect, store, or transmit any personal data. There are no accounts, no analytics, no advertising SDKs, and no tracking of any kind.
+NetLens has no accounts, no analytics, no advertising SDKs, and no tracking. The developer collects no data and operates no server that receives your data. Some tools look up your public IP address, or addresses you enter, with the third-party services listed below.
 
 ## Network Requests
 
@@ -14,12 +14,18 @@ NetLens is a network diagnostics tool. By design, it sends network traffic to ho
 
 | Service | Purpose | When |
 |---------|---------|------|
-| [ip-api.com](https://ip-api.com) | Public IP geolocation and network info | IP Info screen |
-| [ipapi.co](https://ipapi.co) | Public IP geolocation | Home screen widget |
+| [ipinfo.io](https://ipinfo.io) | Public IP geolocation and network info | IP Info screen, and the home screen widget after you grant its consent |
+| [speed.cloudflare.com](https://speed.cloudflare.com) | Download/upload measurement | Speed Test |
+| [ipwho.is](https://ipwho.is) | Geolocation of traceroute hop addresses | Traceroute |
+| [abuseipdb.com](https://www.abuseipdb.com) | IP reputation check using your own API key | IP Info reputation check, only if you enter a key |
+| Google Public DNS (8.8.8.8) | Default resolver for DNS Lookup, so the name you query is sent to it unless you choose another server; also a TCP connection to port 53 for the widget's latency reading | DNS Lookup, home screen widget refresh |
+| Cloudflare DNS (1.1.1.1) | Default host for the home screen latency monitor; change it in settings | Latency monitor |
 
-These services receive your device's public IP address. They are governed by their own privacy policies.
+WHOIS lookups go to whois.iana.org and then to the WHOIS server it refers to for the domain or address you enter.
 
-No other network requests are made unless explicitly initiated by the user.
+These services receive your device's public IP address, or for traceroute and reputation checks the address being looked up. They are governed by their own privacy policies.
+
+Apart from the home screen widget's scheduled refresh and the latency monitor, which contact the services above, no other network requests are made unless you start them.
 
 ## On-Device Storage
 
@@ -33,6 +39,8 @@ All data — scan results, endpoint monitor history, network events, Wake-on-LAN
 | `ACCESS_NETWORK_STATE` | Detect current network connectivity |
 | `ACCESS_WIFI_STATE` | Read Wi-Fi details for LAN tools |
 | `CHANGE_WIFI_MULTICAST_STATE` | Enable mDNS discovery on local network |
+| `CHANGE_WIFI_STATE` | Wi-Fi scanning for the Wi-Fi Analyzer |
+| `ACCESS_FINE_LOCATION` | Android requires it to read Wi-Fi scan results, network names, and cell tower info; NetLens does not collect or send your location |
 
 NetLens requests no permissions beyond what is necessary for its core functionality.
 

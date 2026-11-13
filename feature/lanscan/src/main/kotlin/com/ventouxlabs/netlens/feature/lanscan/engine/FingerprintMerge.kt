@@ -53,5 +53,7 @@ internal fun strongerFingerprint(existing: LanDevice, candidate: LanDevice): Lan
         latencyMs = maxOf(existing.latencyMs, candidate.latencyMs),
         macAddress = existing.macAddress ?: candidate.macAddress,
         vendor = existing.vendor ?: candidate.vendor,
+        // Only SSDP reports a model, so there is nothing to rank: keep whichever side has one.
+        model = existing.model ?: candidate.model,
     )
 }

@@ -439,4 +439,73 @@ class DeviceFingerprinterTest {
         val result = fp.fingerprintWithPorts(printerDevice, listOf(80, 443))
         assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.confidence)
     }
+
+    // --- per-field confidence ---
+
+    @Test
+    fun `weak inherited type plus port 3389 scores os at port rule and type at inherited confidence`() {
+        val weak = device().copy(
+            deviceType = "Computer",
+            fingerprintConfidence = DeviceFingerprinterImpl.CONFIDENCE_HOSTNAME_GUESS,
+        )
+        val result = fp.fingerprintWithPorts(weak, listOf(3389))
+        assertEquals("Computer", result.deviceType)
+        assertEquals("Windows", result.osGuess)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_HOSTNAME_GUESS, result.typeConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.osConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.confidence)
+    }
+
+    @Test
+    fun `strong inherited type with no new port info keeps inherited confidence`() {
+        val strong = device().copy(
+            deviceType = "Printer",
+            fingerprintConfidence = DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE,
+        )
+        val result = fp.fingerprintWithPorts(strong, listOf(80, 443))
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE, result.typeConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.osConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE, result.confidence)
+    }
+
+    @Test
+    fun `null fields score zero`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(12345))
+        assertNull(result.deviceType)
+        assertNull(result.osGuess)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.typeConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.osConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_NONE, result.confidence)
+    }
+
+    @Test
+    fun `port derived type uses its own rule confidence not the inherited os confidence`() {
+        val withOs = device().copy(
+            osGuess = "Linux",
+            fingerprintConfidence = DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE,
+        )
+        val result = fp.fingerprintWithPorts(withOs, listOf(80))
+        assertEquals("Web Server", result.deviceType)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_GENERIC, result.typeConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_MDNS_SERVICE, result.osConfidence)
+    }
+
+    @Test
+    fun `ports 80 and 3389 on a bare device give generic web type and specific windows os`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(80, 3389))
+        assertEquals("Web Server", result.deviceType)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_GENERIC, result.typeConfidence)
+        assertEquals("Windows", result.osGuess)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.osConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.confidence)
+    }
+
+    @Test
+    fun `ports 631 and 548 give printer type and macos os both specific`() {
+        val result = fp.fingerprintWithPorts(device(), listOf(631, 548))
+        assertEquals("Printer", result.deviceType)
+        assertEquals("macOS", result.osGuess)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.typeConfidence)
+        assertEquals(DeviceFingerprinterImpl.CONFIDENCE_PORT_SPECIFIC, result.osConfidence)
+    }
 }

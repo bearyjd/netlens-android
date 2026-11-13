@@ -10,7 +10,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -51,18 +53,20 @@ import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 class LanScanBuildExportTextTest {
 
     private lateinit var fakeSubnetScanner: FakeSubnetScanner
+    private lateinit var fakeSsdpScanner: FakeSsdpScanner
     private lateinit var viewModel: LanScanViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fakeSubnetScanner = FakeSubnetScanner()
+        fakeSsdpScanner = FakeSsdpScanner()
         viewModel = LanScanViewModel(
             subnetScanner = fakeSubnetScanner,
             mdnsScanner = FakeLanMdnsScanner(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
+            ssdpScanner = fakeSsdpScanner,
             netBiosProber = FakeNetBiosProber(),
             arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = FakeLanNetworkBinder(),
@@ -165,5 +169,66 @@ class LanScanBuildExportTextTest {
         )
 
         assertTrue(text.contains("10.0.0.1"))
+    }
+
+    @Test
+    fun `SSDP modelName is retained on the device and exported with type and OS`() = runTest {
+        fakeSsdpScanner.devices = listOf(SsdpDevice(ip = "192.168.1.30", modelName = "Chromecast Ultra"))
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(ip = "192.168.1.30", latencyMs = 4, deviceType = "Streamer", osGuess = "Cast OS"),
+        )
+
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        assertEquals("Chromecast Ultra", viewModel.uiState.value.devices.single().model)
+        val text = viewModel.buildExportText()
+        assertTrue(text.contains("192.168.1.30  Type=Streamer  OS=Cast OS  Model=Chromecast Ultra  4ms"), text)
+    }
+
+    @Test
+    fun `a hostile model cannot forge a row in the live export or the snapshot export`() = runTest {
+        val hostile = "X\nFake Row"
+        fakeSubnetScanner.devices = listOf(LanDevice(ip = "192.168.1.31", latencyMs = 1, model = hostile))
+
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        val live = viewModel.buildExportText()
+        assertFalse(live.lines().any { it.trim() == "Fake Row" }, live)
+        assertTrue(live.contains("Model=X Fake Row"), live)
+
+        val snapshot = viewModel.buildEventExportText(
+            LanScanHistoryUiModel(
+                id = 1, timestamp = 0, subnet = "192.168.1.0/24", deviceCount = 1,
+                devicesJson = Json.encodeToString(listOf(ScanSnapshotDevice("192.168.1.31", model = hostile))),
+            ),
+        )
+        assertFalse(snapshot.lines().any { it.trim() == "Fake Row" }, snapshot)
+        assertTrue(snapshot.contains("Model=X Fake Row"), snapshot)
+    }
+
+    @Test
+    fun `snapshot export includes type OS and model`() {
+        val text = viewModel.buildEventExportText(
+            LanScanHistoryUiModel(
+                id = 1, timestamp = 0, subnet = null, deviceCount = 1,
+                devicesJson = Json.encodeToString(
+                    listOf(ScanSnapshotDevice("10.0.0.2", deviceType = "TV", osGuess = "Tizen", model = "QN90")),
+                ),
+            ),
+        )
+
+        assertTrue(text.contains("10.0.0.2  Type=TV  OS=Tizen  Model=QN90"), text)
+    }
+
+    @Test
+    fun `old snapshot JSON without model still deserializes`() {
+        val device = Json.decodeFromString<ScanSnapshotDevice>("""{"ip":"10.0.0.3","hostname":"old"}""")
+
+        assertNull(device.model)
+        assertEquals("old", device.hostname)
     }
 }

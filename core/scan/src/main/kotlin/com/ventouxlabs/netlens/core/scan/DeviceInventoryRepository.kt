@@ -4,6 +4,7 @@ import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
+import com.ventouxlabs.netlens.core.scan.model.MAX_MODEL_LENGTH
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -60,6 +61,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                         existing.fingerprintEvidence,
                         device.fingerprintEvidence,
                     ),
+                    model = device.model?.take(MAX_MODEL_LENGTH) ?: existing.model,
                 )
                 if (networkId != null && existing.networkId != networkId) {
                     knownDeviceDao.setNetworkId(existing.id, networkId)
@@ -77,6 +79,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                     osGuess = device.osGuess,
                     fingerprintConfidence = device.fingerprintConfidence,
                     fingerprintEvidence = FingerprintEvidence.format(device.fingerprintEvidence),
+                    model = device.model?.take(MAX_MODEL_LENGTH),
                     networkId = networkId,
                 )
                 val insertResult = knownDeviceDao.insertIfNew(entity)

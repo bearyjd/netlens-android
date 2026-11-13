@@ -39,4 +39,30 @@ data class KnownDeviceEntity(
     // Where the device physically lives ("Garage", "Kids' room"). Kept separate from tags so
     // it can be shown as a distinct field and sorted on.
     val location: String? = null,
+    // Scan-derived model (e.g. SSDP modelName). Owned by updateLastSeen.
+    val model: String? = null,
+    // User overrides for the detected type/OS/model. Owned ONLY by updateUserDetails — a rescan
+    // never writes them, so a correction survives any later (even higher-confidence) detection.
+    // Display/export resolve override ?: detected; the detected columns stay untouched.
+    val deviceTypeOverride: String? = null,
+    val osOverride: String? = null,
+    val modelOverride: String? = null,
 )
+
+/**
+ * Type shown to the user: their override if set, else the detected value. The result is
+ * unsanitized device-supplied text; callers must DisplayText.flatten it before display/export.
+ */
+fun KnownDeviceEntity.effectiveDeviceType(): String? = deviceTypeOverride ?: deviceType
+
+/**
+ * OS shown to the user: their override if set, else the detected guess. The result is
+ * unsanitized device-supplied text; callers must DisplayText.flatten it before display/export.
+ */
+fun KnownDeviceEntity.effectiveOs(): String? = osOverride ?: osGuess
+
+/**
+ * Model shown to the user: their override if set, else the detected value. The result is
+ * unsanitized device-supplied text; callers must DisplayText.flatten it before display/export.
+ */
+fun KnownDeviceEntity.effectiveModel(): String? = modelOverride ?: model

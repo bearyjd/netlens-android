@@ -1,6 +1,7 @@
 package com.ventouxlabs.netlens.feature.whois
 
 import app.cash.turbine.test
+import app.cash.turbine.TurbineTestContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -116,7 +117,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup("example.com")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Success }
             assertTrue(finalState is WhoisUiState.Success)
             val success = finalState as WhoisUiState.Success
             assertNotNull(success.whois)
@@ -145,7 +146,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup("example.com")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Success }
             assertTrue(finalState is WhoisUiState.Success)
             val success = finalState as WhoisUiState.Success
             assertNotNull(success.whois)
@@ -163,7 +164,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup("example.com")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Error }
             assertTrue(finalState is WhoisUiState.Error)
             assertEquals("Connection refused", (finalState as WhoisUiState.Error).message)
         }
@@ -182,7 +183,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup("8.8.8.8")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Success }
             assertTrue(finalState is WhoisUiState.Success)
             val success = finalState as WhoisUiState.Success
             assertNull(success.whois)
@@ -201,7 +202,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup("8.8.8.8")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Error }
             assertTrue(finalState is WhoisUiState.Error)
             assertEquals(
                 "Reverse DNS failed",
@@ -225,7 +226,7 @@ class WhoisViewModelTest {
 
             viewModel.lookup() // uses _query.value
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Success }
             assertTrue(finalState is WhoisUiState.Success)
             val success = finalState as WhoisUiState.Success
             assertNotNull(success.rdns)
@@ -293,8 +294,17 @@ class WhoisViewModelTest {
 
             viewModel.lookup("  8.8.4.4  ")
 
-            val finalState = expectMostRecentItem()
+            val finalState = awaitStateWhere { it is WhoisUiState.Success }
             assertTrue(finalState is WhoisUiState.Success)
         }
     }
+}
+
+/** Awaits the first emitted WHOIS state satisfying [predicate]. */
+private suspend fun TurbineTestContext<WhoisUiState>.awaitStateWhere(
+    predicate: (WhoisUiState) -> Boolean,
+): WhoisUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }

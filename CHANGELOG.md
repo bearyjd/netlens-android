@@ -13,6 +13,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`192.168.1.0/24`) now fill in their example value when you swipe toward the end edge of the
   empty field. TalkBack users get the same fill as a "Use example …" action.
 
+### Fixed
+- `netlens://feature/{mdns,wifi,celltower,ipcalc,history}` deep links now open their screens; the router had no path for these destinations (`ipcalc` was listed as query-capable but unreachable). A unit test now fails if a `ToolDestination` has no deep-link path.
+
+## [1.4.0] - 2026-10-21
+
+### Added
+- **Devices keep the model reported over SSDP and let you correct a device's type, OS and
+  model.** Your corrections are stored separately from what scans detect, so rescans never
+  overwrite them; clearing a field shows the detected value again. Inventory search matches
+  both, and the text exports now include type, OS and model.
+- **The Inventory tab now puts identified devices first and tucks unidentified ones into one
+  collapsed row.** After a scan most devices on a typical network have no name, vendor or
+  type, and used to fill the list with identical "?" cards. They are now grouped under
+  "N unidentified devices" (tap to expand); a device you named, tagged or annotated is never
+  hidden, and searching shows matches directly.
+
+### Fixed
+- **Host detail now shows separate type and OS confidence after a port scan.** A strong
+  port-derived OS (e.g. RDP) no longer makes a weakly guessed device type look just as
+  certain, and a port scan that finds nothing new no longer resets confidence to zero.
+- **LAN Scan and Devices screens now sanitize device-supplied text.** Hostnames, device
+  types, OS guesses, vendors, mDNS service names and fingerprint evidence are flattened
+  before display, so a hostile device cannot inject line breaks or control characters.
+- **The host detail port scan now lists only open ports.** Closed and filtered ports used to
+  fill the sheet with hundreds of rows ahead of the fingerprint; they are now summarized in a
+  single line ("4 open · 890 closed or filtered of 894 scanned"), unnamed ports show just
+  their number, and a finished scan with nothing open says so.
+
 ## [1.3.7] - 2026-09-06
 
 ### Added

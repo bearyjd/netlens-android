@@ -48,13 +48,15 @@ import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
  *
  * What remains has no shared equivalent yet. If you add one, move it rather than copying it.
  */
-internal class FakeDeviceFingerprinter : DeviceFingerprinter {
+internal class FakeDeviceFingerprinter(
+    var portFingerprint: PortFingerprint = PortFingerprint(null, null, emptyList()),
+) : DeviceFingerprinter {
     override suspend fun fingerprint(device: LanDevice): LanDevice = device
     override fun classifyFromServices(services: List<String>): Pair<String?, String?> = null to null
     override fun classifyFromSsdp(ssdpDevice: SsdpDevice): Pair<String?, String?> = null to null
     override fun classifyFromNetBios(info: NetBiosInfo): String? = null
     override fun fingerprintWithPorts(device: LanDevice, openPorts: List<Int>): PortFingerprint =
-        PortFingerprint(null, null, emptyList())
+        portFingerprint
 }
 
 internal class FakeNetworkInterfaceProvider : NetworkInterfaceProvider {
