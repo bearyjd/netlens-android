@@ -11,4 +11,6 @@
     <string name="whois_button_lookup">Lookup</string>
     <string name="whois_hint_query">example.com or 8.8.8.8</string>
     <string name="whois_cd_lookup">Lookup</string>
+    <string name="whois_suggestion_query" translatable="false">example.com</string>
+    <string name="whois_action_use_example">Use example %1$s</string>
 </resources>

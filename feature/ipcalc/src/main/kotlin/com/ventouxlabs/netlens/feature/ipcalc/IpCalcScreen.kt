@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -107,7 +108,17 @@ fun IpCalcScreen(
                     keyboardController?.hide()
                     viewModel.calculate()
                 }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .swipeToFillSuggestion(
+                        suggestion = stringResource(R.string.ipcalc_suggestion_input),
+                        enabled = uiState.input.isEmpty(),
+                        actionLabel = stringResource(
+                            R.string.ipcalc_action_use_example,
+                            stringResource(R.string.ipcalc_suggestion_input),
+                        ),
+                        onFill = viewModel::onInputChange,
+                    ),
             )
 
             Spacer(modifier = Modifier.height(12.dp))

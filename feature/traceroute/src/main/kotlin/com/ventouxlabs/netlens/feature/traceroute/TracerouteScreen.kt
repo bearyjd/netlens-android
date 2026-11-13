@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import com.ventouxlabs.netlens.feature.traceroute.model.HopAnomaly
 import com.ventouxlabs.netlens.feature.traceroute.model.TracerouteHop
 import com.ventouxlabs.netlens.feature.traceroute.model.TracerouteUiState
@@ -145,7 +146,17 @@ internal fun TracerouteContent(
                 label = { Text(stringResource(R.string.traceroute_label_host)) },
                 placeholder = { Text(stringResource(R.string.traceroute_hint_host)) },
                 singleLine = true,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .swipeToFillSuggestion(
+                        suggestion = stringResource(R.string.traceroute_suggestion_host),
+                        enabled = state.host.isEmpty(),
+                        actionLabel = stringResource(
+                            R.string.traceroute_action_use_example,
+                            stringResource(R.string.traceroute_suggestion_host),
+                        ),
+                        onFill = onHostChange,
+                    ),
             )
         }
 

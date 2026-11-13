@@ -19,4 +19,6 @@
     <string name="dns_action_port_scan">Port Scan</string>
     <string name="dns_action_traceroute">Traceroute</string>
     <string name="dns_action_whois">WHOIS</string>
+    <string name="dns_suggestion_domain" translatable="false">example.com</string>
+    <string name="dns_action_use_example">Use example %1$s</string>
 </resources>

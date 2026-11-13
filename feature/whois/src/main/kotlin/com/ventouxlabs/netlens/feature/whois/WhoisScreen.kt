@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import com.ventouxlabs.netlens.feature.whois.model.RdnsResult
 import com.ventouxlabs.netlens.feature.whois.model.WhoisResult
 import com.ventouxlabs.netlens.feature.whois.model.WhoisUiState
@@ -131,7 +132,17 @@ private fun WhoisContent(
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChanged,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .swipeToFillSuggestion(
+                        suggestion = stringResource(R.string.whois_suggestion_query),
+                        enabled = query.isEmpty(),
+                        actionLabel = stringResource(
+                            R.string.whois_action_use_example,
+                            stringResource(R.string.whois_suggestion_query),
+                        ),
+                        onFill = onQueryChanged,
+                    ),
                 label = { Text(stringResource(R.string.whois_label_query)) },
                 placeholder = { Text(stringResource(R.string.whois_hint_query)) },
                 singleLine = true,

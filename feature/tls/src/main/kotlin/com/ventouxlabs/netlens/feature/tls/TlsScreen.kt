@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -110,7 +111,17 @@ fun TlsScreen(
             label = { Text(stringResource(R.string.tls_label_hostname)) },
             placeholder = { Text(stringResource(R.string.tls_hint_hostname)) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .swipeToFillSuggestion(
+                    suggestion = stringResource(R.string.tls_suggestion_hostname),
+                    enabled = host.isEmpty(),
+                    actionLabel = stringResource(
+                        R.string.tls_action_use_example,
+                        stringResource(R.string.tls_suggestion_hostname),
+                    ),
+                    onFill = { host = it },
+                ),
         )
 
         Spacer(modifier = Modifier.height(12.dp))

@@ -10,4 +10,6 @@
     <string name="tls_hint_hostname">e.g. example.com</string>
     <string name="tls_label_port">Port</string>
     <string name="tls_button_inspect">Inspect</string>
+    <string name="tls_suggestion_hostname" translatable="false">example.com</string>
+    <string name="tls_action_use_example">Use example %1$s</string>
 </resources>

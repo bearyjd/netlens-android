@@ -25,4 +25,6 @@
     <string name="ping_notification_title">Pinging %1$s</string>
     <string name="ping_notification_text">%1$d sent, %2$s%% loss</string>
     <string name="ping_notification_stop">Stop</string>
+    <string name="ping_suggestion_host" translatable="false">8.8.8.8</string>
+    <string name="ping_action_use_example">Use example %1$s</string>
 </resources>
