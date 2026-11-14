@@ -65,6 +65,7 @@ core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 | DeviceSightingEntity | DeviceSightingDao | Identity (v19): which network a device was seen on |
 | DeviceMergeDecisionEntity | DeviceMergeDecisionDao | Identity (v19): persisted merge suggestions / 'distinct' decisions |
 | NetworkKeyAliasEntity | NetworkKeyAliasDao | Identity (v19): alias network key -> canonical key |
+| (no entity) | DeviceIdentityDao | Identity (v19): the two multi-table `@Transaction` writes, `mergeDevices` (move children, fill only empty user fields, delete loser last) and `insertDeviceWithIdentifiers` (replaces the dropped MAC unique index) |
 | WifiSurveySessionEntity | WifiSurveyDao | WiFi coverage survey (v15) |
 | WifiSurveyPointEntity | WifiSurveyDao | WiFi coverage survey — aggregated capture spots (v15) |
 
