@@ -2,6 +2,11 @@ package com.ventouxlabs.netlens.core.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceMergeDecisionDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
+import com.ventouxlabs.netlens.core.data.dao.NetworkKeyAliasDao
 import com.ventouxlabs.netlens.core.data.dao.DnsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.EndpointDao
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
@@ -13,6 +18,11 @@ import com.ventouxlabs.netlens.core.data.dao.PortScanHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WhoisHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.dao.WolTargetDao
+import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceSightingEntity
+import com.ventouxlabs.netlens.core.data.model.NetworkKeyAliasEntity
 import com.ventouxlabs.netlens.core.data.model.DnsHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.EndpointCheck
 import com.ventouxlabs.netlens.core.data.model.IpInfoHistoryEntry
@@ -68,8 +78,13 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         WatchedNetworkEntity::class,
         WifiSurveySessionEntity::class,
         WifiSurveyPointEntity::class,
+        DeviceIdentifierEntity::class,
+        DeviceObservationEntity::class,
+        DeviceSightingEntity::class,
+        DeviceMergeDecisionEntity::class,
+        NetworkKeyAliasEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {
@@ -92,4 +107,9 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun knownDeviceDao(): KnownDeviceDao
     abstract fun watchedNetworkDao(): WatchedNetworkDao
     abstract fun wifiSurveyDao(): WifiSurveyDao
+    abstract fun deviceIdentifierDao(): DeviceIdentifierDao
+    abstract fun deviceObservationDao(): DeviceObservationDao
+    abstract fun deviceSightingDao(): DeviceSightingDao
+    abstract fun deviceMergeDecisionDao(): DeviceMergeDecisionDao
+    abstract fun networkKeyAliasDao(): NetworkKeyAliasDao
 }

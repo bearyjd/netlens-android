@@ -1,20 +1,21 @@
-<!-- Generated: 2026-08-17 | Files scanned: core:data (22 entities, 19 DAOs, schema v16) | Token estimate: ~1080 -->
+<!-- Generated: 2026-11-13 | Files scanned: core:data (27 entities, 24 DAOs, schema v19) | Token estimate: ~1080 -->
 
 # Data Layer
 
 ## Database
 
-`NetLensDatabase` — Room, version 16, exportSchema = true
+`NetLensDatabase` — Room, version 19, exportSchema = true
 
-Migrations: additive throughout, `MIGRATION_4_5` … `MIGRATION_15_16` in `DataModule`.
+Migrations: additive throughout, `MIGRATION_4_5` … `MIGRATION_18_19` in `DataModule`.
 Recent: v13 = device inventory (`WatchedNetworkEntity`, `KnownDeviceEntity.customName/
 networkId`); v14 = `SpeedTestHistoryEntry.latencyMethod` (distinguishes old full-HTTPS
 latency rows from new TCP-connect-RTT rows); v15 = Wi-Fi coverage survey
 (`WifiSurveySessionEntity`, `WifiSurveyPointEntity`); v16 = `LanScanInventoryEntry`
-(saved LAN scan collections).
+(saved LAN scan collections); v17 = fingerprint confidence/evidence; v18 = `model` + user
+override columns; v19 = device identity (see below).
 
 **Every schema change needs a `Migration`** — the builder falls back destructively only on
-*downgrade*. Schemas are committed under `core/data/schemas/` (`1.json` … `16.json`).
+*downgrade*. Schemas are committed under `core/data/schemas/` (`1.json` … `19.json`).
 
 Migrations and real `@Query` SQL are covered by Robolectric tests (`MigrationTest`,
 `KnownDeviceDaoTest` — via the opt-in `netlens.android.robolectric` plugin, PR #155).
@@ -23,8 +24,8 @@ constructor that Room 2.7's KMP release removed.
 
 ```
 core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
-├── NetLensDatabase.kt              (RoomDatabase, 22 entities)
-├── dao/                            (19 DAOs)
+├── NetLensDatabase.kt              (RoomDatabase, 27 entities)
+├── dao/                            (24 DAOs)
 ├── model/                          (entity + UI projection classes)
 ├── repository/                     (HistoryRepository interface + Impl over 11 DAOs)
 ├── preferences/                    (UserPreferencesRepository — injectable DataStore)
@@ -59,6 +60,11 @@ core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 | KnownDeviceEntity | KnownDeviceDao | LanScan + Devices (inventory, custom names, new-device alerts) |
 | WatchedNetworkEntity | WatchedNetworkDao | Devices (Pro background watch; identity = gateway MAC) |
 | LanScanInventoryEntry | LanScanInventoryDao | LanScan (saved scan collections, v16) |
+| DeviceIdentifierEntity | DeviceIdentifierDao | Identity (v19): MAC/UDN/key identifiers per device; UNIQUE (kind, value, scopeKey), scopeKey '' = global |
+| DeviceObservationEntity | DeviceObservationDao | Identity (v19): fingerprint evidence rows, capped per device |
+| DeviceSightingEntity | DeviceSightingDao | Identity (v19): which network a device was seen on |
+| DeviceMergeDecisionEntity | DeviceMergeDecisionDao | Identity (v19): persisted merge suggestions / 'distinct' decisions |
+| NetworkKeyAliasEntity | NetworkKeyAliasDao | Identity (v19): alias network key -> canonical key |
 | WifiSurveySessionEntity | WifiSurveyDao | WiFi coverage survey (v15) |
 | WifiSurveyPointEntity | WifiSurveyDao | WiFi coverage survey — aggregated capture spots (v15) |
 
@@ -85,3 +91,8 @@ Feature Screen
 - `EncryptedSharedPreferences` — billing Pro status cache (`netlens_billing`, gplay flavor)
 - `DataStore` (`user_preferences`) via `UserPreferencesRepository` — favorite/recent tool routes, IPinfo consent, posture score snapshot, latency-monitor settings (host / threshold / enabled), AbuseIPDB API key
 - `DataStore` (widget) — Glance widget configuration
+
+**Identity schema (v19):** `known_devices.macAddress` is no longer unique (one device can own many
+MACs); `MIGRATION_18_19` backfills one `device_identifiers` row per stored MAC (kind from the U/L
+bit, `INSERT OR IGNORE` so differently spelled duplicates collapse onto the lowest device id) and
+adds `typeConfidence`/`osConfidence`. It never writes user-authored columns.

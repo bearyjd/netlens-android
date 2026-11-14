@@ -11,6 +11,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import com.ventouxlabs.netlens.core.data.NetLensDatabase
 import com.ventouxlabs.netlens.core.data.dao.DnsHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.NetworkKeyAliasDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceMergeDecisionDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
 import com.ventouxlabs.netlens.core.data.dao.EndpointDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
@@ -215,6 +220,72 @@ object DataModule {
         }
     }
 
+    // v19: device identity. known_devices.macAddress stops being unique (one device can own many
+    // MACs); five new tables hold identifiers, observations, sightings, merge decisions and network
+    // key aliases. Backfills each stored MAC as an identifier. Never touches user-authored columns.
+    // `model`/*Override already exist from 17->18 and must not be re-added.
+    internal val MIGRATION_18_19 = object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN typeConfidence INTEGER")
+            db.execSQL("ALTER TABLE known_devices ADD COLUMN osConfidence INTEGER")
+            db.execSQL("DROP INDEX IF EXISTS index_known_devices_macAddress")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_known_devices_macAddress ON known_devices(macAddress)")
+            IDENTITY_TABLE_SQL.forEach(db::execSQL)
+            db.execSQL(BACKFILL_MAC_IDENTIFIERS_SQL)
+        }
+    }
+
+    private val IDENTITY_TABLE_SQL = listOf(
+        "CREATE TABLE IF NOT EXISTS device_identifiers (" +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "deviceId INTEGER NOT NULL, kind TEXT NOT NULL, value TEXT NOT NULL, scopeKey TEXT NOT NULL, " +
+            "source TEXT NOT NULL, proven INTEGER NOT NULL DEFAULT 0, " +
+            "firstSeen INTEGER NOT NULL, lastSeen INTEGER NOT NULL, " +
+            "FOREIGN KEY(deviceId) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS index_device_identifiers_kind_value_scopeKey " +
+            "ON device_identifiers(kind, value, scopeKey)",
+        "CREATE INDEX IF NOT EXISTS index_device_identifiers_deviceId ON device_identifiers(deviceId)",
+        "CREATE TABLE IF NOT EXISTS device_observations (" +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "deviceId INTEGER NOT NULL, source TEXT NOT NULL, field TEXT NOT NULL, value TEXT NOT NULL, " +
+            "weight INTEGER NOT NULL, detail TEXT, lastSeen INTEGER NOT NULL, " +
+            "FOREIGN KEY(deviceId) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS index_device_observations_dedupe " +
+            "ON device_observations(deviceId, source, field, value)",
+        "CREATE TABLE IF NOT EXISTS device_sightings (" +
+            "deviceId INTEGER NOT NULL, networkKey TEXT NOT NULL, networkLabel TEXT, lastIp TEXT NOT NULL, " +
+            "firstSeen INTEGER NOT NULL, lastSeen INTEGER NOT NULL, PRIMARY KEY(deviceId, networkKey), " +
+            "FOREIGN KEY(deviceId) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        "CREATE TABLE IF NOT EXISTS device_merge_decisions (" +
+            "deviceIdLow INTEGER NOT NULL, deviceIdHigh INTEGER NOT NULL, decision TEXT NOT NULL, " +
+            "score INTEGER, reasons TEXT, decidedAt INTEGER NOT NULL, PRIMARY KEY(deviceIdLow, deviceIdHigh), " +
+            "FOREIGN KEY(deviceIdLow) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+            "FOREIGN KEY(deviceIdHigh) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        "CREATE INDEX IF NOT EXISTS index_device_merge_decisions_deviceIdHigh " +
+            "ON device_merge_decisions(deviceIdHigh)",
+        "CREATE INDEX IF NOT EXISTS index_device_merge_decisions_decision_score " +
+            "ON device_merge_decisions(decision, score)",
+        "CREATE TABLE IF NOT EXISTS network_key_aliases (" +
+            "aliasKey TEXT PRIMARY KEY NOT NULL, canonicalKey TEXT NOT NULL, firstSeen INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS index_network_key_aliases_canonicalKey ON network_key_aliases(canonicalKey)",
+    )
+
+    // Stored MACs are normally uppercase and colon-separated, but the v17 unique index is
+    // case-sensitive, so lowercase and dash spellings can exist. Only values that normalise to
+    // exactly 12 hex digits become identifiers (empty / '---' / junk are skipped; the parent row is
+    // untouched). Classify on the normalised value's U/L nibble so spellings of one MAC collapse to
+    // one identifier via INSERT OR IGNORE; ORDER BY id makes the lowest-id device the owner. Legacy
+    // rows have no reliable network key, so scopeKey is ''.
+    private const val BACKFILL_MAC_IDENTIFIERS_SQL =
+        "INSERT OR IGNORE INTO device_identifiers(deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen) " +
+            "SELECT id, " +
+            "CASE WHEN upper(substr(n, 2, 1)) IN ('2','3','6','7','A','B','E','F') " +
+            "THEN 'MAC_LOCAL' ELSE 'MAC_UNIVERSAL' END, " +
+            "lower(n), '', 'ARP', 0, firstSeen, lastSeen FROM (" +
+            "SELECT id, firstSeen, lastSeen, replace(replace(macAddress, ':', ''), '-', '') AS n " +
+            "FROM known_devices WHERE macAddress IS NOT NULL) " +
+            "WHERE length(n) = 12 AND n NOT GLOB '*[^0-9A-Fa-f]*' ORDER BY id"
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NetLensDatabase =
@@ -227,7 +298,7 @@ object DataModule {
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                 MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                 MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                MIGRATION_17_18,
+                MIGRATION_17_18, MIGRATION_18_19,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -307,4 +378,24 @@ object DataModule {
     @Provides
     fun provideWifiSurveyDao(database: NetLensDatabase): WifiSurveyDao =
         database.wifiSurveyDao()
+
+    @Provides
+    fun provideDeviceIdentifierDao(database: NetLensDatabase): DeviceIdentifierDao =
+        database.deviceIdentifierDao()
+
+    @Provides
+    fun provideDeviceObservationDao(database: NetLensDatabase): DeviceObservationDao =
+        database.deviceObservationDao()
+
+    @Provides
+    fun provideDeviceSightingDao(database: NetLensDatabase): DeviceSightingDao =
+        database.deviceSightingDao()
+
+    @Provides
+    fun provideDeviceMergeDecisionDao(database: NetLensDatabase): DeviceMergeDecisionDao =
+        database.deviceMergeDecisionDao()
+
+    @Provides
+    fun provideNetworkKeyAliasDao(database: NetLensDatabase): NetworkKeyAliasDao =
+        database.networkKeyAliasDao()
 }
