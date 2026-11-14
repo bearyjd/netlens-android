@@ -86,4 +86,11 @@ class ResolverHostileInputTest {
         assertEquals(1, owned.size)
         assertFalse(owned.single().proven)
     }
+
+    @Test
+    fun `a hostile MAC string is flattened before it can reach a stored row`() = runTest {
+        val d = h.resolve(LanDevice(ip = "10.0.0.5", macAddress = "zz\nforged row")).devices.single().device
+
+        assertEquals("zz forged row", d.macAddress)
+    }
 }

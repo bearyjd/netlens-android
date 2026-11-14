@@ -56,9 +56,10 @@ class DeviceIdentityResolver @Inject constructor(
         val canonical = canonicalKey(networkKey)
         val prepared = devices.map { Sighting(IdentityPolicy.prepare(it)) }
         val outcomes = if (options.autoMerge) resolveAll(prepared, canonical, now) else prepared.map { legacy(it, canonical) }
+        val redirect = mergeRedirects(outcomes)
         return ResolveResult(
-            devices = outcomes.map { it.resolved },
-            suggestions = outcomes.flatMap { it.suggestions },
+            devices = outcomes.map { it.resolved.copy(resolution = it.resolved.resolution.redirected(redirect)) },
+            suggestions = outcomes.flatMap { it.suggestions }.mapNotNull { it.redirected(redirect) }.distinct(),
             newConflictRows = outcomes.mapNotNull { it.conflictRow },
         )
     }
@@ -78,14 +79,23 @@ class DeviceIdentityResolver @Inject constructor(
         return path.last()
     }
 
-    /** Persists a [MergeSuggestion.ForNewDevice] once the new row exists. Never touches a user decision. */
+    /**
+     * Persists a [MergeSuggestion.ForNewDevice] once the new row exists. Never touches a user decision,
+     * and does nothing if either row has since gone (the decision table's foreign keys would throw).
+     */
     suspend fun persistSuggestion(newDeviceId: Long, suggestion: MergeSuggestion.ForNewDevice, now: Long) {
+        if (knownDeviceDao.getById(newDeviceId) == null || knownDeviceDao.getById(suggestion.existingDeviceId) == null) return
         val low = minOf(newDeviceId, suggestion.existingDeviceId)
         val high = maxOf(newDeviceId, suggestion.existingDeviceId)
         val reasons = suggestion.reasons.joinToString(",")
         val row = DeviceMergeDecisionEntity(low, high, SUGGESTED, suggestion.score, reasons, now)
         if (decisionDao.suggest(row) == INSERT_IGNORED) decisionDao.updateSuggestion(low, high, suggestion.score, reasons)
     }
+
+    /** Sightings resolved earlier in the call may point at a row a later sighting merged away. */
+    private fun mergeRedirects(outcomes: List<Outcome>): Map<Long, Long> =
+        outcomes.map { it.resolved.resolution }.filterIsInstance<Resolution.Existing>()
+            .flatMap { e -> e.mergedFrom.map { it to e.deviceId } }.toMap()
 
     // ---- scan-level flow -------------------------------------------------------------------
 
@@ -182,9 +192,17 @@ class DeviceIdentityResolver @Inject constructor(
     private suspend fun legacy(sighting: Sighting, canonical: String): Outcome {
         val macs = sighting.identifiers.filterTo(linkedSetOf()) { IdentityPolicy.isMac(it.kind) }
         val row = lookup(macs, canonical).firstOrNull()?.row ?: knownDeviceDao.getByIpWithoutMac(sighting.device.ip)
-        val resolution = row?.let { Resolution.Existing(it.id) } ?: Resolution.New
-        return Outcome(ResolvedDevice(sighting.device, resolution, sighting.identifiers, emptySet(), false))
+        if (row != null) {
+            return Outcome(ResolvedDevice(sighting.device, Resolution.Existing(row.id), sighting.identifiers, emptySet(), false))
+        }
+        // New: an identifier somebody already owns must not be offered as ownership (the insert would
+        // be refused forever and the device would never alert), so it is only evidence.
+        val (taken, free) = sighting.identifiers.partition { identifierDao.find(it.kind.name, it.value, scopeOf(it, canonical)) != null }
+        return Outcome(ResolvedDevice(sighting.device, Resolution.New, free.toSet(), taken.toSet(), false))
     }
+
+    private fun scopeOf(id: DeviceIdentifier, canonical: String): String =
+        if (id.kind.scope == Scope.GLOBAL) GLOBAL_SCOPE else canonical
 
     // ---- several candidates (step 4) --------------------------------------------------------
 
@@ -250,7 +268,7 @@ class DeviceIdentityResolver @Inject constructor(
         )
         val identifiers = owned.map {
             DeviceIdentifierEntity(
-                deviceId = 0, kind = it.kind.name, value = it.value, scopeKey = if (it.kind.scope == Scope.GLOBAL) GLOBAL_SCOPE else canonical, source = it.source.name,
+                deviceId = 0, kind = it.kind.name, value = it.value, scopeKey = scopeOf(it, canonical), source = it.source.name,
                 proven = it.proven, firstSeen = now, lastSeen = now,
             )
         }

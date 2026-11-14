@@ -143,4 +143,15 @@ class ResolverLookupTest {
         assertEquals(2, h.known.allDevices.size)
         assertTrue(result.suggestions.isEmpty())
     }
+
+    @Test
+    fun `kill switch off never offers an identifier another row owns as ownership`() = runTest {
+        h.seedRow(101, "10.0.0.5", ids = listOf(udn("uuid:x")))
+
+        val r = h.resolve(lan("10.0.0.50", MAC1, udn("uuid:x")), options = ResolveOptions(autoMerge = false)).devices.single()
+
+        assertEquals(Resolution.New, r.resolution)
+        assertEquals(setOf(MAC1_ID), r.ownedIdentifiers.map { it.value }.toSet())
+        assertEquals(setOf("uuid:x"), r.untrustedClaims.map { it.value }.toSet())
+    }
 }

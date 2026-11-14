@@ -95,6 +95,32 @@ class DeviceIdentityDaoTest {
     }
 
     @Test
+    fun `a merge that fails at the final delete rolls every earlier step back`() = runBlocking {
+        val survivor = dao.insertDeviceWithIdentifiers(device(), listOf(ident(value = "uuid:s")), listOf(obs("s")), true)
+        val loser = dao.insertDeviceWithIdentifiers(
+            device(ip = "10.0.0.2").copy(customName = "Theirs"), listOf(ident(value = "uuid:l")), listOf(obs("l")), true,
+        )
+        db.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER fail_loser_delete BEFORE DELETE ON known_devices WHEN OLD.id = $loser " +
+                "BEGIN SELECT RAISE(ABORT, 'boom'); END",
+        )
+
+        var thrown = false
+        try {
+            dao.mergeDevices(survivor, loser, isKnown = true)
+        } catch (e: SQLiteConstraintException) {
+            thrown = true
+        }
+
+        assertTrue(thrown)
+        assertEquals(loser, db.deviceIdentifierDao().find("UPNP_UDN", "uuid:l", "")?.deviceId)
+        assertEquals(listOf("l"), db.deviceObservationDao().getForDevice(loser).map { it.value })
+        val untouched = db.knownDeviceDao().getById(survivor)!!
+        assertNull(untouched.customName)
+        assertFalse(untouched.isKnown)
+    }
+
+    @Test
     fun `merge moves children before deleting the loser so the cascade cannot take them`() = runBlocking {
         val survivor = dao.insertDeviceWithIdentifiers(device("AA:BB:CC:00:00:01", firstSeen = 1), listOf(ident(value = "uuid:s")), listOf(obs("s")), true)
         val loser = dao.insertDeviceWithIdentifiers(device("AA:BB:CC:00:00:02", "10.0.0.2", firstSeen = 5), listOf(ident(value = "uuid:l")), listOf(obs("l")), true)

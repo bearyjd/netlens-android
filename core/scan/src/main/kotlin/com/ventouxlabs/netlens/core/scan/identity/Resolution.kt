@@ -79,3 +79,29 @@ data class ResolveResult(
 
 /** [autoMerge] is the Task 1.7 kill switch: off means no merge, no weak scoring, MAC-or-IP lookup only. */
 data class ResolveOptions(val autoMerge: Boolean = true)
+
+/** Follows loser -> survivor links (a chain is possible when one scan merges twice); a cycle stops. */
+internal fun Map<Long, Long>.resolve(id: Long): Long {
+    var current = id
+    val seen = mutableSetOf(id)
+    while (true) current = this[current]?.takeIf { seen.add(it) } ?: return current
+}
+
+internal fun Resolution.redirected(redirect: Map<Long, Long>): Resolution = when (this) {
+    is Resolution.Existing -> copy(deviceId = redirect.resolve(deviceId))
+    is Resolution.Ambiguous -> Resolution.Ambiguous(
+        deviceIds.map(redirect::resolve).distinct(), redirect.resolve(attachedTo), blockedBy,
+    )
+    is Resolution.Conflict -> copy(claimedDeviceId = redirect.resolve(claimedDeviceId))
+    Resolution.New -> this
+}
+
+/** Null when the redirect collapses a pair onto one row (nothing left to suggest). */
+internal fun MergeSuggestion.redirected(redirect: Map<Long, Long>): MergeSuggestion? = when (this) {
+    is MergeSuggestion.ForNewDevice -> copy(existingDeviceId = redirect.resolve(existingDeviceId))
+    is MergeSuggestion.BetweenRows -> {
+        val a = redirect.resolve(deviceIdLow)
+        val b = redirect.resolve(deviceIdHigh)
+        if (a == b) null else copy(deviceIdLow = minOf(a, b), deviceIdHigh = maxOf(a, b))
+    }
+}

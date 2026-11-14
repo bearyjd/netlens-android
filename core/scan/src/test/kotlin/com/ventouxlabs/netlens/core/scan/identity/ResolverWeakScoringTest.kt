@@ -73,6 +73,8 @@ class ResolverWeakScoringTest {
         seedTv()
         val s = h.resolve(newTv()).suggestions.single() as MergeSuggestion.ForNewDevice
 
+        h.seedRow(7, "192.168.5.5")
+
         h.resolver.persistSuggestion(newDeviceId = 7, suggestion = s, now = NOW)
 
         val row = h.decisions.get(7, 101)!!
@@ -85,11 +87,39 @@ class ResolverWeakScoringTest {
     fun `persisting never overrides a DISTINCT decision`() = runTest {
         seedTv()
         val s = h.resolve(newTv()).suggestions.single() as MergeSuggestion.ForNewDevice
+        h.seedRow(7, "192.168.5.5")
         h.decisions.setDistinct(7, 101, 1)
 
         h.resolver.persistSuggestion(7, s, NOW)
 
         assertEquals("DISTINCT", h.decisions.get(7, 101)?.decision)
+    }
+
+    @Test
+    fun `persisting is a no-op when either row no longer exists`() = runTest {
+        seedTv()
+        val s = h.resolve(newTv()).suggestions.single() as MergeSuggestion.ForNewDevice
+
+        h.resolver.persistSuggestion(newDeviceId = 7, suggestion = s, now = NOW) // row 7 was never inserted
+
+        assertTrue(h.decisions.all.isEmpty())
+    }
+
+    @Test
+    fun `a suggestion and an Existing result are redirected when a later sighting merges their row away`() = runTest {
+        // 101 (later firstSeen) will lose the merge into 102.
+        h.seedRow(101, "10.0.9.9", ids = listOf(udn("uuid:a"), udn("uuid:a2")), hostname = "living-room-tv", model = "XR-55", firstSeen = 50, lastSeen = NOW - day)
+        h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5)
+
+        val result = h.resolve(
+            newTv().copy(macAddress = MAC2, ip = "192.168.5.6"), // New, weakly matches 101
+            lan("10.0.0.7", null, udn("uuid:a2")), // Existing(101) at the time
+            lan("10.0.0.9", MAC1, udn("uuid:a")), // merges 101 into 102
+        )
+
+        assertEquals(null, h.known.byId(101))
+        assertEquals(Resolution.Existing(102), result.devices[1].resolution)
+        assertEquals(listOf(102L), result.suggestions.map { (it as MergeSuggestion.ForNewDevice).existingDeviceId })
     }
 
     @ParameterizedTest

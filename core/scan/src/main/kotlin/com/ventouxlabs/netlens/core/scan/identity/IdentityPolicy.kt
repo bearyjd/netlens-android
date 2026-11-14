@@ -89,6 +89,7 @@ object IdentityPolicy {
     fun prepare(device: LanDevice): LanDevice {
         val ids = sanitizeIdentifiers(device.identifiers + listOfNotNull(macIdentifier(device.macAddress)))
         return device.copy(
+            macAddress = display(device.macAddress),
             hostname = display(device.hostname),
             vendor = display(device.vendor),
             deviceType = display(device.deviceType),
