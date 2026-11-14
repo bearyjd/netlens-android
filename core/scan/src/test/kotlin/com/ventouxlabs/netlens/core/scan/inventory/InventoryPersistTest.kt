@@ -127,11 +127,12 @@ class InventoryPersistTest {
     fun `observations are capped at 64 per device, evicting the lowest weight first`() = runTest {
         fun obs(range: IntRange, weight: Int) =
             range.map { Observation(ObservationSource.PORTS, ObservedField.PRODUCT, "p$it", weight, null) }
-        repo.persistScan(listOf(lan("10.0.0.8", MAC1).copy(observations = obs(1..40, weight = 10))), networkId = null)
-        repo.persistScan(listOf(lan("10.0.0.8", MAC1).copy(observations = obs(101..140, weight = 50))), networkId = null)
+        repo.persistScan(listOf(lan("10.0.0.8", MAC1).copy(observations = obs(1..40, weight = 50))), networkId = null)
+        repo.persistScan(listOf(lan("10.0.0.8", MAC1).copy(observations = obs(101..140, weight = 10))), networkId = null)
 
         val rows = h.observations.getForDevice(h.known.allDevices.single().id)
         assertEquals(64, rows.size)
+        // the older but stronger evidence stays; the newest weak rows are the ones evicted
         assertEquals(40, rows.count { it.weight == 50 })
         assertEquals(24, rows.count { it.weight == 10 })
     }

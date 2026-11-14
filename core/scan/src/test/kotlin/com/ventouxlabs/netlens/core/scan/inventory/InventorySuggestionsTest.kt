@@ -101,6 +101,16 @@ class InventorySuggestionsTest {
     }
 
     @Test
+    fun `accepting a pair that is not a pending suggestion does nothing`() = runTest {
+        seedPair()
+
+        assertFalse(repo.acceptSuggestion(MergeSuggestion.BetweenRows(101, 102, 100, emptyList())))
+
+        assertNotNull(h.known.byId(101))
+        assertNotNull(h.known.byId(102))
+    }
+
+    @Test
     fun `rejecting writes DISTINCT and a later scan can never downgrade it back to a suggestion`() = runTest {
         seedPair()
         repo.persistScan(scan, networkId = null)
