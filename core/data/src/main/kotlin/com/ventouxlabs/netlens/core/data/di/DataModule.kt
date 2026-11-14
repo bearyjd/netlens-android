@@ -263,23 +263,28 @@ object DataModule {
             "FOREIGN KEY(deviceIdHigh) REFERENCES known_devices(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
         "CREATE INDEX IF NOT EXISTS index_device_merge_decisions_deviceIdHigh " +
             "ON device_merge_decisions(deviceIdHigh)",
+        "CREATE INDEX IF NOT EXISTS index_device_merge_decisions_decision_score " +
+            "ON device_merge_decisions(decision, score)",
         "CREATE TABLE IF NOT EXISTS network_key_aliases (" +
             "aliasKey TEXT PRIMARY KEY NOT NULL, canonicalKey TEXT NOT NULL, firstSeen INTEGER NOT NULL)",
         "CREATE INDEX IF NOT EXISTS index_network_key_aliases_canonicalKey ON network_key_aliases(canonicalKey)",
     )
 
     // Stored MACs are normally uppercase and colon-separated, but the v17 unique index is
-    // case-sensitive, so lowercase and dash spellings can exist. Normalise before classifying
-    // (upper() on the U/L nibble) so spellings of one MAC collapse to a single identifier via
-    // INSERT OR IGNORE; ORDER BY id makes the lowest-id device the owner. Legacy rows have no
-    // reliable network key, so scopeKey is ''.
+    // case-sensitive, so lowercase and dash spellings can exist. Only values that normalise to
+    // exactly 12 hex digits become identifiers (empty / '---' / junk are skipped; the parent row is
+    // untouched). Classify on the normalised value's U/L nibble so spellings of one MAC collapse to
+    // one identifier via INSERT OR IGNORE; ORDER BY id makes the lowest-id device the owner. Legacy
+    // rows have no reliable network key, so scopeKey is ''.
     private const val BACKFILL_MAC_IDENTIFIERS_SQL =
         "INSERT OR IGNORE INTO device_identifiers(deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen) " +
             "SELECT id, " +
-            "CASE WHEN upper(substr(macAddress, 2, 1)) IN ('2','3','6','7','A','B','E','F') " +
+            "CASE WHEN upper(substr(n, 2, 1)) IN ('2','3','6','7','A','B','E','F') " +
             "THEN 'MAC_LOCAL' ELSE 'MAC_UNIVERSAL' END, " +
-            "lower(replace(replace(macAddress, ':', ''), '-', '')), '', 'ARP', 0, firstSeen, lastSeen " +
-            "FROM known_devices WHERE macAddress IS NOT NULL ORDER BY id"
+            "lower(n), '', 'ARP', 0, firstSeen, lastSeen FROM (" +
+            "SELECT id, firstSeen, lastSeen, replace(replace(macAddress, ':', ''), '-', '') AS n " +
+            "FROM known_devices WHERE macAddress IS NOT NULL) " +
+            "WHERE length(n) = 12 AND n NOT GLOB '*[^0-9A-Fa-f]*' ORDER BY id"
 
     @Provides
     @Singleton

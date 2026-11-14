@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 19,
-    "identityHash": "843c221298929622789ada92eac1565d",
+    "identityHash": "464bae049a04d7bc1e86906b29f84008",
     "entities": [
       {
         "tableName": "saved_hosts",
@@ -1848,6 +1848,16 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_device_merge_decisions_deviceIdHigh` ON `${TABLE_NAME}` (`deviceIdHigh`)"
+          },
+          {
+            "name": "index_device_merge_decisions_decision_score",
+            "unique": false,
+            "columnNames": [
+              "decision",
+              "score"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_device_merge_decisions_decision_score` ON `${TABLE_NAME}` (`decision`, `score`)"
           }
         ],
         "foreignKeys": [
@@ -1921,7 +1931,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '843c221298929622789ada92eac1565d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '464bae049a04d7bc1e86906b29f84008')"
     ]
   }
 }

@@ -20,6 +20,7 @@ interface DeviceIdentifierDao {
     @Query("UPDATE device_identifiers SET lastSeen = :lastSeen WHERE id = :id")
     suspend fun touch(id: Long, lastSeen: Long)
 
-    @Query("UPDATE device_identifiers SET scopeKey = :scopeKey WHERE id = :id")
-    suspend fun rescope(id: Long, scopeKey: String)
+    @Query("UPDATE OR IGNORE device_identifiers SET scopeKey = :scopeKey WHERE id = :id")
+    // OR IGNORE: a unique-index collision leaves the row unchanged instead of throwing mid-scan.
+    suspend fun rescope(id: Long, scopeKey: String): Int
 }

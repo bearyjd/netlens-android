@@ -22,12 +22,12 @@ import androidx.room.Index
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("deviceIdHigh")],
+    indices = [Index("deviceIdHigh"), Index("decision", "score")],
 )
 data class DeviceMergeDecisionEntity(
     val deviceIdLow: Long,
     val deviceIdHigh: Long,
-    // 'SUGGESTED' | 'DISTINCT'
+    // 'SUGGESTED' | 'DISTINCT' | 'MERGED'
     val decision: String,
     val score: Int?,
     // Comma-joined reason codes, display only.
