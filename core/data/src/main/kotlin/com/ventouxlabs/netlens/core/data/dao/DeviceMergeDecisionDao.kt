@@ -19,6 +19,15 @@ interface DeviceMergeDecisionDao {
     @Query("SELECT * FROM device_merge_decisions WHERE deviceIdLow = :low AND deviceIdHigh = :high")
     suspend fun get(low: Long, high: Long): DeviceMergeDecisionEntity?
 
+    @Query(
+        "SELECT COUNT(*) FROM device_merge_decisions WHERE decision = 'DISTINCT' " +
+            "AND (deviceIdLow IN (:ids) OR deviceIdHigh IN (:ids))",
+    )
+    suspend fun distinctCountTouching(ids: List<Long>): Int
+
+    /** True when the user ever said any of [ids] is a different device from another row. */
+    suspend fun touchesDistinct(ids: List<Long>): Boolean = ids.isNotEmpty() && distinctCountTouching(ids) > 0
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun suggest(decision: DeviceMergeDecisionEntity): Long
 

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 
 @Dao
@@ -13,6 +14,14 @@ interface DeviceIdentifierDao {
 
     @Query("SELECT * FROM device_identifiers WHERE deviceId = :deviceId")
     suspend fun getForDevice(deviceId: Long): List<DeviceIdentifierEntity>
+
+    @Query("SELECT COUNT(*) FROM device_identifiers WHERE deviceId = :deviceId AND kind = :kind")
+    suspend fun countByKind(deviceId: Long, kind: String): Int
+
+    /** Count and insert in one transaction, so concurrent writers cannot overshoot [cap]. -1 = refused. */
+    @Transaction
+    suspend fun insertBelowCap(identifier: DeviceIdentifierEntity, cap: Int): Long =
+        if (countByKind(identifier.deviceId, identifier.kind) >= cap) -1L else insertIfNew(identifier)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfNew(identifier: DeviceIdentifierEntity): Long

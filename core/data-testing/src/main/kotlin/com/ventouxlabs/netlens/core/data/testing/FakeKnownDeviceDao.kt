@@ -19,11 +19,10 @@ import kotlinx.coroutines.flow.update
  * Two ways in, deliberately:
  *  - [seed] inserts **verbatim**, preserving the caller's id. Test setup, for when a test needs
  *    to assert on a known id.
- *  - [insertIfNew] follows **production semantics**: it dedupes on MAC, assigns the next id and
- *    returns `-1L` when the row already exists.
- *
- * Do not "simplify" [insertIfNew] into [seed]. `DeviceInventoryRepository` relies on the `-1L`
- * duplicate signal, and a fake that always inserts would hide a re-scan creating duplicate rows.
+ *  - [insertIfNew] follows **production semantics**: it assigns the next id and ignores the
+ *    caller's. Since v19 dropped the unique MAC index it no longer dedupes — two inserts of the same
+ *    MAC both succeed, exactly like `INSERT OR IGNORE` against a non-unique index. Duplicate
+ *    protection is `DeviceIdentityDao.insertDeviceWithIdentifiers`' job.
  */
 class FakeKnownDeviceDao : KnownDeviceDao {
 
@@ -34,9 +33,10 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     /** Rows currently stored, in insertion order. */
     val allDevices: List<KnownDeviceEntity> get() = devices.toList()
 
-    /** Inserts verbatim, preserving each entity's own id. Bypasses [insertIfNew]'s dedup. */
+    /** Inserts verbatim, preserving each entity's own id (later inserts continue after the highest). Bypasses [insertIfNew]'s dedup. */
     fun seed(vararg entities: KnownDeviceEntity) {
         devices += entities
+        nextId = maxOf(nextId, (entities.maxOfOrNull { it.id } ?: 0L) + 1)
         publish()
     }
 
@@ -50,13 +50,21 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? =
         devices.find { it.ip == ip && it.macAddress == null }
 
+    override suspend fun getSeenSince(since: Long): List<KnownDeviceEntity> =
+        devices.filter { it.lastSeen >= since }.sortedByDescending { it.lastSeen }.take(SEEN_SINCE_LIMIT)
+
+    /** Same as [insertIfNew]; kept for [FakeDeviceIdentityDao]'s `insertDeviceRow`. */
+    internal fun insertRaw(device: KnownDeviceEntity): Long {
+        val withId = device.copy(id = nextId++)
+        devices += withId
+        publish()
+        return withId.id
+    }
+
     override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> =
         flowOf(devices.filter { !it.isKnown })
 
     override suspend fun insertIfNew(device: KnownDeviceEntity): Long {
-        if (device.macAddress != null && devices.any { it.macAddress == device.macAddress }) {
-            return DUPLICATE_ROW
-        }
         val withId = device.copy(id = nextId++)
         devices += withId
         publish()
@@ -146,5 +154,8 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     companion object {
         /** What the real `@Insert(onConflict = IGNORE)` returns when the row already exists. */
         const val DUPLICATE_ROW = -1L
+
+        /** Mirrors the `LIMIT` on the real `getSeenSince` query. */
+        private const val SEEN_SINCE_LIMIT = 500
     }
 }

@@ -39,14 +39,14 @@ class FakeKnownDeviceDaoTest {
     }
 
     @Test
-    fun `insertIfNew dedupes on MAC and reports the duplicate`() = runTest {
+    fun `two inserts of the same MAC both succeed with different ids since v19 dropped the unique index`() = runTest {
         val dao = FakeKnownDeviceDao()
         val first = dao.insertIfNew(device(mac = "AA"))
-        val second = dao.insertIfNew(device(mac = "AA"))
+        val second = dao.insertIfNew(device(mac = "AA", ip = "192.168.1.3"))
 
-        assertTrue(first > 0)
-        assertEquals(FakeKnownDeviceDao.DUPLICATE_ROW, second)
-        assertEquals(1, dao.allDevices.size)
+        assertTrue(first > 0 && second > 0)
+        assertTrue(first != second)
+        assertEquals(2, dao.allDevices.size)
     }
 
     @Test

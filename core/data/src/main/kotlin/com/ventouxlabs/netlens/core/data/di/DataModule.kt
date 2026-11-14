@@ -16,6 +16,7 @@ import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceMergeDecisionDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceIdentityDao
 import com.ventouxlabs.netlens.core.data.dao.EndpointDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.IpInfoHistoryDao
@@ -398,4 +399,8 @@ object DataModule {
     @Provides
     fun provideNetworkKeyAliasDao(database: NetLensDatabase): NetworkKeyAliasDao =
         database.networkKeyAliasDao()
+
+    @Provides
+    fun provideDeviceIdentityDao(database: NetLensDatabase): DeviceIdentityDao =
+        database.deviceIdentityDao()
 }

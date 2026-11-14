@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.core.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
+import com.ventouxlabs.netlens.core.data.dao.DeviceIdentityDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceMergeDecisionDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
@@ -112,4 +113,5 @@ abstract class NetLensDatabase : RoomDatabase() {
     abstract fun deviceSightingDao(): DeviceSightingDao
     abstract fun deviceMergeDecisionDao(): DeviceMergeDecisionDao
     abstract fun networkKeyAliasDao(): NetworkKeyAliasDao
+    abstract fun deviceIdentityDao(): DeviceIdentityDao
 }
