@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Swipe right on an empty input to use its example.** Ping (`8.8.8.8`), Traceroute
+  (`google.com`), DNS Lookup, WHOIS and TLS Inspector (`example.com`) and IP Calculator
+  (`192.168.1.0/24`) now fill in their example value when you swipe toward the end edge of the
+  empty field. TalkBack users get the same fill as a "Use example …" action.
+
 ### Fixed
 - `netlens://feature/{mdns,wifi,celltower,ipcalc,history}` deep links now open their screens; the router had no path for these destinations (`ipcalc` was listed as query-capable but unreachable). A unit test now fails if a `ToolDestination` has no deep-link path.
 

@@ -15,4 +15,6 @@
     <string name="traceroute_anomaly_latency_spike">Latency spike</string>
     <string name="traceroute_anomaly_geo_jump">Geographic jump</string>
     <string name="traceroute_anomaly_timeout">Consecutive timeout</string>
+    <string name="traceroute_suggestion_host" translatable="false">google.com</string>
+    <string name="traceroute_action_use_example">Use example %1$s</string>
 </resources>

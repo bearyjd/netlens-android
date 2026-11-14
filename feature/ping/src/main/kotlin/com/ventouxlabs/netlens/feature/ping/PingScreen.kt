@@ -62,6 +62,7 @@ import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StatItem
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import com.ventouxlabs.netlens.core.ui.withTabularFigures
 import com.ventouxlabs.netlens.feature.ping.model.PingMode
 import com.ventouxlabs.netlens.feature.ping.model.PingResult
@@ -172,7 +173,17 @@ internal fun PingContent(
                 label = { Text(stringResource(R.string.ping_label_host)) },
                 placeholder = { Text(stringResource(R.string.ping_placeholder_host)) },
                 singleLine = true,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .swipeToFillSuggestion(
+                        suggestion = stringResource(R.string.ping_suggestion_host),
+                        enabled = state.host.isEmpty(),
+                        actionLabel = stringResource(
+                            R.string.ping_action_use_example,
+                            stringResource(R.string.ping_suggestion_host),
+                        ),
+                        onFill = onHostChange,
+                    ),
             )
             if (state.results.isNotEmpty()) {
                 IconButton(onClick = onCopyResults) {

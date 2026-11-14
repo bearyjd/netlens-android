@@ -44,6 +44,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.ventouxlabs.netlens.core.billing.LocalProStatus
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
+import com.ventouxlabs.netlens.core.ui.swipeToFillSuggestion
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -131,7 +132,17 @@ internal fun DnsLookupContent(
             OutlinedTextField(
                 value = state.domain,
                 onValueChange = onDomainChanged,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .swipeToFillSuggestion(
+                        suggestion = stringResource(R.string.dns_suggestion_domain),
+                        enabled = state.domain.isEmpty(),
+                        actionLabel = stringResource(
+                            R.string.dns_action_use_example,
+                            stringResource(R.string.dns_suggestion_domain),
+                        ),
+                        onFill = onDomainChanged,
+                    ),
                 label = { Text(stringResource(R.string.dns_label_domain)) },
                 placeholder = { Text(stringResource(R.string.dns_placeholder_domain)) },
                 singleLine = true,
