@@ -1,7 +1,7 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
 import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
-import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
+import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeLanNetworkBinder
@@ -63,10 +63,7 @@ class LanScanEmptyResultTest {
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
-            deviceInventoryRepository = DeviceInventoryRepositoryImpl(
-                FakeKnownDeviceDao(),
-                FakeNewDeviceNotifier(),
-            ),
+            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
             scanLocationProvider = FakeScanLocationProvider(),
         )
     }

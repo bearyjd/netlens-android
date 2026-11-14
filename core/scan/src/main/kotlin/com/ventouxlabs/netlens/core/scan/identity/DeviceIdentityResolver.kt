@@ -7,12 +7,10 @@ import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.NetworkKeyAliasDao
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity
-import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.identity.DeviceIdentifier
 import com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind
-import com.ventouxlabs.netlens.core.scan.model.identity.ObservedField
 import com.ventouxlabs.netlens.core.scan.model.identity.Scope
 import com.ventouxlabs.netlens.core.scan.model.identity.Strength
 import kotlinx.coroutines.sync.Mutex
@@ -328,12 +326,6 @@ class DeviceIdentityResolver @Inject constructor(
         return Resolution.Conflict(id, claimedDeviceId, inserted = true) to row.copy(id = id)
     }
 
-    /** An identifier claim as evidence only: weight 0, flagged in the detail text, never an identifier row. */
-    private fun claimEvidence(claim: DeviceIdentifier, now: Long) = DeviceObservationEntity(
-        deviceId = 0, source = claim.source.name, field = ObservedField.PRODUCT.name,
-        value = "${claim.kind.name}:${claim.value}", weight = 0, detail = CLAIM_DETAIL, lastSeen = now,
-    )
-
     // ---- weak scoring (step 6) ---------------------------------------------------------------
 
     private suspend fun weakSuggestions(device: LanDevice, pool: WeakPool): List<MergeSuggestion> =
@@ -354,6 +346,5 @@ class DeviceIdentityResolver @Inject constructor(
         private const val INSERT_IGNORED = -1L
         private const val SHARED_IDENTIFIER = "shared_identifier"
         private const val SHARED_IDENTIFIER_SCORE = 100
-        private const val CLAIM_DETAIL = "unverified identifier claim"
     }
 }

@@ -4,6 +4,7 @@ import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
+import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -16,7 +17,7 @@ class DeviceInventoryRepositoryTest {
     private fun repo(
         dao: FakeKnownDeviceDao,
         notifier: RecordingNewDeviceNotifier,
-    ) = DeviceInventoryRepositoryImpl(dao, notifier)
+    ) = InventoryFakes(dao).repository(notifier)
 
     @Test
     fun `new device with MAC is persisted and notified once`() = runTest {
@@ -36,15 +37,15 @@ class DeviceInventoryRepositoryTest {
     fun `re-seen device updates lastSeen and does not notify`() = runTest {
         val dao = FakeKnownDeviceDao()
         val notifier = RecordingNewDeviceNotifier()
-        dao.insertIfNew(
+        val fakes = InventoryFakes(dao)
+        fakes.seedLegacyRow(
             KnownDeviceEntity(
-                macAddress = "AA:BB:CC:DD:EE:04",
+                id = 1, macAddress = "AA:BB:CC:DD:EE:04",
                 hostname = "old", ip = "192.168.1.40", vendor = "Old",
                 firstSeen = 1000L, lastSeen = 1000L,
             ),
         )
-        notifier.notified.clear()
-        repo(dao, notifier).persistScan(
+        fakes.repository(notifier).persistScan(
             listOf(LanDevice(ip = "192.168.1.41", hostname = "new", macAddress = "AA:BB:CC:DD:EE:04")),
             networkId = 7L,
         )
@@ -307,14 +308,15 @@ class DeviceInventoryRepositoryTest {
     @Test
     fun `user overrides survive a rescan with higher fingerprint confidence`() = runTest {
         val dao = FakeKnownDeviceDao()
-        dao.seed(
+        val fakes = InventoryFakes(dao)
+        fakes.seedLegacyRow(
             KnownDeviceEntity(
                 id = 1, macAddress = "AA:BB:CC:DD:EE:61", hostname = "h", ip = "192.168.1.61", vendor = null,
                 deviceType = "Router", osGuess = "Linux", fingerprintConfidence = 20,
                 deviceTypeOverride = "NAS", osOverride = "TrueNAS", modelOverride = "Mine",
             ),
         )
-        repo(dao, RecordingNewDeviceNotifier()).persistScan(
+        fakes.repository(RecordingNewDeviceNotifier()).persistScan(
             listOf(
                 LanDevice(
                     ip = "192.168.1.61", macAddress = "AA:BB:CC:DD:EE:61",

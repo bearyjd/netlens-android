@@ -187,4 +187,25 @@ class KnownDeviceDaoTest {
         val foundMacKnown = dao.getByIpWithoutMac("192.168.1.78")
         assertNull(foundMacKnown)
     }
+
+    @Test
+    fun `updateScanDetails writes scan columns and per-field confidences but never user fields or isKnown`() = runBlocking {
+        val id = dao.insertIfNew(sampleDevice().copy(isKnown = true, fingerprintConfidence = 20))
+
+        dao.updateScanDetails(
+            id = id, macAddress = "00:11:22:33:44:55", hostname = "h2", ip = "192.168.1.51", vendor = "V2",
+            lastSeen = 9L, deviceType = "Printer", osGuess = null, fingerprintConfidence = 80,
+            typeConfidence = 80, osConfidence = null, fingerprintEvidence = "e", model = "M2", networkId = 3L,
+        )
+
+        val row = dao.getById(id)!!
+        assertEquals("00:11:22:33:44:55", row.macAddress)
+        assertEquals("192.168.1.51", row.ip)
+        assertEquals(80, row.typeConfidence)
+        assertNull(row.osConfidence)
+        assertEquals(3L, row.networkId)
+        assertEquals("Old Name", row.customName)
+        assertEquals("NAS", row.deviceTypeOverride)
+        assertEquals(true, row.isKnown)
+    }
 }

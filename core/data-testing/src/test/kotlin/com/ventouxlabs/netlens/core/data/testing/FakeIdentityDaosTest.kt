@@ -176,6 +176,21 @@ class FakeIdentityDaosTest {
     }
 
     @Test
+    fun `trimToStrongest evicts the lowest weight first, then the oldest, and only for that device`() = runTest {
+        val dao = FakeDeviceObservationDao()
+        dao.upsert(observation("weak-new", lastSeen = 99).copy(weight = 1))
+        dao.upsert(observation("strong-old", lastSeen = 1).copy(weight = 90))
+        dao.upsert(observation("mid-old", lastSeen = 1).copy(weight = 50))
+        dao.upsert(observation("mid-new", lastSeen = 5).copy(weight = 50))
+        dao.upsert(observation("other", lastSeen = 1, deviceId = 2).copy(weight = 0))
+
+        dao.trimToStrongest(deviceId = 1, keep = 2)
+
+        assertEquals(setOf("strong-old", "mid-new"), dao.getForDevice(1).map { it.value }.toSet())
+        assertEquals(1, dao.getForDevice(2).size)
+    }
+
+    @Test
     fun `alias insertIfNew returns -1 for an existing alias and canonicalFor resolves it`() = runTest {
         val dao = FakeNetworkKeyAliasDao()
 

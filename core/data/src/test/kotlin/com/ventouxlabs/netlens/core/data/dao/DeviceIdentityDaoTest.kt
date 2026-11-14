@@ -304,4 +304,25 @@ class DeviceIdentityDaoTest {
         assertTrue(first > 0 && second > 0)
         assertTrue(first != second)
     }
+
+    @Test
+    fun `trimToStrongest evicts the lowest weight first, then the oldest, and only for that device`() = runBlocking {
+        val devices = db.knownDeviceDao()
+        val a = devices.insertIfNew(device(ip = "10.0.0.1"))
+        val b = devices.insertIfNew(device(ip = "10.0.0.2"))
+        val dao = db.deviceObservationDao()
+        fun o(device: Long, value: String, weight: Int, lastSeen: Long) = DeviceObservationEntity(
+            deviceId = device, source = "SSDP", field = "MODEL", value = value, weight = weight, detail = null, lastSeen = lastSeen,
+        )
+        dao.upsert(o(a, "weak-new", weight = 1, lastSeen = 99))
+        dao.upsert(o(a, "strong-old", weight = 90, lastSeen = 1))
+        dao.upsert(o(a, "mid-old", weight = 50, lastSeen = 1))
+        dao.upsert(o(a, "mid-new", weight = 50, lastSeen = 5))
+        dao.upsert(o(b, "other", weight = 0, lastSeen = 1))
+
+        dao.trimToStrongest(a, keep = 2)
+
+        assertEquals(setOf("strong-old", "mid-new"), dao.getForDevice(a).map { it.value }.toSet())
+        assertEquals(1, dao.getForDevice(b).size)
+    }
 }

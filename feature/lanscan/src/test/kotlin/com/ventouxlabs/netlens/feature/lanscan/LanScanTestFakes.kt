@@ -22,7 +22,6 @@ import com.ventouxlabs.netlens.core.network.NetworkInterfaceInfo
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
-import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo

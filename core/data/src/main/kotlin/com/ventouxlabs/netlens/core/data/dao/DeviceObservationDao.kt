@@ -20,4 +20,12 @@ interface DeviceObservationDao {
             "(SELECT id FROM device_observations WHERE deviceId = :deviceId ORDER BY lastSeen DESC, id DESC LIMIT :keep)",
     )
     suspend fun trimToNewest(deviceId: Long, keep: Int)
+
+    // Keeps the strongest [keep] rows per device: highest weight first, then most recently seen.
+    @Query(
+        "DELETE FROM device_observations WHERE deviceId = :deviceId AND id NOT IN " +
+            "(SELECT id FROM device_observations WHERE deviceId = :deviceId " +
+            "ORDER BY weight DESC, lastSeen DESC, id DESC LIMIT :keep)",
+    )
+    suspend fun trimToStrongest(deviceId: Long, keep: Int)
 }

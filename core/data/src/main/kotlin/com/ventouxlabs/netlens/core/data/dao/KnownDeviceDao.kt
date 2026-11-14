@@ -51,6 +51,32 @@ interface KnownDeviceDao {
         model: String?,
     )
 
+    // Scan-derived columns only, including the per-field confidences and the display MAC: never the
+    // user-authored block (customName/tags/notes/location/*Override) and never isKnown.
+    @Query(
+        "UPDATE known_devices SET macAddress = :macAddress, hostname = :hostname, ip = :ip, vendor = :vendor, " +
+            "lastSeen = :lastSeen, deviceType = :deviceType, osGuess = :osGuess, " +
+            "fingerprintConfidence = :fingerprintConfidence, typeConfidence = :typeConfidence, " +
+            "osConfidence = :osConfidence, fingerprintEvidence = :fingerprintEvidence, model = :model, " +
+            "networkId = :networkId WHERE id = :id",
+    )
+    suspend fun updateScanDetails(
+        id: Long,
+        macAddress: String?,
+        hostname: String?,
+        ip: String,
+        vendor: String?,
+        lastSeen: Long,
+        deviceType: String?,
+        osGuess: String?,
+        fingerprintConfidence: Int?,
+        typeConfidence: Int?,
+        osConfidence: Int?,
+        fingerprintEvidence: String?,
+        model: String?,
+        networkId: Long?,
+    )
+
     @Query("UPDATE known_devices SET macAddress = :mac WHERE id = :id")
     suspend fun setMacAddress(id: Long, mac: String)
 

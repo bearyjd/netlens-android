@@ -30,7 +30,7 @@ import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
-import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
+import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
@@ -73,7 +73,7 @@ class LanScanBuildExportTextTest {
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
-            deviceInventoryRepository = DeviceInventoryRepositoryImpl(FakeKnownDeviceDao(), FakeNewDeviceNotifier()),
+            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
             scanLocationProvider = FakeScanLocationProvider(),
         )
     }

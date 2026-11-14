@@ -1,6 +1,8 @@
 package com.ventouxlabs.netlens.core.scan.di
 
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
+import com.ventouxlabs.netlens.core.scan.AutoMergeSetting
+import com.ventouxlabs.netlens.core.scan.DefaultAutoMergeSetting
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifierImpl
@@ -67,6 +69,10 @@ abstract class ScanModule {
     abstract fun bindDeviceInventoryRepository(
         impl: DeviceInventoryRepositoryImpl,
     ): DeviceInventoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAutoMergeSetting(impl: DefaultAutoMergeSetting): AutoMergeSetting
 
     @Binds
     abstract fun bindPortScanner(impl: PortScannerImpl): PortScanner
