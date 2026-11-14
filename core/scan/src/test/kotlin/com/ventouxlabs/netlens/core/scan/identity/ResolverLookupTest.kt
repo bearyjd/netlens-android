@@ -3,7 +3,11 @@ package com.ventouxlabs.netlens.core.scan.identity
 import com.ventouxlabs.netlens.core.data.model.NetworkKeyAliasEntity
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind
+import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -115,7 +119,8 @@ class ResolverLookupTest {
     fun `an alias chain longer than the hop cap stops at the cap`() = runTest {
         (0 until 20).forEach { h.aliases.insertIfNew(NetworkKeyAliasEntity("k$it", "k${it + 1}", 1)) }
 
-        assertEquals("k${DeviceIdentityResolver.MAX_ALIAS_HOPS}", h.resolver.canonicalKey("k0"))
+        assertEquals(8, DeviceIdentityResolver.MAX_ALIAS_HOPS)
+        assertEquals("k8", h.resolver.canonicalKey("k0"))
     }
 
     @Test
@@ -153,5 +158,25 @@ class ResolverLookupTest {
         assertEquals(Resolution.New, r.resolution)
         assertEquals(setOf(MAC1_ID), r.ownedIdentifiers.map { it.value }.toSet())
         assertEquals(setOf("uuid:x"), r.untrustedClaims.map { it.value }.toSet())
+    }
+
+    @Test
+    fun `two concurrent resolves of a merging scan never hand back a deleted row`() = runTest {
+        h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a")), firstSeen = 20)
+        h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5)
+        // Every read yields, so unserialised resolves would interleave between lookup and merge.
+        val slow = object : KnownDeviceDao by h.known {
+            override suspend fun getById(id: Long) = h.known.getById(id).also { yield() }
+        }
+        val resolver = DeviceIdentityResolver(slow, h.identifiers, h.decisions, h.aliases, h.tx)
+        val scan = listOf(lan("10.0.0.9", MAC1, udn("uuid:a", proven = true)))
+
+        val results = (1..2).map { async { resolver.resolve(scan, NET, NOW) } }.awaitAll()
+
+        val live = h.known.allDevices.map { it.id }.toSet()
+        results.forEach { r ->
+            val resolution = r.devices.single().resolution
+            assertTrue(resolution is Resolution.Existing && resolution.deviceId in live, "got $resolution, live=$live")
+        }
     }
 }

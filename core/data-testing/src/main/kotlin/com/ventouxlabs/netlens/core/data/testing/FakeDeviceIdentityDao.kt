@@ -23,6 +23,8 @@ class FakeDeviceIdentityDao(
 
     override suspend fun deviceById(id: Long): KnownDeviceEntity? = devices.byId(id)
 
+    override suspend fun distinctCountFor(id: Long): Int = decisions.distinctCountTouching(listOf(id))
+
     override suspend fun identifierCount(kind: String, value: String, scopeKey: String): Int =
         identifiers.countOf(kind, value, scopeKey)
 

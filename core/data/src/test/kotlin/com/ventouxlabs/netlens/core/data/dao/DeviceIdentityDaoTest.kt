@@ -150,7 +150,7 @@ class DeviceIdentityDaoTest {
     }
 
     @Test
-    fun `merge fills only empty user fields including the overrides and keeps the survivor's isKnown`() = runBlocking {
+    fun `a confirmed merge fills only empty user fields including the overrides`() = runBlocking {
         val survivor = dao.insertDeviceWithIdentifiers(device().copy(isKnown = true, customName = "Mine", notes = "  "), emptyList(), emptyList(), true)
         val loser = dao.insertDeviceWithIdentifiers(
             device(ip = "10.0.0.2").copy(
@@ -160,7 +160,7 @@ class DeviceIdentityDaoTest {
             emptyList(), emptyList(), true,
         )
 
-        dao.mergeDevices(survivor, loser, isKnown = null)
+        dao.mergeDevices(survivor, loser, isKnown = true) // user-confirmed: explicit trust choice
 
         val merged = db.knownDeviceDao().getById(survivor)!!
         assertEquals("Mine", merged.customName)
@@ -207,5 +207,101 @@ class DeviceIdentityDaoTest {
         val id = dao.insertDeviceWithIdentifiers(device(), listOf(ident(value = "a"), ident(value = "b"), ident("SMB_SERVER_GUID", "g")), emptyList(), true)
 
         assertEquals(2, db.deviceIdentifierDao().countByKind(id, "UPNP_UDN"))
+    }
+
+    @Test
+    fun `a confirmed merge leaves a fully user-authored survivor row unchanged`() = runBlocking {
+        fun mine() = device().copy(
+            customName = "mine", tags = "mine", notes = "mine", location = "mine",
+            deviceTypeOverride = "mine", osOverride = "mine", modelOverride = "mine",
+        )
+        val survivor = dao.insertDeviceWithIdentifiers(mine(), emptyList(), emptyList(), true)
+        val loser = dao.insertDeviceWithIdentifiers(
+            mine().copy(
+                ip = "10.0.0.2", customName = "other", tags = "other", notes = "other", location = "other",
+                deviceTypeOverride = "other", osOverride = "other", modelOverride = "other",
+            ),
+            emptyList(), emptyList(), true,
+        )
+        val before = db.knownDeviceDao().getById(survivor)!!
+
+        assertTrue(dao.mergeDevices(survivor, loser, isKnown = false))
+
+        assertEquals(before, db.knownDeviceDao().getById(survivor))
+    }
+
+    @Test
+    fun `an automatic merge is refused inside the transaction when both rows now carry user details`() = runBlocking {
+        val survivor = dao.insertDeviceWithIdentifiers(device(), listOf(ident(value = "uuid:s")), emptyList(), true)
+        val loser = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), listOf(ident(value = "uuid:l")), emptyList(), true)
+        db.knownDeviceDao().setCustomName(survivor, "named")
+        db.knownDeviceDao().setCustomName(loser, "also named")
+
+        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null))
+
+        assertNotNull(db.knownDeviceDao().getById(loser))
+        assertEquals(loser, db.deviceIdentifierDao().find("UPNP_UDN", "uuid:l", "")?.deviceId)
+    }
+
+    @Test
+    fun `an automatic merge is refused when the user marked the pair DISTINCT or the trust differs`() = runBlocking {
+        val a = dao.insertDeviceWithIdentifiers(device(), emptyList(), emptyList(), true)
+        val b = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), emptyList(), emptyList(), true)
+        db.deviceMergeDecisionDao().setDistinct(a, b, 1)
+        assertFalse(dao.mergeDevices(a, b, isKnown = null))
+
+        val c = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.3").copy(isKnown = true), emptyList(), emptyList(), true)
+        val d = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.4"), emptyList(), emptyList(), true)
+        assertFalse(dao.mergeDevices(c, d, isKnown = null))
+        assertNotNull(db.knownDeviceDao().getById(d))
+    }
+
+    @Test
+    fun `an automatic merge whose loser has a DISTINCT decision with a third device is refused and the decision survives`() = runBlocking {
+        val survivor = dao.insertDeviceWithIdentifiers(device(), emptyList(), emptyList(), true)
+        val loser = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), emptyList(), emptyList(), true)
+        val third = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.3"), emptyList(), emptyList(), true)
+        db.deviceMergeDecisionDao().setDistinct(loser, third, 1)
+
+        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null))
+        assertEquals("DISTINCT", db.deviceMergeDecisionDao().get(loser, third)?.decision)
+        // The survivor touching a DISTINCT row is fine: that row survives with it.
+        assertTrue(dao.mergeDevices(loser, survivor, isKnown = null))
+        assertEquals("DISTINCT", db.deviceMergeDecisionDao().get(loser, third)?.decision)
+    }
+
+    @Test
+    fun `touchesDistinct sees a DISTINCT decision on either side and ignores suggestions`() = runBlocking {
+        val decisions = db.deviceMergeDecisionDao()
+        val ids = listOf(1L, 2L, 3L).map { dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.$it"), emptyList(), emptyList(), true) }
+        decisions.suggest(com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity(ids[0], ids[1], "SUGGESTED", 60, null, 1))
+        assertFalse(decisions.touchesDistinct(listOf(ids[0], ids[1])))
+
+        decisions.setDistinct(ids[1], ids[2], 1)
+        assertTrue(decisions.touchesDistinct(listOf(ids[1])))
+        assertTrue(decisions.touchesDistinct(listOf(ids[2])))
+        assertFalse(decisions.touchesDistinct(listOf(ids[0])))
+    }
+
+    @Test
+    fun `insertBelowCap inserts up to the cap then refuses`() = runBlocking {
+        val id = dao.insertDeviceWithIdentifiers(device(), emptyList(), emptyList(), true)
+        val identifiers = db.deviceIdentifierDao()
+
+        assertTrue(identifiers.insertBelowCap(ident(value = "a").copy(deviceId = id), cap = 2) > 0)
+        assertTrue(identifiers.insertBelowCap(ident(value = "b").copy(deviceId = id), cap = 2) > 0)
+        assertEquals(-1L, identifiers.insertBelowCap(ident(value = "c").copy(deviceId = id), cap = 2))
+        assertEquals(2, identifiers.countByKind(id, "UPNP_UDN"))
+    }
+
+    @Test
+    fun `two inserts of the same MAC both succeed with different ids since v19`() = runBlocking {
+        val known = db.knownDeviceDao()
+
+        val first = known.insertIfNew(device("AA:BB:CC:00:00:01"))
+        val second = known.insertIfNew(device("AA:BB:CC:00:00:01", ip = "10.0.0.2"))
+
+        assertTrue(first > 0 && second > 0)
+        assertTrue(first != second)
     }
 }

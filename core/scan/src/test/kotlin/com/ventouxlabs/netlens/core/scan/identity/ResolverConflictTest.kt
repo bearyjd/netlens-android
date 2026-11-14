@@ -140,28 +140,84 @@ class ResolverConflictTest {
     }
 
     @Test
-    fun `two new sightings sharing an unproven identifier are separate and only one owns it`() = runTest {
+    fun `two new sightings sharing an unproven identifier are separate and neither owns it`() = runTest {
         val result = h.resolve(
             lan("10.0.0.30", MAC2, udn("uuid:y")),
             lan("10.0.0.40", MAC3, udn("uuid:y")),
         )
 
         assertEquals(listOf(Resolution.New, Resolution.New), result.devices.map { it.resolution })
-        val owners = result.devices.filter { d -> d.ownedIdentifiers.any { it.value == "uuid:y" } }
-        assertEquals(1, owners.size)
-        assertEquals("10.0.0.30", owners.single().device.ip) // tie on identifier count: lowest IP
-        assertTrue(result.devices.all { it.sharesIdentifier })
-        assertNull(result.newConflictRows.firstOrNull())
+        assertTrue(result.devices.none { d -> d.ownedIdentifiers.any { it.value == "uuid:y" } })
+        assertTrue(result.devices.all { it.sharesIdentifier && it.untrustedClaims.any { c -> c.value == "uuid:y" } })
     }
 
     @Test
-    fun `the incumbent is the sighting tied to the row, not the lowest address`() = runTest {
+    fun `the incumbent is the sighting MAC-tied to the row, not the lowest address or the busiest`() = runTest {
         seedIncumbent()
 
-        // The copycat sorts first by IP; the incumbent still wins because its MAC belongs to the row.
-        val result = h.resolve(lan("10.0.0.2", null, udn("uuid:x")), lan("10.0.0.10", MAC1, udn("uuid:x")))
+        // Equal identifier counts (2 each), copycat sorts first by IP. Only the MAC tie can decide.
+        val copycat = lan("10.0.0.2", null, udn("uuid:x"), udn("uuid:pad"))
+        val result = h.resolve(copycat, lan("10.0.0.10", MAC1, udn("uuid:x")))
 
         assertTrue(result.devices[0].resolution is Resolution.Conflict)
         assertEquals(Resolution.Existing(101), result.devices[1].resolution)
+    }
+
+    @Test
+    fun `padding a claimant with junk identifiers cannot win a contested identifier`() = runTest {
+        seedIncumbent()
+        val junk = (1..32).map { com.ventouxlabs.netlens.core.scan.model.identity.DeviceIdentifier(
+            com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind.MDNS_DEVICE_ID, "junk-$it",
+            com.ventouxlabs.netlens.core.scan.model.identity.ObservationSource.MDNS) }
+
+        // Neither sighting carries the row's MAC: nobody can prove they are the owner.
+        val result = h.resolve(
+            lan("10.0.0.10", null, udn("uuid:x")),
+            LanDevice(ip = "10.0.0.20", identifiers = (junk + udn("uuid:x")).toSet()),
+        )
+
+        assertTrue(result.devices.all { it.resolution is Resolution.Conflict })
+        assertEquals(2, result.newConflictRows.size)
+        assertEquals(101L, h.identifiers.find("UPNP_UDN", "uuid:x", "")?.deviceId)
+    }
+
+    @Test
+    fun `a newcomer claiming an identifier the confirmed owner omitted loses it and owns only its MAC`() = runTest {
+        seedIncumbent() // 101 owns MAC1 + udn x
+
+        // The owner's sighting did not report X this time; the newcomer does, with another MAC.
+        val result = h.resolve(lan("10.0.0.10", MAC1), lan("10.0.0.20", MAC2, udn("uuid:x")))
+
+        val newcomer = result.devices[1]
+        assertEquals(Resolution.New, newcomer.resolution)
+        assertEquals(setOf(MAC2_ID), newcomer.ownedIdentifiers.map { it.value }.toSet())
+        assertEquals(setOf("uuid:x"), newcomer.untrustedClaims.map { it.value }.toSet())
+        assertEquals(Resolution.Existing(101), result.devices[0].resolution)
+    }
+
+    @Test
+    fun `the same newcomer whose MAC belongs to another row resolves to that row and nothing merges`() = runTest {
+        seedIncumbent()
+        h.seedRow(102, "10.0.0.50", ids = listOf(universalMac(MAC2_ID)), mac = MAC2)
+
+        val result = h.resolve(lan("10.0.0.10", MAC1), lan("10.0.0.20", MAC2, udn("uuid:x")))
+
+        assertEquals(Resolution.Existing(102), result.devices[1].resolution)
+        assertEquals(setOf(101L, 102L), h.known.allDevices.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `with the owner offline a claimant whose MAC contradicts the owner's is a Conflict, not the owner`() = runTest {
+        seedIncumbent()
+
+        val result = h.resolve(lan("10.0.0.20", MAC2, udn("uuid:x")))
+
+        assertTrue(result.devices.single().resolution is Resolution.Conflict)
+        assertEquals(1, result.newConflictRows.size)
+        assertEquals(101L, h.identifiers.find("UPNP_UDN", "uuid:x", "")?.deviceId)
+        assertEquals("10.0.0.10", h.known.byId(101)!!.ip)
+        // Next scan finds its own row through the MAC it owns.
+        val again = h.resolve(lan("10.0.0.20", MAC2, udn("uuid:x")))
+        assertEquals(Resolution.Existing(result.newConflictRows.single().id), again.devices.single().resolution)
     }
 }

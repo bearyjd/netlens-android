@@ -23,6 +23,9 @@ class FakeDeviceMergeDecisionDao : DeviceMergeDecisionDao {
     override suspend fun get(low: Long, high: Long): DeviceMergeDecisionEntity? =
         rows.value.find { it.deviceIdLow == low && it.deviceIdHigh == high }
 
+    override suspend fun distinctCountTouching(ids: List<Long>): Int =
+        rows.value.count { it.decision == "DISTINCT" && (it.deviceIdLow in ids || it.deviceIdHigh in ids) }
+
     override suspend fun suggest(decision: DeviceMergeDecisionEntity): Long {
         if (get(decision.deviceIdLow, decision.deviceIdHigh) != null) return -1L
         rows.value = rows.value + decision

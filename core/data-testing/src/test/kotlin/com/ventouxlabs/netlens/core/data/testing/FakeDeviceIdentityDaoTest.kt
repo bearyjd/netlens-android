@@ -77,14 +77,14 @@ class FakeDeviceIdentityDaoTest {
     }
 
     @Test
-    fun `merge fills only empty user fields and keeps the survivor's isKnown`() = runTest {
+    fun `a confirmed merge fills only empty user fields`() = runTest {
         val survivor = dao.insertDeviceWithIdentifiers(device().copy(isKnown = true, customName = "Mine", notes = "  "), emptyList(), emptyList(), true)
         val loser = dao.insertDeviceWithIdentifiers(
             device(ip = "10.0.0.2").copy(customName = "Theirs", notes = "n", osOverride = "TrueNAS"),
             emptyList(), emptyList(), true,
         )
 
-        dao.mergeDevices(survivor, loser, isKnown = null)
+        dao.mergeDevices(survivor, loser, isKnown = true)
 
         val merged = devices.byId(survivor)!!
         assertEquals("Mine", merged.customName)
@@ -110,5 +110,34 @@ class FakeDeviceIdentityDaoTest {
         )
 
         assertEquals(listOf("10.0.0.2", "10.0.0.3"), devices.getSeenSince(100).map { it.ip })
+    }
+
+    @Test
+    fun `an automatic merge is refused when both rows carry user details, trust differs or the loser touches DISTINCT`() = runTest {
+        val a = dao.insertDeviceWithIdentifiers(device().copy(customName = "x"), emptyList(), emptyList(), true)
+        val b = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2").copy(notes = "y"), emptyList(), emptyList(), true)
+        assertFalse(dao.mergeDevices(a, b, isKnown = null))
+
+        val c = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.3").copy(isKnown = true), emptyList(), emptyList(), true)
+        val d = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.4"), emptyList(), emptyList(), true)
+        assertFalse(dao.mergeDevices(c, d, isKnown = null))
+
+        val e = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.5"), emptyList(), emptyList(), true)
+        decisions.setDistinct(d, e, 1)
+        val f = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.6"), emptyList(), emptyList(), true)
+        assertFalse(dao.mergeDevices(f, d, isKnown = null))
+        assertTrue(dao.mergeDevices(d, f, isKnown = null))
+        assertEquals("DISTINCT", decisions.get(d, e)?.decision)
+    }
+
+    @Test
+    fun `touchesDistinct and insertBelowCap behave like the real DAOs`() = runTest {
+        decisions.setDistinct(2, 3, 1)
+        assertTrue(decisions.touchesDistinct(listOf(3)))
+        assertFalse(decisions.touchesDistinct(listOf(1)))
+
+        val i = FakeDeviceIdentifierDao()
+        assertTrue(i.insertBelowCap(ident("a").copy(deviceId = 1), cap = 1) > 0)
+        assertEquals(-1L, i.insertBelowCap(ident("b").copy(deviceId = 1), cap = 1))
     }
 }

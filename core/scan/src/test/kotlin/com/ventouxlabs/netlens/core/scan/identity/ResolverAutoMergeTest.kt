@@ -26,7 +26,7 @@ class ResolverAutoMergeTest {
         b()
     }
 
-    private suspend fun scan() = h.resolve(lan("10.0.0.9", MAC1, udn("uuid:a")))
+    private suspend fun scan() = h.resolve(lan("10.0.0.9", MAC1, udn("uuid:a", proven = true)))
 
     @Test
     fun `rows reached through strong identifiers with no user data merge into the earliest`() = runTest {
@@ -157,7 +157,7 @@ class ResolverAutoMergeTest {
         h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a")), firstSeen = 10)
         h.seedRow(102, "10.0.0.2", ids = listOf(localMac(MAC_LOCAL_ID)), mac = MAC_LOCAL_RAW, firstSeen = 5, scopeKey = NET)
 
-        val r = h.resolve(lan("10.0.0.9", MAC_LOCAL_RAW, udn("uuid:a"))).devices.single().resolution
+        val r = h.resolve(lan("10.0.0.9", MAC_LOCAL_RAW, udn("uuid:a", proven = true))).devices.single().resolution
 
         assertEquals(MergeBlock.WEAK_LINK, (r as Resolution.Ambiguous).blockedBy)
     }
@@ -186,11 +186,65 @@ class ResolverAutoMergeTest {
         h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 20, customName = "Keep")
         h.seedRow(103, "10.0.0.3", ids = listOf(udn("uuid:b")), firstSeen = 10)
 
-        val r = h.resolve(lan("10.0.0.9", MAC1, udn("uuid:a"), udn("uuid:b"))).devices.single().resolution
+        val r = h.resolve(lan("10.0.0.9", MAC1, udn("uuid:a", true), udn("uuid:b", true))).devices.single().resolution
 
         assertEquals(103L, (r as Resolution.Existing).deviceId)
         assertEquals(setOf(101L, 102L), r.mergedFrom.toSet())
         assertEquals("Keep", h.known.byId(103)!!.customName)
         assertEquals(1, h.known.allDevices.size)
+    }
+
+    @Test
+    fun `one sighting claiming two rows' unproven identifiers never merges them and still alerts`() = runTest {
+        h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a")), firstSeen = 10)
+        h.seedRow(102, "10.0.0.2", ids = listOf(udn("uuid:b")), firstSeen = 5)
+
+        val result = h.resolve(lan("10.0.0.9", null, udn("uuid:a"), udn("uuid:b")))
+
+        assertTrue(result.devices.single().resolution is Resolution.Conflict)
+        assertEquals(1, result.newConflictRows.size)
+        assertNotNull(h.known.byId(101))
+        assertNotNull(h.known.byId(102))
+        assertEquals(101L, h.identifiers.find("UPNP_UDN", "uuid:a", "")?.deviceId)
+    }
+
+    @Test
+    fun `a mix of proof and an unproven claim is blocked, not merged`() = runTest {
+        seedPair()
+
+        val r = h.resolve(lan("10.0.0.9", MAC1, udn("uuid:a"))).devices.single().resolution // MAC proves 102 only
+
+        assertEquals(MergeBlock.WEAK_LINK, (r as Resolution.Ambiguous).blockedBy)
+        assertNotNull(h.known.byId(101))
+    }
+
+    @Test
+    fun `a merge whose loser has a DISTINCT decision with a third device is blocked`() = runTest {
+        // A=101 is DISTINCT from C=103. A later than B, so A would be the loser.
+        seedPair(
+            a = { h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a")), firstSeen = 20) },
+            b = { h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5) },
+        )
+        h.seedRow(103, "10.0.0.3", firstSeen = 1)
+        h.decisions.setDistinct(101, 103, 7)
+
+        val r = scan().devices.single().resolution
+
+        assertEquals(MergeBlock.DISTINCT_DECISION, (r as Resolution.Ambiguous).blockedBy)
+        assertNotNull(h.known.byId(101))
+        assertEquals("DISTINCT", h.decisions.get(101, 103)?.decision)
+    }
+
+    @Test
+    fun `when the DISTINCT row is the survivor the merge proceeds and the decision is retained`() = runTest {
+        seedPair(
+            a = { h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a")), firstSeen = 1) },
+            b = { h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5) },
+        )
+        h.seedRow(103, "10.0.0.3", firstSeen = 1)
+        h.decisions.setDistinct(101, 103, 7)
+
+        assertEquals(Resolution.Existing(101, listOf(102)), scan().devices.single().resolution)
+        assertEquals("DISTINCT", h.decisions.get(101, 103)?.decision)
     }
 }

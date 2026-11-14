@@ -21,12 +21,12 @@ class DeviceIdentifierRecorder @Inject constructor(
             when {
                 owner != null && owner.deviceId == deviceId -> identifierDao.touch(owner.id, now)
                 owner != null -> Unit // owned by another device: unique, not authenticated, never stolen
-                identifierDao.countByKind(deviceId, id.kind.name) >= IdentityPolicy.MAX_IDENTIFIERS_PER_KIND -> Unit
-                else -> identifierDao.insertIfNew(
+                else -> identifierDao.insertBelowCap(
                     DeviceIdentifierEntity(
                         deviceId = deviceId, kind = id.kind.name, value = id.value, scopeKey = scopeKey,
                         source = id.source.name, proven = id.proven, firstSeen = now, lastSeen = now,
                     ),
+                    IdentityPolicy.MAX_IDENTIFIERS_PER_KIND,
                 )
             }
         }

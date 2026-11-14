@@ -26,7 +26,7 @@ class IdentityHarness {
     val sightings = FakeDeviceSightingDao()
     val decisions = FakeDeviceMergeDecisionDao()
     val aliases = FakeNetworkKeyAliasDao()
-    private val tx = FakeDeviceIdentityDao(known, identifiers, observations, sightings, decisions)
+    val tx = FakeDeviceIdentityDao(known, identifiers, observations, sightings, decisions)
     val resolver = DeviceIdentityResolver(known, identifiers, decisions, aliases, tx)
 
     /** Seeds a known_devices row (verbatim id); NETWORK-scoped identifiers are stored under [scopeKey], GLOBAL ones under ''. */

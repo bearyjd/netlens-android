@@ -30,6 +30,9 @@ enum class MergeBlock(val code: String) {
     DISTINCT_DECISION("distinct_decision"),
     USER_DETAILS("user_details"),
     TRUST_DIFFERS("trust_differs"),
+
+    /** The DAO refused inside its transaction: a user edit or decision landed after the resolver read the rows. */
+    CHANGED_SINCE_READ("changed_since_read"),
 }
 
 /**

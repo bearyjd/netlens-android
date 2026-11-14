@@ -9,6 +9,7 @@ import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.fillEmptyUserFieldsFrom
+import com.ventouxlabs.netlens.core.data.model.hasUserDetails
 
 /**
  * The two multi-table writes of device identity, each one SQLite transaction (Room cannot span
@@ -22,6 +23,12 @@ interface DeviceIdentityDao {
 
     @Query("SELECT COUNT(*) FROM device_identifiers WHERE kind = :kind AND value = :value AND scopeKey = :scopeKey")
     suspend fun identifierCount(kind: String, value: String, scopeKey: String): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM device_merge_decisions WHERE decision = 'DISTINCT' " +
+            "AND (deviceIdLow = :id OR deviceIdHigh = :id)",
+    )
+    suspend fun distinctCountFor(id: Long): Int
 
     @Query("SELECT COUNT(*) FROM known_devices WHERE macAddress = :mac")
     suspend fun macCount(mac: String): Int
@@ -96,12 +103,18 @@ interface DeviceIdentityDao {
      * loser's user-authored fields fill only the survivor's *empty* fields, the survivor keeps its
      * `isKnown` unless [isKnown] is given, and the loser row is deleted LAST (its children cascade
      * with it, so they must have moved first). Returns false, touching nothing, if either row is gone.
+     *
+     * [isKnown] == null means an AUTOMATIC merge, whose rules are re-checked here inside the
+     * transaction because the user may have edited or decided since the resolver looked: refused when
+     * the loser touches any DISTINCT decision (its decisions would cascade away), when both rows carry
+     * user details, or when `isKnown` differs. A user-confirmed merge passes an explicit [isKnown].
      */
     @Transaction
     suspend fun mergeDevices(survivorId: Long, loserId: Long, isKnown: Boolean?): Boolean {
         val survivor = deviceById(survivorId) ?: return false
         val loser = deviceById(loserId) ?: return false
         if (survivorId == loserId) return false
+        if (isKnown == null && !automaticMergeAllowed(survivor, loser)) return false
         moveIdentifiers(loserId, survivorId)
         moveObservations(loserId, survivorId)
         moveSightings(loserId, survivorId)
@@ -114,6 +127,11 @@ interface DeviceIdentityDao {
         deleteDevice(loserId)
         return true
     }
+
+    private suspend fun automaticMergeAllowed(survivor: KnownDeviceEntity, loser: KnownDeviceEntity): Boolean =
+        distinctCountFor(loser.id) == 0 &&
+            !(survivor.hasUserDetails() && loser.hasUserDetails()) &&
+            survivor.isKnown == loser.isKnown
 
     companion object {
         /** What `insertDeviceWithIdentifiers` returns when it inserted nothing. */

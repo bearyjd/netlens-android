@@ -61,7 +61,7 @@ class ResolverHostileInputTest {
 
     @Test
     fun `identifiers per kind are capped deterministically`() = runTest {
-        val flood = (1..100).map { DeviceIdentifier(IdentifierKind.MDNS_DEVICE_ID, "id-%03d".format(it), ObservationSource.MDNS) }
+        val flood = (1..100).reversed().map { DeviceIdentifier(IdentifierKind.MDNS_DEVICE_ID, "id-%03d".format(it), ObservationSource.MDNS) }
         val other = udn("uuid:keep")
 
         val owned = h.resolve(LanDevice(ip = "10.0.0.5", identifiers = (flood + other).toSet())).devices.single().ownedIdentifiers
@@ -92,5 +92,35 @@ class ResolverHostileInputTest {
         val d = h.resolve(LanDevice(ip = "10.0.0.5", macAddress = "zz\nforged row")).devices.single().device
 
         assertEquals("zz forged row", d.macAddress)
+    }
+
+    @Test
+    fun `observation weights are clamped to 0 and 100`() = runTest {
+        val device = LanDevice(
+            ip = "10.0.0.5",
+            observations = listOf(
+                Observation(ObservationSource.SSDP, ObservedField.MODEL, "lo", -1, null),
+                Observation(ObservationSource.SSDP, ObservedField.MODEL, "hi", 101, null),
+            ),
+        )
+
+        val weights = h.resolve(device).devices.single().device.observations.associate { it.value to it.weight }
+
+        assertEquals(mapOf("lo" to 0, "hi" to 100), weights)
+    }
+
+    @Test
+    fun `grouping re-applies the identifier cap and bounds the additional addresses`() = runTest {
+        fun ids(range: IntRange) = range.map { DeviceIdentifier(IdentifierKind.MDNS_DEVICE_ID, "id-%03d".format(it), ObservationSource.MDNS) }
+        val shared = udn("uuid:shared", proven = true)
+        val devices = (1..40).map { n ->
+            LanDevice(ip = "10.0.1.$n", identifiers = (ids((n * 3)..(n * 3 + 2)) + shared).toSet())
+        }
+
+        val d = h.resolve(*devices.toTypedArray()).devices.single()
+
+        assertEquals(IdentityPolicy.MAX_IDENTIFIERS_PER_KIND, d.ownedIdentifiers.count { it.kind == IdentifierKind.MDNS_DEVICE_ID })
+        assertEquals(IdentityPolicy.MAX_IDENTIFIERS_PER_KIND, d.device.identifiers.count { it.kind == IdentifierKind.MDNS_DEVICE_ID })
+        assertTrue(d.device.additionalIps.size <= IdentityPolicy.MAX_ADDITIONAL_IPS)
     }
 }

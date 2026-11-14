@@ -25,49 +25,39 @@ internal object ScanGrouping {
     fun groupAuthenticated(sightings: List<Sighting>): List<Sighting> {
         val parent = IntArray(sightings.size) { it }
         fun find(i: Int): Int = if (parent[i] == i) i else find(parent[i]).also { parent[i] = it }
-        for (i in sightings.indices) {
-            for (j in i + 1 until sightings.size) {
-                if (sharesProvenIdentifier(sightings[i], sightings[j])) parent[find(j)] = find(i)
+        val firstProver = HashMap<ClaimKey, Int>()
+        sightings.forEachIndexed { i, s ->
+            for (id in s.identifiers.filter { it.proven && IdentityPolicy.isClaimable(it) }) {
+                val j = firstProver.getOrPut(id.claimKey()) { i }
+                if (j != i) parent[find(i)] = find(j)
             }
         }
         return sightings.indices.groupBy(::find).values.map { members -> combine(members.map { sightings[it] }) }
-    }
-
-    private fun sharesProvenIdentifier(a: Sighting, b: Sighting): Boolean {
-        val proven = a.identifiers.filter { it.proven && IdentityPolicy.isClaimable(it) }.map { it.claimKey() }.toSet()
-        return b.identifiers.any { it.proven && it.claimKey() in proven }
     }
 
     private fun combine(members: List<Sighting>): Sighting {
         if (members.size == 1) return members.single()
         val primary = members.sortedWith(compareBy({ -it.identifiers.size }, { it.device.ip })).first()
         val others = members - primary
-        val identifiers = members.flatMap { it.identifiers }
-            .groupBy { it.claimKey() }
-            .map { (_, same) -> same.first().copy(proven = same.all { it.proven }) }
-            .toCollection(linkedSetOf())
+        // The union of several sanitised sets can exceed the per-kind cap again: re-apply it.
+        val identifiers = IdentityPolicy.sanitizeIdentifiers(members.flatMap { it.identifiers })
         return Sighting(
             primary.device.copy(
                 identifiers = identifiers,
-                additionalIps = primary.device.additionalIps + others.flatMap { it.device.additionalIps + it.device.ip },
-                observations = members.flatMap { it.device.observations }.distinct(),
+                additionalIps = (primary.device.additionalIps + others.flatMap { it.device.additionalIps + it.device.ip })
+                    .mapNotNull { IdentityPolicy.display(it) }.sorted().take(IdentityPolicy.MAX_ADDITIONAL_IPS).toSet(),
+                observations = members.flatMap { it.device.observations }.distinct().take(IdentityPolicy.MAX_OBSERVATIONS),
                 hostname = primary.device.hostname ?: others.firstNotNullOfOrNull { it.device.hostname },
                 macAddress = primary.device.macAddress ?: others.firstNotNullOfOrNull { it.device.macAddress },
             ),
         )
     }
 
-    /** Claimable identifiers carried by two or more sightings, with the sightings that carry them. */
-    fun contested(sightings: List<Sighting>): Map<ClaimKey, List<Sighting>> =
-        sightings
-            .flatMap { s -> s.identifiers.filter(IdentityPolicy::isClaimable).map { it.claimKey() to s } }
-            .groupBy({ it.first }, { it.second })
-            .filterValues { it.size > 1 }
-
     /**
-     * The sighting that keeps a contested identifier: highest [tie] to the row that already owns it,
-     * then most identifiers, then lowest address, so the outcome never depends on scan order.
+     * The only sighting allowed to keep a claimable identifier that is contested or whose owner is
+     * confirmed elsewhere: the single carrier that is MAC-confirmed as the owner. Nothing else is
+     * evidence of ownership — not address, not how many identifiers it reports (padding costs nothing).
      */
-    fun incumbent(carriers: List<Sighting>, tie: (Sighting) -> Int): Sighting =
-        carriers.sortedWith(compareBy({ -tie(it) }, { -it.identifiers.size }, { it.device.ip })).first()
+    fun keeper(carriers: List<Sighting>, macConfirmed: List<Sighting>): Sighting? =
+        carriers.filter { it in macConfirmed }.singleOrNull()
 }

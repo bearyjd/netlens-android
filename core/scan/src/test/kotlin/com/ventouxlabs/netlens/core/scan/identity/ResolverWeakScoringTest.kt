@@ -114,7 +114,7 @@ class ResolverWeakScoringTest {
         val result = h.resolve(
             newTv().copy(macAddress = MAC2, ip = "192.168.5.6"), // New, weakly matches 101
             lan("10.0.0.7", null, udn("uuid:a2")), // Existing(101) at the time
-            lan("10.0.0.9", MAC1, udn("uuid:a")), // merges 101 into 102
+            lan("10.0.0.9", MAC1, udn("uuid:a", proven = true)), // merges 101 into 102
         )
 
         assertEquals(null, h.known.byId(101))

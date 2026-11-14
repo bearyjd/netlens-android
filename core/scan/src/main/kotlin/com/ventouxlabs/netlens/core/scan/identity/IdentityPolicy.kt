@@ -19,7 +19,8 @@ import com.ventouxlabs.netlens.core.scan.model.identity.Strength
 /** A candidate row plus what the merge rules need to know about it. */
 data class MergeCandidate(
     val row: KnownDeviceEntity,
-    val viaStrong: Boolean,
+    // Reached through an identifier that proves the holder (proven claim or universal MAC), not a bare claim.
+    val viaProof: Boolean,
     val identifiers: List<DeviceIdentifierEntity>,
 )
 
@@ -29,6 +30,7 @@ object IdentityPolicy {
     const val MAX_IDENTIFIER_LENGTH = 256
     const val MAX_DISPLAY_LENGTH = 256
     const val MAX_OBSERVATIONS = 64
+    const val MAX_ADDITIONAL_IPS = 32
     const val WEAK_MATCH_THRESHOLD = 60
     const val MAX_WEAK_SUGGESTIONS = 3
 
@@ -41,6 +43,7 @@ object IdentityPolicy {
     // "service-type Jaccard x 20" term has nothing to compare against. Kept at 0 until they are.
     const val SERVICE_JACCARD_POINTS = 0
 
+    private val NUMERIC_SUFFIX = Regex("-\\d+$")
     private val MAC_KINDS = setOf(IdentifierKind.MAC_UNIVERSAL, IdentifierKind.MAC_LOCAL)
 
     // One value per physical machine. UDN, TLS and SSH keys are deliberately absent: embedded UPnP
@@ -111,13 +114,13 @@ object IdentityPolicy {
     fun normalizeHostname(raw: String?): String? {
         val flat = display(raw)?.lowercase() ?: return null
         val noDomain = flat.removeSuffix(".local")
-        val stripped = noDomain.replace(Regex("-\\d+$"), "")
+        val stripped = noDomain.replace(NUMERIC_SUFFIX, "")
         return stripped.ifEmpty { noDomain }.ifEmpty { null }
     }
 
     /** Null when [candidates] may be merged automatically; otherwise the first rule that forbids it. */
     fun mergeBlocker(candidates: List<MergeCandidate>, isDistinct: (Long, Long) -> Boolean): MergeBlock? = when {
-        !candidates.all { it.viaStrong } -> MergeBlock.WEAK_LINK
+        !candidates.all { it.viaProof } -> MergeBlock.WEAK_LINK
         hasContradictoryIdentifiers(candidates) -> MergeBlock.CONTRADICTORY_IDENTIFIER
         anyDistinctPair(candidates, isDistinct) -> MergeBlock.DISTINCT_DECISION
         candidates.count { it.row.hasUserDetails() } > 1 -> MergeBlock.USER_DETAILS

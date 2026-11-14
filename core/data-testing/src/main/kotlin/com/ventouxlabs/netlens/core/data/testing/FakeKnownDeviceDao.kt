@@ -19,11 +19,10 @@ import kotlinx.coroutines.flow.update
  * Two ways in, deliberately:
  *  - [seed] inserts **verbatim**, preserving the caller's id. Test setup, for when a test needs
  *    to assert on a known id.
- *  - [insertIfNew] follows **production semantics**: it dedupes on MAC, assigns the next id and
- *    returns `-1L` when the row already exists.
- *
- * Do not "simplify" [insertIfNew] into [seed]. `DeviceInventoryRepository` relies on the `-1L`
- * duplicate signal, and a fake that always inserts would hide a re-scan creating duplicate rows.
+ *  - [insertIfNew] follows **production semantics**: it assigns the next id and ignores the
+ *    caller's. Since v19 dropped the unique MAC index it no longer dedupes — two inserts of the same
+ *    MAC both succeed, exactly like `INSERT OR IGNORE` against a non-unique index. Duplicate
+ *    protection is `DeviceIdentityDao.insertDeviceWithIdentifiers`' job.
  */
 class FakeKnownDeviceDao : KnownDeviceDao {
 
@@ -54,10 +53,7 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun getSeenSince(since: Long): List<KnownDeviceEntity> =
         devices.filter { it.lastSeen >= since }.sortedByDescending { it.lastSeen }.take(SEEN_SINCE_LIMIT)
 
-    /**
-     * Inserts with the next id and NO MAC dedupe — what the real DAO does since v19 dropped the
-     * unique MAC index. [FakeDeviceIdentityDao] guards duplicates inside its own transaction.
-     */
+    /** Same as [insertIfNew]; kept for [FakeDeviceIdentityDao]'s `insertDeviceRow`. */
     internal fun insertRaw(device: KnownDeviceEntity): Long {
         val withId = device.copy(id = nextId++)
         devices += withId
@@ -69,9 +65,6 @@ class FakeKnownDeviceDao : KnownDeviceDao {
         flowOf(devices.filter { !it.isKnown })
 
     override suspend fun insertIfNew(device: KnownDeviceEntity): Long {
-        if (device.macAddress != null && devices.any { it.macAddress == device.macAddress }) {
-            return DUPLICATE_ROW
-        }
         val withId = device.copy(id = nextId++)
         devices += withId
         publish()
