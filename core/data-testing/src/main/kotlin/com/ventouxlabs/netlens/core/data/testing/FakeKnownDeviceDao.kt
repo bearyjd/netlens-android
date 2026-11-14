@@ -34,9 +34,10 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     /** Rows currently stored, in insertion order. */
     val allDevices: List<KnownDeviceEntity> get() = devices.toList()
 
-    /** Inserts verbatim, preserving each entity's own id. Bypasses [insertIfNew]'s dedup. */
+    /** Inserts verbatim, preserving each entity's own id (later inserts continue after the highest). Bypasses [insertIfNew]'s dedup. */
     fun seed(vararg entities: KnownDeviceEntity) {
         devices += entities
+        nextId = maxOf(nextId, (entities.maxOfOrNull { it.id } ?: 0L) + 1)
         publish()
     }
 
