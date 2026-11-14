@@ -21,6 +21,10 @@ interface KnownDeviceDao {
     @Query("SELECT * FROM known_devices WHERE ip = :ip AND macAddress IS NULL")
     suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity?
 
+    // Candidate pool for weak merge scoring; bounded so a huge inventory cannot make a scan O(n^2).
+    @Query("SELECT * FROM known_devices WHERE lastSeen >= :since ORDER BY lastSeen DESC LIMIT 500")
+    suspend fun getSeenSince(since: Long): List<KnownDeviceEntity>
+
     @Query("SELECT * FROM known_devices WHERE isKnown = 0 ORDER BY lastSeen DESC")
     fun getUnknownDevices(): Flow<List<KnownDeviceEntity>>
 

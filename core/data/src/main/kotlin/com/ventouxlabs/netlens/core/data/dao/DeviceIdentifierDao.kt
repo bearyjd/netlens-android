@@ -14,6 +14,9 @@ interface DeviceIdentifierDao {
     @Query("SELECT * FROM device_identifiers WHERE deviceId = :deviceId")
     suspend fun getForDevice(deviceId: Long): List<DeviceIdentifierEntity>
 
+    @Query("SELECT COUNT(*) FROM device_identifiers WHERE deviceId = :deviceId AND kind = :kind")
+    suspend fun countByKind(deviceId: Long, kind: String): Int
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfNew(identifier: DeviceIdentifierEntity): Long
 
