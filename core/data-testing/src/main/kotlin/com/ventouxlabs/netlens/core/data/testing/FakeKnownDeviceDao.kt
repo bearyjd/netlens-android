@@ -50,6 +50,20 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override suspend fun getByIpWithoutMac(ip: String): KnownDeviceEntity? =
         devices.find { it.ip == ip && it.macAddress == null }
 
+    override suspend fun getSeenSince(since: Long): List<KnownDeviceEntity> =
+        devices.filter { it.lastSeen >= since }.sortedByDescending { it.lastSeen }.take(SEEN_SINCE_LIMIT)
+
+    /**
+     * Inserts with the next id and NO MAC dedupe — what the real DAO does since v19 dropped the
+     * unique MAC index. [FakeDeviceIdentityDao] guards duplicates inside its own transaction.
+     */
+    internal fun insertRaw(device: KnownDeviceEntity): Long {
+        val withId = device.copy(id = nextId++)
+        devices += withId
+        publish()
+        return withId.id
+    }
+
     override fun getUnknownDevices(): Flow<List<KnownDeviceEntity>> =
         flowOf(devices.filter { !it.isKnown })
 
@@ -146,5 +160,8 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     companion object {
         /** What the real `@Insert(onConflict = IGNORE)` returns when the row already exists. */
         const val DUPLICATE_ROW = -1L
+
+        /** Mirrors the `LIMIT` on the real `getSeenSince` query. */
+        private const val SEEN_SINCE_LIMIT = 500
     }
 }
