@@ -1,6 +1,8 @@
 package com.ventouxlabs.netlens.core.data
 
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ventouxlabs.netlens.core.data.di.DataModule
@@ -14,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Runs every real [DataModule] migration against the exported schema JSONs
  * (`core/data/schemas/com.ventouxlabs.netlens.core.data.NetLensDatabase/`) under Robolectric. This
- * is the only place any of the 14 migrations (4→5 … 17→18) get exercised — previously they were
+ * is the only place any of the 15 migrations (4→5 … 18→19) get exercised — previously they were
  * hand-checked only, per `.omc/skills/room-migration-schema-default-expertise.md`.
  *
  * Note: schema `3.json` is not exported (migrations start at 4→5), so the chain below starts at 4.
@@ -27,7 +29,7 @@ class MigrationTest {
         DataModule.MIGRATION_7_8, DataModule.MIGRATION_8_9, DataModule.MIGRATION_9_10,
         DataModule.MIGRATION_10_11, DataModule.MIGRATION_11_12, DataModule.MIGRATION_12_13,
         DataModule.MIGRATION_13_14, DataModule.MIGRATION_14_15, DataModule.MIGRATION_15_16,
-        DataModule.MIGRATION_16_17, DataModule.MIGRATION_17_18,
+        DataModule.MIGRATION_16_17, DataModule.MIGRATION_17_18, DataModule.MIGRATION_18_19,
     )
 
     @get:Rule
@@ -42,9 +44,9 @@ class MigrationTest {
     // every step but does NOT exercise row-preserving migrations (e.g. MIGRATION_11_12's
     // known_devices rename-and-copy). That needs its own data-integrity test as a follow-up.
     @Test
-    fun `migrate full chain 4 through 18 preserves schema shape`() {
+    fun `migrate full chain 4 through 19 preserves schema shape`() {
         helper.createDatabase(TEST_DB, 4).close()
-        helper.runMigrationsAndValidate(TEST_DB, 18, true, *allMigrations)
+        helper.runMigrationsAndValidate(TEST_DB, 19, true, *allMigrations)
     }
 
     // v15 adds tags/notes/location to known_devices and the two wifi_survey_* tables — the
@@ -130,7 +132,205 @@ class MigrationTest {
         }
     }
 
+    // v19 backfills one identifier per stored MAC. Four rows: locally administered (0xAA has the U/L
+    // bit set), universal, no MAC, and a lowercase spelling of the locally administered MAC (the v17
+    // unique index is case-sensitive, so both spellings coexist and must collapse via OR IGNORE).
+    @Test
+    fun `migrate 18 to 19 backfills mac identifiers and leaves every known_devices row identical`() {
+        val before = seedV18Devices()
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        assertEquals(before, snapshot(migrated, V18_COLUMNS))
+        assertIdentifiersBackfilled(migrated)
+    }
+
+    @Test
+    fun `migrate chained 17 to 19 backfills identifiers and leaves every known_devices row identical`() {
+        val before = helper.createDatabase(TEST_DB, 17).run {
+            execSQL(
+                "INSERT INTO known_devices (id, macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, " +
+                    "deviceType, osGuess, fingerprintConfidence, fingerprintEvidence, customName, networkId, " +
+                    "tags, notes, location) VALUES " +
+                    "(1, '00:11:22:33:44:55', 'h', '192.168.1.2', 'V', 10, 20, 1, 'Router', 'Linux', 85, 'port 22', " +
+                    "'Name', 3, 't1,t2', 'note', 'Attic'), " +
+                    "(2, NULL, NULL, '192.168.1.9', NULL, 11, 21, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)",
+            )
+            snapshot(this, V17_COLUMNS).also { close() }
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB, 19, true, DataModule.MIGRATION_17_18, DataModule.MIGRATION_18_19,
+        )
+
+        assertEquals(before, snapshot(migrated, V17_COLUMNS))
+        assertEquals(
+            listOf(listOf("1", "MAC_UNIVERSAL", "001122334455", "", "ARP", "0", "10", "20")),
+            rows(migrated, "SELECT deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen FROM device_identifiers"),
+        )
+    }
+
+    @Test
+    fun `migrate 18 to 19 lets two devices share a mac after dropping the unique index`() {
+        helper.createDatabase(TEST_DB, 18).close()
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        for (ip in listOf("10.0.0.1", "10.0.0.2")) {
+            migrated.execSQL(
+                "INSERT INTO known_devices (macAddress, ip, firstSeen, lastSeen, isKnown) VALUES " +
+                    "('AA:BB:CC:DD:EE:FF', '$ip', 0, 0, 0)",
+            )
+        }
+        assertEquals(listOf(listOf("2")), rows(migrated, "SELECT COUNT(*) FROM known_devices"))
+    }
+
+    @Test
+    fun `backfill accepts hyphen and mixed-case spellings`() {
+        helper.createDatabase(TEST_DB, 18).apply {
+            execSQL(
+                "INSERT INTO known_devices (id, macAddress, ip, firstSeen, lastSeen, isKnown) VALUES " +
+                    "(1, '00-11-22-33-44-55', '10.0.0.1', 0, 0, 0), (2, 'aA:bB:cC:dD:eE:fF', '10.0.0.2', 0, 0, 0)",
+            )
+            close()
+        }
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        assertEquals(
+            listOf(listOf("1", "MAC_UNIVERSAL", "001122334455"), listOf("2", "MAC_LOCAL", "aabbccddeeff")),
+            rows(migrated, "SELECT deviceId, kind, value FROM device_identifiers ORDER BY deviceId"),
+        )
+    }
+
+    @Test
+    fun `backfill classifies every second nibble by the locally administered bit`() {
+        val nibbles = "0123456789abcdef"
+        helper.createDatabase(TEST_DB, 18).apply {
+            nibbles.forEachIndexed { i, n ->
+                execSQL(
+                    "INSERT INTO known_devices (id, macAddress, ip, firstSeen, lastSeen, isKnown) VALUES " +
+                        "(${i + 1}, '0$n:11:22:33:44:55', '10.0.0.${i + 1}', 0, 0, 0)",
+                )
+            }
+            close()
+        }
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        val expected = nibbles.mapIndexed { i, n ->
+            val kind = if (n in "2367abef") "MAC_LOCAL" else "MAC_UNIVERSAL"
+            listOf((i + 1).toString(), kind, "0${n}1122334455")
+        }
+        assertEquals(expected, rows(migrated, "SELECT deviceId, kind, value FROM device_identifiers ORDER BY deviceId"))
+    }
+
+    @Test
+    fun `malformed macs yield no identifier and the parent row survives`() {
+        helper.createDatabase(TEST_DB, 18).apply {
+            val macs = listOf("NULL", "''", "'---'", "'notamac'", "'AA:BB:CC:DD:EE'", "'AA:BB:CC:DD:EE:GG'")
+            macs.forEachIndexed { i, mac ->
+                execSQL(
+                    "INSERT INTO known_devices (id, macAddress, ip, firstSeen, lastSeen, isKnown) VALUES " +
+                        "(${i + 1}, $mac, '10.0.0.${i + 1}', 0, 0, 0)",
+                )
+            }
+            close()
+        }
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        assertEquals(listOf(listOf("0")), rows(migrated, "SELECT COUNT(*) FROM device_identifiers"))
+        assertEquals(listOf(listOf("6")), rows(migrated, "SELECT COUNT(*) FROM known_devices"))
+    }
+
+    @Test
+    fun `10000 distinct macs migrate to exactly 10000 identifiers`() {
+        helper.createDatabase(TEST_DB, 18).apply {
+            execSQL(
+                "WITH RECURSIVE c(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM c WHERE i < 10000) " +
+                    "INSERT INTO known_devices (macAddress, ip, firstSeen, lastSeen, isKnown) " +
+                    "SELECT printf('%012x', 1000000 + i), '10.0.0.1', 0, 0, 0 FROM c",
+            )
+            close()
+        }
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+
+        val expected = (1..10_000).map { listOf(it.toString(), "MAC_UNIVERSAL", "%012x".format(1_000_000 + it)) }
+        assertEquals(expected, rows(migrated, "SELECT deviceId, kind, value FROM device_identifiers ORDER BY deviceId"))
+    }
+
+    @Test
+    fun `deleting a device cascades to its children and merge pairs only`() {
+        helper.createDatabase(TEST_DB, 18).close()
+        val db = helper.runMigrationsAndValidate(TEST_DB, 19, true, DataModule.MIGRATION_18_19)
+        db.setForeignKeyConstraintsEnabled(true)
+        (1..3).forEach { id ->
+            db.execSQL("INSERT INTO known_devices (id, ip, firstSeen, lastSeen, isKnown) VALUES ($id, '10.0.0.$id', 0, 0, 0)")
+            db.execSQL(
+                "INSERT INTO device_identifiers (deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen) " +
+                    "VALUES ($id, 'MAC_UNIVERSAL', 'v$id', '', 'ARP', 0, 0, 0)",
+            )
+            db.execSQL("INSERT INTO device_observations (deviceId, source, field, value, weight, detail, lastSeen) VALUES ($id, 'MDNS', 'OS', 'x', 1, NULL, 0)")
+            db.execSQL("INSERT INTO device_sightings (deviceId, networkKey, networkLabel, lastIp, firstSeen, lastSeen) VALUES ($id, 'n', NULL, '10.0.0.$id', 0, 0)")
+        }
+        for ((low, high) in listOf(1 to 2, 2 to 3, 1 to 3)) {
+            db.execSQL("INSERT INTO device_merge_decisions VALUES ($low, $high, 'SUGGESTED', 5, NULL, 0)")
+        }
+
+        db.execSQL("DELETE FROM known_devices WHERE id = 2")
+
+        assertEquals(listOf(listOf("1", "3")), rows(db, "SELECT deviceIdLow, deviceIdHigh FROM device_merge_decisions"))
+        for (table in listOf("device_identifiers", "device_observations", "device_sightings")) {
+            assertEquals(listOf(listOf("1"), listOf("3")), rows(db, "SELECT deviceId FROM $table ORDER BY deviceId"))
+        }
+        assertEquals(listOf(listOf("1"), listOf("3")), rows(db, "SELECT id FROM known_devices ORDER BY id"))
+        val orphan = runCatching {
+            db.execSQL("INSERT INTO device_sightings (deviceId, networkKey, networkLabel, lastIp, firstSeen, lastSeen) VALUES (99, 'n', NULL, '1.1.1.1', 0, 0)")
+        }
+        assertTrue(orphan.exceptionOrNull() is SQLiteConstraintException)
+    }
+
+    private fun seedV18Devices(): List<List<String?>> =
+        helper.createDatabase(TEST_DB, 18).run {
+            execSQL(
+                "INSERT INTO known_devices (id, macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, " +
+                    "deviceType, osGuess, fingerprintConfidence, fingerprintEvidence, customName, networkId, " +
+                    "tags, notes, location, model, deviceTypeOverride, osOverride, modelOverride) VALUES " +
+                    "(1, 'AA:BB:CC:DD:EE:FF', 'router', '192.168.1.1', 'Acme', 100, 200, 1, 'Router', 'Linux', " +
+                    "90, 'port 22; ttl 64', 'My Router', 7, 'a,b', 'a note', 'Garage', 'X1', 'Switch', 'BSD', 'X2'), " +
+                    "(2, '00:11:22:33:44:55', 'phone', '192.168.1.2', NULL, 110, 210, 0, NULL, NULL, " +
+                    "NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), " +
+                    "(3, NULL, NULL, '192.168.1.3', NULL, 120, 220, 0, NULL, NULL, " +
+                    "NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), " +
+                    "(4, 'aa:bb:cc:dd:ee:ff', 'dup', '192.168.1.4', NULL, 130, 230, 0, NULL, NULL, " +
+                    "NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)",
+            )
+            snapshot(this, V18_COLUMNS).also { close() }
+        }
+
+    private fun assertIdentifiersBackfilled(db: SupportSQLiteDatabase) {
+        // Device 4 collapses into device 1's identifier (lowest id wins); device 3 has no MAC.
+        assertEquals(
+            listOf(
+                listOf("1", "MAC_LOCAL", "aabbccddeeff", "", "ARP", "0", "100", "200"),
+                listOf("2", "MAC_UNIVERSAL", "001122334455", "", "ARP", "0", "110", "210"),
+            ),
+            rows(db, "SELECT deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen FROM device_identifiers ORDER BY deviceId"),
+        )
+    }
+
+    private fun snapshot(db: SupportSQLiteDatabase, columns: String): List<List<String?>> {
+        return rows(db, "SELECT $columns FROM known_devices ORDER BY id")
+    }
+
+    private fun rows(db: SupportSQLiteDatabase, sql: String): List<List<String?>> =
+        db.query(sql).use { c ->
+            buildList {
+                while (c.moveToNext()) add((0 until c.columnCount).map { i -> if (c.isNull(i)) null else c.getString(i) })
+            }
+        }
+
     private companion object {
         const val TEST_DB = "migration-test"
+        const val V17_COLUMNS = "id, macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, deviceType, " +
+            "osGuess, fingerprintConfidence, fingerprintEvidence, customName, networkId, tags, notes, location"
+        const val V18_COLUMNS = "$V17_COLUMNS, model, deviceTypeOverride, osOverride, modelOverride"
     }
 }

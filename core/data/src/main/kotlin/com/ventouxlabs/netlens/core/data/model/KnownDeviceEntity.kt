@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "known_devices",
-    indices = [Index("lastSeen"), Index("isKnown"), Index(value = ["macAddress"], unique = true), Index("ip")],
+    indices = [Index("lastSeen"), Index("isKnown"), Index("macAddress"), Index("ip")],
 )
 data class KnownDeviceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -47,6 +47,10 @@ data class KnownDeviceEntity(
     val deviceTypeOverride: String? = null,
     val osOverride: String? = null,
     val modelOverride: String? = null,
+    // Confidence (0-100) behind the detected type / OS, tracked separately now that they can come
+    // from different sources. Null until a scan writes them; owned by the scan pipeline.
+    val typeConfidence: Int? = null,
+    val osConfidence: Int? = null,
 )
 
 /**
