@@ -1,6 +1,5 @@
 package com.ventouxlabs.netlens.core.data.model
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -33,7 +32,7 @@ data class DeviceIdentifierEntity(
     val value: String,
     val scopeKey: String,
     val source: String,
-    @ColumnInfo(defaultValue = "0") val proven: Boolean = false,
+    val proven: Boolean = false,
     val firstSeen: Long,
     val lastSeen: Long,
 )

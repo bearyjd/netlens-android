@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 19,
-    "identityHash": "e898b5f99d62149dd3e36ef93f4c7862",
+    "identityHash": "843c221298929622789ada92eac1565d",
     "entities": [
       {
         "tableName": "saved_hosts",
@@ -1542,7 +1542,7 @@
       },
       {
         "tableName": "device_identifiers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `deviceId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `value` TEXT NOT NULL, `scopeKey` TEXT NOT NULL, `source` TEXT NOT NULL, `proven` INTEGER NOT NULL DEFAULT 0, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, FOREIGN KEY(`deviceId`) REFERENCES `known_devices`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `deviceId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `value` TEXT NOT NULL, `scopeKey` TEXT NOT NULL, `source` TEXT NOT NULL, `proven` INTEGER NOT NULL, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, FOREIGN KEY(`deviceId`) REFERENCES `known_devices`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -1584,8 +1584,7 @@
             "fieldPath": "proven",
             "columnName": "proven",
             "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
+            "notNull": true
           },
           {
             "fieldPath": "firstSeen",
@@ -1922,7 +1921,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e898b5f99d62149dd3e36ef93f4c7862')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '843c221298929622789ada92eac1565d')"
     ]
   }
 }
