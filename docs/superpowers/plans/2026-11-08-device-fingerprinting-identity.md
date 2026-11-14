@@ -38,7 +38,7 @@ hand-written fakes, captured byte fixtures, Robolectric only where `core:data` a
 - `core:scan/engine/DeviceFingerprinter.kt` — `if`-chain classifier over mDNS service types, SSDP,
   NetBIOS, hostname and open ports; one confidence number for both type and OS.
 - `core:scan/DeviceInventoryRepository.kt` — identity = `getByMac(mac) ?: getByIpWithoutMac(ip)`.
-- `core:data/model/KnownDeviceEntity.kt` — unique index on `macAddress`; DB **version 17**.
+- `core:data/model/KnownDeviceEntity.kt` — unique index on `macAddress`; DB **version 18** (`MIGRATION_17_18` already shipped: it added `model` and the three `*Override` columns — never edit it).
 - Discovery orchestration lives in `feature:lanscan/LanScanViewModel.startScan` (ping, mDNS, SSDP,
   then ARP + NetBIOS enrichment). `feature:devices/WatchRunner` runs a separate lite sweep.
 - `SsdpScanner` already fetches description XML (capped, SSRF-checked by `isSafeLocationUrl`).
@@ -89,8 +89,8 @@ ARP: NBSTAT unit ID, EUI-64 IPv6 addresses, and MAC-bearing mDNS TXT keys.
 - **Ownership in `known_devices`.** Scans write only scan-derived fields. `customName`, `tags`,
   `notes`, `location`, `isKnown` are user-authored and are never overwritten by a scan **or by a
   merge** (merge rules in Task 1.4).
-- **Migrations.** PR 1 ships `MIGRATION_17_18`. Later phases may add their own forward migrations
-  (18→19, …), each with a `MigrationTest` case. **Never edit a migration that has shipped in a
+- **Migrations.** PR 1 ships `MIGRATION_18_19` (`MIGRATION_17_18` already exists on master). Later phases may add
+  their own forward migrations (19→20, …), each with a `MigrationTest` case. **Never edit a migration that has shipped in a
   release.** Copy each migration's DDL from the exported schema JSON's `createSql` so it matches what
   Room validates.
 - **Strings** go in the owning module's `strings.xml`. Technical values (identifiers, banners, hashes)
@@ -158,11 +158,12 @@ claimed identifier *silence* a new-device alert for a device that is simultaneou
 
 ---
 
-## Schema: MIGRATION_17_18 (core:data)
+## Schema: MIGRATION_18_19 (core:data)
 
 ```sql
 -- 1. known_devices: new scan-derived columns; MAC no longer unique (one device can own many MACs)
-ALTER TABLE known_devices ADD COLUMN model TEXT;
+-- NOTE: `model` and the *Override columns already exist from MIGRATION_17_18; do not re-add them
+-- (SQLite fails with "duplicate column name").
 ALTER TABLE known_devices ADD COLUMN typeConfidence INTEGER;
 ALTER TABLE known_devices ADD COLUMN osConfidence INTEGER;
 DROP INDEX IF EXISTS index_known_devices_macAddress;
@@ -237,10 +238,10 @@ Room details the SQL above must satisfy:
 - Declare every `ForeignKey` and `Index` on the entities, with explicit `name =` on any index whose
   name departs from Room's `index_<table>_<cols>` convention (e.g. `index_device_observations_dedupe`),
   or Room's schema validation fails at runtime.
-- The `known_devices.macAddress` index name is `index_known_devices_macAddress` in the exported v17
-  schema (verified), so the `DROP INDEX` above matches.
-- Bump `NetLensDatabase` to version 18, commit the exported `18.json`, and update
-  `docs/CODEMAPS/data.md`: it still says v16, the code is at v17, and after this PR the entity and DAO
+- The `known_devices.macAddress` index name is `index_known_devices_macAddress` in the exported v18
+  schema (re-verify against `18.json` before relying on it), so the `DROP INDEX` above matches.
+- Bump `NetLensDatabase` to version 19, commit the exported `19.json` (keep `18.json`), and update
+  `docs/CODEMAPS/data.md`: it still says v16, the code is at v18, and after this PR the entity and DAO
   counts change.
 
 ---
@@ -261,9 +262,10 @@ Room details the SQL above must satisfy:
 - [ ] Tests: normalisation table, U/L bit, EUI-64 round-trip, junk input.
 
 ### Task 1.3: Schema + migration
-- [ ] Entities, DAOs and `MIGRATION_17_18` as specified; register in `DataModule`.
-- [ ] `MigrationTest`: 17→18 with rows having a universal MAC, a local MAC, no MAC, and two rows with
-      the same MAC (must not abort the migration — `INSERT OR IGNORE`).
+- [ ] Entities, DAOs and `MIGRATION_18_19` as specified; register it after `MIGRATION_17_18` in `DataModule`.
+- [ ] `MigrationTest`: 18→19 **and** chained 17→19, with rows having a universal MAC, a local MAC, no
+      MAC, and two rows whose stored MAC spellings differ but normalise to the same identifier (the v17
+      unique index forbids byte-identical MACs; the migration must not abort — `INSERT OR IGNORE`).
 - [ ] Assert that user-authored columns are byte-identical before and after.
 - [ ] `core:data-testing`: `FakeDeviceIdentifierDao`, `FakeDeviceObservationDao`,
       `FakeDeviceSightingDao`, `FakeDeviceMergeDecisionDao`; extend `FakeKnownDeviceDao`.
@@ -285,7 +287,8 @@ Algorithm:
    `scopeKey = canonical(currentNetworkKey)`, **and also `scopeKey = ''` for `MAC_LOCAL`** — legacy
    rows backfilled by the migration. On a legacy match, rewrite that identifier's `scopeKey` to the
    current canonical key. Collect candidate rows.
-3. **Exactly one candidate** → `Existing`.
+3. **Exactly one candidate** → `Existing`, unless the Conflict rule above applies (a copied identifier
+   seen simultaneously at another address is not `Existing`).
 4. **Several candidates** (the scanned device's identifiers point at more than one row; rows can't
    share an identifier in the DB because of the unique index) → try **auto-merge** of those rows,
    allowed only if *all* of:
@@ -293,10 +296,14 @@ Algorithm:
    - no identifier kind has *different* values on the two rows that could not legitimately co-exist
      (two different `SMB_SERVER_GUID`s = two machines; two different `MAC_LOCAL`s is normal);
    - no `DISTINCT` decision exists between them;
-   - at most one row has any of `customName`, `tags`, `notes`, `location` set (otherwise →
-     `MergeSuggestion` for the user). `isKnown` does not block a merge: it is ORed.
+   - at most one row has any user-authored detail set — `customName`, `tags`, `notes`, `location`,
+     `deviceTypeOverride`, `osOverride`, `modelOverride` (otherwise → `MergeSuggestion` for the user);
+   - all candidates have the same `isKnown` value. Differing trust is never ORed automatically: it
+     requires the user to pick (→ `MergeSuggestion`).
    Merge keeps the row with the earliest `firstSeen`, moves identifiers, observations and sightings,
-   copies the other row's user fields only into *empty* fields, ORs `isKnown`, deletes the other row.
+   copies the other row's user fields (including the three overrides) only into *empty* fields, keeps
+   the surviving row's `isKnown`, deletes the other row. Confirmed (user-driven) merges apply the same
+   preservation rules and let the user choose the `isKnown` value when it differs.
    The whole merge is one `@Transaction`.
    If any rule fails → `Ambiguous`, attach the scan data to the most recently seen candidate, emit a
    suggestion.
@@ -317,10 +324,17 @@ Algorithm:
         (port the existing `DeviceInventoryRepositoryTest` cases to the resolver);
   - [ ] claimed STRONG identifier on a device seen at another IP in the same scan, with a different
         universal MAC → not grouped; the newcomer resolves `New` and alerts (step 1 exception);
-  - [ ] multi-homed device (same UDN, same or absent MACs) → grouped, one row, `additionalIps` set;
+  - [ ] multi-homed device (same UDN, same or absent MACs) → grouped only when the sightings are
+        authenticated as one device or the user confirmed it; an unauthenticated sighting that claims an
+        existing row's STRONG identifier from a second simultaneous address is a **`Conflict`**:
+        persisted as its own row with the claims kept as untrusted evidence (never transferring
+        unique-identifier ownership), checked *before* grouping and before sole-candidate acceptance
+        (step 3), and it **notifies when newly inserted** (a copied UDN must not suppress the alert);
   - [ ] legacy `MAC_LOCAL` identifier with `scopeKey = ''` matches on any network and is rewritten to
         the current key (no duplicate after upgrade);
   - [ ] a merge where both rows have user fields → suggestion, rows untouched;
+  - [ ] two rows that each carry only an override (`osOverride` / `modelOverride`) → suggestion, never
+        auto-merged; rows with differing `isKnown` → suggestion;
   - [ ] **auto-merge kill switch off** (Task 1.7) → resolver behaves exactly like today's
         MAC-or-IP lookup.
 
@@ -343,7 +357,8 @@ Algorithm:
       `osConfidence` whenever the corresponding field is set, and compare per field. Test that a
       reading which only sets `deviceType` leaves `osConfidence` alone.
 - [ ] `NewDeviceNotifier` fires only for `Resolution.New`. Not for `Existing`, not for merges.
-      `Ambiguous` does not notify (it attaches to an existing row) but is surfaced in the UI.
+      `Ambiguous` does not notify (it attaches to an existing row) but is surfaced in the UI. A newly
+      inserted `Conflict` row **does** notify.
 - [ ] Keep `macAddress` column populated with the most recent universal MAC (or local MAC if none)
       for backward compatibility with existing UI, search and export.
 - [ ] Expose `pendingMergeSuggestions: Flow<List<MergeSuggestion>>`, read from the `SUGGESTED` rows
@@ -364,9 +379,13 @@ BSSID and SSID are **labels only**, never part of a key: both need the foregroun
 permission, so a key built from them would differ between a foreground scan and a background watch of
 the same network.
 
-- [ ] Canonicalisation: look every key in the list up in `network_key_aliases`. If any is known, use
-      its canonical key and record the others as aliases of it. If none is known, the strongest key
-      becomes canonical. Sightings and NETWORK-scoped identifiers always store the canonical key.
+- [ ] Canonicalisation: look every **strong** key (`gw-mac:`, `gw-id:`) up in `network_key_aliases`.
+      If any is known, use its canonical key and record the other strong keys as aliases of it. If
+      none is known, the strongest key becomes canonical. **`l3:` keys never participate in alias
+      lookup or registration** (`192.168.1.1/24` exists on countless networks; otherwise a hotel with
+      gateway MAC B and the same l3 hash would alias B to the home network). `l3` stays a
+      foreground-only fallback hint. Test: home scan, hotel scan with the same l3, then a background
+      watch of the hotel → `NotWatched`. Sightings and NETWORK-scoped identifiers always store the canonical key.
 - [ ] Store a human label (SSID if available, else subnet) in `device_sightings.networkLabel`.
 - [ ] **Watched networks, migration path.** Existing `watched_networks` rows hold only `gatewayMac`.
       On the first foreground scan of a watched network, record its resolved keys as aliases of
@@ -407,7 +426,7 @@ Without a place to act on suggestions, two rows that both carry user details sta
       which decisions depend on each finding.
 
 **PR 1 exit check:** existing tests green; resolver suite green; migration test green; on a real LAN,
-upgrading from v17 and rescanning creates **no new duplicate rows** (rows that were already duplicated
+upgrading from v18 and rescanning creates **no new duplicate rows** (rows that were already duplicated
 before the upgrade carry no identifiers and stay as they are — they surface only through merge
 suggestions).
 

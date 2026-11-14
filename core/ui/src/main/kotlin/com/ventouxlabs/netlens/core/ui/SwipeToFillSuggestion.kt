@@ -25,8 +25,8 @@ import kotlin.math.abs
  * Lets the user swipe toward the end edge (right in LTR) across an empty text field to fill in its
  * example value — e.g. Ping's `8.8.8.8` placeholder — instead of typing it.
  *
- * Only active while [enabled] (callers pass "the field is empty"), so a swipe can never replace text
- * the user typed. The gesture is observed in the [PointerEventPass.Initial] pass and consumed only
+ * Only installed while [enabled] (callers pass "the field is empty").
+ * The gesture is observed in the [PointerEventPass.Initial] pass and consumed only
  * once it is clearly a horizontal swipe toward the end edge: taps still focus the field, and
  * vertical drags still scroll the screen. Swipe gestures are invisible to TalkBack, so the same
  * fill is also exposed as a custom accessibility action labelled [actionLabel].
@@ -58,12 +58,17 @@ fun Modifier.swipeToFillSuggestion(
         .pointerInput(direction, touchSlop, thresholdPx) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (down.isConsumed) return@awaitEachGesture
                 var dx = 0f
                 var dy = 0f
                 var claimed = false
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    // A missing pointer or an already-consumed change (Compose delivers a pointer
+                    // cancellation as a consumed release) must abort without filling the field.
+                    val change = event.changes.firstOrNull { it.id == down.id }
+                        ?: return@awaitEachGesture
+                    if (change.isConsumed) return@awaitEachGesture
                     if (!change.pressed) {
                         // Consume the release too, so the field's own tap handling does not treat a
                         // completed swipe as a tap and move the cursor.
