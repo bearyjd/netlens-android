@@ -66,6 +66,7 @@ class DevicesContentRenderTest {
 
     @Test
     fun `the auto-merge switch renders both on and off`() {
+        render(DevicesUiState(autoMergeEnabled = null))
         render(DevicesUiState(autoMergeEnabled = true))
         render(DevicesUiState(autoMergeEnabled = false))
     }

@@ -86,7 +86,11 @@ data class ResolveResult(
     val newConflictRows: List<KnownDeviceEntity>,
 )
 
-/** [autoMerge] is the Task 1.7 kill switch: off means no merge, no weak scoring, MAC-or-IP lookup only. */
+/**
+ * [autoMerge] is the Task 1.7 kill switch: off means no new merge, no weak scoring and no Conflict handling
+ * (MAC-or-IP lookup only). Completed merges and pending suggestions are left as they are; identifiers are
+ * still recorded.
+ */
 data class ResolveOptions(val autoMerge: Boolean = true)
 
 /** Follows loser -> survivor links (a chain is possible when one scan merges twice); a cycle stops. */

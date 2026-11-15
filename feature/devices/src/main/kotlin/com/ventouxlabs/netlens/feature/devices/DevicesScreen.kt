@@ -191,7 +191,7 @@ internal fun DevicesContent(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             watchSection()
-            AutoMergeRow(enabled = state.autoMergeEnabled, onToggle = onAutoMergeToggle)
+            state.autoMergeEnabled?.let { AutoMergeRow(enabled = it, onToggle = onAutoMergeToggle) }
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = onSearchQueryChanged,
@@ -250,7 +250,7 @@ internal fun DevicesContent(
     }
 }
 
-/** Kill switch for automatic duplicate merging; available to every user, unlike the Pro watch section. */
+/** Kill switch for automatic duplicate merging; available to every user, unlike the Pro watch section. Hidden until the preference loads. */
 @Composable
 private fun AutoMergeRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Row(

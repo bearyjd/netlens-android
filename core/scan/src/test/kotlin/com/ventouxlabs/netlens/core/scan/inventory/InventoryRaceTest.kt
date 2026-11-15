@@ -119,13 +119,14 @@ class InventoryRaceTest {
         assertEquals("again", h.known.allDevices.single().hostname)
     }
 
-    @Test
-    fun `two concurrent scans of the same identifier-less device create one row and one alert`() = runTest {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `two concurrent scans of the same identifier-less device create one row and one alert`(autoMerge: Boolean) = runTest {
         val slow = interfering {
             delay(100) // a suspension between resolve and insert: where an unlocked second scan sneaks in
             null
         }
-        val repo = h.fakes.repository(notifier, autoMerge = false, identityDao = slow)
+        val repo = h.fakes.repository(notifier, autoMerge = autoMerge, identityDao = slow)
 
         val a = launch { repo.persistScan(listOf(lan("10.0.0.77")), networkId = null) }
         val b = launch { repo.persistScan(listOf(lan("10.0.0.77")), networkId = 3) }

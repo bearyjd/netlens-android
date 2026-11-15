@@ -3,7 +3,6 @@ package com.ventouxlabs.netlens.feature.devices.model
 import androidx.annotation.StringRes
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
-import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 
 data class DevicesUiState(
     val devices: List<KnownDeviceEntity> = emptyList(),
@@ -11,8 +10,8 @@ data class DevicesUiState(
     val watchedNetworks: List<WatchedNetworkEntity> = emptyList(),
     val cadence: WatchCadence = WatchCadence.DEFAULT,
     val masterWatchEnabled: Boolean = false,
-    /** The `autoMergeDevices` preference (default on): off stops automatic duplicate merging. */
-    val autoMergeEnabled: Boolean = UserPreferencesRepository.DEFAULT_AUTO_MERGE_DEVICES,
+    /** The `autoMergeDevices` preference; null until it has loaded, so a stored "off" never shows as on. */
+    val autoMergeEnabled: Boolean? = null,
     val selectedDeviceId: Long? = null,
     /** Every tag in the inventory, for the filter-chip row — not just the ones in [devices]. */
     val availableTags: List<String> = emptyList(),

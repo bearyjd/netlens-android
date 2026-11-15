@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -13,10 +14,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,6 +43,10 @@ class UserPreferencesRepository @Inject constructor(
     // is too costly to run on the main thread during Hilt's app-init field injection.
     private val _abuseIpDbApiKeyFlow = MutableStateFlow("")
 
+    /** The store's data with an unreadable (IOException) store treated as empty, so defaults apply. */
+    private val safeData: Flow<Preferences> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+
     init {
         CoroutineScope(Dispatchers.IO).launch {
             // Hydrate the key off the main thread.
@@ -49,7 +56,7 @@ class UserPreferencesRepository @Inject constructor(
             }
             // One-shot migration: if DataStore has a plaintext AbuseIPDB key from a prior install,
             // copy it to the encrypted store and remove it from DataStore.
-            val plaintextKey = dataStore.data.first()[ABUSEIPDB_API_KEY]
+            val plaintextKey = safeData.first()[ABUSEIPDB_API_KEY]
             if (!plaintextKey.isNullOrBlank() && storedKey.isNullOrBlank()) {
                 encryptedStore.putString(ABUSEIPDB_ENCRYPTED_KEY, plaintextKey)
                 _abuseIpDbApiKeyFlow.value = plaintextKey
@@ -123,8 +130,12 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
-    /** Kill switch for device-identity auto-merge; off falls back to the plain MAC-or-IP lookup. */
-    val autoMergeDevices: Flow<Boolean> = dataStore.data.map { it[AUTO_MERGE_DEVICES] ?: DEFAULT_AUTO_MERGE_DEVICES }
+    /**
+     * Kill switch for device-identity auto-merge. Off stops new merges, weak scoring and Conflict
+     * handling (the plain MAC-or-IP lookup); it does not undo completed merges or clear existing
+     * suggestions. An unreadable store reads as the default.
+     */
+    val autoMergeDevices: Flow<Boolean> = safeData.map { it[AUTO_MERGE_DEVICES] ?: DEFAULT_AUTO_MERGE_DEVICES }
 
     suspend fun setAutoMergeDevices(enabled: Boolean) {
         dataStore.edit { it[AUTO_MERGE_DEVICES] = enabled }

@@ -184,13 +184,28 @@ class DevicesViewModelTest {
     }
 
     @Test
-    fun `auto merge is on by default and setAutoMergeDevices persists and surfaces the choice`() = runTest {
-        assertTrue(viewModel.uiState.value.autoMergeEnabled)
+    fun `auto merge is unknown until the preference loads, then the persisted value, then follows toggles`() = runTest {
+        assertNull(DevicesUiState().autoMergeEnabled)
+
+        // The default-on repository value arrives with the first preferences emission.
+        assertEquals(true, viewModel.uiState.value.autoMergeEnabled)
 
         viewModel.setAutoMergeDevices(false)
-
         assertEquals(false, userPreferences.autoMergeDevices.first())
         assertEquals(false, viewModel.uiState.value.autoMergeEnabled)
+
+        viewModel.setAutoMergeDevices(true)
+        assertEquals(true, viewModel.uiState.value.autoMergeEnabled)
+    }
+
+    @Test
+    fun `auto merge reads as loading, never on, before the first preferences emission`() = runTest {
+        val (vm, _) = buildViewModelOnStandardDispatcher()
+        vm.setAutoMergeDevices(false)
+
+        assertNull(vm.uiState.value.autoMergeEnabled) // nothing has run: neither on nor off
+        advanceUntilIdle()
+        assertEquals(false, vm.uiState.value.autoMergeEnabled)
     }
 
     @Test
