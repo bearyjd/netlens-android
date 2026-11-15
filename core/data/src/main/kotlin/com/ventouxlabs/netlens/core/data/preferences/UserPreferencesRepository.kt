@@ -123,6 +123,13 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Kill switch for device-identity auto-merge; off falls back to the plain MAC-or-IP lookup. */
+    val autoMergeDevices: Flow<Boolean> = dataStore.data.map { it[AUTO_MERGE_DEVICES] ?: DEFAULT_AUTO_MERGE_DEVICES }
+
+    suspend fun setAutoMergeDevices(enabled: Boolean) {
+        dataStore.edit { it[AUTO_MERGE_DEVICES] = enabled }
+    }
+
     val latencyMonitorEnabled: Flow<Boolean> = dataStore.data.map { it[LATENCY_MONITOR_ENABLED] ?: false }
     val latencyMonitorHost: Flow<String> = dataStore.data.map { it[LATENCY_MONITOR_HOST] ?: "1.1.1.1" }
     val latencyAlertThresholdMs: Flow<Int> = dataStore.data.map { it[LATENCY_ALERT_THRESHOLD_MS] ?: 200 }
@@ -198,6 +205,8 @@ class UserPreferencesRepository @Inject constructor(
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val WATCH_CADENCE_MINUTES = intPreferencesKey("watch_cadence_minutes")
         private val WATCH_MASTER_ENABLED = booleanPreferencesKey("watch_master_enabled")
+        private val AUTO_MERGE_DEVICES = booleanPreferencesKey("auto_merge_devices")
+        const val DEFAULT_AUTO_MERGE_DEVICES = true
         const val DEFAULT_WATCH_CADENCE_MINUTES = 60
         private const val RECENTS_SEPARATOR = ","
         private const val MAX_RECENTS = 5

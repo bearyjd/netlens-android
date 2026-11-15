@@ -30,6 +30,7 @@ class DevicesContentRenderTest {
             onCopyResults = {},
             onShareResults = {},
             watchSection = {},
+            onAutoMergeToggle = {},
             onSearchQueryChanged = {},
             onToggleTag = {},
             onClearTags = {},
@@ -61,5 +62,11 @@ class DevicesContentRenderTest {
     @Test
     fun `a search with no matches renders`() {
         render(DevicesUiState(searchQuery = "router"))
+    }
+
+    @Test
+    fun `the auto-merge switch renders both on and off`() {
+        render(DevicesUiState(autoMergeEnabled = true))
+        render(DevicesUiState(autoMergeEnabled = false))
     }
 }

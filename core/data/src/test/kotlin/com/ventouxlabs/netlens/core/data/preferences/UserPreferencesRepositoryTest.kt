@@ -140,6 +140,16 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `auto merge devices defaults to on and round-trips`() = testScope.runTest {
+        assertEquals(UserPreferencesRepository.DEFAULT_AUTO_MERGE_DEVICES, repository.autoMergeDevices.first())
+        assertTrue(repository.autoMergeDevices.first())
+        repository.setAutoMergeDevices(false)
+        assertFalse(repository.autoMergeDevices.first())
+        repository.setAutoMergeDevices(true)
+        assertTrue(repository.autoMergeDevices.first())
+    }
+
+    @Test
     fun `watch master toggle round-trips and defaults to false`() = testScope.runTest {
         assertEquals(false, repository.watchMasterEnabled.first())
         repository.setWatchMasterEnabled(true)

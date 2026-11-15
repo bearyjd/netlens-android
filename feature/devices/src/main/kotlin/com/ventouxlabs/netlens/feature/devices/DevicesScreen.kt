@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -118,6 +120,7 @@ fun DevicesScreen(
                 onCadenceChange = { cadence -> viewModel.setCadence(cadence, isPro) },
             )
         },
+        onAutoMergeToggle = viewModel::setAutoMergeDevices,
         onSearchQueryChanged = viewModel::setSearchQuery,
         onToggleTag = viewModel::toggleTagFilter,
         onClearTags = viewModel::clearTagFilters,
@@ -139,6 +142,7 @@ internal fun DevicesContent(
     onCopyResults: () -> Unit,
     onShareResults: () -> Unit,
     watchSection: @Composable () -> Unit,
+    onAutoMergeToggle: (Boolean) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onToggleTag: (String) -> Unit,
     onClearTags: () -> Unit,
@@ -187,6 +191,7 @@ internal fun DevicesContent(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             watchSection()
+            AutoMergeRow(enabled = state.autoMergeEnabled, onToggle = onAutoMergeToggle)
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = onSearchQueryChanged,
@@ -242,6 +247,29 @@ internal fun DevicesContent(
                 }
             }
         }
+    }
+}
+
+/** Kill switch for automatic duplicate merging; available to every user, unlike the Pro watch section. */
+@Composable
+private fun AutoMergeRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(stringResource(R.string.devices_auto_merge_title))
+            Text(
+                stringResource(R.string.devices_auto_merge_summary),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        // The Row owns the toggle semantics, so the Switch itself is not a second focus target.
+        Switch(checked = enabled, onCheckedChange = null)
     }
 }
 

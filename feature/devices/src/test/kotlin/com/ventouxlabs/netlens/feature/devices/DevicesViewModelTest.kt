@@ -184,6 +184,16 @@ class DevicesViewModelTest {
     }
 
     @Test
+    fun `auto merge is on by default and setAutoMergeDevices persists and surfaces the choice`() = runTest {
+        assertTrue(viewModel.uiState.value.autoMergeEnabled)
+
+        viewModel.setAutoMergeDevices(false)
+
+        assertEquals(false, userPreferences.autoMergeDevices.first())
+        assertEquals(false, viewModel.uiState.value.autoMergeEnabled)
+    }
+
+    @Test
     fun `setMasterWatch enqueues only when pro and master enabled`() = runTest {
         viewModel.setMasterWatch(enabled = true, isPro = true)
         assertTrue(scheduler.calls.any { it.isPro && it.masterEnabled })

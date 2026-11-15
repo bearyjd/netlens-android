@@ -64,7 +64,7 @@ class ScanNetworkAttributionTest {
             },
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = fakes.known,
-            deviceInventoryRepository = fakes.repository(FakeNewDeviceNotifier()),
+            deviceInventoryRepository = fakes.repository(FakeNewDeviceNotifier(), autoMerge = false),
             scanLocationProvider = FakeScanLocationProvider(),
             networkIdentity = identity,
         )

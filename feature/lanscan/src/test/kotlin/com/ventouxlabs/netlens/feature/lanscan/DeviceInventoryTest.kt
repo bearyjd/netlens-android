@@ -67,7 +67,7 @@ class DeviceInventoryTest {
             networkInterfaceProvider = StubNetworkInterfaceProvider(),
             lanScanHistoryDao = StubLanScanHistoryDao(),
             knownDeviceDao = fakeKnownDeviceDao,
-            deviceInventoryRepository = InventoryFakes(fakeKnownDeviceDao).repository(fakeNotifier),
+            deviceInventoryRepository = InventoryFakes(fakeKnownDeviceDao).repository(fakeNotifier, autoMerge = false),
             scanLocationProvider = FakeScanLocationProvider(),
             networkIdentity = FakeNetworkIdentity(),
         )
