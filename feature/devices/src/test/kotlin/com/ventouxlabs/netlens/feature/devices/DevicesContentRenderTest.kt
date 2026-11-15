@@ -35,7 +35,7 @@ class DevicesContentRenderTest {
             onAutoMergeToggle = {},
             onOpenSuggestions = {},
             onCloseSuggestions = {},
-            onMergeSuggestion = { _, _ -> },
+            onMergeSuggestion = { _, _, _ -> },
             onRejectSuggestion = {},
             onSearchQueryChanged = {},
             onToggleTag = {},

@@ -47,6 +47,7 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
         newDeviceNotifier = notifier,
         resolver = DeviceIdentityResolver(known, identifiers, decisions, aliases, identityDao),
         recorder = DeviceIdentifierRecorder(identifiers),
+        identifierDao = identifiers,
         identityDao = identityDao,
         observationDao = observations,
         sightingDao = sightings,

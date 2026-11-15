@@ -8,11 +8,11 @@ import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
 import com.ventouxlabs.netlens.core.scan.network.NetworkKeys
 import com.ventouxlabs.netlens.core.network.DisplayText
-import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.di.DefaultDispatcher
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
+import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
@@ -31,6 +31,7 @@ import com.ventouxlabs.netlens.feature.devices.model.displayType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,7 +51,6 @@ class DevicesViewModel @Inject constructor(
     private val networkIdentity: NetworkIdentity,
     private val userPreferences: UserPreferencesRepository,
     private val inventory: DeviceInventoryRepository,
-    private val identifierDao: DeviceIdentifierDao,
     private val watchScheduler: WatchScheduler,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
@@ -151,9 +151,10 @@ class DevicesViewModel @Inject constructor(
         devices: List<KnownDeviceEntity>,
     ): List<MergeSuggestionUi> {
         val rows = devices.associateBy { it.id }
+        val identifiers = mutableMapOf<Long, List<DeviceIdentifierEntity>>() // one query per row per emission
         return pairs.mapNotNull { pair ->
             val (survivor, loser) = survivorAndLoser(pair, rows) ?: return@mapNotNull null
-            buildMergeSuggestionUi(pair, survivor, loser, identifierDao.getForDevice(loser.id))
+            buildMergeSuggestionUi(pair, survivor, loser, identifiers.getOrPut(loser.id) { inventory.identifiersFor(loser.id) })
         }
     }
 
@@ -164,16 +165,26 @@ class DevicesViewModel @Inject constructor(
     /**
      * Merges the pair. When the two rows disagree on trust, [isKnown] is the user's explicit choice and
      * is required: without it nothing is sent, so a merge can never default into (or out of) a known row.
+     * When the merge drops a value or decides trust ([MergeSuggestionUi.requiresConfirmation]) it also
+     * needs [confirmed], set only by the confirmation dialog. The survivor and preview hash the user saw
+     * are sent along, so the repository refuses a merge whose rows changed since.
      */
-    fun acceptSuggestion(key: String, isKnown: Boolean?) {
+    fun acceptSuggestion(key: String, isKnown: Boolean?, confirmed: Boolean) {
         val suggestion = uiState.value.suggestions.find { it.key == key }
         if (uiState.value.suggestionBusyKey != null) return
         when {
             suggestion == null -> refuse(R.string.devices_suggestion_merge_refused)
             suggestion.trustDiffers && isKnown == null ->
                 _uiState.update { it.copy(suggestionMessage = R.string.devices_suggestion_choose_trust) }
+            suggestion.requiresConfirmation && !confirmed ->
+                _uiState.update { it.copy(suggestionMessage = R.string.devices_suggestion_confirm_required) }
             else -> runSuggestionAction(key, R.string.devices_suggestion_merge_refused) {
-                inventory.acceptSuggestion(suggestion.pair, if (suggestion.trustDiffers) isKnown else null)
+                inventory.acceptSuggestion(
+                    suggestion.pair,
+                    if (suggestion.trustDiffers) isKnown else null,
+                    suggestion.survivor.id,
+                    suggestion.previewHash,
+                )
             }
         }
     }
@@ -205,8 +216,16 @@ class DevicesViewModel @Inject constructor(
                 logger.log(Level.WARNING, "suggestion action failed", e)
                 false
             }
-            _uiState.update { it.copy(suggestionBusyKey = null, suggestionMessage = if (done) null else refusedMessage) }
-            if (!done) suggestionRefresh.update { it + 1 }
+            if (done) {
+                // Stay busy while the list re-emits, so a tap aimed at the pair that was just here
+                // cannot land on the card that slides into its place.
+                _uiState.update { it.copy(suggestionMessage = null) }
+                delay(SETTLE_MS)
+                _uiState.update { it.copy(suggestionBusyKey = null) }
+            } else {
+                _uiState.update { it.copy(suggestionBusyKey = null, suggestionMessage = refusedMessage) }
+                suggestionRefresh.update { it + 1 }
+            }
         }
     }
 
@@ -351,7 +370,9 @@ class DevicesViewModel @Inject constructor(
         return sb.toString().trimEnd()
     }
 
-    private companion object {
-        val logger: Logger = Logger.getLogger("DevicesViewModel")
+    internal companion object {
+        /** How long taps stay ignored after a successful suggestion action. */
+        const val SETTLE_MS = 400L
+        private val logger: Logger = Logger.getLogger("DevicesViewModel")
     }
 }

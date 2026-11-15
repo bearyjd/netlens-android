@@ -149,7 +149,7 @@ internal fun DevicesContent(
     onAutoMergeToggle: (Boolean) -> Unit,
     onOpenSuggestions: () -> Unit,
     onCloseSuggestions: () -> Unit,
-    onMergeSuggestion: (key: String, isKnown: Boolean?) -> Unit,
+    onMergeSuggestion: (key: String, isKnown: Boolean?, confirmed: Boolean) -> Unit,
     onRejectSuggestion: (key: String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onToggleTag: (String) -> Unit,

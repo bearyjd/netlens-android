@@ -47,7 +47,7 @@ class MergeSuggestionsRenderTest {
     )
 
     private fun render(suggestions: List<MergeSuggestionUi>, busyKey: String? = null, message: Int? = null) = paparazzi.snapshot {
-        MergeSuggestionsContent(suggestions, busyKey, message, onClose = {}, onMerge = { _, _ -> }, onNotTheSame = {})
+        MergeSuggestionsContent(suggestions, busyKey, message, onClose = {}, onMerge = { _, _, _ -> }, onNotTheSame = {})
     }
 
     @Test
@@ -92,5 +92,22 @@ class MergeSuggestionsRenderTest {
                 suggestion(entity(1), entity(3)),
             ),
         )
+    }
+
+    @Test
+    fun `the confirmation body renders dropped values, the trust choice and the MAC warning`() {
+        val rlo = Char(0x202E)
+        val ui = suggestion(
+            entity(1, known = true, name = "Mine", notes = "keep"),
+            entity(2, known = false, name = "Other", notes = "lost${rlo}text\n" + "y".repeat(500), mac = "aa:bb:cc:dd:ee:ff"),
+        )
+        paparazzi.snapshot { MergeConfirmContent(ui, trustChoice = true) }
+        paparazzi.snapshot { MergeConfirmContent(ui, trustChoice = false) }
+        paparazzi.snapshot { MergeConfirmContent(ui, trustChoice = null) }
+    }
+
+    @Test
+    fun `a trust-escalating pair renders the warning above the choice`() {
+        render(listOf(suggestion(entity(1, known = true), entity(2, known = false, mac = "aa:bb:cc:dd:ee:ff"))))
     }
 }

@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.network.DisplayText
+import com.ventouxlabs.netlens.core.scan.identity.MergePreview
 import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.feature.devices.R
 
@@ -64,6 +65,9 @@ data class SuggestionRow(
 
 data class MovedIdentifier(val kind: String, val value: String)
 
+/** A field both rows have with different values: the removed row's value is lost, so it is shown before merging. */
+data class DroppedValue(val field: UserField, val value: String)
+
 /**
  * A pending pair as the sheet shows it. [survivor] is the row that stays (mirrors
  * `DeviceInventoryRepositoryImpl.acceptSuggestion`: older `firstSeen`, then lower id); [loser] is
@@ -82,11 +86,21 @@ data class MergeSuggestionUi(
     val droppedFields: List<UserField>,
     val movedIdentifiers: List<MovedIdentifier>,
     val movedIdentifierCount: Int,
+    /** The removed row's value for each of [droppedFields], sanitised, for the confirmation dialog. */
+    val droppedValues: List<DroppedValue>,
+    /** [MergePreview.hash] of what this preview was built from; the repository re-checks it at merge time. */
+    val previewHash: Int,
 ) {
     val key: String get() = suggestionKey(pair.deviceIdLow, pair.deviceIdHigh)
 
     /** The user must choose the merged trust value: it is never defaulted for them. */
     val trustDiffers: Boolean get() = survivor.isKnown != loser.isKnown
+
+    /** Dropping a value or choosing trust cannot be undone, so Merge asks first. */
+    val requiresConfirmation: Boolean get() = droppedFields.isNotEmpty() || trustDiffers
+
+    /** Choosing "known" would carry the removed row's different MAC onto a trusted row. */
+    val escalatesTrust: Boolean get() = trustDiffers && macsDiffer
 
     val macsDiffer: Boolean get() = !survivor.mac.equals(loser.mac, ignoreCase = true)
 }
@@ -96,12 +110,32 @@ fun suggestionKey(low: Long, high: Long): String = "suggestion:$low:$high"
 
 private const val MAX_SHOWN_IDENTIFIERS = 5
 private const val MAX_IDENTIFIER_DISPLAY = 64
+private const val MAX_NAME_DISPLAY = 63
+private const val MAX_DROPPED_DISPLAY = 120
+
+// Format characters (bidi overrides and isolates, zero-width, BOM, tag characters) plus the Unicode
+// line and paragraph separators. DisplayText.flatten strips only C0/C1 controls, so these are mapped to
+// a space first; they could otherwise reorder or hide text, or fake a line break.
+private val INVISIBLE = Regex("[\\p{Cf}" + Char(0x2028) + Char(0x2029) + "]")
+
+private val FSI = Char(0x2068)
+private val PDI = Char(0x2069)
+
+/** Flattened, format-character-free and clamped (never ending on half a surrogate pair); null when nothing is left. */
+internal fun safeDisplay(value: String?, max: Int): String? =
+    DisplayText.flatten(value?.replace(INVISIBLE, " "))?.let { text ->
+        val clamped = text.take(max)
+        (if (clamped.isNotEmpty() && clamped.last().isHighSurrogate()) clamped.dropLast(1) else clamped).trim().ifEmpty { null }
+    }
+
+/** Wraps device-derived text so its direction cannot leak into the surrounding translated sentence. */
+fun bidiIsolate(text: String): String = "$FSI$text$PDI"
 
 /** The row [pair] keeps when accepted, then the one folded into it; null if either row is missing. */
 fun survivorAndLoser(pair: MergeSuggestion.BetweenRows, rows: Map<Long, KnownDeviceEntity>): Pair<KnownDeviceEntity, KnownDeviceEntity>? {
     val low = rows[pair.deviceIdLow] ?: return null
     val high = rows[pair.deviceIdHigh] ?: return null
-    return if (compareValuesBy(low, high, { it.firstSeen }, { it.id }) <= 0) low to high else high to low
+    return MergePreview.survivorAndLoser(low, high)
 }
 
 fun buildMergeSuggestionUi(
@@ -121,11 +155,14 @@ fun buildMergeSuggestionUi(
         droppedFields = fields.filter { (_, v) -> v.first != null && v.second != null && v.first != v.second }.map { it.first },
         movedIdentifiers = loserIdentifiers.take(MAX_SHOWN_IDENTIFIERS).map {
             MovedIdentifier(
-                kind = DisplayText.flatten(it.kind).orEmpty(),
-                value = DisplayText.flatten(it.value).orEmpty().take(MAX_IDENTIFIER_DISPLAY),
+                kind = safeDisplay(it.kind, MAX_IDENTIFIER_DISPLAY).orEmpty(),
+                value = safeDisplay(it.value, MAX_IDENTIFIER_DISPLAY).orEmpty(),
             )
         },
         movedIdentifierCount = loserIdentifiers.size,
+        droppedValues = fields.filter { (_, v) -> v.first != null && v.second != null && v.first != v.second }
+            .map { (field, v) -> DroppedValue(field, safeDisplay(v.second, MAX_DROPPED_DISPLAY).orEmpty()) },
+        previewHash = MergePreview.hash(survivor, loser, loserIdentifiers),
     )
 }
 
@@ -134,8 +171,8 @@ private fun String?.orBlankNull(): String? = if (isNullOrBlank()) null else this
 /** `customName ?: hostname ?: vendor ?: ip`, each candidate flattened first: device text is hostile. */
 private fun KnownDeviceEntity.toSuggestionRow() = SuggestionRow(
     id = id,
-    name = listOf(customName, hostname, vendor, ip).firstNotNullOfOrNull { DisplayText.flatten(it) }.orEmpty(),
-    ip = DisplayText.flatten(ip).orEmpty(),
-    mac = DisplayText.flatten(macAddress),
+    name = listOf(customName, hostname, vendor, ip).firstNotNullOfOrNull { safeDisplay(it, MAX_NAME_DISPLAY) }.orEmpty(),
+    ip = safeDisplay(ip, MAX_NAME_DISPLAY).orEmpty(),
+    mac = safeDisplay(macAddress, MAX_NAME_DISPLAY),
     isKnown = isKnown,
 )

@@ -1,14 +1,17 @@
 package com.ventouxlabs.netlens.core.scan
 
 import com.ventouxlabs.netlens.core.data.TransactionRunner
+import com.ventouxlabs.netlens.core.data.dao.DeviceIdentifierDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceIdentityDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceMergeDecisionDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
+import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentifierRecorder
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentityResolver
 import com.ventouxlabs.netlens.core.scan.identity.IdentityPolicy
+import com.ventouxlabs.netlens.core.scan.identity.MergePreview
 import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.identity.ResolveOptions
 import com.ventouxlabs.netlens.core.scan.identity.ResolvedDevice
@@ -45,8 +48,15 @@ interface DeviceInventoryRepository {
      * defaults to the survivor's. False (nothing changed) when the pair is no longer a pending
      * suggestion, a row is gone, the merge would delete a row the user marked DISTINCT, or the rows'
      * `isKnown` differ and no [isKnown] choice was passed (trust is never decided for the user).
+     *
+     * [expectedSurvivorId] and [previewHash] ([MergePreview.hash]) pin what the user was shown: inside
+     * the transaction the merge is refused (false) when the survivor differs or the hash no longer
+     * matches, i.e. a row or identifier changed after the preview.
      */
-    suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean? = null): Boolean
+    suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?, expectedSurvivorId: Long, previewHash: Int): Boolean
+
+    /** The identifiers [deviceId] owns, for showing what a merge would move. */
+    suspend fun identifiersFor(deviceId: Long): List<DeviceIdentifierEntity>
 
     /**
      * Records the pair (low id first) as DISTINCT: never suggested or auto-merged again. False, writing
@@ -61,6 +71,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
     private val newDeviceNotifier: NewDeviceNotifier,
     private val resolver: DeviceIdentityResolver,
     private val recorder: DeviceIdentifierRecorder,
+    private val identifierDao: DeviceIdentifierDao,
     private val identityDao: DeviceIdentityDao,
     private val observationDao: DeviceObservationDao,
     private val sightingDao: DeviceSightingDao,
@@ -181,12 +192,22 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
     private fun List<MergeSuggestion>.forNewDevice(resolved: ResolvedDevice) =
         filterIsInstance<MergeSuggestion.ForNewDevice>().filter { it.device == resolved.device }
 
-    override suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?): Boolean = writeLock.withLock {
+    override suspend fun identifiersFor(deviceId: Long): List<DeviceIdentifierEntity> = identifierDao.getForDevice(deviceId)
+
+    override suspend fun acceptSuggestion(
+        pair: MergeSuggestion.BetweenRows,
+        isKnown: Boolean?,
+        expectedSurvivorId: Long,
+        previewHash: Int,
+    ): Boolean = writeLock.withLock {
         transactions.run {
             if (decisionDao.get(pair.deviceIdLow, pair.deviceIdHigh)?.decision != SUGGESTED) return@run false
             val low = knownDeviceDao.getById(pair.deviceIdLow) ?: return@run false
             val high = knownDeviceDao.getById(pair.deviceIdHigh) ?: return@run false
-            val (survivor, loser) = if (compareValuesBy(low, high, { it.firstSeen }, { it.id }) <= 0) low to high else high to low
+            val (survivor, loser) = MergePreview.survivorAndLoser(low, high)
+            // The user confirmed a specific preview: anything that changed since is not what they saw.
+            if (survivor.id != expectedSurvivorId) return@run false
+            if (MergePreview.hash(survivor, loser, identifierDao.getForDevice(loser.id)) != previewHash) return@run false
             // Deleting the loser would cascade away its DISTINCT edges to third rows: refuse instead.
             if (decisionDao.touchesDistinct(listOf(loser.id))) return@run false
             // Differing trust is never decided for the user.

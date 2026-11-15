@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.feature.devices.model.MergeSuggestionUi
+import com.ventouxlabs.netlens.feature.devices.model.bidiIsolate
 import com.ventouxlabs.netlens.feature.devices.model.SuggestionRow
 import com.ventouxlabs.netlens.feature.devices.model.UserField
 
@@ -70,7 +72,7 @@ internal fun MergeSuggestionsSheet(
     busyKey: String?,
     message: Int?,
     onDismiss: () -> Unit,
-    onMerge: (key: String, isKnown: Boolean?) -> Unit,
+    onMerge: (key: String, isKnown: Boolean?, confirmed: Boolean) -> Unit,
     onNotTheSame: (key: String) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -85,7 +87,7 @@ internal fun MergeSuggestionsContent(
     busyKey: String?,
     message: Int?,
     onClose: () -> Unit,
-    onMerge: (key: String, isKnown: Boolean?) -> Unit,
+    onMerge: (key: String, isKnown: Boolean?, confirmed: Boolean) -> Unit,
     onNotTheSame: (key: String) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
@@ -128,15 +130,35 @@ internal fun MergeSuggestionsContent(
 private fun SuggestionCard(
     suggestion: MergeSuggestionUi,
     busy: Boolean,
-    onMerge: (String, Boolean?) -> Unit,
+    onMerge: (String, Boolean?, Boolean) -> Unit,
     onNotTheSame: (String) -> Unit,
 ) {
     // No default: a differing-trust merge needs the user's explicit choice, so Merge stays disabled
     // until one is made. Keyed on the pair so a recycled card never inherits another pair's choice.
     var trustChoice by rememberSaveable(suggestion.key) { mutableStateOf<Boolean?>(null) }
     val mergeEnabled = !busy && (!suggestion.trustDiffers || trustChoice != null)
-    val survivorName = suggestion.survivor.name
-    val loserName = suggestion.loser.name
+    var confirming by rememberSaveable(suggestion.key) { mutableStateOf(false) }
+    val survivorName = bidiIsolate(suggestion.survivor.name)
+    val loserName = bidiIsolate(suggestion.loser.name)
+
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringResource(R.string.devices_suggestion_confirm_title)) },
+            text = { MergeConfirmContent(suggestion, trustChoice) },
+            confirmButton = {
+                TextButton(
+                    onClick = { confirming = false; onMerge(suggestion.key, trustChoice, true) },
+                    modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET),
+                ) { Text(stringResource(R.string.devices_suggestion_confirm_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = false }, modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET)) {
+                    Text(stringResource(R.string.devices_suggestion_confirm_cancel))
+                }
+            },
+        )
+    }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,6 +168,13 @@ private fun SuggestionCard(
                 Text(
                     stringResource(R.string.devices_suggestion_macs_differ),
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (suggestion.escalatesTrust) {
+                Text(
+                    stringResource(R.string.devices_suggestion_escalation_warning),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -160,7 +189,7 @@ private fun SuggestionCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val mergeDescription = stringResource(R.string.devices_suggestion_merge_cd, survivorName, loserName)
                 Button(
-                    onClick = { onMerge(suggestion.key, trustChoice) },
+                    onClick = { if (suggestion.requiresConfirmation) confirming = true else onMerge(suggestion.key, trustChoice, false) },
                     enabled = mergeEnabled,
                     modifier = Modifier
                         .heightIn(min = MIN_TOUCH_TARGET)
@@ -185,7 +214,7 @@ private fun RowSummary(title: String, row: SuggestionRow) {
         Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         // labelSmall is the Mono role (DESIGN.md): IPs and MACs belong in it.
         Text(
-            "${row.ip}  ·  ${row.mac ?: stringResource(R.string.devices_mac_unknown)}",
+            "${bidiIsolate(row.ip)}  ·  ${bidiIsolate(row.mac ?: stringResource(R.string.devices_mac_unknown))}",
             style = MaterialTheme.typography.labelSmall,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -234,8 +263,9 @@ private fun FieldLine(template: Int, fields: List<UserField>) {
 private fun TrustChoice(choice: Boolean?, onChoose: (Boolean) -> Unit) {
     Column(Modifier.selectableGroup()) {
         Text(stringResource(R.string.devices_suggestion_trust_prompt), style = MaterialTheme.typography.bodySmall)
-        TrustOption(R.string.devices_suggestion_trust_choose_known, selected = choice == true) { onChoose(true) }
+        // "New" first: the safe option is the first one a screen reader reaches.
         TrustOption(R.string.devices_suggestion_trust_choose_new, selected = choice == false) { onChoose(false) }
+        TrustOption(R.string.devices_suggestion_trust_choose_known, selected = choice == true) { onChoose(true) }
     }
 }
 
@@ -250,5 +280,44 @@ private fun TrustOption(label: Int, selected: Boolean, onClick: () -> Unit) {
     ) {
         RadioButton(selected = selected, onClick = null)
         Text(stringResource(label), modifier = Modifier.padding(start = 8.dp))
+    }
+}
+
+/** Body of the confirmation dialog, stateless so a composition smoke test can render it without a dialog window. */
+@Composable
+internal fun MergeConfirmContent(suggestion: MergeSuggestionUi, trustChoice: Boolean?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.devices_suggestion_confirm_irreversible, bidiIsolate(suggestion.loser.name)),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        suggestion.droppedValues.forEach {
+            Text(
+                stringResource(R.string.devices_suggestion_confirm_lost, stringResource(it.field.label), bidiIsolate(it.value)),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (suggestion.trustDiffers && trustChoice != null) {
+            val label = stringResource(if (trustChoice) R.string.devices_suggestion_trust_known else R.string.devices_suggestion_trust_new)
+            Text(stringResource(R.string.devices_suggestion_confirm_trust, label), style = MaterialTheme.typography.bodyMedium)
+        }
+        if (suggestion.escalatesTrust && trustChoice == true) {
+            Text(
+                stringResource(
+                    R.string.devices_suggestion_confirm_mac,
+                    bidiIsolate(suggestion.loser.mac ?: stringResource(R.string.devices_mac_unknown)),
+                    bidiIsolate(suggestion.survivor.name),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                stringResource(R.string.devices_suggestion_escalation_warning),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }

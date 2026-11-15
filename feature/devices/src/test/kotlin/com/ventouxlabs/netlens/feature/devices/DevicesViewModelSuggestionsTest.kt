@@ -15,13 +15,17 @@ import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.feature.devices.model.UserField
+import com.ventouxlabs.netlens.feature.devices.model.buildMergeSuggestionUi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -60,11 +64,11 @@ class DevicesViewModelSuggestionsTest {
         var refuseAccept = false
         var throwOnAccept = false
 
-        override suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?): Boolean {
+        override suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?, expectedSurvivorId: Long, previewHash: Int): Boolean {
             acceptCalls += pair to isKnown
             beforeAccept()
             if (throwOnAccept) error("boom")
-            return if (refuseAccept) false else real.acceptSuggestion(pair, isKnown)
+            return if (refuseAccept) false else real.acceptSuggestion(pair, isKnown, expectedSurvivorId, previewHash)
         }
 
         override suspend fun rejectSuggestion(pair: MergeSuggestion.BetweenRows): Boolean {
@@ -105,7 +109,6 @@ class DevicesViewModelSuggestionsTest {
             networkIdentity = FakeNetworkIdentity(),
             userPreferences = UserPreferencesRepository(dataStore, keyValueStore),
             inventory = spy,
-            identifierDao = fakes.identifiers,
             watchScheduler = RecordingWatchScheduler(),
             defaultDispatcher = UnconfinedTestDispatcher(),
         )
@@ -152,14 +155,35 @@ class DevicesViewModelSuggestionsTest {
     }
 
     @Test
-    fun `hostile names are flattened before they reach the sheet`() = runTest {
-        val hostile = "nas\n192.168.1.1 (Router)\u202Eevil"
-        seedPair(row(1, firstSeen = 10, customName = hostile), row(2, firstSeen = 20, customName = null, hostname = "a\r\nb\tc"))
+    fun `hostile names are flattened to literal safe text`() = runTest {
+        val rlo = Char(0x202E)
+        seedPair(
+            row(1, firstSeen = 10, customName = "nas\n192.168.1.1 (Router)${rlo}evil"),
+            row(2, firstSeen = 20, customName = null, hostname = "a\r\nb\tc"),
+        )
 
-        val s = only()
-        assertEquals(DisplayText.flatten(hostile), s.survivor.name)
-        assertFalse(s.survivor.name.contains('\n'))
-        assertEquals("a b c", s.loser.name)
+        assertEquals("nas 192.168.1.1 (Router) evil", only().survivor.name)
+        assertEquals("a b c", only().loser.name)
+    }
+
+    @Test
+    fun `a name cannot forge a second line of trust text`() = runTest {
+        seedPair(row(1, firstSeen = 10, customName = "nas\nTrusted (known)"), row(2, firstSeen = 20))
+
+        assertEquals("nas Trusted (known)", only().survivor.name)
+    }
+
+    @Test
+    fun `every bidi and invisible format character becomes a space`() = runTest {
+        val specials = (0x202A..0x202E) + (0x2066..0x2069) + listOf(0x200B, 0x200C, 0x200D, 0xFEFF, 0x2028, 0x2029, 0x200E, 0x200F, 0x061C)
+        specials.forEach { code ->
+            val x = FakeKnownDeviceDao()
+            x.seed(row(1, firstSeen = 10, customName = null, hostname = "nas${Char(code)}evil"), row(2, firstSeen = 20))
+            val ui = buildMergeSuggestionUi(
+                MergeSuggestion.BetweenRows(1, 2, 70, emptyList()), x.byId(1)!!, x.byId(2)!!, emptyList(),
+            )
+            assertEquals("nas evil", ui.survivor.name, "U+${code.toString(16)}")
+        }
     }
 
     @Test
@@ -200,14 +224,148 @@ class DevicesViewModelSuggestionsTest {
         seedPair(row(1, firstSeen = 50), row(2, firstSeen = 10))
         val predicted = only().survivor.id
 
-        viewModel.acceptSuggestion(only().key, isKnown = null)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
 
         assertEquals(2L, predicted)
         assertNotNull(fakes.known.byId(predicted))
         assertNull(fakes.known.byId(1))
         assertTrue(viewModel.uiState.value.suggestions.isEmpty())
         assertNull(viewModel.uiState.value.suggestionMessage)
+    }
+
+    @Test
+    fun `after a successful merge taps are ignored until the list has settled`() = runTest {
+        seedPair(row(1, firstSeen = 10), row(2, firstSeen = 20))
+        fakes.known.seed(row(3, firstSeen = 30), row(4, firstSeen = 40))
+        fakes.decisions.suggest(DeviceMergeDecisionEntity(3, 4, "SUGGESTED", 60, "model", 0))
+        val first = viewModel.uiState.value.suggestions.first { it.pair.deviceIdLow == 1L }
+        val second = viewModel.uiState.value.suggestions.first { it.pair.deviceIdLow == 3L }
+
+        viewModel.acceptSuggestion(first.key, isKnown = null, confirmed = true)
+        viewModel.acceptSuggestion(second.key, isKnown = null, confirmed = true) // lands on the card that slid up
+
+        assertEquals(first.key, viewModel.uiState.value.suggestionBusyKey)
+        assertEquals(1, spy.acceptCalls.size)
+        assertNotNull(fakes.known.byId(3))
+
+        advanceTimeBy(DevicesViewModel.SETTLE_MS + 1)
+        runCurrent()
         assertNull(viewModel.uiState.value.suggestionBusyKey)
+        viewModel.acceptSuggestion(second.key, isKnown = null, confirmed = true)
+        assertEquals(2, spy.acceptCalls.size)
+    }
+
+    @Test
+    fun `while an action is suspended every other accept and reject is ignored`() = runTest {
+        seedPair(row(1, firstSeen = 10), row(2, firstSeen = 20))
+        fakes.known.seed(row(3, firstSeen = 30), row(4, firstSeen = 40))
+        fakes.decisions.suggest(DeviceMergeDecisionEntity(3, 4, "SUGGESTED", 60, "model", 0))
+        val first = viewModel.uiState.value.suggestions.first { it.pair.deviceIdLow == 1L }
+        val other = viewModel.uiState.value.suggestions.first { it.pair.deviceIdLow == 3L }
+        val release = CompletableDeferred<Unit>()
+        spy.beforeAccept = { release.await() }
+
+        viewModel.acceptSuggestion(first.key, isKnown = null, confirmed = true)
+        assertEquals(first.key, viewModel.uiState.value.suggestionBusyKey) // set synchronously
+        viewModel.acceptSuggestion(first.key, isKnown = null, confirmed = true)
+        viewModel.acceptSuggestion(other.key, isKnown = null, confirmed = true)
+        viewModel.rejectSuggestion(first.key)
+        viewModel.rejectSuggestion(other.key)
+
+        assertEquals(1, spy.acceptCalls.size)
+        assertTrue(spy.rejectCalls.isEmpty())
+
+        release.complete(Unit)
+        advanceTimeBy(DevicesViewModel.SETTLE_MS + 1)
+        runCurrent()
+        assertNull(viewModel.uiState.value.suggestionBusyKey)
+        assertEquals(1, spy.acceptCalls.size)
+    }
+
+    @Test
+    fun `a field changed between preview and accept is refused and the list refreshed`() = runTest {
+        seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20))
+        val shown = only()
+        spy.beforeAccept = { fakes.known.updateUserDetails(2, null, null, "added after preview", null, null, null, null) }
+
+        viewModel.acceptSuggestion(shown.key, isKnown = null, confirmed = true)
+
+        assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
+        assertNotNull(fakes.known.byId(1))
+        assertNotNull(fakes.known.byId(2))
+        assertTrue(only().previewHash != shown.previewHash, "the list now reflects the changed row")
+    }
+
+    @Test
+    fun `an identifier added between preview and accept is refused`() = runTest {
+        seedPair(row(1, firstSeen = 10), row(2, firstSeen = 20))
+        val shown = only()
+        spy.beforeAccept = {
+            fakes.identifiers.insertIfNew(
+                DeviceIdentifierEntity(deviceId = 2, kind = "UPNP_UDN", value = "uuid:late", scopeKey = "", source = "SSDP", firstSeen = 0, lastSeen = 0),
+            )
+        }
+
+        viewModel.acceptSuggestion(shown.key, isKnown = null, confirmed = true)
+
+        assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
+        assertNotNull(fakes.known.byId(2))
+        assertEquals(1, only().movedIdentifierCount)
+    }
+
+    @Test
+    fun `dropping a value needs confirmation and the confirmed merge goes through`() = runTest {
+        seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20, notes = "theirs"))
+        assertEquals(listOf(UserField.NOTES), only().droppedFields)
+        assertEquals("theirs", only().droppedValues.single().value)
+
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = false)
+
+        assertTrue(spy.acceptCalls.isEmpty())
+        assertEquals(R.string.devices_suggestion_confirm_required, viewModel.uiState.value.suggestionMessage)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
+        assertEquals(1, spy.acceptCalls.size)
+        assertNull(fakes.known.byId(2))
+    }
+
+    @Test
+    fun `differing trust needs confirmation even with an explicit choice`() = runTest {
+        seedPair(row(1, firstSeen = 10, isKnown = true), row(2, firstSeen = 20, isKnown = false))
+
+        viewModel.acceptSuggestion(only().key, isKnown = true, confirmed = false)
+
+        assertTrue(spy.acceptCalls.isEmpty())
+        assertEquals(R.string.devices_suggestion_confirm_required, viewModel.uiState.value.suggestionMessage)
+    }
+
+    @Test
+    fun `a merge with nothing to lose and agreeing trust needs no confirmation`() = runTest {
+        seedPair(row(1, firstSeen = 10), row(2, firstSeen = 20))
+        assertFalse(only().requiresConfirmation)
+
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = false)
+
+        assertEquals(1, spy.acceptCalls.size)
+    }
+
+    @Test
+    fun `differing trust with differing MACs is flagged as a trust escalation`() = runTest {
+        seedPair(row(1, firstSeen = 10, isKnown = true, mac = "aa:aa:aa:aa:aa:01"), row(2, firstSeen = 20, isKnown = false, mac = "bb:bb:bb:bb:bb:02"))
+        assertTrue(only().escalatesTrust)
+    }
+
+    @Test
+    fun `an explicit trust of either value is exactly what reaches the repository`() = runTest {
+        for (choice in listOf(true, false)) {
+            val (a, b) = if (choice) 10L to 11L else 20L to 21L
+            fakes.known.seed(row(a, firstSeen = 10, isKnown = true), row(b, firstSeen = 20, isKnown = false))
+            fakes.decisions.suggest(DeviceMergeDecisionEntity(a, b, "SUGGESTED", 70, "model", 0))
+            viewModel.acceptSuggestion("suggestion:$a:$b", isKnown = choice, confirmed = true)
+            assertEquals(choice, spy.acceptCalls.last().second)
+            assertEquals(choice, fakes.known.byId(a)!!.isKnown)
+            advanceTimeBy(DevicesViewModel.SETTLE_MS + 1)
+            runCurrent()
+        }
     }
 
     @Test
@@ -221,7 +379,7 @@ class DevicesViewModelSuggestionsTest {
         assertEquals(listOf(UserField.TAGS, UserField.LOCATION), before.filledFields)
         assertEquals(listOf(UserField.NAME, UserField.NOTES), before.droppedFields)
 
-        viewModel.acceptSuggestion(before.key, isKnown = null)
+        viewModel.acceptSuggestion(before.key, isKnown = null, confirmed = true)
 
         val merged = fakes.known.byId(before.survivor.id)!!
         assertEquals("Mine", merged.customName)
@@ -251,7 +409,7 @@ class DevicesViewModelSuggestionsTest {
         seedPair(row(1, firstSeen = 10, isKnown = true), row(2, firstSeen = 20, isKnown = false))
         assertTrue(only().trustDiffers)
 
-        viewModel.acceptSuggestion(only().key, isKnown = null)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
 
         assertTrue(spy.acceptCalls.isEmpty(), "no merge request may be sent without the user's trust choice")
         assertNotNull(fakes.known.byId(1))
@@ -263,7 +421,7 @@ class DevicesViewModelSuggestionsTest {
     fun `an explicit trust choice is passed through, even against the survivor's own trust`() = runTest {
         seedPair(row(1, firstSeen = 10, isKnown = true), row(2, firstSeen = 20, isKnown = false))
 
-        viewModel.acceptSuggestion(only().key, isKnown = false)
+        viewModel.acceptSuggestion(only().key, isKnown = false, confirmed = true)
 
         assertEquals(false, spy.acceptCalls.single().second)
         assertEquals(false, fakes.known.byId(1)!!.isKnown)
@@ -274,7 +432,7 @@ class DevicesViewModelSuggestionsTest {
     fun `agreeing trust needs no choice and sends none`() = runTest {
         seedPair(row(1, firstSeen = 10, isKnown = true), row(2, firstSeen = 20, isKnown = true))
 
-        viewModel.acceptSuggestion(only().key, isKnown = false) // a stray value must not flip trust
+        viewModel.acceptSuggestion(only().key, isKnown = false, confirmed = true) // a stray value must not flip trust
 
         assertNull(spy.acceptCalls.single().second)
         assertEquals(true, fakes.known.byId(1)!!.isKnown)
@@ -287,7 +445,7 @@ class DevicesViewModelSuggestionsTest {
         fakes.known.seed(row(3, firstSeen = 30))
         fakes.decisions.setDistinct(2, 3, 0)
 
-        viewModel.acceptSuggestion(only().key, isKnown = null)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
 
         assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
         assertNull(viewModel.uiState.value.suggestionBusyKey)
@@ -308,7 +466,7 @@ class DevicesViewModelSuggestionsTest {
             )
         }
 
-        viewModel.acceptSuggestion(only().key, isKnown = null)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
 
         assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
         assertEquals(1, only().movedIdentifierCount)
@@ -319,7 +477,7 @@ class DevicesViewModelSuggestionsTest {
         seedPair(row(1, firstSeen = 10), row(2, firstSeen = 20))
         spy.throwOnAccept = true
 
-        viewModel.acceptSuggestion(only().key, isKnown = null)
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = true)
 
         assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
         assertNull(viewModel.uiState.value.suggestionBusyKey)
@@ -327,7 +485,7 @@ class DevicesViewModelSuggestionsTest {
 
     @Test
     fun `accepting a pair that is no longer listed is a refusal`() = runTest {
-        viewModel.acceptSuggestion("suggestion:9:10", isKnown = null)
+        viewModel.acceptSuggestion("suggestion:9:10", isKnown = null, confirmed = true)
 
         assertEquals(R.string.devices_suggestion_merge_refused, viewModel.uiState.value.suggestionMessage)
         assertTrue(spy.acceptCalls.isEmpty())

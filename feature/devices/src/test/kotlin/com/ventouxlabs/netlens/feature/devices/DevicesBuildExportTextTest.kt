@@ -1,6 +1,5 @@
 package com.ventouxlabs.netlens.feature.devices
 
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceIdentifierDao
 import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
@@ -62,7 +61,6 @@ class DevicesBuildExportTextTest {
             FakeNetworkIdentity(),
             userPreferences,
             RecordingDeviceInventoryRepository(),
-            FakeDeviceIdentifierDao(),
             RecordingWatchScheduler(),
             UnconfinedTestDispatcher(),
         )

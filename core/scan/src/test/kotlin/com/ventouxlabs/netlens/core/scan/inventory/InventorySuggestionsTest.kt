@@ -1,9 +1,11 @@
 package com.ventouxlabs.netlens.core.scan.inventory
 
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
 import com.ventouxlabs.netlens.core.scan.RecordingNewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.identity.IdentityHarness
 import com.ventouxlabs.netlens.core.scan.identity.MAC1
 import com.ventouxlabs.netlens.core.scan.identity.MAC1_ID
+import com.ventouxlabs.netlens.core.scan.identity.MergePreview
 import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.identity.lan
 import com.ventouxlabs.netlens.core.scan.identity.udn
@@ -32,6 +34,58 @@ class InventorySuggestionsTest {
 
     private suspend fun pending() = repo.pendingMergeSuggestions.first()
 
+    /** Accepts with the survivor and hash a UI would have captured from the rows as they are now. */
+    private suspend fun accept(
+        pair: MergeSuggestion.BetweenRows,
+        isKnown: Boolean? = null,
+        repository: DeviceInventoryRepository = repo,
+        harness: IdentityHarness = h,
+        survivorOverride: Long? = null,
+        hashDelta: Int = 0,
+    ): Boolean {
+        val low = harness.known.byId(pair.deviceIdLow)
+        val high = harness.known.byId(pair.deviceIdHigh)
+        if (low == null || high == null) return repository.acceptSuggestion(pair, isKnown, -1, 0)
+        val (survivor, loser) = MergePreview.survivorAndLoser(low, high)
+        val hash = MergePreview.hash(survivor, loser, harness.identifiers.getForDevice(loser.id))
+        return repository.acceptSuggestion(pair, isKnown, survivorOverride ?: survivor.id, hash + hashDelta)
+    }
+
+    @Test
+    fun `accepting is refused when the survivor is not the one the user was shown`() = runTest {
+        seedPair()
+        repo.persistScan(scan, networkId = null)
+
+        assertFalse(accept(pending().single(), survivorOverride = 101))
+
+        assertNotNull(h.known.byId(101))
+        assertNotNull(h.known.byId(102))
+    }
+
+    @Test
+    fun `accepting is refused when the previewed hash no longer matches`() = runTest {
+        seedPair()
+        repo.persistScan(scan, networkId = null)
+
+        assertFalse(accept(pending().single(), hashDelta = 1))
+
+        assertNotNull(h.known.byId(101))
+        assertNotNull(h.known.byId(102))
+    }
+
+    @Test
+    fun `a field or identifier changed after the preview changes the hash`() = runTest {
+        seedPair()
+        val low = h.known.byId(101)!!
+        val high = h.known.byId(102)!!
+        val (survivor, loser) = MergePreview.survivorAndLoser(low, high)
+        val base = MergePreview.hash(survivor, loser, h.identifiers.getForDevice(loser.id))
+
+        assertTrue(base != MergePreview.hash(survivor.copy(notes = "changed"), loser, h.identifiers.getForDevice(loser.id)))
+        assertTrue(base != MergePreview.hash(survivor, loser.copy(isKnown = !loser.isKnown), h.identifiers.getForDevice(loser.id)))
+        assertTrue(base != MergePreview.hash(survivor, loser, emptyList()))
+    }
+
     @Test
     fun `a flagged pair shows up as a pending suggestion`() = runTest {
         seedPair()
@@ -45,7 +99,7 @@ class InventorySuggestionsTest {
         seedPair()
         repo.persistScan(scan, networkId = null)
 
-        assertTrue(repo.acceptSuggestion(pending().single()))
+        assertTrue(accept(pending().single()))
 
         assertNull(h.known.byId(101))
         val survivor = h.known.byId(102)!!
@@ -62,7 +116,7 @@ class InventorySuggestionsTest {
         seedPair(aKnown = true, bKnown = false)
         repo.persistScan(scan, networkId = null)
 
-        assertTrue(repo.acceptSuggestion(pending().single(), isKnown = true))
+        assertTrue(accept(pending().single(), isKnown = true))
 
         assertEquals(true, h.known.byId(102)!!.isKnown)
     }
@@ -76,7 +130,7 @@ class InventorySuggestionsTest {
             x.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5, notes = "B", lastSeen = 40, isKnown = bKnown)
             r.persistScan(scan, networkId = null)
 
-            assertFalse(r.acceptSuggestion(r.pendingMergeSuggestions.first().single()))
+            assertFalse(accept(r.pendingMergeSuggestions.first().single(), repository = r, harness = x))
 
             assertNotNull(x.known.byId(101))
             assertNotNull(x.known.byId(102))
@@ -88,7 +142,7 @@ class InventorySuggestionsTest {
         seedPair(aKnown = true, bKnown = true)
         repo.persistScan(scan, networkId = null)
 
-        assertTrue(repo.acceptSuggestion(pending().single()))
+        assertTrue(accept(pending().single()))
         assertEquals(true, h.known.byId(102)!!.isKnown)
     }
 
@@ -104,7 +158,7 @@ class InventorySuggestionsTest {
         obs(101, "new", 50).forEach { h.observations.upsert(it) }
         repo.persistScan(scan, networkId = null)
 
-        assertTrue(repo.acceptSuggestion(pending().single()))
+        assertTrue(accept(pending().single()))
 
         val kept = h.observations.getForDevice(102)
         assertEquals(64, kept.size)
@@ -119,7 +173,7 @@ class InventorySuggestionsTest {
         repo.persistScan(scan, networkId = null)
         h.decisions.setDistinct(101, 103, 7)
 
-        assertFalse(repo.acceptSuggestion(pending().single()))
+        assertFalse(accept(pending().single()))
 
         assertNotNull(h.known.byId(101))
         assertNotNull(h.known.byId(102))
@@ -133,7 +187,7 @@ class InventorySuggestionsTest {
         val pair = pending().single()
         assertTrue(repo.rejectSuggestion(pair))
 
-        assertFalse(repo.acceptSuggestion(pair))
+        assertFalse(accept(pair))
 
         assertNotNull(h.known.byId(101))
         assertNotNull(h.known.byId(102))
@@ -143,7 +197,7 @@ class InventorySuggestionsTest {
     fun `accepting a pair that is not a pending suggestion does nothing`() = runTest {
         seedPair()
 
-        assertFalse(repo.acceptSuggestion(MergeSuggestion.BetweenRows(101, 102, 100, emptyList())))
+        assertFalse(accept(MergeSuggestion.BetweenRows(101, 102, 100, emptyList())))
 
         assertNotNull(h.known.byId(101))
         assertNotNull(h.known.byId(102))
