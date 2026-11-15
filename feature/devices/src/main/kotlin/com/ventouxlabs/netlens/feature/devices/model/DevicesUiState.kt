@@ -10,6 +10,8 @@ data class DevicesUiState(
     val watchedNetworks: List<WatchedNetworkEntity> = emptyList(),
     val cadence: WatchCadence = WatchCadence.DEFAULT,
     val masterWatchEnabled: Boolean = false,
+    /** The `autoMergeDevices` preference; null until it has loaded, so a stored "off" never shows as on. */
+    val autoMergeEnabled: Boolean? = null,
     val selectedDeviceId: Long? = null,
     /** Every tag in the inventory, for the filter-chip row — not just the ones in [devices]. */
     val availableTags: List<String> = emptyList(),

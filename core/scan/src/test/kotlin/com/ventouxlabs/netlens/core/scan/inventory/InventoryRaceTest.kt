@@ -44,6 +44,7 @@ class InventoryRaceTest {
     fun `losing the insert race re-resolves onto the winner's row instead of duplicating it`() = runTest {
         val repo = h.fakes.repository(
             notifier,
+            autoMerge = false,
             identityDao = interfering { call ->
                 if (call == 0) {
                     // Another writer inserts the same device between our resolve and our insert.
@@ -65,7 +66,7 @@ class InventoryRaceTest {
     @Test
     fun `when the insert keeps failing the device is skipped, never inserted another way and never notified`() = runTest {
         var attempts = 0
-        val repo = h.fakes.repository(notifier, identityDao = interfering { attempts++; DeviceIdentityDao.DUPLICATE })
+        val repo = h.fakes.repository(notifier, autoMerge = false, identityDao = interfering { attempts++; DeviceIdentityDao.DUPLICATE })
 
         repo.persistScan(listOf(lan("10.0.0.50", MAC1), lan("10.0.0.51", MAC2)), networkId = null)
 
@@ -118,13 +119,14 @@ class InventoryRaceTest {
         assertEquals("again", h.known.allDevices.single().hostname)
     }
 
-    @Test
-    fun `two concurrent scans of the same identifier-less device create one row and one alert`() = runTest {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `two concurrent scans of the same identifier-less device create one row and one alert`(autoMerge: Boolean) = runTest {
         val slow = interfering {
             delay(100) // a suspension between resolve and insert: where an unlocked second scan sneaks in
             null
         }
-        val repo = h.fakes.repository(notifier, identityDao = slow)
+        val repo = h.fakes.repository(notifier, autoMerge = autoMerge, identityDao = slow)
 
         val a = launch { repo.persistScan(listOf(lan("10.0.0.77")), networkId = null) }
         val b = launch { repo.persistScan(listOf(lan("10.0.0.77")), networkId = 3) }

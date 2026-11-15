@@ -140,6 +140,34 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `auto merge devices defaults to on and round-trips`() = testScope.runTest {
+        assertEquals(UserPreferencesRepository.DEFAULT_AUTO_MERGE_DEVICES, repository.autoMergeDevices.first())
+        assertTrue(repository.autoMergeDevices.first())
+        repository.setAutoMergeDevices(false)
+        assertFalse(repository.autoMergeDevices.first())
+        repository.setAutoMergeDevices(true)
+        assertTrue(repository.autoMergeDevices.first())
+    }
+
+    @Test
+    fun `an unreadable data store reads as the default instead of throwing`() = testScope.runTest {
+        val broken = object : androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> {
+            override val data = kotlinx.coroutines.flow.flow<androidx.datastore.preferences.core.Preferences> {
+                throw java.io.IOException("corrupt")
+            }
+            override suspend fun updateData(
+                transform: suspend (androidx.datastore.preferences.core.Preferences) -> androidx.datastore.preferences.core.Preferences,
+            ) = throw java.io.IOException("corrupt")
+        }
+        val repo = UserPreferencesRepository(broken, object : KeyValueStore {
+            override fun getString(key: String): String? = null
+            override fun putString(key: String, value: String?) = Unit
+        })
+
+        assertEquals(UserPreferencesRepository.DEFAULT_AUTO_MERGE_DEVICES, repo.autoMergeDevices.first())
+    }
+
+    @Test
     fun `watch master toggle round-trips and defaults to false`() = testScope.runTest {
         assertEquals(false, repository.watchMasterEnabled.first())
         repository.setWatchMasterEnabled(true)
