@@ -95,7 +95,7 @@ class LanScanArpOrderTest {
             networkInterfaceProvider = activeInterface,
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
-            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
+            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier(), autoMerge = false),
             scanLocationProvider = FakeScanLocationProvider(),
             networkIdentity = identity,
         )
