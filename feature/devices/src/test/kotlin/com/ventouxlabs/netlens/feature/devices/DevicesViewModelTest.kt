@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import com.ventouxlabs.netlens.core.data.testing.FakeDeviceIdentifierDao
 import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
@@ -77,7 +78,8 @@ class DevicesViewModelTest {
         userPreferences = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         scheduler = RecordingWatchScheduler()
         viewModel = DevicesViewModel(
-            knownDao, watchedDao, identity, userPreferences, scheduler,
+            knownDao, watchedDao, identity, userPreferences,
+            RecordingDeviceInventoryRepository(), FakeDeviceIdentifierDao(), scheduler,
             UnconfinedTestDispatcher(),
         )
         viewModelStore.put("devices", viewModel)
@@ -265,7 +267,8 @@ class DevicesViewModelTest {
         val prefs = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         val standardScheduler = RecordingWatchScheduler()
         val vm = DevicesViewModel(
-            knownDao, watchedDao, identity, prefs, standardScheduler,
+            knownDao, watchedDao, identity, prefs,
+            RecordingDeviceInventoryRepository(), FakeDeviceIdentifierDao(), standardScheduler,
             StandardTestDispatcher(testScheduler),
         )
         viewModelStore.put("devices-standard", vm)

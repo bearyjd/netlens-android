@@ -121,6 +121,10 @@ fun DevicesScreen(
             )
         },
         onAutoMergeToggle = viewModel::setAutoMergeDevices,
+        onOpenSuggestions = viewModel::openSuggestions,
+        onCloseSuggestions = viewModel::closeSuggestions,
+        onMergeSuggestion = viewModel::acceptSuggestion,
+        onRejectSuggestion = viewModel::rejectSuggestion,
         onSearchQueryChanged = viewModel::setSearchQuery,
         onToggleTag = viewModel::toggleTagFilter,
         onClearTags = viewModel::clearTagFilters,
@@ -143,6 +147,10 @@ internal fun DevicesContent(
     onShareResults: () -> Unit,
     watchSection: @Composable () -> Unit,
     onAutoMergeToggle: (Boolean) -> Unit,
+    onOpenSuggestions: () -> Unit,
+    onCloseSuggestions: () -> Unit,
+    onMergeSuggestion: (key: String, isKnown: Boolean?) -> Unit,
+    onRejectSuggestion: (key: String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onToggleTag: (String) -> Unit,
     onClearTags: () -> Unit,
@@ -161,6 +169,17 @@ internal fun DevicesContent(
             onToggleKnown = { onToggleKnown(selected.id) },
             onDelete = { onDelete(selected.id) },
             knownTags = state.availableTags,
+        )
+    }
+
+    if (state.suggestionsOpen) {
+        MergeSuggestionsSheet(
+            suggestions = state.suggestions,
+            busyKey = state.suggestionBusyKey,
+            message = state.suggestionMessage,
+            onDismiss = onCloseSuggestions,
+            onMerge = onMergeSuggestion,
+            onNotTheSame = onRejectSuggestion,
         )
     }
 
@@ -192,6 +211,9 @@ internal fun DevicesContent(
         Column(Modifier.fillMaxSize().padding(padding)) {
             watchSection()
             state.autoMergeEnabled?.let { AutoMergeRow(enabled = it, onToggle = onAutoMergeToggle) }
+            if (state.suggestions.isNotEmpty()) {
+                MergeSuggestionsBanner(count = state.suggestions.size, onClick = onOpenSuggestions)
+            }
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = onSearchQueryChanged,
