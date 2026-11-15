@@ -2,7 +2,9 @@ package com.ventouxlabs.netlens.feature.devices
 
 import app.cash.paparazzi.Paparazzi
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
+import com.ventouxlabs.netlens.feature.devices.model.buildMergeSuggestionUi
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,6 +33,10 @@ class DevicesContentRenderTest {
             onShareResults = {},
             watchSection = {},
             onAutoMergeToggle = {},
+            onOpenSuggestions = {},
+            onCloseSuggestions = {},
+            onMergeSuggestion = { _, _, _ -> },
+            onRejectSuggestion = {},
             onSearchQueryChanged = {},
             onToggleTag = {},
             onClearTags = {},
@@ -69,5 +75,13 @@ class DevicesContentRenderTest {
         render(DevicesUiState(autoMergeEnabled = null))
         render(DevicesUiState(autoMergeEnabled = true))
         render(DevicesUiState(autoMergeEnabled = false))
+    }
+
+    @Test
+    fun `the duplicates banner renders above the list`() {
+        val a = device(id = 1, known = false)
+        val b = device(id = 2, known = true)
+        val pair = MergeSuggestion.BetweenRows(1, 2, 70, listOf("model"))
+        render(DevicesUiState(devices = listOf(a, b), suggestions = listOf(buildMergeSuggestionUi(pair, a, b, emptyList()))))
     }
 }

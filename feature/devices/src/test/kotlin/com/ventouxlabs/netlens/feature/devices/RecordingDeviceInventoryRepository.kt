@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
 import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -15,6 +16,7 @@ class RecordingDeviceInventoryRepository : DeviceInventoryRepository {
     }
 
     override val pendingMergeSuggestions: Flow<List<MergeSuggestion.BetweenRows>> = flowOf(emptyList())
-    override suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?): Boolean = false
+    override suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean?, expectedSurvivorId: Long, previewHash: Int): Boolean = false
+    override suspend fun identifiersFor(deviceId: Long): List<DeviceIdentifierEntity> = emptyList()
     override suspend fun rejectSuggestion(pair: MergeSuggestion.BetweenRows): Boolean = false
 }

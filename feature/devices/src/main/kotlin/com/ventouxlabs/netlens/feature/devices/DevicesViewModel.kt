@@ -1,7 +1,10 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
+import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
 import com.ventouxlabs.netlens.core.scan.network.NetworkKeys
 import com.ventouxlabs.netlens.core.network.DisplayText
@@ -9,26 +12,36 @@ import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
 import com.ventouxlabs.netlens.core.data.di.DefaultDispatcher
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
+import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
+import com.ventouxlabs.netlens.feature.devices.model.MergeSuggestionUi
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
+import com.ventouxlabs.netlens.feature.devices.model.buildMergeSuggestionUi
+import com.ventouxlabs.netlens.feature.devices.model.survivorAndLoser
 import com.ventouxlabs.netlens.feature.devices.model.displayModel
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 import com.ventouxlabs.netlens.feature.devices.model.displayOs
 import com.ventouxlabs.netlens.feature.devices.model.displayType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,6 +50,7 @@ class DevicesViewModel @Inject constructor(
     private val watchedNetworkDao: WatchedNetworkDao,
     private val networkIdentity: NetworkIdentity,
     private val userPreferences: UserPreferencesRepository,
+    private val inventory: DeviceInventoryRepository,
     private val watchScheduler: WatchScheduler,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
@@ -44,6 +58,9 @@ class DevicesViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val _selectedDeviceId = MutableStateFlow<Long?>(null)
     private val _activeTags = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Bumped after a refused action so the pair list is rebuilt from the database, not trusted from memory. */
+    private val suggestionRefresh = MutableStateFlow(0)
 
     private val _uiState = MutableStateFlow(DevicesUiState())
     val uiState: StateFlow<DevicesUiState> = _uiState.asStateFlow()
@@ -83,17 +100,31 @@ class DevicesViewModel @Inject constructor(
                 // On a large inventory that is enough work per character to drop frames.
                 .flowOn(defaultDispatcher)
                 .collect { next ->
-                // Preserve cadence/masterWatchEnabled/autoMergeEnabled (folded in below from preferences) and the
-                // transient watchError, which is set by user actions rather than these flows.
+                // Preserve cadence/masterWatchEnabled/autoMergeEnabled (folded in below from preferences), the
+                // suggestion state (own collector below) and the transient errors, which are set by
+                // user actions rather than these flows. This state is rebuilt from scratch on every
+                // search keystroke, so anything not copied here would vanish.
                 _uiState.update {
                     next.copy(
                         cadence = it.cadence,
                         masterWatchEnabled = it.masterWatchEnabled,
                         autoMergeEnabled = it.autoMergeEnabled,
+                        suggestions = it.suggestions,
+                        suggestionsOpen = it.suggestionsOpen,
+                        suggestionBusyKey = it.suggestionBusyKey,
+                        suggestionMessage = it.suggestionMessage,
                         watchError = it.watchError,
                     )
                 }
             }
+        }
+        viewModelScope.launch {
+            combine(inventory.pendingMergeSuggestions, knownDeviceDao.getAllDevices(), suggestionRefresh) { pairs, devices, _ ->
+                pairs to devices
+            }
+                .map { (pairs, devices) -> buildSuggestions(pairs, devices) }
+                .flowOn(defaultDispatcher)
+                .collect { next -> _uiState.update { it.copy(suggestions = next) } }
         }
         viewModelScope.launch {
             combine(
@@ -106,6 +137,94 @@ class DevicesViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(cadence = cadence, masterWatchEnabled = master, autoMergeEnabled = autoMerge)
                 }
+            }
+        }
+    }
+
+    /**
+     * Pairs are resolved against the unfiltered inventory, never [DevicesUiState.devices] (which a
+     * search or tag filter narrows). A pair whose row is gone is dropped, so the banner count matches
+     * what the sheet can show.
+     */
+    private suspend fun buildSuggestions(
+        pairs: List<MergeSuggestion.BetweenRows>,
+        devices: List<KnownDeviceEntity>,
+    ): List<MergeSuggestionUi> {
+        val rows = devices.associateBy { it.id }
+        val identifiers = mutableMapOf<Long, List<DeviceIdentifierEntity>>() // one query per row per emission
+        return pairs.mapNotNull { pair ->
+            val (survivor, loser) = survivorAndLoser(pair, rows) ?: return@mapNotNull null
+            buildMergeSuggestionUi(pair, survivor, loser, identifiers.getOrPut(loser.id) { inventory.identifiersFor(loser.id) })
+        }
+    }
+
+    fun openSuggestions() { _uiState.update { it.copy(suggestionsOpen = true, suggestionMessage = null) } }
+
+    fun closeSuggestions() { _uiState.update { it.copy(suggestionsOpen = false, suggestionMessage = null) } }
+
+    /**
+     * Merges the pair. When the two rows disagree on trust, [isKnown] is the user's explicit choice and
+     * is required: without it nothing is sent, so a merge can never default into (or out of) a known row.
+     * When the merge drops a value or decides trust ([MergeSuggestionUi.requiresConfirmation]) it also
+     * needs [confirmed], set only by the confirmation dialog. The survivor and preview hash the user saw
+     * are sent along, so the repository refuses a merge whose rows changed since.
+     */
+    fun acceptSuggestion(key: String, isKnown: Boolean?, confirmed: Boolean) {
+        val suggestion = uiState.value.suggestions.find { it.key == key }
+        if (uiState.value.suggestionBusyKey != null) return
+        when {
+            suggestion == null -> refuse(R.string.devices_suggestion_merge_refused)
+            suggestion.trustDiffers && isKnown == null ->
+                _uiState.update { it.copy(suggestionMessage = R.string.devices_suggestion_choose_trust) }
+            suggestion.requiresConfirmation && !confirmed ->
+                _uiState.update { it.copy(suggestionMessage = R.string.devices_suggestion_confirm_required) }
+            else -> runSuggestionAction(key, R.string.devices_suggestion_merge_refused) {
+                inventory.acceptSuggestion(
+                    suggestion.pair,
+                    if (suggestion.trustDiffers) isKnown else null,
+                    suggestion.survivor.id,
+                    suggestion.previewHash,
+                )
+            }
+        }
+    }
+
+    /** Writes DISTINCT for the pair. */
+    fun rejectSuggestion(key: String) {
+        val suggestion = uiState.value.suggestions.find { it.key == key }
+        if (uiState.value.suggestionBusyKey != null) return
+        if (suggestion == null) {
+            refuse(R.string.devices_suggestion_reject_refused)
+            return
+        }
+        runSuggestionAction(key, R.string.devices_suggestion_reject_refused) { inventory.rejectSuggestion(suggestion.pair) }
+    }
+
+    private fun refuse(@StringRes message: Int) {
+        _uiState.update { it.copy(suggestionMessage = message) }
+        suggestionRefresh.update { it + 1 }
+    }
+
+    private fun runSuggestionAction(key: String, @StringRes refusedMessage: Int, action: suspend () -> Boolean) {
+        _uiState.update { it.copy(suggestionBusyKey = key, suggestionMessage = null) }
+        viewModelScope.launch {
+            val done = try {
+                action()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.log(Level.WARNING, "suggestion action failed", e)
+                false
+            }
+            if (done) {
+                // Stay busy while the list re-emits, so a tap aimed at the pair that was just here
+                // cannot land on the card that slides into its place.
+                _uiState.update { it.copy(suggestionMessage = null) }
+                delay(SETTLE_MS)
+                _uiState.update { it.copy(suggestionBusyKey = null) }
+            } else {
+                _uiState.update { it.copy(suggestionBusyKey = null, suggestionMessage = refusedMessage) }
+                suggestionRefresh.update { it + 1 }
             }
         }
     }
@@ -249,5 +368,11 @@ class DevicesViewModel @Inject constructor(
             }
         }
         return sb.toString().trimEnd()
+    }
+
+    internal companion object {
+        /** How long taps stay ignored after a successful suggestion action. */
+        const val SETTLE_MS = 400L
+        private val logger: Logger = Logger.getLogger("DevicesViewModel")
     }
 }

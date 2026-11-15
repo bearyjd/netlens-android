@@ -77,7 +77,8 @@ class DevicesViewModelTest {
         userPreferences = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         scheduler = RecordingWatchScheduler()
         viewModel = DevicesViewModel(
-            knownDao, watchedDao, identity, userPreferences, scheduler,
+            knownDao, watchedDao, identity, userPreferences,
+            RecordingDeviceInventoryRepository(), scheduler,
             UnconfinedTestDispatcher(),
         )
         viewModelStore.put("devices", viewModel)
@@ -265,7 +266,8 @@ class DevicesViewModelTest {
         val prefs = UserPreferencesRepository(dataStore, fakeKeyValueStore)
         val standardScheduler = RecordingWatchScheduler()
         val vm = DevicesViewModel(
-            knownDao, watchedDao, identity, prefs, standardScheduler,
+            knownDao, watchedDao, identity, prefs,
+            RecordingDeviceInventoryRepository(), standardScheduler,
             StandardTestDispatcher(testScheduler),
         )
         viewModelStore.put("devices-standard", vm)

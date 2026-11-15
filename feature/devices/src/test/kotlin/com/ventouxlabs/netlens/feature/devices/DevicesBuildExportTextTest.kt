@@ -60,6 +60,7 @@ class DevicesBuildExportTextTest {
             FakeWatchedNetworkDao(),
             FakeNetworkIdentity(),
             userPreferences,
+            RecordingDeviceInventoryRepository(),
             RecordingWatchScheduler(),
             UnconfinedTestDispatcher(),
         )

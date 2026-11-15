@@ -64,6 +64,7 @@ class DeviceTaggingTest {
             watchedNetworkDao = FakeWatchedNetworkDao(),
             networkIdentity = FakeNetworkIdentity(),
             userPreferences = UserPreferencesRepository(dataStore, keyValueStore),
+            inventory = RecordingDeviceInventoryRepository(),
             watchScheduler = RecordingWatchScheduler(),
             defaultDispatcher = UnconfinedTestDispatcher(),
         )
