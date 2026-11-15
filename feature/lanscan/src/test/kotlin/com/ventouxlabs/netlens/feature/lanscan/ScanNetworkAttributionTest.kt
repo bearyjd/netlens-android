@@ -44,6 +44,8 @@ class ScanNetworkAttributionTest {
         gatewayMac = "AA:BB:CC:DD:EE:00"; gatewayIp = "192.168.1.1"; subnet = "192.168.1.0/24"; ssid = "Home"
     }
 
+    private var interfaces = emptyList<NetworkInterfaceInfo>()
+
     private lateinit var viewModel: LanScanViewModel
 
     @BeforeEach
@@ -56,7 +58,7 @@ class ScanNetworkAttributionTest {
             portScanner = FakePortScanner(),
             lanNetworkBinder = binder,
             networkInterfaceProvider = object : NetworkInterfaceProvider {
-                override fun getNetworkInterfaces() = emptyList<NetworkInterfaceInfo>()
+                override fun getNetworkInterfaces() = interfaces
                 override fun getActiveNetworkInterface() = NetworkInterfaceInfo("192.168.1.20", 24, "wlan0", "Wi-Fi", false, "192.168.1.1")
             },
             lanScanHistoryDao = FakeLanScanHistoryDao(),
@@ -83,7 +85,7 @@ class ScanNetworkAttributionTest {
     }
 
     @Test
-    fun `a custom range is attributed to no network`() = runTest {
+    fun `a custom range matching no interface is attributed to no network`() = runTest {
         viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
         viewModel.onCustomRangeChanged("192.168.1.0/24")
         viewModel.startScan()
@@ -114,6 +116,106 @@ class ScanNetworkAttributionTest {
     fun `a gateway MAC that only appears during the scan is not a network change`() = runTest {
         identity.scriptedSnapshots += NetworkSnapshot(null, "192.168.1.1", "192.168.1.0/24")
         identity.scriptedSnapshots += NetworkSnapshot("aa:bb:cc:dd:ee:00", "192.168.1.1", "192.168.1.0/24")
+        viewModel.startScan()
+
+        assertEquals("gw-mac:aabbccddee00", sighting().networkKey)
+    }
+
+    private val wifi = NetworkInterfaceInfo("192.168.1.20", 24, "wlan0", "Wi-Fi", false, "192.168.1.1")
+    private val vpn = NetworkInterfaceInfo("10.8.0.2", 24, "tun0", "VPN", true, null)
+
+    private fun tapChip(cidr: String) {
+        viewModel.refreshSuggestedNetworks()
+        viewModel.startScanWithCidr(cidr)
+    }
+
+    @Test
+    fun `a tapped chip for the interface network is attributed with its label`() = runTest {
+        interfaces = listOf(wifi, vpn)
+        tapChip("192.168.1.0/24")
+
+        assertEquals("gw-mac:aabbccddee00", sighting().networkKey)
+        assertEquals("Home", sighting().networkLabel)
+    }
+
+    @Test
+    fun `a tapped VPN chip is attributed to none`() = runTest {
+        interfaces = listOf(wifi, vpn)
+        tapChip("10.8.0.0/24")
+
+        assertEquals("unknown-network", sighting().networkKey)
+        assertTrue(identity.snapshotsTaken.isEmpty())
+    }
+
+    @Test
+    fun `a typed range that is not the live LAN network is attributed to none`() = runTest {
+        interfaces = listOf(wifi, vpn)
+        viewModel.refreshSuggestedNetworks()
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("172.16.0.0/24")
+        viewModel.startScan()
+
+        assertEquals("unknown-network", sighting().networkKey)
+        assertTrue(identity.snapshotsTaken.isEmpty())
+    }
+
+    @Test
+    fun `a tapped chip scan during which the network changed is attributed to none`() = runTest {
+        interfaces = listOf(wifi)
+        identity.scriptedSnapshots += NetworkSnapshot("aa:bb:cc:dd:ee:00", "192.168.1.1", "192.168.1.0/24")
+        identity.scriptedSnapshots += NetworkSnapshot("10:22:33:44:55:66", "10.0.0.1", "10.0.0.0/24")
+        tapChip("192.168.1.0/24")
+
+        assertEquals("unknown-network", sighting().networkKey)
+        assertTrue(fakes.aliases.all.isEmpty())
+    }
+
+    @Test
+    fun `a chip for a second non-VPN interface that is not the bound LAN is attributed to none`() = runTest {
+        val hotspot = NetworkInterfaceInfo("192.168.43.1", 24, "ap0", "Hotspot", false, null)
+        interfaces = listOf(wifi, hotspot)
+        tapChip("192.168.43.0/24")
+
+        assertEquals("unknown-network", sighting().networkKey)
+        assertTrue(fakes.aliases.all.isEmpty())
+    }
+
+    @Test
+    fun `a stale suggestion whose cidr no longer matches the live network is attributed to none`() = runTest {
+        interfaces = listOf(wifi)
+        viewModel.refreshSuggestedNetworks()
+        identity.subnet = "10.0.0.0/24"
+        viewModel.startScanWithCidr("192.168.1.0/24")
+
+        assertEquals("unknown-network", sighting().networkKey)
+        assertTrue(fakes.aliases.all.isEmpty())
+    }
+
+    @Test
+    fun `a chip cidr with host bits set is still attributed when the live subnet matches`() = runTest {
+        interfaces = listOf(wifi)
+        tapChip("192.168.1.77/24")
+
+        assertEquals("gw-mac:aabbccddee00", sighting().networkKey)
+        assertEquals("Home", sighting().networkLabel)
+    }
+
+    @Test
+    fun `a typed range equal to the live LAN cidr is attributed by design`() = runTest {
+        interfaces = listOf(wifi)
+        viewModel.refreshSuggestedNetworks()
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        assertEquals("gw-mac:aabbccddee00", sighting().networkKey)
+    }
+
+    @Test
+    fun `an automatic scan with an unrelated suggestion list is still attributed`() = runTest {
+        interfaces = listOf(wifi, vpn)
+        viewModel.refreshSuggestedNetworks()
+        identity.subnet = "10.0.0.0/24"
         viewModel.startScan()
 
         assertEquals("gw-mac:aabbccddee00", sighting().networkKey)

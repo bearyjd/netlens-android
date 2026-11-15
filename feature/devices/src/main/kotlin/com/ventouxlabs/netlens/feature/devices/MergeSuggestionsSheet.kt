@@ -164,7 +164,7 @@ private fun SuggestionCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RowSummary(stringResource(R.string.devices_suggestion_survives, survivorName), suggestion.survivor)
             RowSummary(stringResource(R.string.devices_suggestion_removed, loserName), suggestion.loser)
-            if (suggestion.macsDiffer) {
+            if (suggestion.macsDiffer && !suggestion.escalatesTrust) {
                 Text(
                     stringResource(R.string.devices_suggestion_macs_differ),
                     style = MaterialTheme.typography.bodySmall,
@@ -174,7 +174,7 @@ private fun SuggestionCard(
             if (suggestion.escalatesTrust) {
                 Text(
                     stringResource(R.string.devices_suggestion_escalation_warning),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -279,7 +279,7 @@ private fun TrustOption(label: Int, selected: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null)
-        Text(stringResource(label), modifier = Modifier.padding(start = 8.dp))
+        Text(stringResource(label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

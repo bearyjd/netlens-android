@@ -318,6 +318,11 @@ class LanScanViewModel @Inject constructor(
 
         val scanStartedAt = System.currentTimeMillis()
         val customRange = _uiState.value.rangeMode == ScanRangeMode.CUSTOM
+        // A custom range is attributed only when it is a non-VPN interface network (the chip list may
+        // be stale) AND, checked against the live snapshot inside the binding, the LAN we are bound to.
+        val scanCidr = if (customRange) normalizedCidr("$subnet/$prefixLength") else null
+        val ownInterfaceNetwork = scanCidr == null ||
+            _uiState.value.suggestedNetworks.any { !it.isVpn && normalizedCidr(it.cidr) == scanCidr }
         scanJob = viewModelScope.launch {
             // Three scanners discover hosts concurrently. Rather than copy + re-sort the whole
             // device list and emit a new _uiState on every single discovery (an O(n^2 log n)
@@ -350,7 +355,11 @@ class LanScanViewModel @Inject constructor(
             val boundToLanNetwork = lanNetworkBinder.withLanNetwork { bound ->
                 // Read the network identity inside the binding too: outside it the default network is
                 // the VPN, whose gateway would name the tunnel rather than the LAN the devices are on.
-                val identityAtStart = if (customRange) null else networkIdentity.snapshot()
+                val identityAtStart = if (ownInterfaceNetwork) {
+                    networkIdentity.snapshot().takeIf { scanCidr == null || normalizedCidr(it.subnet) == scanCidr }
+                } else {
+                    null
+                }
                 coroutineScope {
                     val emitterJob = launch {
                         while (isActive) {
@@ -416,8 +425,11 @@ class LanScanViewModel @Inject constructor(
         }
     }
 
-    // [atStart] is null for a custom range, which need not be the network the phone is on: only an
-    // automatic scan is attributed to it. A scan during which the phone moved networks is attributed to none.
+    // [atStart] is null for a custom range that is not the LAN the process is bound to: only an
+    // automatic scan, or a custom range equal to that live network (a tapped suggestion chip, or a
+    // typed range that happens to be the same cidr, by design), is attributed to it. A VPN chip, another
+    // interface's chip, a stale chip or any other range stays unattributed, and a scan during which
+    // the phone moved networks is attributed to none.
     private suspend fun scanNetwork(atStart: NetworkSnapshot?, devices: List<LanDevice>): NetworkContext {
         if (atStart == null) return NetworkContext.NONE
         val atEnd = networkIdentity.snapshot()
@@ -682,6 +694,12 @@ class LanScanViewModel @Inject constructor(
     companion object {
         // Bounded cadence for flushing accumulated LAN-scan discoveries to the UI.
         private const val DISCOVERY_EMIT_INTERVAL_MS = 200L
+
+        /** `a.b.c.d/p` with host bits cleared, or null when [cidr] is null or does not parse. */
+        private fun normalizedCidr(cidr: String?): String? {
+            val (ip, prefix) = parseCidr(cidr ?: return null) ?: return null
+            return "${calculateNetworkAddress(ip, prefix)}/$prefix"
+        }
 
         internal fun parseCidr(cidr: String): Pair<String, Int>? {
             val trimmed = cidr.trim()
