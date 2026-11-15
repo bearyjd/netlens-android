@@ -11,6 +11,12 @@ class FakeNetworkKeyAliasDao : NetworkKeyAliasDao {
 
     override suspend fun canonicalFor(key: String): String? = rows.find { it.aliasKey == key }?.canonicalKey
 
+    override suspend fun pruneGatewayIdAliases(canonical: String, keep: Int) {
+        val aliases = rows.filter { it.canonicalKey == canonical && it.aliasKey.startsWith("gw-id:") && it.aliasKey != canonical }
+        val kept = aliases.sortedWith(compareByDescending<NetworkKeyAliasEntity> { it.firstSeen }.thenBy { it.aliasKey }).take(keep).toSet()
+        rows.removeAll(aliases.filter { it !in kept })
+    }
+
     override suspend fun insertIfNew(alias: NetworkKeyAliasEntity): Long {
         if (rows.any { it.aliasKey == alias.aliasKey }) return -1L
         rows += alias

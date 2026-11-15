@@ -1,23 +1,21 @@
 package com.ventouxlabs.netlens.core.scan.network
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.wifi.WifiManager
-import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.net.Inet4Address
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Reads the gateway and subnet of the network the process is bound to, falling back to the system
+ * default: under a VPN the default network is the tunnel, whose gateway says nothing about the LAN
+ * the scan actually ran on.
+ */
 @Singleton
 class NetworkIdentityImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val links: NetworkLinkReader,
     private val arpTableReader: ArpTableReader,
 ) : NetworkIdentity {
 
-    private val cm: ConnectivityManager
-        get() = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private fun link(): LinkInfo? = links.boundLink() ?: links.activeLink()
 
     override suspend fun currentGatewayMac(): String? {
         val gatewayIp = currentGatewayIp() ?: return null
@@ -25,31 +23,9 @@ class NetworkIdentityImpl @Inject constructor(
         return arpTableReader.getMacForIp(gatewayIp)
     }
 
-    override fun currentSubnet(): String? {
-        val network = cm.activeNetwork ?: return null
-        val link = cm.getLinkProperties(network) ?: return null
-        val addr = link.linkAddresses.firstOrNull { it.address is Inet4Address } ?: return null
-        val ip = addr.address.hostAddress ?: return null
-        val prefix = addr.prefixLength
-        val networkAddress = calculateNetworkAddress(ip, prefix)
-        return "$networkAddress/$prefix"
-    }
+    override fun currentGatewayIp(): String? = link()?.gatewayIp
 
-    override fun currentSsid(): String? {
-        return try {
-            val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            @Suppress("DEPRECATION") // Foreground-only; ACCESS_FINE_LOCATION already granted.
-            wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it != "<unknown ssid>" }
-        } catch (_: Exception) {
-            null
-        }
-    }
+    override fun currentSubnet(): String? = link()?.subnet
 
-    override fun currentGatewayIp(): String? {
-        val network = cm.activeNetwork ?: return null
-        val link = cm.getLinkProperties(network) ?: return null
-        val defaultRoute = link.routes.firstOrNull { it.isDefaultRoute && it.gateway is Inet4Address }
-            ?: link.routes.firstOrNull { it.gateway is Inet4Address }
-        return defaultRoute?.gateway?.hostAddress
-    }
+    override fun currentSsid(): String? = links.ssid()
 }

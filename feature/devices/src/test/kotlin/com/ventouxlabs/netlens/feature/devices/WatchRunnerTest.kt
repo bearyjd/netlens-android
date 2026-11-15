@@ -10,7 +10,7 @@ import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.network.NetworkKeyCanonicalizer
 import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.core.scan.network.NetworkKey.Kind
-import com.ventouxlabs.netlens.core.scan.model.identity.DeviceIdentifier
+import com.ventouxlabs.netlens.core.scan.network.NetworkKey
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -115,27 +115,50 @@ class WatchRunnerTest {
     }
 
     @Test
-    fun `a watched network is still matched once ARP is gone, after one foreground scan recorded its keys`() = runTest {
+    fun `recorded aliases cannot identify the current network without a strong observation`() = runTest {
         val fakes = InventoryFakes()
         val watchedDao = FakeWatchedNetworkDao().also(::watchedHome)
-        val udn = DeviceIdentifier(
-            com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind.UPNP_UDN, "uuid:router",
-            com.ventouxlabs.netlens.core.scan.model.identity.ObservationSource.SSDP,
+        // foreground, ARP readable: the gateway MAC and a proven gateway id are both recorded
+        fakes.networkKeys.canonicalize(
+            listOf(NetworkKey.gatewayMac(homeMac)!!, NetworkKey(Kind.GATEWAY_ID, "upnp_udn:uuid:router")), now = 1,
         )
-        // foreground, ARP readable: both strong keys are resolved after discovery
-        val foreground = FakeNetworkIdentity().apply { gatewayMac = homeMac; gatewayIp = "192.168.1.1"; subnet = "192.168.1.0/24" }
-        val discovered = listOf(LanDevice(ip = "192.168.1.1", identifiers = setOf(udn)))
-        fakes.networkKeys.canonicalize(foreground.currentNetworkKeys(discovered), now = 1)
-
-        // background, ARP unreadable, but the gateway still offers its UDN
-        val background = FakeNetworkIdentity().apply {
-            gatewayMac = null; gatewayIp = "192.168.1.1"; subnet = "192.168.1.0/24"; gatewayIdentifier = udn
-        }
+        // background lite sweep on the same network, ARP now unreadable: only the l3 hint is left
+        val background = FakeNetworkIdentity().apply { gatewayMac = null; gatewayIp = "192.168.1.1"; subnet = "192.168.1.0/24" }
         val subnetScanner = FakeSubnetScanner().apply { devices = listOf(LanDevice(ip = "192.168.1.10")) }
         val (r, repo) = runner(background, watchedDao, subnetScanner, keys = fakes.networkKeys)
 
-        assertEquals(WatchOutcome.Swept(1), r.run())
-        assertEquals(7L, repo.calls.single().networkId)
-        assertTrue(repo.calls.single().network.keys.any { it.kind == Kind.GATEWAY_ID })
+        // Matching it would need a unicast description fetch from the gateway: a product decision, not made here.
+        assertEquals(WatchOutcome.NotWatched, r.run())
+        assertTrue(repo.calls.isEmpty())
+    }
+
+    @Test
+    fun `a gateway id shared with home does not make the hotel watched or aliased`() = runTest {
+        val fakes = InventoryFakes()
+        val watchedDao = FakeWatchedNetworkDao().also(::watchedHome)
+        val sharedId = NetworkKey(Kind.GATEWAY_ID, "upnp_udn:uuid:router")
+        fakes.networkKeys.canonicalize(listOf(NetworkKey.gatewayMac(homeMac)!!, sharedId), now = 1)
+        val hotelMac = NetworkKey.gatewayMac("10:22:33:44:55:66")!!
+        assertEquals(hotelMac.key, fakes.networkKeys.canonicalize(listOf(hotelMac, sharedId), now = 2))
+
+        val hotel = FakeNetworkIdentity().apply { gatewayMac = "10:22:33:44:55:66"; gatewayIp = "192.168.1.1"; subnet = "192.168.1.0/24" }
+        val (r, repo) = runner(hotel, watchedDao, keys = fakes.networkKeys)
+
+        assertEquals(WatchOutcome.NotWatched, r.run())
+        assertTrue(repo.calls.isEmpty())
+        assertEquals("gw-mac:aabbccddee00", fakes.aliases.canonicalFor(sharedId.key))
+    }
+
+    @Test
+    fun `strong keys that resolve to different networks are not watched`() = runTest {
+        val fakes = InventoryFakes()
+        val watchedDao = FakeWatchedNetworkDao().also(::watchedHome)
+        val homeMacKey = NetworkKey.gatewayMac(homeMac)!!
+        val otherId = NetworkKey(Kind.GATEWAY_ID, "upnp_udn:uuid:other")
+        fakes.networkKeys.canonicalize(listOf(homeMacKey), now = 1)
+        fakes.networkKeys.canonicalize(listOf(otherId), now = 1)
+
+        assertEquals(null, fakes.networkKeys.currentIdentity(listOf(homeMacKey, otherId)))
+        assertEquals(null, fakes.networkKeys.currentIdentity(listOf(otherId, homeMacKey)))
     }
 }

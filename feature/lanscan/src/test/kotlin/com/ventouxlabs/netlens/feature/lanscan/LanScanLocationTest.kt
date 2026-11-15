@@ -59,6 +59,7 @@ class LanScanLocationTest {
             knownDeviceDao = FakeKnownDeviceDao(),
             deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
             scanLocationProvider = locationProvider,
+            networkIdentity = com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity(),
         )
     }
 

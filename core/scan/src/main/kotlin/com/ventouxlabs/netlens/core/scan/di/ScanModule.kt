@@ -22,7 +22,9 @@ import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.SsdpScannerImpl
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScannerImpl
+import com.ventouxlabs.netlens.core.scan.network.AndroidNetworkLinkReader
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
+import com.ventouxlabs.netlens.core.scan.network.NetworkLinkReader
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentityImpl
 import dagger.Binds
 import dagger.Module
@@ -33,6 +35,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ScanModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkLinkReader(impl: AndroidNetworkLinkReader): NetworkLinkReader
 
     @Binds
     @Singleton

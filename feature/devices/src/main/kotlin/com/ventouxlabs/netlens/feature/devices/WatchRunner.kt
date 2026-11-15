@@ -35,8 +35,9 @@ class WatchRunner @Inject constructor(
         if (keys.isEmpty()) return WatchOutcome.NoGateway
         // Only a gateway MAC / gateway id (or an alias of one) can match a watched network: the l3
         // hint is shared by countless networks, so an l3-only match would sweep a hotel into the home inventory.
-        val current = networkKeyCanonicalizer.strongIdentities(keys)
-        val watched = watchedNetworkDao.getAll().firstOrNull { networkKeyCanonicalizer.canonicalForGatewayMac(it.gatewayMac) in current }
+        // Unvouched keys (none strong, or strong keys that disagree) match nothing.
+        val current = networkKeyCanonicalizer.currentIdentity(keys) ?: return WatchOutcome.NotWatched
+        val watched = watchedNetworkDao.getAll().firstOrNull { networkKeyCanonicalizer.canonicalForGatewayMac(it.gatewayMac) == current }
         if (watched == null || !watched.watchEnabled) return WatchOutcome.NotWatched
 
         val subnetCidr = networkIdentity.currentSubnet() ?: watched.subnet

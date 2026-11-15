@@ -63,4 +63,27 @@ class InventoryNetworkKeyTest {
         assertEquals(setOf("gw-mac:a", "gw-mac:b"), h.sightings.getForDevice(1).map { it.networkKey }.toSet())
         assertTrue(h.aliases.all.all { it.aliasKey == it.canonicalKey }) // neither network is aliased to the other
     }
+
+    @Test
+    fun `a hotel sharing the home router's gateway id gets its own scope and no home devices`() = runTest {
+        val hotelMac = NetworkKey(Kind.GATEWAY_MAC, "b")
+        repo.persistScan(listOf(lan("10.0.0.5", MAC_LOCAL_RAW)), networkId = null, network = net("Home", homeMac, homeId))
+        repo.persistScan(listOf(lan("10.0.0.5", MAC_LOCAL_RAW)), networkId = null, network = net("Hotel", hotelMac, homeId))
+
+        assertEquals(2, h.known.allDevices.size)
+        assertEquals(setOf("gw-mac:a", "gw-mac:b"), h.identifiers.all.map { it.scopeKey }.toSet())
+        assertEquals("gw-mac:a", h.aliases.canonicalFor("gw-id:g"))
+    }
+
+    @Test
+    fun `a randomised MAC follows the home aliases to one device and stays separate at the hotel`() = runTest {
+        val hotelMac = NetworkKey(Kind.GATEWAY_MAC, "b")
+        repo.persistScan(listOf(lan("10.0.0.5", MAC_LOCAL_RAW)), networkId = null, network = net("Home", homeMac, homeId))
+        repo.persistScan(listOf(lan("10.0.0.5", MAC_LOCAL_RAW)), networkId = null, network = net("Home", homeId)) // ARP gone
+        assertEquals(1, h.known.allDevices.size)
+
+        repo.persistScan(listOf(lan("10.0.0.5", MAC_LOCAL_RAW)), networkId = null, network = net("Hotel", hotelMac))
+        assertEquals(2, h.known.allDevices.size)
+        assertEquals(setOf("gw-mac:a", "gw-mac:b"), h.identifiers.all.map { it.scopeKey }.toSet())
+    }
 }

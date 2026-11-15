@@ -140,6 +140,15 @@ class DevicesViewModelTest {
     }
 
     @Test
+    fun `watchCurrentNetwork stores a sanitised SSID as the display name`() = runTest {
+        identity.gatewayMac = "AA:BB:CC:DD:EE:FF"
+        identity.subnet = "192.168.1.0/24"
+        identity.ssid = "Home\u202EWi\u200BFi\n"
+        viewModel.watchCurrentNetwork()
+        assertEquals("HomeWiFi", watchedDao.getByGatewayMac("AA:BB:CC:DD:EE:FF")?.displayName)
+    }
+
+    @Test
     fun `watchCurrentNetwork is a no-op when gateway is unresolvable`() = runTest {
         identity.gatewayMac = null
         viewModel.watchCurrentNetwork()

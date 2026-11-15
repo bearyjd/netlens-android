@@ -29,11 +29,9 @@ class NetworkKeyCanonicalizerTest {
     }
 
     @Test
-    fun `a known weaker key supplies the canonical key and the stronger one becomes its alias`() = runTest {
-        c.canonicalize(listOf(id("g")), now = 1)
-        val canonical = c.canonicalize(listOf(mac("a"), id("g")), now = 2)
-        assertEquals("gw-id:g", canonical)
-        assertEquals("gw-id:g", h.aliases.canonicalFor("gw-mac:a"))
+    fun `a later scan that sees only the gateway id lands on the canonical key the MAC established`() = runTest {
+        c.canonicalize(listOf(mac("a"), id("g")), now = 1)
+        assertEquals("gw-mac:a", c.canonicalize(listOf(id("g")), now = 2))
     }
 
     @Test
@@ -64,17 +62,56 @@ class NetworkKeyCanonicalizerTest {
     }
 
     @Test
-    fun `strong identities of the current network include its canonical key and exclude l3`() = runTest {
-        c.canonicalize(listOf(mac("a"), id("g")), now = 1)
-        assertEquals(setOf("gw-id:g", "gw-mac:a"), c.strongIdentities(listOf(id("g"), l3("x"))))
-        assertEquals(emptySet<String>(), c.strongIdentities(listOf(l3("x"))))
+    fun `a watched gateway MAC resolves through its aliases`() = runTest {
+        c.canonicalize(listOf(mac("aabbccddee00"), id("g")), now = 1)
+        assertEquals("gw-mac:aabbccddee00", c.canonicalForGatewayMac("AA:BB:CC:DD:EE:00"))
+        assertEquals(null, c.canonicalForGatewayMac("junk"))
     }
 
     @Test
-    fun `a watched gateway MAC resolves through its aliases`() = runTest {
-        c.canonicalize(listOf(id("g")), now = 1)
-        c.canonicalize(listOf(mac("aabbccddee00"), id("g")), now = 2)
-        assertEquals("gw-id:g", c.canonicalForGatewayMac("AA:BB:CC:DD:EE:00"))
-        assertEquals(null, c.canonicalForGatewayMac("junk"))
+    fun `a gateway id shared with another network never pulls a new gateway MAC into it`() = runTest {
+        c.canonicalize(listOf(mac("a"), id("r")), now = 1)
+        val hotel = c.canonicalize(listOf(mac("b"), id("r")), now = 2)
+        assertEquals("gw-mac:b", hotel)
+        assertEquals("gw-mac:b", h.aliases.canonicalFor("gw-mac:b") ?: "gw-mac:b") // never aliased to a
+        assertEquals("gw-mac:a", h.aliases.canonicalFor("gw-id:r"))
+    }
+
+    @Test
+    fun `strong keys that already map to different canonicals register nothing and pick the MAC's canonical, in either order`() = runTest {
+        c.canonicalize(listOf(id("g1")), now = 1)
+        c.canonicalize(listOf(mac("a")), now = 1)
+        val before = h.aliases.all.toSet()
+
+        assertEquals("gw-mac:a", c.canonicalize(listOf(mac("a"), id("g1")), now = 2))
+        assertEquals("gw-mac:a", c.canonicalize(listOf(id("g1"), mac("a")), now = 3))
+        assertEquals(before, h.aliases.all.toSet())
+    }
+
+    @Test
+    fun `conflicting gateway ids without a MAC resolve to the smallest root, in either order, registering nothing`() = runTest {
+        c.canonicalize(listOf(id("g2")), now = 1)
+        c.canonicalize(listOf(id("g1")), now = 1)
+        val before = h.aliases.all.toSet()
+
+        assertEquals("gw-id:g1", c.canonicalize(listOf(id("g2"), id("g1")), now = 2))
+        assertEquals("gw-id:g1", c.canonicalize(listOf(id("g1"), id("g2")), now = 3))
+        assertEquals(before, h.aliases.all.toSet())
+    }
+
+    @Test
+    fun `with nothing known the canonical key does not depend on key order`() = runTest {
+        val fresh = IdentityHarness().fakes.networkKeys
+        assertEquals("gw-id:g1", fresh.canonicalize(listOf(id("g2"), id("g1")), now = 1))
+        assertEquals("gw-id:g1", IdentityHarness().fakes.networkKeys.canonicalize(listOf(id("g1"), id("g2")), now = 1))
+    }
+
+    @Test
+    fun `a canonical key keeps only its 8 newest gateway id aliases`() = runTest {
+        for (n in 1..12) c.canonicalize(listOf(mac("a"), id("g%02d".format(n))), now = n.toLong())
+
+        val ids = h.aliases.all.filter { it.aliasKey.startsWith("gw-id:") }.map { it.aliasKey }.toSet()
+        assertEquals((5..12).map { "gw-id:g%02d".format(it) }.toSet(), ids)
+        assertEquals("gw-mac:a", h.aliases.canonicalFor("gw-mac:a"))
     }
 }

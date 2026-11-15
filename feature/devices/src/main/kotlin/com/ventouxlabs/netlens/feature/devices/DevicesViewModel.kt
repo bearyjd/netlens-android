@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.feature.devices
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
+import com.ventouxlabs.netlens.core.scan.network.NetworkKeys
 import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
@@ -167,7 +168,7 @@ class DevicesViewModel @Inject constructor(
             }
             watchedNetworkDao.upsert(
                 WatchedNetworkEntity(
-                    displayName = networkIdentity.currentSsid(),
+                    displayName = NetworkKeys.label(networkIdentity.currentSsid(), null),
                     gatewayMac = gatewayMac,
                     subnet = subnet,
                     watchEnabled = true,
