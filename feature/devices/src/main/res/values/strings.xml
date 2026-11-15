@@ -44,6 +44,8 @@
     <string name="devices_detail_close">Close</string>
     <string name="devices_cd_copy_results">Copy results</string>
     <string name="devices_cd_share">Share results</string>
+    <string name="devices_auto_merge_title">Merge duplicate devices automatically</string>
+    <string name="devices_auto_merge_summary">Combines rows that clearly belong to one device. Turning it off stops new merges but does not undo earlier ones; device details keep being recorded.</string>
     <string name="devices_watch_section">Network Watch</string>
     <string name="devices_watch_master">Background new-device alerts</string>
     <string name="devices_watch_this_network">Watch this network</string>

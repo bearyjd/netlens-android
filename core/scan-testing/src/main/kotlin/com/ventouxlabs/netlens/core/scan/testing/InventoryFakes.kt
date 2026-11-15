@@ -32,11 +32,16 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
     val resolver = DeviceIdentityResolver(known, identifiers, decisions, aliases, identity)
     val networkKeys = NetworkKeyCanonicalizer(aliases, resolver)
 
-    /** [identityDao] lets a test wrap the transactional DAO (e.g. to inject a competing writer). */
+    /**
+     * [autoMerge] has no default so each test states which resolver path it exercises; [autoMergeSetting]
+     * replaces it when a test needs the setting to change between scans. [identityDao] lets a test wrap
+     * the transactional DAO (e.g. to inject a competing writer).
+     */
     fun repository(
         notifier: NewDeviceNotifier,
-        autoMerge: Boolean = false,
+        autoMerge: Boolean,
         identityDao: DeviceIdentityDao = identity,
+        autoMergeSetting: AutoMergeSetting = AutoMergeSetting { autoMerge },
     ) = DeviceInventoryRepositoryImpl(
         knownDeviceDao = known,
         newDeviceNotifier = notifier,
@@ -47,7 +52,7 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
         sightingDao = sightings,
         decisionDao = decisions,
         transactions = FakeTransactionRunner(),
-        autoMergeSetting = AutoMergeSetting { autoMerge },
+        autoMergeSetting = autoMergeSetting,
         networkKeys = networkKeys,
     )
 

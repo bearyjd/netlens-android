@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test
 class InventoryPersistTest {
     private val h = IdentityHarness()
     private val notifier = RecordingNewDeviceNotifier()
-    private val repo = h.fakes.repository(notifier)
+    private val repo = h.fakes.repository(notifier, autoMerge = false)
 
     @Test
     fun `a reading that sets only deviceType leaves osConfidence and osGuess alone`() = runTest {

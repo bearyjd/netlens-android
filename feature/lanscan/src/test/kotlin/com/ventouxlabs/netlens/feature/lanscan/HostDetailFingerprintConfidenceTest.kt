@@ -57,7 +57,7 @@ class HostDetailFingerprintConfidenceTest {
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
             knownDeviceDao = FakeKnownDeviceDao(),
-            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
+            deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier(), autoMerge = false),
             scanLocationProvider = FakeScanLocationProvider(),
             networkIdentity = FakeNetworkIdentity(),
         )

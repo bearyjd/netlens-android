@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 /** persistScan stores the canonical network key and a label, and registers aliases for strong keys. */
 class InventoryNetworkKeyTest {
     private val h = IdentityHarness()
-    private val repo = h.fakes.repository(RecordingNewDeviceNotifier())
+    private val repo = h.fakes.repository(RecordingNewDeviceNotifier(), autoMerge = false)
 
     private fun net(label: String?, vararg keys: NetworkKey) = NetworkContext(keys.toList(), label)
     private val homeMac = NetworkKey(Kind.GATEWAY_MAC, "a")

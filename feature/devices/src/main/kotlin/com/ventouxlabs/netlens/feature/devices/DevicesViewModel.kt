@@ -83,12 +83,13 @@ class DevicesViewModel @Inject constructor(
                 // On a large inventory that is enough work per character to drop frames.
                 .flowOn(defaultDispatcher)
                 .collect { next ->
-                // Preserve cadence/masterWatchEnabled (folded in below from preferences) and the
+                // Preserve cadence/masterWatchEnabled/autoMergeEnabled (folded in below from preferences) and the
                 // transient watchError, which is set by user actions rather than these flows.
                 _uiState.update {
                     next.copy(
                         cadence = it.cadence,
                         masterWatchEnabled = it.masterWatchEnabled,
+                        autoMergeEnabled = it.autoMergeEnabled,
                         watchError = it.watchError,
                     )
                 }
@@ -98,10 +99,13 @@ class DevicesViewModel @Inject constructor(
             combine(
                 userPreferences.watchCadenceMinutes,
                 userPreferences.watchMasterEnabled,
-            ) { minutes, master ->
-                WatchCadence.fromMinutes(minutes) to master
-            }.collect { (cadence, master) ->
-                _uiState.update { it.copy(cadence = cadence, masterWatchEnabled = master) }
+                userPreferences.autoMergeDevices,
+            ) { minutes, master, autoMerge ->
+                Triple(WatchCadence.fromMinutes(minutes), master, autoMerge)
+            }.collect { (cadence, master, autoMerge) ->
+                _uiState.update {
+                    it.copy(cadence = cadence, masterWatchEnabled = master, autoMergeEnabled = autoMerge)
+                }
             }
         }
     }
@@ -208,6 +212,11 @@ class DevicesViewModel @Inject constructor(
             userPreferences.setWatchMasterEnabled(enabled)
             watchScheduler.apply(isPro, enabled, uiState.value.cadence)
         }
+    }
+
+    /** Applies from the next scan: the repository reads the preference per scan. */
+    fun setAutoMergeDevices(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setAutoMergeDevices(enabled) }
     }
 
     fun buildExportText(): String {

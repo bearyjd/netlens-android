@@ -17,7 +17,7 @@ class DeviceInventoryRepositoryTest {
     private fun repo(
         dao: FakeKnownDeviceDao,
         notifier: RecordingNewDeviceNotifier,
-    ) = InventoryFakes(dao).repository(notifier)
+    ) = InventoryFakes(dao).repository(notifier, autoMerge = false)
 
     @Test
     fun `new device with MAC is persisted and notified once`() = runTest {
@@ -45,7 +45,7 @@ class DeviceInventoryRepositoryTest {
                 firstSeen = 1000L, lastSeen = 1000L,
             ),
         )
-        fakes.repository(notifier).persistScan(
+        fakes.repository(notifier, autoMerge = false).persistScan(
             listOf(LanDevice(ip = "192.168.1.41", hostname = "new", macAddress = "AA:BB:CC:DD:EE:04")),
             networkId = 7L,
         )
@@ -316,7 +316,7 @@ class DeviceInventoryRepositoryTest {
                 deviceTypeOverride = "NAS", osOverride = "TrueNAS", modelOverride = "Mine",
             ),
         )
-        fakes.repository(RecordingNewDeviceNotifier()).persistScan(
+        fakes.repository(RecordingNewDeviceNotifier(), autoMerge = false).persistScan(
             listOf(
                 LanDevice(
                     ip = "192.168.1.61", macAddress = "AA:BB:CC:DD:EE:61",
