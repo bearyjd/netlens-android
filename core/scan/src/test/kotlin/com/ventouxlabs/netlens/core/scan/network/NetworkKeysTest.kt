@@ -134,8 +134,8 @@ class NetworkKeysTest {
 
     @Test
     fun `bidi and invisible format characters are stripped from the label`() {
-        val hostile = "Ho‮me​‏⁦Wi⁩Fi‪"
+        val hostile = "Ho\u202Eme\u200B\u200F\u2066Wi\u2069Fi\u202A"
         assertEquals("HomeWiFi", NetworkKeys.label(hostile, null))
-        assertNull(NetworkKeys.label("​‮", null))
+        assertNull(NetworkKeys.label("\u200B\u202E", null))
     }
 }
