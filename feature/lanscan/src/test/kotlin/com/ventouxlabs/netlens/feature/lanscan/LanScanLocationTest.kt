@@ -46,13 +46,10 @@ class LanScanLocationTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         locationProvider = FakeScanLocationProvider()
         viewModel = LanScanViewModel(
-            subnetScanner = FakeSubnetScanner(),
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner(), arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),

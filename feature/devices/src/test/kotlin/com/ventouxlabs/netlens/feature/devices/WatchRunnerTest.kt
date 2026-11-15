@@ -3,7 +3,12 @@ package com.ventouxlabs.netlens.feature.devices
 import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import com.ventouxlabs.netlens.core.data.model.NetworkKeyAliasEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipelineImpl
+import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinterImpl
 import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
+import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
+import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
 import com.ventouxlabs.netlens.core.scan.engine.FakeOuiLookup
 import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -26,7 +31,15 @@ class WatchRunnerTest {
         oui: FakeOuiLookup = FakeOuiLookup(),
         repo: RecordingDeviceInventoryRepository = RecordingDeviceInventoryRepository(),
         keys: NetworkKeyCanonicalizer = InventoryFakes().networkKeys,
-    ) = WatchRunner(identity, watchedDao, subnetScanner, arp, oui, repo, keys) to repo
+    ) = WatchRunner(
+        identity,
+        watchedDao,
+        DeviceDiscoveryPipelineImpl(
+            subnetScanner, FakeLanMdnsScanner(), FakeSsdpScanner(), FakeNetBiosProber(), arp, DeviceFingerprinterImpl(oui), oui,
+        ),
+        repo,
+        keys,
+    ) to repo
 
     @Test
     fun `unresolvable gateway is a no-op`() = runTest {

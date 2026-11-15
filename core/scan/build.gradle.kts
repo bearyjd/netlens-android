@@ -6,6 +6,11 @@ plugins {
 
 android {
     namespace = "com.ventouxlabs.netlens.core.scan"
+
+    // The discovery pipeline logs engine failures through android.util.Log.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {

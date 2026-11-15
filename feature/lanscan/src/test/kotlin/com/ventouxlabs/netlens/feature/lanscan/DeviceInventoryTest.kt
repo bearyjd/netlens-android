@@ -56,13 +56,10 @@ class DeviceInventoryTest {
         fakeKnownDeviceDao = FakeKnownDeviceDao()
         fakeNotifier = RecordingNewDeviceNotifier()
         viewModel = LanScanViewModel(
-            subnetScanner = fakeSubnetScanner,
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = fakeSubnetScanner, arpTableReader = FakeArpTableReader(), fingerprinter = StubDeviceFingerprinter()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = StubDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = StubNetworkInterfaceProvider(),
             lanScanHistoryDao = StubLanScanHistoryDao(),

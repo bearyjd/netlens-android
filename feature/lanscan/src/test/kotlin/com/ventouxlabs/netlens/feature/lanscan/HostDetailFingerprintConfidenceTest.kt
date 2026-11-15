@@ -46,13 +46,10 @@ class HostDetailFingerprintConfidenceTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         fingerprinter = FakeDeviceFingerprinter()
         viewModel = LanScanViewModel(
-            subnetScanner = FakeSubnetScanner(),
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner(), arpTableReader = FakeArpTableReader(), fingerprinter = fingerprinter),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = fingerprinter,
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),

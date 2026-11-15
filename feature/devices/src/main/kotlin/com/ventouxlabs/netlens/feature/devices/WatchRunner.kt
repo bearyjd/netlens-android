@@ -1,14 +1,16 @@
 package com.ventouxlabs.netlens.feature.devices
 
 import com.ventouxlabs.netlens.core.data.dao.WatchedNetworkDao
-import com.ventouxlabs.netlens.core.oui.OuiLookup
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
-import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
-import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipeline
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryEvent
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryMode
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryRequest
 import com.ventouxlabs.netlens.core.scan.network.NetworkContext
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
 import com.ventouxlabs.netlens.core.scan.network.NetworkKeyCanonicalizer
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 sealed interface WatchOutcome {
@@ -24,9 +26,7 @@ sealed interface WatchOutcome {
 class WatchRunner @Inject constructor(
     private val networkIdentity: NetworkIdentity,
     private val watchedNetworkDao: WatchedNetworkDao,
-    private val subnetScanner: SubnetScanner,
-    private val arpTableReader: ArpTableReader,
-    private val ouiLookup: OuiLookup,
+    private val discoveryPipeline: DeviceDiscoveryPipeline,
     private val deviceInventoryRepository: DeviceInventoryRepository,
     private val networkKeyCanonicalizer: NetworkKeyCanonicalizer,
 ) {
@@ -43,14 +43,10 @@ class WatchRunner @Inject constructor(
         val subnetCidr = networkIdentity.currentSubnet() ?: watched.subnet
         val (subnet, prefix) = parseCidr(subnetCidr) ?: return WatchOutcome.NotWatched
 
-        arpTableReader.invalidateCache()
-        val reachable = subnetScanner.scan(subnet, prefix).toList()
-        val arp = arpTableReader.getAll()
-        val enriched = reachable.map { device ->
-            val mac = device.macAddress ?: arp[device.ip]
-            val vendor = mac?.let { ouiLookup.lookup(it) } ?: device.vendor
-            device.copy(macAddress = mac, vendor = vendor)
-        }
+        val enriched = discoveryPipeline.run(DiscoveryRequest("$subnet/$prefix", DiscoveryMode.Lite))
+            .filterIsInstance<DiscoveryEvent.Finished>()
+            .first()
+            .devices
         deviceInventoryRepository.persistScan(enriched, networkId = watched.id, network = NetworkContext(keys, networkIdentity.currentNetworkLabel()))
         return WatchOutcome.Swept(enriched.size)
     }

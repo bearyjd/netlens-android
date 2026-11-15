@@ -31,7 +31,19 @@ import com.ventouxlabs.netlens.feature.lanscan.model.ScanSnapshotDevice
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ventouxlabs.netlens.core.scan.model.SsdpDevice
-import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
+import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipeline
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipelineImpl
+import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
+import com.ventouxlabs.netlens.core.scan.engine.FakeLanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeNetBiosProber
+import com.ventouxlabs.netlens.core.scan.engine.FakeOuiLookup
+import com.ventouxlabs.netlens.core.scan.engine.FakeSsdpScanner
+import com.ventouxlabs.netlens.core.scan.engine.FakeSubnetScanner
+import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
+import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
+import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 
 /**
  * Shared fakes for `:feature:lanscan`'s ViewModel tests. Extracted from
@@ -77,3 +89,19 @@ internal class FakeNewDeviceNotifier : NewDeviceNotifier {
     override fun createChannel() {}
     override fun notify(device: KnownDeviceEntity) {}
 }
+
+/**
+ * The real pipeline over fake engines, for the tests that assert end-to-end wiring (binding,
+ * network attribution, inventory persistence). Tests of the ViewModel's own state, progress and
+ * cancellation use `FakeDeviceDiscoveryPipeline` instead; see `LanScanDiscoveryStateTest`.
+ */
+internal fun enginePipeline(
+    subnetScanner: SubnetScanner = FakeSubnetScanner(),
+    mdnsScanner: LanMdnsScanner = FakeLanMdnsScanner(),
+    ssdpScanner: SsdpScanner = FakeSsdpScanner(),
+    netBiosProber: NetBiosProber = FakeNetBiosProber(),
+    arpTableReader: ArpTableReader = FakeArpTableReader(),
+    fingerprinter: DeviceFingerprinter = FakeDeviceFingerprinter(),
+): DeviceDiscoveryPipeline = DeviceDiscoveryPipelineImpl(
+    subnetScanner, mdnsScanner, ssdpScanner, netBiosProber, arpTableReader, fingerprinter, FakeOuiLookup(),
+)

@@ -66,13 +66,10 @@ class LanScanVpnBindingTest {
         binder = FakeLanNetworkBinder()
         boundDuringPingSweep = null
         viewModel = LanScanViewModel(
-            subnetScanner = recordingSubnetScanner,
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = recordingSubnetScanner, arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = binder,
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),

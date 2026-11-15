@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.lanscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -8,7 +8,7 @@ import com.ventouxlabs.netlens.core.scan.model.LanDevice
  * deviceType/osGuess/evidence rather than whichever arrived first.
  *
  * Concurrent discovery jobs (ping, mDNS, SSDP) can all resolve the same device with different
- * classification strength — see LanScanViewModel.mergeDevice, which used to take whichever result
+ * classification strength — see DeviceDiscoveryPipelineImpl.merge, which used to take whichever result
  * landed first via `?:`. That let a weak hostname guess that happened to resolve early permanently
  * block a strong mDNS signal moments behind it.
  */
@@ -21,7 +21,7 @@ internal fun strongerFingerprint(existing: LanDevice, candidate: LanDevice): Lan
     return existing.copy(
         hostname = existing.hostname ?: candidate.hostname,
         // Only escalate when the two readings actually came from different discovery
-        // methods — not on every merge. LanScanViewModel also calls this to reconcile a
+        // methods — not on every merge. DeviceDiscoveryPipelineImpl also calls this to reconcile a
         // single device's own pre- and post-fingerprint() classification (same discovery
         // method, same event), where an unconditional MULTIPLE would mislabel a
         // ping-only device as multiply-discovered on its very first pass.
