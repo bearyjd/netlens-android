@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-15
+
 ### Added
 - **Swipe right on an empty input to use its example.** Ping (`8.8.8.8`), Traceroute
   (`google.com`), DNS Lookup, WHOIS and TLS Inspector (`example.com`) and IP Calculator
@@ -14,7 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   empty field. TalkBack users get the same fill as a "Use example …" action.
 
 ### Fixed
+- LAN scans started from a suggested-network chip are now attributed to the network you are on
+  (with its name) instead of being filed under an unknown network. Chips for a VPN or another
+  interface, and ranges that are not the network you are connected to, stay unattributed.
 - `netlens://feature/{mdns,wifi,celltower,ipcalc,history}` deep links now open their screens; the router had no path for these destinations (`ipcalc` was listed as query-capable but unreachable). A unit test now fails if a `ToolDestination` has no deep-link path.
+
+### Changed
+- Device inventory groundwork for recognising the same device across rescans (storage upgrade and
+  merge suggestions). No visible change is expected yet.
 
 ## [1.4.0] - 2026-10-21
 

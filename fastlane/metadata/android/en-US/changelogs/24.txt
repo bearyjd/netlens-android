@@ -1,0 +1,1 @@
+Added: swipe right on an empty tool input to fill in its example (Ping, Traceroute, DNS, WHOIS, TLS, IP Calculator); TalkBack gets a "Use example" action. Fixed: deep links to mDNS, Wi-Fi, cell tower, IP calculator and history now open; scans started from a suggested-network chip are attributed to your network.
