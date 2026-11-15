@@ -40,6 +40,7 @@ enum class MergeBlock(val code: String) {
  * multi-homed device) carries [LanDevice.additionalIps]. [ownedIdentifiers] are safe to store as
  * unique-identifier ownership; [untrustedClaims] must only ever be stored as evidence.
  * [sharesIdentifier] flags a device that shares an identifier with another sighting in the same scan.
+ * [ownershipLocked]: see the property.
  */
 data class ResolvedDevice(
     val device: LanDevice,
@@ -47,6 +48,11 @@ data class ResolvedDevice(
     val ownedIdentifiers: Set<DeviceIdentifier>,
     val untrustedClaims: Set<DeviceIdentifier>,
     val sharesIdentifier: Boolean,
+    /**
+     * The row was reached only through unproven claims (or is just the attach point of an Ambiguous
+     * result), so the scan may update its scan-derived columns but must not give it new identifiers.
+     */
+    val ownershipLocked: Boolean = false,
 )
 
 sealed interface MergeSuggestion {

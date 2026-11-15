@@ -9,18 +9,25 @@ import javax.inject.Inject
 /**
  * Write path for identifiers of a device that already has an id. Bumps `lastSeen` on ones the device
  * owns, adds new ones up to [IdentityPolicy.MAX_IDENTIFIERS_PER_KIND] per kind, and never takes an
- * identifier another device owns.
+ * identifier another device owns. With [insertNew] false it only bumps identifiers the device already owns.
  */
 class DeviceIdentifierRecorder @Inject constructor(
     private val identifierDao: DeviceIdentifierDao,
 ) {
-    suspend fun record(deviceId: Long, identifiers: Set<DeviceIdentifier>, canonicalNetworkKey: String, now: Long) {
+    suspend fun record(
+        deviceId: Long,
+        identifiers: Set<DeviceIdentifier>,
+        canonicalNetworkKey: String,
+        now: Long,
+        insertNew: Boolean = true,
+    ) {
         for (id in IdentityPolicy.sanitizeIdentifiers(identifiers)) {
             val scopeKey = if (id.kind.scope == Scope.GLOBAL) GLOBAL_SCOPE else canonicalNetworkKey
             val owner = identifierDao.find(id.kind.name, id.value, scopeKey)
             when {
                 owner != null && owner.deviceId == deviceId -> identifierDao.touch(owner.id, now)
                 owner != null -> Unit // owned by another device: unique, not authenticated, never stolen
+                !insertNew -> Unit // ownership locked: only refresh what the device already owns
                 else -> identifierDao.insertBelowCap(
                     DeviceIdentifierEntity(
                         deviceId = deviceId, kind = id.kind.name, value = id.value, scopeKey = scopeKey,

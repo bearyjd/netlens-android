@@ -23,12 +23,14 @@ private data class Detected(val value: String?, val confidence: Int?)
 /**
  * Applies [device] to this row: scan-derived columns only, "higher confidence wins" per field. A
  * reading that says nothing about a field leaves it and its confidence alone; user-authored columns
- * and `isKnown` are never touched. Legacy rows have no per-field confidence yet, so they compare
- * against the single `fingerprintConfidence`.
+ * and `isKnown` are never touched.
  */
 internal fun KnownDeviceEntity.withScan(device: LanDevice, now: Long, networkId: Long?): KnownDeviceEntity {
-    val type = pick(Detected(deviceType, typeConfidence), typeConfidence ?: fingerprintConfidence, device.deviceType, device.fingerprintConfidence)
-    val os = pick(Detected(osGuess, osConfidence), osConfidence ?: fingerprintConfidence, device.osGuess, device.fingerprintConfidence)
+    // Legacy rows carry one confidence for both fields: freeze it into each field that has a value
+    // before the aggregate can rise, or a later reading for the other field is judged against the wrong number.
+    val legacy = fingerprintConfidence ?: 0
+    val type = pick(Detected(deviceType, typeConfidence ?: legacy.takeIf { deviceType != null }), device.deviceType, device.fingerprintConfidence)
+    val os = pick(Detected(osGuess, osConfidence ?: legacy.takeIf { osGuess != null }), device.osGuess, device.fingerprintConfidence)
     return copy(
         macAddress = chosenMac(macAddress, device.macAddress),
         hostname = device.hostname ?: hostname,
@@ -46,10 +48,10 @@ internal fun KnownDeviceEntity.withScan(device: LanDevice, now: Long, networkId:
     )
 }
 
-private fun pick(existing: Detected, existingComparable: Int?, candidate: String?, candidateConfidence: Int): Detected = when {
+private fun pick(existing: Detected, candidate: String?, candidateConfidence: Int): Detected = when {
     candidate == null -> existing
     existing.value == null -> Detected(candidate, candidateConfidence)
-    candidateConfidence > (existingComparable ?: 0) -> Detected(candidate, candidateConfidence)
+    candidateConfidence > (existing.confidence ?: 0) -> Detected(candidate, candidateConfidence)
     else -> existing
 }
 

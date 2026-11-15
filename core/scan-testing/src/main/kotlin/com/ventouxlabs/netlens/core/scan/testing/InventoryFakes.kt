@@ -53,11 +53,12 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
      */
     suspend fun seedLegacyRow(row: KnownDeviceEntity) {
         known.seed(row)
-        val mac = row.macAddress?.lowercase()?.filter { it.isLetterOrDigit() } ?: return
+        val mac = row.macAddress?.replace(":", "")?.replace("-", "")?.lowercase() ?: return
+        if (mac.length != 12 || !mac.all { it in '0'..'9' || it in 'a'..'f' }) return
         val kind = if (mac.substring(0, 2).toInt(16) and 0x02 != 0) "MAC_LOCAL" else "MAC_UNIVERSAL"
         identifiers.insertIfNew(
             DeviceIdentifierEntity(
-                deviceId = row.id, kind = kind, value = mac, scopeKey = "", source = "ARP", firstSeen = 1, lastSeen = 1,
+                deviceId = row.id, kind = kind, value = mac, scopeKey = "", source = "ARP", firstSeen = row.firstSeen, lastSeen = row.lastSeen,
             ),
         )
     }

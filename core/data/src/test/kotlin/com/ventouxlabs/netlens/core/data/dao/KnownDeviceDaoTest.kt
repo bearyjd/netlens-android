@@ -189,23 +189,26 @@ class KnownDeviceDaoTest {
     }
 
     @Test
-    fun `updateScanDetails writes scan columns and per-field confidences but never user fields or isKnown`() = runBlocking {
-        val id = dao.insertIfNew(sampleDevice().copy(isKnown = true, fingerprintConfidence = 20))
+    fun `updateScanDetails writes scan columns and the confidences it is given but never a protected field`() = runBlocking {
+        for (known in listOf(true, false)) {
+            val id = dao.insertIfNew(sampleDevice().copy(isKnown = known, osConfidence = 70, fingerprintConfidence = 20))
+            val before = dao.getById(id)!!
 
-        dao.updateScanDetails(
-            id = id, macAddress = "00:11:22:33:44:55", hostname = "h2", ip = "192.168.1.51", vendor = "V2",
-            lastSeen = 9L, deviceType = "Printer", osGuess = null, fingerprintConfidence = 80,
-            typeConfidence = 80, osConfidence = null, fingerprintEvidence = "e", model = "M2", networkId = 3L,
-        )
+            dao.updateScanDetails(
+                id = id, macAddress = "00:11:22:33:44:55", hostname = "h2", ip = "192.168.1.51", vendor = "V2",
+                lastSeen = 9L, deviceType = "Printer", osGuess = before.osGuess, fingerprintConfidence = 80,
+                typeConfidence = 80, osConfidence = before.osConfidence, fingerprintEvidence = "e", model = "M2", networkId = 3L,
+            )
 
-        val row = dao.getById(id)!!
-        assertEquals("00:11:22:33:44:55", row.macAddress)
-        assertEquals("192.168.1.51", row.ip)
-        assertEquals(80, row.typeConfidence)
-        assertNull(row.osConfidence)
-        assertEquals(3L, row.networkId)
-        assertEquals("Old Name", row.customName)
-        assertEquals("NAS", row.deviceTypeOverride)
-        assertEquals(true, row.isKnown)
+            val row = dao.getById(id)!!
+            assertEquals("00:11:22:33:44:55", row.macAddress)
+            assertEquals(80, row.typeConfidence)
+            assertEquals(70, row.osConfidence)
+            assertEquals(3L, row.networkId)
+            assertEquals(
+                listOf(before.isKnown, before.customName, before.tags, before.notes, before.location, before.deviceTypeOverride, before.osOverride, before.modelOverride),
+                listOf(row.isKnown, row.customName, row.tags, row.notes, row.location, row.deviceTypeOverride, row.osOverride, row.modelOverride),
+            )
+        }
     }
 }

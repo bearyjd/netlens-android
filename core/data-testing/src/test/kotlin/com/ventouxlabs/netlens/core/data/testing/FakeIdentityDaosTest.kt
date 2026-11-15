@@ -191,6 +191,17 @@ class FakeIdentityDaosTest {
     }
 
     @Test
+    fun `trimToStrongest breaks equal weights by keeping the newer row`() = runTest {
+        val dao = FakeDeviceObservationDao()
+        dao.upsert(observation("older", lastSeen = 1))
+        dao.upsert(observation("newer", lastSeen = 2))
+
+        dao.trimToStrongest(deviceId = 1, keep = 1)
+
+        assertEquals(listOf("newer"), dao.getForDevice(1).map { it.value })
+    }
+
+    @Test
     fun `alias insertIfNew returns -1 for an existing alias and canonicalFor resolves it`() = runTest {
         val dao = FakeNetworkKeyAliasDao()
 

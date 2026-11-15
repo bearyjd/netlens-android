@@ -8,6 +8,7 @@ import com.ventouxlabs.netlens.core.scan.model.identity.ObservationSource
 import com.ventouxlabs.netlens.core.scan.model.identity.ObservedField
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -88,10 +89,10 @@ class ResolverHostileInputTest {
     }
 
     @Test
-    fun `a hostile MAC string is flattened before it can reach a stored row`() = runTest {
+    fun `a hostile or malformed MAC string never reaches a stored row`() = runTest {
         val d = h.resolve(LanDevice(ip = "10.0.0.5", macAddress = "zz\nforged row")).devices.single().device
 
-        assertEquals("zz forged row", d.macAddress)
+        assertNull(d.macAddress)
     }
 
     @Test

@@ -59,8 +59,24 @@ class InventoryPersistTest {
         val row = h.known.byId(1)!!
         assertEquals("Chromecast", row.deviceType)
         assertEquals("Android", row.osGuess)
-        assertNull(row.typeConfidence)
-        assertNull(row.osConfidence)
+        // the legacy single confidence is frozen into the per-field columns before the aggregate rises
+        assertEquals(90, row.typeConfidence)
+        assertEquals(90, row.osConfidence)
+    }
+
+    @Test
+    fun `a type-only reading at higher confidence does not stop a later OS reading from beating the old OS guess`() = runTest {
+        h.fakes.seedLegacyRow(
+            KnownDeviceEntity(id = 1, macAddress = MAC1, hostname = null, ip = "10.0.0.5", vendor = null, osGuess = "Linux", fingerprintConfidence = 40),
+        )
+
+        repo.persistScan(listOf(lan("10.0.0.5", MAC1).copy(deviceType = "Router", fingerprintConfidence = 90)), networkId = null)
+        repo.persistScan(listOf(lan("10.0.0.5", MAC1).copy(osGuess = "OpenWrt", fingerprintConfidence = 80)), networkId = null)
+
+        val row = h.known.byId(1)!!
+        assertEquals("OpenWrt", row.osGuess)
+        assertEquals(80, row.osConfidence)
+        assertEquals("Router", row.deviceType)
     }
 
     @Test

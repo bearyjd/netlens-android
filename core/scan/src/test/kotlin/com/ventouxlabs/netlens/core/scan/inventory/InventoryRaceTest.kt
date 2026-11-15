@@ -19,6 +19,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 /** The duplicate-row guard that replaces the unique MAC index: the repository Mutex and re-resolve on a lost race. */
 class InventoryRaceTest {
@@ -62,10 +64,12 @@ class InventoryRaceTest {
 
     @Test
     fun `when the insert keeps failing the device is skipped, never inserted another way and never notified`() = runTest {
-        val repo = h.fakes.repository(notifier, identityDao = interfering { DeviceIdentityDao.DUPLICATE })
+        var attempts = 0
+        val repo = h.fakes.repository(notifier, identityDao = interfering { attempts++; DeviceIdentityDao.DUPLICATE })
 
         repo.persistScan(listOf(lan("10.0.0.50", MAC1), lan("10.0.0.51", MAC2)), networkId = null)
 
+        assertEquals(6, attempts) // 3 bounded attempts per device, not 1 and not unbounded
         assertEquals(0, h.known.allDevices.size)
         assertEquals(0, notifier.notified.size)
     }
@@ -100,6 +104,18 @@ class InventoryRaceTest {
         assertEquals(3, h.known.allDevices.size)
         assertEquals(setOf("10.0.0.20", "10.0.0.21"), notifier.notified.map { it.ip }.toSet())
         assertEquals(9L, h.identifiers.find("UPNP_UDN", "uuid:x", "")?.deviceId)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `two identifier-less readings of one IP in a single scan are one row and one alert`(autoMerge: Boolean) = runTest {
+        val repo = h.fakes.repository(notifier, autoMerge = autoMerge)
+
+        repo.persistScan(listOf(lan("10.0.0.5"), lan("10.0.0.5", hostname = "again")), networkId = null)
+
+        assertEquals(1, h.known.allDevices.size)
+        assertEquals(1, notifier.notified.size)
+        assertEquals("again", h.known.allDevices.single().hostname)
     }
 
     @Test

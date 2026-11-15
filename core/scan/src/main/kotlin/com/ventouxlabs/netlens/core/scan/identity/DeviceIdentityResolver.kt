@@ -164,14 +164,21 @@ class DeviceIdentityResolver @Inject constructor(
         val candidates = found - dropped.toSet()
         val lost = lost0 + dropped.flatMap { it.hits }
         val owned = sighting.identifiers - lost
-        fun outcome(resolution: Resolution, suggestions: List<MergeSuggestion> = emptyList(), row: KnownDeviceEntity? = null) =
-            Outcome(ResolvedDevice(device, resolution, owned, lost, contested || lost.isNotEmpty()), suggestions, row)
+        fun outcome(
+            resolution: Resolution,
+            suggestions: List<MergeSuggestion> = emptyList(),
+            row: KnownDeviceEntity? = null,
+            locked: Boolean = false,
+        ) = Outcome(ResolvedDevice(device, resolution, owned, lost, contested || lost.isNotEmpty(), locked), suggestions, row)
 
         if (candidates.size > 1) {
             val (resolution, suggestions) = mergeOrAmbiguous(candidates, now)
-            return outcome(resolution, suggestions)
+            return outcome(resolution, suggestions, locked = resolution is Resolution.Ambiguous)
         }
-        candidates.singleOrNull()?.let { return outcome(Resolution.Existing(it.row.id)) }
+        candidates.singleOrNull()?.let { c ->
+            if (c.claimOnly && gainsOwnership(c, owned)) return claimTakeover(device, c, owned, lost, canonical, now)
+            return outcome(Resolution.Existing(c.row.id), locked = c.claimOnly)
+        }
         legacyIpRow(device, owned)?.let { return outcome(Resolution.Existing(it.id)) }
         val claimed = dropped.firstOrNull()?.row?.id
             ?: lost.firstNotNullOfOrNull { identifierDao.find(it.kind.name, it.value, GLOBAL_SCOPE)?.deviceId }
@@ -181,6 +188,32 @@ class DeviceIdentityResolver @Inject constructor(
             return outcome(Resolution.New)
         }
         return outcome(Resolution.New, weakSuggestions(device, pool))
+    }
+
+    /** True when [owned] holds proof (a proven identifier or a universal MAC) the claim-only row does not own yet. */
+    private suspend fun gainsOwnership(c: Candidate, owned: Set<DeviceIdentifier>): Boolean {
+        val has = identifierDao.getForDevice(c.row.id).map { it.kind to it.value }.toSet()
+        return owned.any { (it.proven || it.kind == IdentifierKind.MAC_UNIVERSAL) && (it.kind.name to it.value) !in has }
+    }
+
+    /**
+     * A sighting that only claims a row's identifier but brings proof of its own is a different
+     * device: it becomes its own (alerting) Conflict row and the claimed row stays untouched.
+     */
+    private suspend fun claimTakeover(
+        device: LanDevice,
+        c: Candidate,
+        owned: Set<DeviceIdentifier>,
+        lost: Set<DeviceIdentifier>,
+        canonical: String,
+        now: Long,
+    ): Outcome {
+        val ownedNow = owned - c.hits.toSet()
+        val lostNow = lost + c.hits
+        val inserted = insertConflict(device, ownedNow, lostNow, c.row.id, canonical, now)
+        // Null: another writer won a race; New lets the repository re-resolve.
+        val resolution = inserted?.first ?: Resolution.New
+        return Outcome(ResolvedDevice(device, resolution, ownedNow, lostNow, sharesIdentifier = true, ownershipLocked = true), emptyList(), inserted?.second)
     }
 
     /**

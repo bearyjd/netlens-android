@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.logging.Logger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,11 +38,15 @@ interface DeviceInventoryRepository {
      * Merges the suggested pair as a user-confirmed merge: the older row survives, its user-authored
      * fields win, the other row's fill only empty ones. [isKnown] is the user's trust choice and
      * defaults to the survivor's. False (nothing changed) when the pair is no longer a pending
-     * suggestion, a row is gone, or the merge would delete a row the user marked DISTINCT.
+     * suggestion, a row is gone, the merge would delete a row the user marked DISTINCT, or the rows'
+     * `isKnown` differ and no [isKnown] choice was passed (trust is never decided for the user).
      */
     suspend fun acceptSuggestion(pair: MergeSuggestion.BetweenRows, isKnown: Boolean? = null): Boolean
 
-    /** Records the pair as DISTINCT: never suggested or auto-merged again. False if a row is gone. */
+    /**
+     * Records the pair (low id first) as DISTINCT: never suggested or auto-merged again. False, writing
+     * nothing, unless the pair is currently a pending suggestion between two existing rows.
+     */
     suspend fun rejectSuggestion(pair: MergeSuggestion.BetweenRows): Boolean
 }
 
@@ -99,6 +104,8 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
                 suggestions = again.second
             }
         }
+        // Neither text nor ids of the device go in the log: they are hostile input.
+        logger.warning("Skipped a scanned device after $MAX_ATTEMPTS lost insert races")
     }
 
     private suspend fun apply(resolved: ResolvedDevice, suggestions: List<MergeSuggestion.ForNewDevice>, run: ScanRun): Boolean =
@@ -124,7 +131,9 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
 
     private suspend fun update(deviceId: Long, resolved: ResolvedDevice, run: ScanRun): Boolean = transactions.run {
         val row = knownDeviceDao.getById(deviceId) ?: return@run false // deleted since resolve: resolve again
-        val scanned = row.withScan(resolved.device, run.now, run.networkId)
+        val locked = resolved.ownershipLocked
+        // A locked row keeps its display MAC too: it is derived from identifiers the row must not gain.
+        val scanned = row.withScan(resolved.device, run.now, run.networkId).let { if (locked) it.copy(macAddress = row.macAddress) else it }
         knownDeviceDao.updateScanDetails(
             id = deviceId, macAddress = scanned.macAddress, hostname = scanned.hostname, ip = scanned.ip,
             vendor = scanned.vendor, lastSeen = scanned.lastSeen, deviceType = scanned.deviceType,
@@ -132,7 +141,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             typeConfidence = scanned.typeConfidence, osConfidence = scanned.osConfidence,
             fingerprintEvidence = scanned.fingerprintEvidence, model = scanned.model, networkId = scanned.networkId,
         )
-        recorder.record(deviceId, resolved.ownedIdentifiers, run.canonicalKey, run.now)
+        recorder.record(deviceId, resolved.ownedIdentifiers, run.canonicalKey, run.now, insertNew = !locked)
         resolved.observationEntities(run.now).forEach { observationDao.upsert(it.copy(deviceId = deviceId)) }
         observationDao.trimToStrongest(deviceId, IdentityPolicy.MAX_OBSERVATIONS)
         sightingDao.upsert(resolved.sighting(deviceId, run.canonicalKey, run.now))
@@ -141,7 +150,11 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
 
     private suspend fun insertNew(resolved: ResolvedDevice, suggestions: List<MergeSuggestion.ForNewDevice>, run: ScanRun): Boolean {
         val row = resolved.newRow(run.now, run.networkId)
+        // The resolver's IP-only fallback applies to a device offering nothing but MACs (always, with the kill switch off).
+        val ipFallback = !run.options.autoMerge || resolved.ownedIdentifiers.all { IdentityPolicy.isMac(it.kind) }
         val id = transactions.run {
+            // An earlier reading in this same scan may have just created the row this fallback would now find.
+            if (ipFallback && knownDeviceDao.getByIpWithoutMac(row.ip) != null) return@run DeviceIdentityDao.DUPLICATE
             val inserted = identityDao.insertDeviceWithIdentifiers(
                 row, resolved.identifierEntities(run.canonicalKey, run.now), resolved.observationEntities(run.now), dedupeByMac = false,
             )
@@ -168,12 +181,18 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             val (survivor, loser) = if (compareValuesBy(low, high, { it.firstSeen }, { it.id }) <= 0) low to high else high to low
             // Deleting the loser would cascade away its DISTINCT edges to third rows: refuse instead.
             if (decisionDao.touchesDistinct(listOf(loser.id))) return@run false
-            identityDao.mergeDevices(survivor.id, loser.id, isKnown ?: survivor.isKnown)
+            // Differing trust is never decided for the user.
+            if (isKnown == null && survivor.isKnown != loser.isKnown) return@run false
+            val merged = identityDao.mergeDevices(survivor.id, loser.id, isKnown ?: survivor.isKnown)
+            if (merged) observationDao.trimToStrongest(survivor.id, IdentityPolicy.MAX_OBSERVATIONS)
+            merged
         }
     }
 
     override suspend fun rejectSuggestion(pair: MergeSuggestion.BetweenRows): Boolean = writeLock.withLock {
+        if (pair.deviceIdLow >= pair.deviceIdHigh) return@withLock false
         transactions.run {
+            if (decisionDao.get(pair.deviceIdLow, pair.deviceIdHigh)?.decision != SUGGESTED) return@run false
             if (knownDeviceDao.getById(pair.deviceIdLow) == null || knownDeviceDao.getById(pair.deviceIdHigh) == null) return@run false
             decisionDao.setDistinct(pair.deviceIdLow, pair.deviceIdHigh, System.currentTimeMillis())
             true
@@ -181,6 +200,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
     }
 
     private companion object {
+        val logger: Logger = Logger.getLogger("DeviceInventory")
         const val MAX_ATTEMPTS = 3
         const val SUGGESTED = "SUGGESTED"
 

@@ -58,19 +58,58 @@ class InventorySuggestionsTest {
     }
 
     @Test
-    fun `accepting applies the user's explicit isKnown choice, defaulting to the survivor's`() = runTest {
+    fun `accepting applies the user's explicit isKnown choice`() = runTest {
         seedPair(aKnown = true, bKnown = false)
         repo.persistScan(scan, networkId = null)
-        assertTrue(repo.acceptSuggestion(pending().single(), isKnown = true))
-        assertEquals(true, h.known.byId(102)!!.isKnown)
 
-        val other = IdentityHarness()
-        val repo2 = other.fakes.repository(RecordingNewDeviceNotifier(), autoMerge = true)
-        other.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a", proven = true)), firstSeen = 10, customName = "A", lastSeen = 50, isKnown = true)
-        other.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5, notes = "B", lastSeen = 40, isKnown = false)
-        repo2.persistScan(scan, networkId = null)
-        assertTrue(repo2.acceptSuggestion(repo2.pendingMergeSuggestions.first().single()))
-        assertEquals(false, other.known.byId(102)!!.isKnown)
+        assertTrue(repo.acceptSuggestion(pending().single(), isKnown = true))
+
+        assertEquals(true, h.known.byId(102)!!.isKnown)
+    }
+
+    @Test
+    fun `accepting without a trust choice is refused when the rows disagree, in either order`() = runTest {
+        for ((aKnown, bKnown) in listOf(true to false, false to true)) {
+            val x = IdentityHarness()
+            val r = x.fakes.repository(RecordingNewDeviceNotifier(), autoMerge = true)
+            x.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a", proven = true)), firstSeen = 10, customName = "A", lastSeen = 50, isKnown = aKnown)
+            x.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5, notes = "B", lastSeen = 40, isKnown = bKnown)
+            r.persistScan(scan, networkId = null)
+
+            assertFalse(r.acceptSuggestion(r.pendingMergeSuggestions.first().single()))
+
+            assertNotNull(x.known.byId(101))
+            assertNotNull(x.known.byId(102))
+        }
+    }
+
+    @Test
+    fun `accepting without a trust choice is fine when the rows agree`() = runTest {
+        seedPair(aKnown = true, bKnown = true)
+        repo.persistScan(scan, networkId = null)
+
+        assertTrue(repo.acceptSuggestion(pending().single()))
+        assertEquals(true, h.known.byId(102)!!.isKnown)
+    }
+
+    @Test
+    fun `an accepted merge trims the survivor to the 64 strongest observations`() = runTest {
+        seedPair()
+        fun obs(device: Long, prefix: String, weight: Int) = (1..64).map {
+            com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity(
+                deviceId = device, source = "PORTS", field = "PRODUCT", value = "$prefix$it", weight = weight, detail = null, lastSeen = 1,
+            )
+        }
+        obs(102, "old", 10).forEach { h.observations.upsert(it) }
+        obs(101, "new", 50).forEach { h.observations.upsert(it) }
+        repo.persistScan(scan, networkId = null)
+
+        assertTrue(repo.acceptSuggestion(pending().single()))
+
+        val kept = h.observations.getForDevice(102)
+        assertEquals(64, kept.size)
+        assertTrue(kept.all { it.weight == 50 })
+        assertEquals(0, notifier.notified.size)
     }
 
     @Test
@@ -124,6 +163,18 @@ class InventorySuggestionsTest {
         assertEquals("DISTINCT", h.decisions.get(101, 102)?.decision)
         assertTrue(pending().isEmpty())
         assertEquals(2, h.known.allDevices.size)
+    }
+
+    @Test
+    fun `rejecting a pair that is not pending, or is given high-before-low, writes nothing`() = runTest {
+        seedPair()
+
+        assertFalse(repo.rejectSuggestion(MergeSuggestion.BetweenRows(101, 102, 100, emptyList())))
+        repo.persistScan(scan, networkId = null)
+        assertFalse(repo.rejectSuggestion(MergeSuggestion.BetweenRows(102, 101, 100, emptyList())))
+
+        assertEquals("SUGGESTED", h.decisions.get(101, 102)?.decision)
+        assertNull(h.decisions.get(102, 101))
     }
 
     @Test

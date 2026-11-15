@@ -90,4 +90,16 @@ class InventoryNotifyTest {
         assertEquals(listOf("10.0.0.20"), notifier.notified.map { it.ip })
         assertEquals(101L, h.identifiers.find("UPNP_UDN", "uuid:x", "")?.deviceId)
     }
+
+    @Test
+    fun `with the kill switch off, rows a sighting could have merged are left alone and nothing alerts`() = runTest {
+        h.seedRow(101, "10.0.0.1", ids = listOf(udn("uuid:a", proven = true)), firstSeen = 10)
+        h.seedRow(102, "10.0.0.2", ids = listOf(universalMac(MAC1_ID)), mac = MAC1, firstSeen = 5)
+        val off = h.fakes.repository(notifier, autoMerge = false)
+
+        off.persistScan(listOf(lan("10.0.0.9", MAC1, udn("uuid:a", proven = true))), networkId = null)
+
+        assertEquals(2, h.known.allDevices.size)
+        assertEquals(0, notifier.notified.size)
+    }
 }
