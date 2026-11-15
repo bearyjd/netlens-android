@@ -46,6 +46,8 @@ import com.ventouxlabs.netlens.feature.lanscan.engine.strongerFingerprint
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
+import com.ventouxlabs.netlens.core.scan.network.NetworkContext
+import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
 import com.ventouxlabs.netlens.core.scan.model.MAX_MODEL_LENGTH
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -87,6 +89,7 @@ class LanScanViewModel @Inject constructor(
     private val deviceInventoryRepository: DeviceInventoryRepository,
     private val scanLocationProvider: ScanLocationProvider,
     private val lanScanInventoryDao: LanScanInventoryDao? = null,
+    private val networkIdentity: NetworkIdentity? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LanScanUiState())
@@ -316,6 +319,7 @@ class LanScanViewModel @Inject constructor(
         }
 
         val scanStartedAt = System.currentTimeMillis()
+        val customRange = _uiState.value.rangeMode == ScanRangeMode.CUSTOM
         scanJob = viewModelScope.launch {
             // Three scanners discover hosts concurrently. Rather than copy + re-sort the whole
             // device list and emit a new _uiState on every single discovery (an O(n^2 log n)
@@ -441,8 +445,16 @@ class LanScanViewModel @Inject constructor(
                 )
             }
             saveToHistory(scanStartedAt, location)
-            deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null)
+            val devices = _uiState.value.devices
+            deviceInventoryRepository.persistScan(devices, networkId = null, network = scanNetwork(devices, customRange))
         }
+    }
+
+    // A custom range need not be the network the phone is on, so only an automatic scan is attributed to it.
+    private suspend fun scanNetwork(devices: List<LanDevice>, customRange: Boolean): NetworkContext {
+        val identity = networkIdentity ?: return NetworkContext.NONE
+        if (customRange) return NetworkContext.NONE
+        return NetworkContext(identity.currentNetworkKeys(devices), identity.currentNetworkLabel())
     }
 
     fun toggleKnown(id: Long) {

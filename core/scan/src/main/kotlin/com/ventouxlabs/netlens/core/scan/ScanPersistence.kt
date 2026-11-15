@@ -99,7 +99,7 @@ internal fun ResolvedDevice.observationEntities(now: Long): List<DeviceObservati
         )
     } + untrustedClaims.take(IdentityPolicy.MAX_IDENTIFIERS_PER_KIND).map { claimEvidence(it, now) }
 
-internal fun ResolvedDevice.sighting(deviceId: Long, canonicalKey: String, now: Long) = DeviceSightingEntity(
-    deviceId = deviceId, networkKey = canonicalKey, networkLabel = null, lastIp = device.ip, firstSeen = now, lastSeen = now,
+internal fun ResolvedDevice.sighting(deviceId: Long, canonicalKey: String, networkLabel: String?, now: Long) = DeviceSightingEntity(
+    deviceId = deviceId, networkKey = canonicalKey, networkLabel = networkLabel, lastIp = device.ip, firstSeen = now, lastSeen = now,
 )
 

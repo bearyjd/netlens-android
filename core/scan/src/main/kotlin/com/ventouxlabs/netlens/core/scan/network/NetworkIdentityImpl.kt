@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.devices
+package com.ventouxlabs.netlens.core.scan.network
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -45,7 +45,7 @@ class NetworkIdentityImpl @Inject constructor(
         }
     }
 
-    private fun currentGatewayIp(): String? {
+    override fun currentGatewayIp(): String? {
         val network = cm.activeNetwork ?: return null
         val link = cm.getLinkProperties(network) ?: return null
         val defaultRoute = link.routes.firstOrNull { it.isDefaultRoute && it.gateway is Inet4Address }

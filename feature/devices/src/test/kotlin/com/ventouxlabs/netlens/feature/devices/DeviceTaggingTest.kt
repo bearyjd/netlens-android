@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
