@@ -304,4 +304,59 @@ class DeviceIdentityDaoTest {
         assertTrue(first > 0 && second > 0)
         assertTrue(first != second)
     }
+
+    @Test
+    fun `trimToStrongest evicts the lowest weight first, then the oldest, and only for that device`() = runBlocking {
+        val devices = db.knownDeviceDao()
+        val a = devices.insertIfNew(device(ip = "10.0.0.1"))
+        val b = devices.insertIfNew(device(ip = "10.0.0.2"))
+        val dao = db.deviceObservationDao()
+        fun o(device: Long, value: String, weight: Int, lastSeen: Long) = DeviceObservationEntity(
+            deviceId = device, source = "SSDP", field = "MODEL", value = value, weight = weight, detail = null, lastSeen = lastSeen,
+        )
+        dao.upsert(o(a, "weak-new", weight = 1, lastSeen = 99))
+        dao.upsert(o(a, "strong-old", weight = 90, lastSeen = 1))
+        dao.upsert(o(a, "mid-old", weight = 50, lastSeen = 1))
+        dao.upsert(o(a, "mid-new", weight = 50, lastSeen = 5))
+        dao.upsert(o(b, "other", weight = 0, lastSeen = 1))
+
+        dao.trimToStrongest(a, keep = 2)
+
+        assertEquals(setOf("strong-old", "mid-new"), dao.getForDevice(a).map { it.value }.toSet())
+        assertEquals(1, dao.getForDevice(b).size)
+    }
+
+    @Test
+    fun `trimToStrongest breaks equal weights by keeping the newer row`() = runBlocking {
+        val a = db.knownDeviceDao().insertIfNew(device(ip = "10.0.0.1"))
+        val dao = db.deviceObservationDao()
+        fun o(value: String, lastSeen: Long) = DeviceObservationEntity(
+            deviceId = a, source = "SSDP", field = "MODEL", value = value, weight = 5, detail = null, lastSeen = lastSeen,
+        )
+        dao.upsert(o("older", 1))
+        dao.upsert(o("newer", 2))
+
+        dao.trimToStrongest(a, keep = 1)
+
+        assertEquals(listOf("newer"), dao.getForDevice(a).map { it.value })
+    }
+
+    @Test
+    fun `a transaction block that writes a device field and an observation then throws leaves both untouched`() = runBlocking {
+        val devices = db.knownDeviceDao()
+        val id = devices.insertIfNew(device(ip = "10.0.0.1"))
+        val before = devices.getById(id)
+
+        val failure = runCatching {
+            com.ventouxlabs.netlens.core.data.RoomTransactionRunner(db).run {
+                devices.setNetworkId(id, 99L)
+                db.deviceObservationDao().upsert(obs("x").copy(deviceId = id))
+                error("boom")
+            }
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals(before, devices.getById(id))
+        assertTrue(db.deviceObservationDao().getForDevice(id).isEmpty())
+    }
 }

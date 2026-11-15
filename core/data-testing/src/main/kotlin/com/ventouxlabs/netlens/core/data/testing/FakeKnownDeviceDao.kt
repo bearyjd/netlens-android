@@ -96,6 +96,30 @@ class FakeKnownDeviceDao : KnownDeviceDao {
         )
     }
 
+    override suspend fun updateScanDetails(
+        id: Long,
+        macAddress: String?,
+        hostname: String?,
+        ip: String,
+        vendor: String?,
+        lastSeen: Long,
+        deviceType: String?,
+        osGuess: String?,
+        fingerprintConfidence: Int?,
+        typeConfidence: Int?,
+        osConfidence: Int?,
+        fingerprintEvidence: String?,
+        model: String?,
+        networkId: Long?,
+    ) = mutate(id) {
+        it.copy(
+            macAddress = macAddress, hostname = hostname, ip = ip, vendor = vendor, lastSeen = lastSeen,
+            deviceType = deviceType, osGuess = osGuess, fingerprintConfidence = fingerprintConfidence,
+            typeConfidence = typeConfidence, osConfidence = osConfidence,
+            fingerprintEvidence = fingerprintEvidence, model = model, networkId = networkId,
+        )
+    }
+
     override suspend fun setMacAddress(id: Long, mac: String) = mutate(id) { it.copy(macAddress = mac) }
 
     override suspend fun setKnown(id: Long, isKnown: Boolean) = mutate(id) { it.copy(isKnown = isKnown) }

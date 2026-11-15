@@ -31,6 +31,18 @@ class FakeDeviceObservationDao : DeviceObservationDao {
         rows.removeAll { it.deviceId == deviceId && it !in kept }
     }
 
+    override suspend fun trimToStrongest(deviceId: Long, keep: Int) {
+        val kept = rows.filter { it.deviceId == deviceId }
+            .sortedWith(
+                compareByDescending<DeviceObservationEntity> { it.weight }
+                    .thenByDescending { it.lastSeen }
+                    .thenByDescending { it.id },
+            )
+            .take(keep)
+            .toSet()
+        rows.removeAll { it.deviceId == deviceId && it !in kept }
+    }
+
     /** `INSERT OR IGNORE` for [FakeDeviceIdentityDao]'s transactional insert. */
     internal fun insertIgnoring(observation: DeviceObservationEntity): Long {
         if (rows.any { sameKey(it, observation) }) return -1L

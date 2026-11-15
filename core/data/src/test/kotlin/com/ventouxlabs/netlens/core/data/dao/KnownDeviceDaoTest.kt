@@ -187,4 +187,28 @@ class KnownDeviceDaoTest {
         val foundMacKnown = dao.getByIpWithoutMac("192.168.1.78")
         assertNull(foundMacKnown)
     }
+
+    @Test
+    fun `updateScanDetails writes scan columns and the confidences it is given but never a protected field`() = runBlocking {
+        for (known in listOf(true, false)) {
+            val id = dao.insertIfNew(sampleDevice().copy(isKnown = known, osConfidence = 70, fingerprintConfidence = 20))
+            val before = dao.getById(id)!!
+
+            dao.updateScanDetails(
+                id = id, macAddress = "00:11:22:33:44:55", hostname = "h2", ip = "192.168.1.51", vendor = "V2",
+                lastSeen = 9L, deviceType = "Printer", osGuess = before.osGuess, fingerprintConfidence = 80,
+                typeConfidence = 80, osConfidence = before.osConfidence, fingerprintEvidence = "e", model = "M2", networkId = 3L,
+            )
+
+            val row = dao.getById(id)!!
+            assertEquals("00:11:22:33:44:55", row.macAddress)
+            assertEquals(80, row.typeConfidence)
+            assertEquals(70, row.osConfidence)
+            assertEquals(3L, row.networkId)
+            assertEquals(
+                listOf(before.isKnown, before.customName, before.tags, before.notes, before.location, before.deviceTypeOverride, before.osOverride, before.modelOverride),
+                listOf(row.isKnown, row.customName, row.tags, row.notes, row.location, row.deviceTypeOverride, row.osOverride, row.modelOverride),
+            )
+        }
+    }
 }

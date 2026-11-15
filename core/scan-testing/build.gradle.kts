@@ -18,5 +18,6 @@ dependencies {
     // public signatures, so a consumer cannot use them without these on its compile classpath.
     api(project(":core:scan"))
     api(project(":core:oui"))
+    api(project(":core:data-testing"))
     api(libs.kotlinx.coroutines.core)
 }

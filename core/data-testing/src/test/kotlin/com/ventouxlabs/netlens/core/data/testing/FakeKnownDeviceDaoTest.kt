@@ -113,6 +113,36 @@ class FakeKnownDeviceDaoTest {
     }
 
     @Test
+    fun `updateScanDetails writes scan columns and the confidences it is given but never a protected field`() = runTest {
+        for (known in listOf(true, false)) {
+            val dao = FakeKnownDeviceDao()
+            dao.seed(
+                device(mac = "AA", id = 1).copy(
+                    isKnown = known, customName = "Mine", tags = "t", notes = "n", location = "L",
+                    deviceTypeOverride = "D", osOverride = "X", modelOverride = "M", osConfidence = 70,
+                ),
+            )
+            val before = dao.byId(1)!!
+
+            dao.updateScanDetails(
+                id = 1, macAddress = "00:11:22:33:44:55", hostname = "h2", ip = "192.168.1.51", vendor = "V2",
+                lastSeen = 9L, deviceType = "Printer", osGuess = null, fingerprintConfidence = 80,
+                typeConfidence = 80, osConfidence = before.osConfidence, fingerprintEvidence = "e", model = "M2", networkId = 3L,
+            )
+
+            val row = dao.byId(1)!!
+            assertEquals("00:11:22:33:44:55", row.macAddress)
+            assertEquals(80, row.typeConfidence)
+            assertEquals(70, row.osConfidence)
+            assertEquals(3L, row.networkId)
+            assertEquals(
+                listOf(before.isKnown, before.customName, before.tags, before.notes, before.location, before.deviceTypeOverride, before.osOverride, before.modelOverride),
+                listOf(row.isKnown, row.customName, row.tags, row.notes, row.location, row.deviceTypeOverride, row.osOverride, row.modelOverride),
+            )
+        }
+    }
+
+    @Test
     fun `updateLastSeen leaves overrides untouched and updateUserDetails leaves scan columns untouched`() = runTest {
         val dao = FakeKnownDeviceDao()
         dao.seed(

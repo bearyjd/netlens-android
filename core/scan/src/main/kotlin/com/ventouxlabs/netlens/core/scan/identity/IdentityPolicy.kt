@@ -92,7 +92,8 @@ object IdentityPolicy {
     fun prepare(device: LanDevice): LanDevice {
         val ids = sanitizeIdentifiers(device.identifiers + listOfNotNull(macIdentifier(device.macAddress)))
         return device.copy(
-            macAddress = display(device.macAddress),
+            // A MAC that yields no identifier (multicast, broadcast, malformed) must not key a row either.
+            macAddress = device.macAddress.takeIf { macIdentifier(it) != null }?.let { display(it) },
             hostname = display(device.hostname),
             vendor = display(device.vendor),
             deviceType = display(device.deviceType),

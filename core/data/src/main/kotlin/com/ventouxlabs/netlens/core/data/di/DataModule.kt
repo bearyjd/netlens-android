@@ -11,6 +11,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import com.ventouxlabs.netlens.core.data.NetLensDatabase
 import com.ventouxlabs.netlens.core.data.dao.DnsHistoryDao
+import com.ventouxlabs.netlens.core.data.RoomTransactionRunner
+import com.ventouxlabs.netlens.core.data.TransactionRunner
 import com.ventouxlabs.netlens.core.data.dao.NetworkKeyAliasDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
@@ -403,4 +405,8 @@ object DataModule {
     @Provides
     fun provideDeviceIdentityDao(database: NetLensDatabase): DeviceIdentityDao =
         database.deviceIdentityDao()
+
+    @Provides
+    fun provideTransactionRunner(database: NetLensDatabase): TransactionRunner =
+        RoomTransactionRunner(database)
 }

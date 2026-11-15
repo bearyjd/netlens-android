@@ -2,14 +2,8 @@ package com.ventouxlabs.netlens.core.scan.identity
 
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceIdentifierDao
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceIdentityDao
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceMergeDecisionDao
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceObservationDao
-import com.ventouxlabs.netlens.core.data.testing.FakeDeviceSightingDao
-import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
-import com.ventouxlabs.netlens.core.data.testing.FakeNetworkKeyAliasDao
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
+import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.core.scan.model.identity.DeviceIdentifier
 import com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind
 import com.ventouxlabs.netlens.core.scan.model.identity.ObservationSource
@@ -18,15 +12,15 @@ import com.ventouxlabs.netlens.core.scan.model.identity.Scope
 const val NET = "net-home"
 const val NOW = 1_000_000_000_000L
 
-/** The resolver over the shared in-memory DAO fakes. */
-class IdentityHarness {
-    val known = FakeKnownDeviceDao()
-    val identifiers = FakeDeviceIdentifierDao()
-    val observations = FakeDeviceObservationDao()
-    val sightings = FakeDeviceSightingDao()
-    val decisions = FakeDeviceMergeDecisionDao()
-    val aliases = FakeNetworkKeyAliasDao()
-    val tx = FakeDeviceIdentityDao(known, identifiers, observations, sightings, decisions)
+/** The resolver over the shared in-memory DAO fakes; [fakes] also builds a repository over the same state. */
+class IdentityHarness(val fakes: InventoryFakes = InventoryFakes()) {
+    val known = fakes.known
+    val identifiers = fakes.identifiers
+    val observations = fakes.observations
+    val sightings = fakes.sightings
+    val decisions = fakes.decisions
+    val aliases = fakes.aliases
+    val tx = fakes.identity
     val resolver = DeviceIdentityResolver(known, identifiers, decisions, aliases, tx)
 
     /** Seeds a known_devices row (verbatim id); NETWORK-scoped identifiers are stored under [scopeKey], GLOBAL ones under ''. */
