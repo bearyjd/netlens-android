@@ -53,13 +53,9 @@ class LanScanEmptyResultTest {
         binder = FakeLanNetworkBinder()
         subnetScanner = FakeSubnetScanner()
         viewModel = LanScanViewModel(
-            subnetScanner = subnetScanner,
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = subnetScanner, arpTableReader = FakeArpTableReader()),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = binder,
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),

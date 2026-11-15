@@ -50,13 +50,9 @@ class ScanNetworkAttributionTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         viewModel = LanScanViewModel(
-            subnetScanner = FakeSubnetScanner().apply { devices = listOf(LanDevice(ip = "192.168.1.10", macAddress = "00:BB:CC:00:00:01")) },
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner().apply { devices = listOf(LanDevice(ip = "192.168.1.10", macAddress = "00:BB:CC:00:00:01")) }, arpTableReader = FakeArpTableReader()),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = FakeSsdpScanner(),
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = binder,
             networkInterfaceProvider = object : NetworkInterfaceProvider {
                 override fun getNetworkInterfaces() = emptyList<NetworkInterfaceInfo>()

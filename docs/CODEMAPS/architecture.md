@@ -16,7 +16,10 @@ app (single Activity)
 ├── core:network        (connectivity, SSRF guard, ResultExporter, DisplayText.flatten —
 │                        sanitises network-supplied names at ingestion)
 ├── core:data           (Room DB v16, 22 entities, 19 DAOs)
-├── core:scan           (LAN scan engines + DeviceInventoryRepository + NewDeviceNotifier
+├── core:scan           (LAN scan engines + DeviceDiscoveryPipeline (Lite = background sweep,
+│                        Standard = foreground scan; owns device merge/fingerprint ordering;
+│                        callers own LAN binding and network identity)
+│                        + DeviceInventoryRepository + NewDeviceNotifier
 │                        + port/service domain: PortScanner, PortResult, PortRiskLevel,
 │                        WellKnownPorts, ServiceLauncher, ServiceIntentLauncher)
 ├── core:billing        (ProStatus interface, LocalProStatus)
@@ -26,7 +29,7 @@ app (single Activity)
 └── baselineprofile     (Macrobenchmark profile generation)
 
 test-only, never on a runtime classpath (consumed via testImplementation):
-  core:scan-testing     (Fake* engine doubles incl. FakePortScanner)
+  core:scan-testing     (Fake* engine doubles incl. FakePortScanner, FakeDeviceDiscoveryPipeline)
   core:data-testing     (FakeNetworkEventDao)
   core:network-testing  (SsrfRedirectProbe)
 ```

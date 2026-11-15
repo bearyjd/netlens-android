@@ -1,6 +1,5 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
-import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -33,23 +31,19 @@ import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
 import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
-import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipeline
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
-import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinterImpl
-import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryEvent
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryMode
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryRequest
+import com.ventouxlabs.netlens.core.scan.engine.DiscoveryStage
 import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinder
-import com.ventouxlabs.netlens.core.scan.engine.NetBiosProber
-import com.ventouxlabs.netlens.core.scan.engine.SsdpScanner
-import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
-import com.ventouxlabs.netlens.feature.lanscan.engine.strongerFingerprint
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
-import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.core.scan.network.NetworkContext
 import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
 import com.ventouxlabs.netlens.core.scan.network.NetworkSnapshot
-import com.ventouxlabs.netlens.core.scan.model.MAX_MODEL_LENGTH
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.feature.lanscan.model.LanScanHistoryUiModel
@@ -76,13 +70,9 @@ enum class SortOrder { IP, LATENCY }
 
 @HiltViewModel
 class LanScanViewModel @Inject constructor(
-    private val subnetScanner: SubnetScanner,
-    private val mdnsScanner: LanMdnsScanner,
+    private val discoveryPipeline: DeviceDiscoveryPipeline,
     private val fingerprinter: DeviceFingerprinter,
     private val portScanner: PortScanner,
-    private val ssdpScanner: SsdpScanner,
-    private val netBiosProber: NetBiosProber,
-    private val arpTableReader: ArpTableReader,
     private val lanNetworkBinder: LanNetworkBinder,
     private val networkInterfaceProvider: NetworkInterfaceProvider,
     private val lanScanHistoryDao: LanScanHistoryDao,
@@ -305,7 +295,6 @@ class LanScanViewModel @Inject constructor(
         }
         val expectedHosts = ((1 shl (32 - prefixLength)) - 2).coerceIn(1, 1024).toFloat()
 
-        arpTableReader.invalidateCache()
         _uiState.update {
             it.copy(
                 devices = emptyList(),
@@ -343,23 +332,6 @@ class LanScanViewModel @Inject constructor(
                 }
             }
 
-            suspend fun mergeDevice(device: LanDevice) {
-                // fingerprint() re-derives deviceType/osGuess from hostname/services alone, so a
-                // device that already arrived with a real classification (e.g. SSDP, confidence
-                // CONFIDENCE_SSDP) must not have that silently overwritten by a weaker re-guess —
-                // keep whichever of the two is actually stronger.
-                val reclassified = fingerprinter.fingerprint(device)
-                val fingerprinted = strongerFingerprint(device, reclassified)
-                discoveredLock.withLock {
-                    val existing = discovered[fingerprinted.ip]
-                    discovered[fingerprinted.ip] = if (existing != null) {
-                        strongerFingerprint(existing, fingerprinted)
-                    } else {
-                        fingerprinted
-                    }
-                }
-            }
-
             // Every engine below reaches the LAN through an unbound socket, which Android binds to
             // the process default — the VPN, whenever one is up. Pin the process to the Wi-Fi or
             // Ethernet network for the discovery phase so the probes actually leave over the LAN.
@@ -379,57 +351,37 @@ class LanScanViewModel @Inject constructor(
                         }
                     }
 
-                    val pingJob = launch {
-                        subnetScanner.scan(subnet, prefixLength)
-                            .catch { e ->
-                                _uiState.update {
-                                    it.copy(error = e.message ?: "Ping sweep failed")
-                                }
-                            }
-                            .collect { device -> mergeDevice(device) }
-                    }
-
-                    val mdnsJob = launch {
-                        mdnsScanner.discover()
-                            .catch { e -> Log.d("LanScan", "mDNS discovery failed: ${e.message}") }
-                            .collect { device -> mergeDevice(device) }
-                    }
-
-                    val ssdpJob = launch {
-                        ssdpScanner.discover()
-                            .catch { e -> Log.d("LanScan", "SSDP discovery failed: ${e.message}") }
-                            .collect { ssdpDevice ->
-                                val (type, os) = fingerprinter.classifyFromSsdp(ssdpDevice)
-                                val device = LanDevice(
-                                    ip = ssdpDevice.ip,
-                                    hostname = ssdpDevice.friendlyName,
-                                    isReachable = true,
-                                    discoveryMethod = DiscoveryMethod.SSDP,
-                                    deviceType = type,
-                                    osGuess = os,
-                                    vendor = ssdpDevice.manufacturer,
-                                    model = ssdpDevice.modelName?.take(MAX_MODEL_LENGTH),
-                                    fingerprintConfidence = if (type != null || os != null) {
-                                        DeviceFingerprinterImpl.CONFIDENCE_SSDP
+                    // Until the pipeline reaches enrichment, updates accumulate in `discovered` for the
+                    // periodic flush; from then on each one is applied to the published list in place.
+                    var enriching = false
+                    discoveryPipeline.run(DiscoveryRequest("$subnet/$prefixLength", DiscoveryMode.Standard))
+                        .collect { event ->
+                            when (event) {
+                                is DiscoveryEvent.DeviceUpdated -> {
+                                    val updated = event.device
+                                    if (!enriching) {
+                                        discoveredLock.withLock { discovered[updated.ip] = updated }
                                     } else {
-                                        DeviceFingerprinterImpl.CONFIDENCE_NONE
-                                    },
-                                    fingerprintEvidence = listOfNotNull(
-                                        ssdpDevice.deviceType?.let { "SSDP: $it" },
-                                    ),
-                                )
-                                mergeDevice(device)
+                                        _uiState.update { state ->
+                                            state.copy(
+                                                devices = state.devices.map { if (it.ip == updated.ip) updated else it },
+                                            )
+                                        }
+                                    }
+                                }
+                                is DiscoveryEvent.Progress -> if (event.stage == DiscoveryStage.Arp) {
+                                    emitterJob.cancelAndJoin()
+                                    flushDiscovered()
+                                    enriching = true
+                                }
+                                is DiscoveryEvent.StageFailed -> _uiState.update {
+                                    it.copy(error = event.message ?: "Ping sweep failed")
+                                }
+                                is DiscoveryEvent.Finished -> Unit
                             }
-                    }
-
-                    pingJob.join()
-                    mdnsJob.join()
-                    ssdpJob.join()
-
+                        }
                     emitterJob.cancelAndJoin()
-                    flushDiscovered()
-
-                    enrichWithArpAndNetBios()
+                    if (!enriching) flushDiscovered()
                 }
                 network = scanNetwork(identityAtStart, _uiState.value.devices)
                 bound
@@ -493,56 +445,6 @@ class LanScanViewModel @Inject constructor(
 
     fun toggleInventorySortOrder() {
         _inventorySortAscending.value = !_inventorySortAscending.value
-    }
-
-    private suspend fun enrichWithArpAndNetBios() {
-        val arpTable = arpTableReader.getAll()
-
-        for (device in _uiState.value.devices) {
-            val mac = device.macAddress ?: arpTable[device.ip]
-            if (mac != null && device.macAddress == null) {
-                val enriched = fingerprinter.fingerprint(device.copy(macAddress = mac))
-                _uiState.update { state ->
-                    state.copy(
-                        devices = state.devices.map {
-                            if (it.ip == enriched.ip) it.copy(
-                                macAddress = enriched.macAddress,
-                                vendor = it.vendor ?: enriched.vendor,
-                            ) else it
-                        },
-                    )
-                }
-            }
-        }
-
-        kotlinx.coroutines.coroutineScope {
-            _uiState.value.devices.filter { it.hostname == null && it.osGuess == null }.forEach { device ->
-                launch {
-                    val nbInfo = netBiosProber.probe(device.ip) ?: return@launch
-                    val os = fingerprinter.classifyFromNetBios(nbInfo)
-                    _uiState.update { state ->
-                        state.copy(
-                            devices = state.devices.map {
-                                if (it.ip == device.ip) it.copy(
-                                    hostname = it.hostname ?: nbInfo.name,
-                                    osGuess = it.osGuess ?: os,
-                                    fingerprintConfidence = if (os != null) {
-                                        maxOf(it.fingerprintConfidence, DeviceFingerprinterImpl.CONFIDENCE_NETBIOS)
-                                    } else {
-                                        it.fingerprintConfidence
-                                    },
-                                    fingerprintEvidence = if (os != null) {
-                                        (it.fingerprintEvidence + "NetBIOS: ${nbInfo.name}").distinct()
-                                    } else {
-                                        it.fingerprintEvidence
-                                    },
-                                ) else it
-                            },
-                        )
-                    }
-                }
-            }
-        }
     }
 
     private suspend fun saveToHistory(timestamp: Long, location: ScanCoordinates?) {
