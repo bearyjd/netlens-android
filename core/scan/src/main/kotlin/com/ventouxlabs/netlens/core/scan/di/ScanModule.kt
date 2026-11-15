@@ -8,6 +8,8 @@ import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifierImpl
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReaderImpl
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipeline
+import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipelineImpl
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinterImpl
 import com.ventouxlabs.netlens.core.scan.engine.LanMdnsScanner
@@ -85,6 +87,9 @@ abstract class ScanModule {
     @Binds
     @Singleton
     abstract fun bindAutoMergeSetting(impl: DefaultAutoMergeSetting): AutoMergeSetting
+
+    @Binds
+    abstract fun bindDeviceDiscoveryPipeline(impl: DeviceDiscoveryPipelineImpl): DeviceDiscoveryPipeline
 
     @Binds
     abstract fun bindPortScanner(impl: PortScannerImpl): PortScanner

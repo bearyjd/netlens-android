@@ -1,4 +1,4 @@
-package com.ventouxlabs.netlens.feature.lanscan.engine
+package com.ventouxlabs.netlens.core.scan.engine
 
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -125,7 +125,7 @@ class FingerprintMergeTest {
     }
 
     // Regression: discoveryMethod used to be stamped MULTIPLE unconditionally, which was
-    // correct for the original two-source merge (LanScanViewModel.mergeDevice's ping/mDNS/SSDP
+    // correct for the original two-source merge (DeviceDiscoveryPipelineImpl.merge's ping/mDNS/SSDP
     // jobs) but wrong when the same function reconciles a single device's own pre- and
     // post-fingerprint() classification — same discovery event, not multiple sources.
     @Test

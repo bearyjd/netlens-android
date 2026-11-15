@@ -63,13 +63,10 @@ class LanScanBuildExportTextTest {
         fakeSubnetScanner = FakeSubnetScanner()
         fakeSsdpScanner = FakeSsdpScanner()
         viewModel = LanScanViewModel(
-            subnetScanner = fakeSubnetScanner,
-            mdnsScanner = FakeLanMdnsScanner(),
+            discoveryPipeline = enginePipeline(subnetScanner = fakeSubnetScanner, ssdpScanner = fakeSsdpScanner),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
-            ssdpScanner = fakeSsdpScanner,
-            netBiosProber = FakeNetBiosProber(),
-            arpTableReader = FakeArpTableReader(),
             lanNetworkBinder = FakeLanNetworkBinder(),
             networkInterfaceProvider = FakeNetworkInterfaceProvider(),
             lanScanHistoryDao = FakeLanScanHistoryDao(),
