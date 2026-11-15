@@ -64,6 +64,7 @@ class LanScanBuildExportTextTest {
         fakeSsdpScanner = FakeSsdpScanner()
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = fakeSubnetScanner, ssdpScanner = fakeSsdpScanner),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = FakeLanNetworkBinder(),

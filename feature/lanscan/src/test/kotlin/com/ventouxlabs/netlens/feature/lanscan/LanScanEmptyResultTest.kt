@@ -54,6 +54,7 @@ class LanScanEmptyResultTest {
         subnetScanner = FakeSubnetScanner()
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = subnetScanner, arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = binder,

@@ -51,6 +51,7 @@ class ScanNetworkAttributionTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner().apply { devices = listOf(LanDevice(ip = "192.168.1.10", macAddress = "00:BB:CC:00:00:01")) }, arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = binder,

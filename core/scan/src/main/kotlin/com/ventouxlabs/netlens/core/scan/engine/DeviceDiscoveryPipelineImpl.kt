@@ -35,7 +35,6 @@ class DeviceDiscoveryPipelineImpl @Inject constructor(
         val parts = request.cidr.trim().split("/")
         require(parts.size == 2) { "Invalid CIDR: ${request.cidr}" }
         val prefixLength = requireNotNull(parts[1].toIntOrNull()) { "Invalid CIDR: ${request.cidr}" }
-        arpTableReader.invalidateCache()
         when (request.mode) {
             DiscoveryMode.Lite -> runLite(parts[0], prefixLength)
             DiscoveryMode.Standard -> runStandard(parts[0], prefixLength)
@@ -47,6 +46,7 @@ class DeviceDiscoveryPipelineImpl @Inject constructor(
     }
 
     private suspend fun ProducerScope<DiscoveryEvent>.runLite(subnet: String, prefixLength: Int) {
+        arpTableReader.invalidateCache()
         progress(DiscoveryMode.Lite, DiscoveryStage.Discovery)
         val reachable = subnetScanner.scan(subnet, prefixLength).toList()
         progress(DiscoveryMode.Lite, DiscoveryStage.Arp)
@@ -90,7 +90,7 @@ class DeviceDiscoveryPipelineImpl @Inject constructor(
         coroutineScope {
             launch {
                 subnetScanner.scan(subnet, prefixLength)
-                    .catch { e -> send(StageFailed(DiscoveryStage.Discovery, e.message ?: "Ping sweep failed")) }
+                    .catch { e -> send(StageFailed(DiscoveryStage.Discovery, e.message ?: PING_SWEEP_FAILED_MESSAGE)) }
                     .collect { device -> merge(device) }
             }
             launch {

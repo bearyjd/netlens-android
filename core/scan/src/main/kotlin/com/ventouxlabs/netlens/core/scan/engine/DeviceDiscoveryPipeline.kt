@@ -3,6 +3,9 @@ package com.ventouxlabs.netlens.core.scan.engine
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import kotlinx.coroutines.flow.Flow
 
+/** What a failed ping sweep reports when the engine's exception has no message. */
+const val PING_SWEEP_FAILED_MESSAGE = "Ping sweep failed"
+
 /** The phases a discovery run moves through, in the order [DiscoveryMode.stages] lists them. */
 enum class DiscoveryStage { Discovery, Arp, NetBios }
 
@@ -37,5 +40,8 @@ sealed interface DiscoveryEvent {
  * the binding so every probe leaves over the LAN. Cancelling the collector cancels every engine.
  */
 interface DeviceDiscoveryPipeline {
+    // ARP cache: Lite drops it before its sweep (the old WatchRunner order). Standard never touches
+    // it; the caller owns that, because where it drops the cache relative to its network-identity
+    // snapshot decides which ARP table enrichment sees.
     fun run(request: DiscoveryRequest): Flow<DiscoveryEvent>
 }

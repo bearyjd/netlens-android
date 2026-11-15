@@ -31,12 +31,14 @@ import com.ventouxlabs.netlens.core.data.model.LanScanInventoryEntry
 import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
+import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.DeviceDiscoveryPipeline
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryEvent
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryMode
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryRequest
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryStage
+import com.ventouxlabs.netlens.core.scan.engine.PING_SWEEP_FAILED_MESSAGE
 import com.ventouxlabs.netlens.core.scan.engine.LanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
@@ -71,6 +73,7 @@ enum class SortOrder { IP, LATENCY }
 @HiltViewModel
 class LanScanViewModel @Inject constructor(
     private val discoveryPipeline: DeviceDiscoveryPipeline,
+    private val arpTableReader: ArpTableReader,
     private val fingerprinter: DeviceFingerprinter,
     private val portScanner: PortScanner,
     private val lanNetworkBinder: LanNetworkBinder,
@@ -295,6 +298,11 @@ class LanScanViewModel @Inject constructor(
         }
         val expectedHosts = ((1 shl (32 - prefixLength)) - 2).coerceIn(1, 1024).toFloat()
 
+        // Order is load-bearing: this drop, then the identity snapshot inside the LAN binding (which
+        // re-reads ARP, so the cache holds the PRE-sweep table), then the sweep, then enrichment from
+        // that cached table. A post-sweep ARP read would change what the identity resolver sees on
+        // the first scan; that is a separate, deliberate follow-up, not part of this refactor.
+        arpTableReader.invalidateCache()
         _uiState.update {
             it.copy(
                 devices = emptyList(),
@@ -362,6 +370,7 @@ class LanScanViewModel @Inject constructor(
                                     if (!enriching) {
                                         discoveredLock.withLock { discovered[updated.ip] = updated }
                                     } else {
+                                        // Replaces the whole device by IP: assumes nothing else edits `devices` during a scan.
                                         _uiState.update { state ->
                                             state.copy(
                                                 devices = state.devices.map { if (it.ip == updated.ip) updated else it },
@@ -375,7 +384,7 @@ class LanScanViewModel @Inject constructor(
                                     enriching = true
                                 }
                                 is DiscoveryEvent.StageFailed -> _uiState.update {
-                                    it.copy(error = event.message ?: "Ping sweep failed")
+                                    it.copy(error = event.message ?: PING_SWEEP_FAILED_MESSAGE)
                                 }
                                 is DiscoveryEvent.Finished -> Unit
                             }

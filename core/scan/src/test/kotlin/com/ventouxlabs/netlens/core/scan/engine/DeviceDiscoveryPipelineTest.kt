@@ -289,7 +289,7 @@ class DeviceDiscoveryPipelineTest {
     }
 
     @Test
-    fun `both modes sweep the CIDR's address and prefix after dropping the stale ARP cache`() = runTest {
+    fun `Lite drops the stale ARP cache before its sweep and Standard leaves the cache to its caller`() = runTest {
         for (mode in DiscoveryMode.entries) {
             val calls = mutableListOf<String>()
             val scanner = object : SubnetScanner {
@@ -299,14 +299,18 @@ class DeviceDiscoveryPipelineTest {
             }
             val arpSpy = object : ArpTableReader {
                 override suspend fun getMacForIp(ip: String): String? = null
-                override suspend fun getAll(): Map<String, String> = emptyMap()
+                override suspend fun getAll(): Map<String, String> = emptyMap<String, String>().also { calls += "read" }
                 override fun invalidateCache() { calls += "invalidate" }
             }
 
             pipeline(subnetScanner = scanner, arpTableReader = arpSpy)
                 .run(DiscoveryRequest(" 10.1.2.0/22 ", mode)).toList()
 
-            assertEquals(listOf("invalidate", "scan 10.1.2.0/22"), calls, "mode $mode")
+            val expected = when (mode) {
+                DiscoveryMode.Lite -> listOf("invalidate", "scan 10.1.2.0/22", "read")
+                DiscoveryMode.Standard -> listOf("scan 10.1.2.0/22", "read")
+            }
+            assertEquals(expected, calls, "mode $mode")
         }
     }
 

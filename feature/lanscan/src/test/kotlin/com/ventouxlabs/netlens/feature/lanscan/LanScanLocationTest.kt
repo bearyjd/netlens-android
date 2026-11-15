@@ -47,6 +47,7 @@ class LanScanLocationTest {
         locationProvider = FakeScanLocationProvider()
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner(), arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = FakeLanNetworkBinder(),

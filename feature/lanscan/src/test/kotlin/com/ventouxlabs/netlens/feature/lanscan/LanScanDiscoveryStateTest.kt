@@ -5,6 +5,7 @@ import com.ventouxlabs.netlens.core.scan.engine.DiscoveryEvent
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryMode
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryRequest
 import com.ventouxlabs.netlens.core.scan.engine.DiscoveryStage
+import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.FakeDeviceDiscoveryPipeline
 import com.ventouxlabs.netlens.core.scan.engine.FakeLanNetworkBinder
 import com.ventouxlabs.netlens.core.scan.engine.FakePortScanner
@@ -16,7 +17,11 @@ import com.ventouxlabs.netlens.feature.lanscan.model.ScanRangeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -49,6 +54,7 @@ class LanScanDiscoveryStateTest {
         pipeline = FakeDeviceDiscoveryPipeline()
         viewModel = LanScanViewModel(
             discoveryPipeline = pipeline,
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = binder,
@@ -64,6 +70,19 @@ class LanScanDiscoveryStateTest {
     @AfterEach
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    /**
+     * Runs a test that leaves the pipeline suspended, then tears the scan down unconditionally so a
+     * failing assertion (or a broken `cancelScan`) fails the test instead of hanging `runTest`.
+     */
+    private fun suspendedScanTest(body: suspend TestScope.() -> Unit) = runTest {
+        try {
+            body()
+        } finally {
+            viewModel.viewModelScope.cancel()
+            runCurrent()
+        }
     }
 
     private fun startScan() {
@@ -108,7 +127,7 @@ class LanScanDiscoveryStateTest {
     }
 
     @Test
-    fun `devices are not published before discovery ends, then flushed with capped progress`() = runTest {
+    fun `devices are not published before discovery ends, then flushed with capped progress`() = suspendedScanTest {
         pipeline.events = listOf(DiscoveryEvent.DeviceUpdated(a))
         pipeline.suspendAfterEvents = true
 
@@ -126,7 +145,7 @@ class LanScanDiscoveryStateTest {
     }
 
     @Test
-    fun `reaching enrichment flushes discovery at once and later updates replace devices in place`() = runTest {
+    fun `reaching enrichment flushes discovery at once and later updates replace devices in place`() = suspendedScanTest {
         val enriched = a.copy(macAddress = "11:22:33:44:55:66")
         pipeline.events = listOf(
             DiscoveryEvent.DeviceUpdated(a),
@@ -166,13 +185,15 @@ class LanScanDiscoveryStateTest {
     }
 
     @Test
-    fun `cancelling stops the pipeline and leaves the scan idle`() = runTest {
+    fun `cancelling stops the pipeline and leaves the scan idle`() = suspendedScanTest {
         pipeline.events = listOf(DiscoveryEvent.DeviceUpdated(a))
         pipeline.suspendAfterEvents = true
         startScan()
+        runCurrent()
         assertTrue(pipeline.isRunning)
 
         viewModel.cancelScan()
+        runCurrent()
 
         assertFalse(pipeline.isRunning, "the pipeline kept running after cancelScan")
         assertFalse(viewModel.uiState.value.isScanning)
@@ -180,7 +201,7 @@ class LanScanDiscoveryStateTest {
     }
 
     @Test
-    fun `a second scan is ignored while one is running`() = runTest {
+    fun `a second scan is ignored while one is running`() = suspendedScanTest {
         pipeline.suspendAfterEvents = true
         startScan()
 

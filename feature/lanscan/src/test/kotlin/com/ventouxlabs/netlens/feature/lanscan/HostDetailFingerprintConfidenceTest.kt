@@ -47,6 +47,7 @@ class HostDetailFingerprintConfidenceTest {
         fingerprinter = FakeDeviceFingerprinter()
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = FakeSubnetScanner(), arpTableReader = FakeArpTableReader(), fingerprinter = fingerprinter),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = fingerprinter,
             portScanner = FakePortScanner(),
             lanNetworkBinder = FakeLanNetworkBinder(),

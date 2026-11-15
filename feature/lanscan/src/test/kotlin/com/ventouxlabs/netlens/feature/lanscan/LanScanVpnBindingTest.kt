@@ -67,6 +67,7 @@ class LanScanVpnBindingTest {
         boundDuringPingSweep = null
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = recordingSubnetScanner, arpTableReader = FakeArpTableReader()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = FakeDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = binder,

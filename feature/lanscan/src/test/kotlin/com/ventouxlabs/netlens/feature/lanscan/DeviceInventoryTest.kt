@@ -57,6 +57,7 @@ class DeviceInventoryTest {
         fakeNotifier = RecordingNewDeviceNotifier()
         viewModel = LanScanViewModel(
             discoveryPipeline = enginePipeline(subnetScanner = fakeSubnetScanner, arpTableReader = FakeArpTableReader(), fingerprinter = StubDeviceFingerprinter()),
+            arpTableReader = FakeArpTableReader(),
             fingerprinter = StubDeviceFingerprinter(),
             portScanner = FakePortScanner(),
             lanNetworkBinder = FakeLanNetworkBinder(),
