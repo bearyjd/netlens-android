@@ -5,6 +5,9 @@ import com.ventouxlabs.netlens.core.oui.OuiLookup
 import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepository
 import com.ventouxlabs.netlens.core.scan.engine.ArpTableReader
 import com.ventouxlabs.netlens.core.scan.engine.SubnetScanner
+import com.ventouxlabs.netlens.core.scan.network.NetworkContext
+import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
+import com.ventouxlabs.netlens.core.scan.network.NetworkKeyCanonicalizer
 import kotlinx.coroutines.flow.toList
 import javax.inject.Inject
 
@@ -25,10 +28,16 @@ class WatchRunner @Inject constructor(
     private val arpTableReader: ArpTableReader,
     private val ouiLookup: OuiLookup,
     private val deviceInventoryRepository: DeviceInventoryRepository,
+    private val networkKeyCanonicalizer: NetworkKeyCanonicalizer,
 ) {
     suspend fun run(): WatchOutcome {
-        val gatewayMac = networkIdentity.currentGatewayMac() ?: return WatchOutcome.NoGateway
-        val watched = watchedNetworkDao.getByGatewayMac(gatewayMac)
+        val keys = networkIdentity.currentNetworkKeys()
+        if (keys.isEmpty()) return WatchOutcome.NoGateway
+        // Only a gateway MAC / gateway id (or an alias of one) can match a watched network: the l3
+        // hint is shared by countless networks, so an l3-only match would sweep a hotel into the home inventory.
+        // Unvouched keys (none strong, or strong keys that disagree) match nothing.
+        val current = networkKeyCanonicalizer.currentIdentity(keys) ?: return WatchOutcome.NotWatched
+        val watched = watchedNetworkDao.getAll().firstOrNull { networkKeyCanonicalizer.canonicalForGatewayMac(it.gatewayMac) == current }
         if (watched == null || !watched.watchEnabled) return WatchOutcome.NotWatched
 
         val subnetCidr = networkIdentity.currentSubnet() ?: watched.subnet
@@ -42,7 +51,7 @@ class WatchRunner @Inject constructor(
             val vendor = mac?.let { ouiLookup.lookup(it) } ?: device.vendor
             device.copy(macAddress = mac, vendor = vendor)
         }
-        deviceInventoryRepository.persistScan(enriched, networkId = watched.id)
+        deviceInventoryRepository.persistScan(enriched, networkId = watched.id, network = NetworkContext(keys, networkIdentity.currentNetworkLabel()))
         return WatchOutcome.Swept(enriched.size)
     }
 

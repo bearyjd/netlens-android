@@ -16,6 +16,7 @@ import com.ventouxlabs.netlens.core.scan.DeviceInventoryRepositoryImpl
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentifierRecorder
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentityResolver
+import com.ventouxlabs.netlens.core.scan.network.NetworkKeyCanonicalizer
 
 /**
  * Every in-memory DAO the inventory repository needs, wired around the caller's [known] fake so a
@@ -28,6 +29,8 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
     val decisions = FakeDeviceMergeDecisionDao()
     val aliases = FakeNetworkKeyAliasDao()
     val identity = FakeDeviceIdentityDao(known, identifiers, observations, sightings, decisions)
+    val resolver = DeviceIdentityResolver(known, identifiers, decisions, aliases, identity)
+    val networkKeys = NetworkKeyCanonicalizer(aliases, resolver)
 
     /** [identityDao] lets a test wrap the transactional DAO (e.g. to inject a competing writer). */
     fun repository(
@@ -45,6 +48,7 @@ class InventoryFakes(val known: FakeKnownDeviceDao = FakeKnownDeviceDao()) {
         decisionDao = decisions,
         transactions = FakeTransactionRunner(),
         autoMergeSetting = AutoMergeSetting { autoMerge },
+        networkKeys = networkKeys,
     )
 
     /**

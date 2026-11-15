@@ -12,6 +12,9 @@ interface WatchedNetworkDao {
     @Query("SELECT * FROM watched_networks ORDER BY addedAt DESC")
     fun observeAll(): Flow<List<WatchedNetworkEntity>>
 
+    @Query("SELECT * FROM watched_networks")
+    suspend fun getAll(): List<WatchedNetworkEntity>
+
     @Query("SELECT * FROM watched_networks WHERE gatewayMac = :mac")
     suspend fun getByGatewayMac(mac: String): WatchedNetworkEntity?
 

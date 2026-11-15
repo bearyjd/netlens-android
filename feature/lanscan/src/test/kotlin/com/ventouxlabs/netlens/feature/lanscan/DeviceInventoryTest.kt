@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
+import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -68,6 +69,7 @@ class DeviceInventoryTest {
             knownDeviceDao = fakeKnownDeviceDao,
             deviceInventoryRepository = InventoryFakes(fakeKnownDeviceDao).repository(fakeNotifier),
             scanLocationProvider = FakeScanLocationProvider(),
+            networkIdentity = FakeNetworkIdentity(),
         )
     }
 

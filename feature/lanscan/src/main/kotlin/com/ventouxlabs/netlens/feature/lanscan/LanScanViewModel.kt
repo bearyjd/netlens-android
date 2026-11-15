@@ -46,6 +46,9 @@ import com.ventouxlabs.netlens.feature.lanscan.engine.strongerFingerprint
 import com.ventouxlabs.netlens.feature.lanscan.model.EmptyScanReason
 import com.ventouxlabs.netlens.feature.lanscan.model.DeviceSortField
 import com.ventouxlabs.netlens.core.scan.model.DiscoveryMethod
+import com.ventouxlabs.netlens.core.scan.network.NetworkContext
+import com.ventouxlabs.netlens.core.scan.network.NetworkIdentity
+import com.ventouxlabs.netlens.core.scan.network.NetworkSnapshot
 import com.ventouxlabs.netlens.core.scan.model.MAX_MODEL_LENGTH
 import com.ventouxlabs.netlens.feature.lanscan.model.HostDetailState
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -86,6 +89,7 @@ class LanScanViewModel @Inject constructor(
     private val knownDeviceDao: KnownDeviceDao,
     private val deviceInventoryRepository: DeviceInventoryRepository,
     private val scanLocationProvider: ScanLocationProvider,
+    private val networkIdentity: NetworkIdentity,
     private val lanScanInventoryDao: LanScanInventoryDao? = null,
 ) : ViewModel() {
 
@@ -316,6 +320,7 @@ class LanScanViewModel @Inject constructor(
         }
 
         val scanStartedAt = System.currentTimeMillis()
+        val customRange = _uiState.value.rangeMode == ScanRangeMode.CUSTOM
         scanJob = viewModelScope.launch {
             // Three scanners discover hosts concurrently. Rather than copy + re-sort the whole
             // device list and emit a new _uiState on every single discovery (an O(n^2 log n)
@@ -361,7 +366,11 @@ class LanScanViewModel @Inject constructor(
             // Without this a scan under any VPN, including on-device ad-blockers, silently returns
             // nothing (issue #152). Scope stays as tight as the network work: the DB writes below
             // stay outside it.
+            var network = NetworkContext.NONE
             val boundToLanNetwork = lanNetworkBinder.withLanNetwork { bound ->
+                // Read the network identity inside the binding too: outside it the default network is
+                // the VPN, whose gateway would name the tunnel rather than the LAN the devices are on.
+                val identityAtStart = if (customRange) null else networkIdentity.snapshot()
                 coroutineScope {
                     val emitterJob = launch {
                         while (isActive) {
@@ -422,6 +431,7 @@ class LanScanViewModel @Inject constructor(
 
                     enrichWithArpAndNetBios()
                 }
+                network = scanNetwork(identityAtStart, _uiState.value.devices)
                 bound
             }
 
@@ -441,8 +451,17 @@ class LanScanViewModel @Inject constructor(
                 )
             }
             saveToHistory(scanStartedAt, location)
-            deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null)
+            deviceInventoryRepository.persistScan(_uiState.value.devices, networkId = null, network = network)
         }
+    }
+
+    // [atStart] is null for a custom range, which need not be the network the phone is on: only an
+    // automatic scan is attributed to it. A scan during which the phone moved networks is attributed to none.
+    private suspend fun scanNetwork(atStart: NetworkSnapshot?, devices: List<LanDevice>): NetworkContext {
+        if (atStart == null) return NetworkContext.NONE
+        val atEnd = networkIdentity.snapshot()
+        if (!atStart.sameNetworkAs(atEnd)) return NetworkContext.NONE
+        return NetworkContext(atEnd.keys(devices), networkIdentity.currentNetworkLabel())
     }
 
     fun toggleKnown(id: Long) {

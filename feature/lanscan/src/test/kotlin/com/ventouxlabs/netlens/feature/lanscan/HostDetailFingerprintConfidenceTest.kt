@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.lanscan
 
+import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import com.ventouxlabs.netlens.core.data.testing.FakeKnownDeviceDao
 import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
 import com.ventouxlabs.netlens.core.scan.engine.FakeArpTableReader
@@ -58,6 +59,7 @@ class HostDetailFingerprintConfidenceTest {
             knownDeviceDao = FakeKnownDeviceDao(),
             deviceInventoryRepository = InventoryFakes().repository(FakeNewDeviceNotifier()),
             scanLocationProvider = FakeScanLocationProvider(),
+            networkIdentity = FakeNetworkIdentity(),
         )
     }
 

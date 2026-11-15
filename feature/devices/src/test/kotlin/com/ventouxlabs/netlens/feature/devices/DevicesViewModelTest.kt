@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.devices
 
+import com.ventouxlabs.netlens.core.scan.network.FakeNetworkIdentity
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
@@ -136,6 +137,15 @@ class DevicesViewModelTest {
         val watched = watchedDao.getByGatewayMac("AA:BB:CC:DD:EE:FF")
         assertEquals("HomeWiFi", watched?.displayName)
         assertEquals("192.168.1.0/24", watched?.subnet)
+    }
+
+    @Test
+    fun `watchCurrentNetwork stores a sanitised SSID as the display name`() = runTest {
+        identity.gatewayMac = "AA:BB:CC:DD:EE:FF"
+        identity.subnet = "192.168.1.0/24"
+        identity.ssid = "Home\u202EWi\u200BFi\n"
+        viewModel.watchCurrentNetwork()
+        assertEquals("HomeWiFi", watchedDao.getByGatewayMac("AA:BB:CC:DD:EE:FF")?.displayName)
     }
 
     @Test

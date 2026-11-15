@@ -12,6 +12,8 @@ class FakeWatchedNetworkDao : WatchedNetworkDao {
 
     override fun observeAll(): Flow<List<WatchedNetworkEntity>> = flow
 
+    override suspend fun getAll(): List<WatchedNetworkEntity> = networks.toList()
+
     override suspend fun getByGatewayMac(mac: String): WatchedNetworkEntity? =
         networks.find { it.gatewayMac == mac }
 

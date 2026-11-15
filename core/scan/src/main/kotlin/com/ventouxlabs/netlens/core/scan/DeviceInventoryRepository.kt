@@ -14,6 +14,8 @@ import com.ventouxlabs.netlens.core.scan.identity.ResolveOptions
 import com.ventouxlabs.netlens.core.scan.identity.ResolvedDevice
 import com.ventouxlabs.netlens.core.scan.identity.Resolution
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
+import com.ventouxlabs.netlens.core.scan.network.NetworkContext
+import com.ventouxlabs.netlens.core.scan.network.NetworkKeyCanonicalizer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -28,8 +30,11 @@ interface DeviceInventoryRepository {
      * [networkId] (null for ad-hoc foreground scans). Fires [NewDeviceNotifier] once per genuinely
      * new row (a new device, or a newly inserted identifier-conflict row) and never for a re-seen
      * device or a merge. Shared by foreground LanScan and the background watch.
+     *
+     * [network] says which network the scan ran on: sightings and NETWORK-scoped identifiers are
+     * stored under its canonical key and its label. With no keys every scan shares one fallback key.
      */
-    suspend fun persistScan(devices: List<LanDevice>, networkId: Long?)
+    suspend fun persistScan(devices: List<LanDevice>, networkId: Long?, network: NetworkContext = NetworkContext.NONE)
 
     /** Possible duplicates the resolver or the user's scans found, strongest first; read from `SUGGESTED` decisions. */
     val pendingMergeSuggestions: Flow<List<MergeSuggestion.BetweenRows>>
@@ -62,6 +67,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
     private val decisionDao: DeviceMergeDecisionDao,
     private val transactions: TransactionRunner,
     private val autoMergeSetting: AutoMergeSetting,
+    private val networkKeys: NetworkKeyCanonicalizer,
 ) : DeviceInventoryRepository {
 
     // Foreground scan, background watch and the user's merge decisions share one process and one
@@ -75,17 +81,19 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             }
         }
 
-    override suspend fun persistScan(devices: List<LanDevice>, networkId: Long?) = writeLock.withLock {
+    override suspend fun persistScan(devices: List<LanDevice>, networkId: Long?, network: NetworkContext) = writeLock.withLock {
         if (devices.isEmpty()) return@withLock
-        val run = ScanRun(networkId, System.currentTimeMillis(), resolver.canonicalKey(NETWORK_KEY), ResolveOptions(autoMergeSetting.isEnabled()))
-        val first = resolver.resolve(devices, NETWORK_KEY, run.now, run.options)
+        val now = System.currentTimeMillis()
+        val canonical = networkKeys.canonicalize(network.keys, now)
+        val run = ScanRun(networkId, now, canonical, network.label, ResolveOptions(autoMergeSetting.isEnabled()))
+        val first = resolver.resolve(devices, canonical, run.now, run.options)
         first.newConflictRows.forEach(newDeviceNotifier::notify)
         for (resolved in first.devices) {
             persist(resolved, first.suggestions.forNewDevice(resolved), run)
         }
     }
 
-    private class ScanRun(val networkId: Long?, val now: Long, val canonicalKey: String, val options: ResolveOptions)
+    private class ScanRun(val networkId: Long?, val now: Long, val canonicalKey: String, val networkLabel: String?, val options: ResolveOptions)
 
     /**
      * Applies one resolved device. A lost insert race (another writer owns one of its identifiers)
@@ -123,7 +131,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
      */
     private suspend fun reResolve(resolved: ResolvedDevice, run: ScanRun): Pair<ResolvedDevice, List<MergeSuggestion.ForNewDevice>> {
         val device = resolved.device.copy(identifiers = resolved.ownedIdentifiers)
-        val result = resolver.resolve(listOf(device), NETWORK_KEY, run.now, run.options)
+        val result = resolver.resolve(listOf(device), run.canonicalKey, run.now, run.options)
         result.newConflictRows.forEach(newDeviceNotifier::notify)
         val again = result.devices.single()
         return again.copy(untrustedClaims = again.untrustedClaims + resolved.untrustedClaims) to result.suggestions.forNewDevice(again)
@@ -144,7 +152,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
         recorder.record(deviceId, resolved.ownedIdentifiers, run.canonicalKey, run.now, insertNew = !locked)
         resolved.observationEntities(run.now).forEach { observationDao.upsert(it.copy(deviceId = deviceId)) }
         observationDao.trimToStrongest(deviceId, IdentityPolicy.MAX_OBSERVATIONS)
-        sightingDao.upsert(resolved.sighting(deviceId, run.canonicalKey, run.now))
+        sightingDao.upsert(resolved.sighting(deviceId, run.canonicalKey, run.networkLabel, run.now))
         true
     }
 
@@ -160,7 +168,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             )
             if (inserted != DeviceIdentityDao.DUPLICATE) {
                 observationDao.trimToStrongest(inserted, IdentityPolicy.MAX_OBSERVATIONS)
-                sightingDao.upsert(resolved.sighting(inserted, run.canonicalKey, run.now))
+                sightingDao.upsert(resolved.sighting(inserted, run.canonicalKey, run.networkLabel, run.now))
             }
             inserted
         }
@@ -203,9 +211,5 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
         val logger: Logger = Logger.getLogger("DeviceInventory")
         const val MAX_ATTEMPTS = 3
         const val SUGGESTED = "SUGGESTED"
-
-        // Until Task 1.6 promotes a real network key every scan shares one: a per-networkId key would
-        // scope the same randomised MAC differently for foreground scans (null) and the watch.
-        const val NETWORK_KEY = ""
     }
 }
