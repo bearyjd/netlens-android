@@ -109,6 +109,10 @@ class InventorySuggestionsTest {
         assertEquals(setOf("uuid:a", MAC1_ID), h.identifiers.getForDevice(102).map { it.value }.toSet())
         assertTrue(pending().isEmpty())
         assertEquals(0, notifier.notified.size)
+        // The suggestion row cascades away with the loser, so the log is the only record of the score.
+        val log = h.known.mergeLog.single()
+        assertEquals(listOf("USER", "102", "101"), listOf(log.kind, log.survivorId.toString(), log.loserId.toString()))
+        assertNotNull(log.decisionScore)
     }
 
     @Test

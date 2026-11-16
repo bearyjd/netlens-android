@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.map
 
 /**
  * In-memory [DeviceMergeDecisionDao]. Scan paths ([suggest], [updateSuggestion]) never touch a pair
- * the user already decided; only [setDistinct] / [setMerged] replace a stored decision. The fake does
+ * the user already decided; only [setDistinct] replaces a stored decision. The fake does
  * NOT normalise `low < high` — the database does not either, so callers must.
  */
 class FakeDeviceMergeDecisionDao : DeviceMergeDecisionDao {
@@ -40,9 +40,6 @@ class FakeDeviceMergeDecisionDao : DeviceMergeDecisionDao {
 
     override suspend fun setDistinct(low: Long, high: Long, decidedAt: Long) =
         put(DeviceMergeDecisionEntity(low, high, "DISTINCT", null, null, decidedAt))
-
-    override suspend fun setMerged(low: Long, high: Long, decidedAt: Long) =
-        put(DeviceMergeDecisionEntity(low, high, "MERGED", null, null, decidedAt))
 
     internal fun removeForDevice(deviceId: Long) {
         rows.value = rows.value.filter { it.deviceIdLow != deviceId && it.deviceIdHigh != deviceId }

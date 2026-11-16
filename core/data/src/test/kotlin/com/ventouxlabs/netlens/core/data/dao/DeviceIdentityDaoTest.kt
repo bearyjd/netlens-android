@@ -8,6 +8,7 @@ import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceSightingEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeKind
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -107,13 +108,14 @@ class DeviceIdentityDaoTest {
 
         var thrown = false
         try {
-            dao.mergeDevices(survivor, loser, isKnown = true)
+            dao.mergeDevices(survivor, loser, isKnown = true, kind = MergeKind.USER)
         } catch (e: SQLiteConstraintException) {
             thrown = true
         }
 
         assertTrue(thrown)
         assertEquals(loser, db.deviceIdentifierDao().find("UPNP_UDN", "uuid:l", "")?.deviceId)
+        assertEquals(0, mergeLogCount(db))
         assertEquals(listOf("l"), db.deviceObservationDao().getForDevice(loser).map { it.value })
         val untouched = db.knownDeviceDao().getById(survivor)!!
         assertNull(untouched.customName)
@@ -127,7 +129,7 @@ class DeviceIdentityDaoTest {
         db.deviceSightingDao().upsert(DeviceSightingEntity(loser, "netA", null, "10.0.0.2", 5, 5))
         db.deviceSightingDao().upsert(DeviceSightingEntity(survivor, "netB", null, "10.0.0.1", 1, 1))
 
-        assertTrue(dao.mergeDevices(survivor, loser, isKnown = null))
+        assertTrue(dao.mergeDevices(survivor, loser, isKnown = null, kind = MergeKind.AUTO))
 
         assertNull(db.knownDeviceDao().getById(loser))
         assertEquals(survivor, db.deviceIdentifierDao().find("UPNP_UDN", "uuid:l", "")?.deviceId)
@@ -143,7 +145,7 @@ class DeviceIdentityDaoTest {
         db.deviceSightingDao().upsert(DeviceSightingEntity(survivor, "net", null, "10.0.0.1", 1, 1))
         db.deviceSightingDao().upsert(DeviceSightingEntity(loser, "net", null, "10.0.0.2", 2, 2))
 
-        assertTrue(dao.mergeDevices(survivor, loser, null))
+        assertTrue(dao.mergeDevices(survivor, loser, null, MergeKind.AUTO))
 
         assertEquals(1, db.deviceObservationDao().getForDevice(survivor).size)
         assertEquals(1, db.deviceSightingDao().getForDevice(survivor).size)
@@ -160,7 +162,7 @@ class DeviceIdentityDaoTest {
             emptyList(), emptyList(), true,
         )
 
-        dao.mergeDevices(survivor, loser, isKnown = true) // user-confirmed: explicit trust choice
+        dao.mergeDevices(survivor, loser, isKnown = true, kind = MergeKind.USER) // user-confirmed: explicit trust choice
 
         val merged = db.knownDeviceDao().getById(survivor)!!
         assertEquals("Mine", merged.customName)
@@ -178,7 +180,7 @@ class DeviceIdentityDaoTest {
         val survivor = dao.insertDeviceWithIdentifiers(device().copy(isKnown = true), emptyList(), emptyList(), true)
         val loser = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), emptyList(), emptyList(), true)
 
-        dao.mergeDevices(survivor, loser, isKnown = false)
+        dao.mergeDevices(survivor, loser, isKnown = false, kind = MergeKind.USER)
 
         assertFalse(db.knownDeviceDao().getById(survivor)!!.isKnown)
     }
@@ -187,8 +189,8 @@ class DeviceIdentityDaoTest {
     fun `merge with a missing row is a no-op returning false`() = runBlocking {
         val only = dao.insertDeviceWithIdentifiers(device(), listOf(ident()), emptyList(), true)
 
-        assertFalse(dao.mergeDevices(only, only + 99, null))
-        assertFalse(dao.mergeDevices(only + 99, only, null))
+        assertFalse(dao.mergeDevices(only, only + 99, null, MergeKind.AUTO))
+        assertFalse(dao.mergeDevices(only + 99, only, null, MergeKind.AUTO))
         assertNotNull(db.knownDeviceDao().getById(only))
         assertEquals(1, db.deviceIdentifierDao().getForDevice(only).size)
     }
@@ -225,7 +227,7 @@ class DeviceIdentityDaoTest {
         )
         val before = db.knownDeviceDao().getById(survivor)!!
 
-        assertTrue(dao.mergeDevices(survivor, loser, isKnown = false))
+        assertTrue(dao.mergeDevices(survivor, loser, isKnown = false, kind = MergeKind.USER))
 
         assertEquals(before, db.knownDeviceDao().getById(survivor))
     }
@@ -237,7 +239,7 @@ class DeviceIdentityDaoTest {
         db.knownDeviceDao().setCustomName(survivor, "named")
         db.knownDeviceDao().setCustomName(loser, "also named")
 
-        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null))
+        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null, kind = MergeKind.AUTO))
 
         assertNotNull(db.knownDeviceDao().getById(loser))
         assertEquals(loser, db.deviceIdentifierDao().find("UPNP_UDN", "uuid:l", "")?.deviceId)
@@ -248,11 +250,11 @@ class DeviceIdentityDaoTest {
         val a = dao.insertDeviceWithIdentifiers(device(), emptyList(), emptyList(), true)
         val b = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), emptyList(), emptyList(), true)
         db.deviceMergeDecisionDao().setDistinct(a, b, 1)
-        assertFalse(dao.mergeDevices(a, b, isKnown = null))
+        assertFalse(dao.mergeDevices(a, b, isKnown = null, kind = MergeKind.AUTO))
 
         val c = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.3").copy(isKnown = true), emptyList(), emptyList(), true)
         val d = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.4"), emptyList(), emptyList(), true)
-        assertFalse(dao.mergeDevices(c, d, isKnown = null))
+        assertFalse(dao.mergeDevices(c, d, isKnown = null, kind = MergeKind.AUTO))
         assertNotNull(db.knownDeviceDao().getById(d))
     }
 
@@ -263,10 +265,10 @@ class DeviceIdentityDaoTest {
         val third = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.3"), emptyList(), emptyList(), true)
         db.deviceMergeDecisionDao().setDistinct(loser, third, 1)
 
-        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null))
+        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null, kind = MergeKind.AUTO))
         assertEquals("DISTINCT", db.deviceMergeDecisionDao().get(loser, third)?.decision)
         // The survivor touching a DISTINCT row is fine: that row survives with it.
-        assertTrue(dao.mergeDevices(loser, survivor, isKnown = null))
+        assertTrue(dao.mergeDevices(loser, survivor, isKnown = null, kind = MergeKind.AUTO))
         assertEquals("DISTINCT", db.deviceMergeDecisionDao().get(loser, third)?.decision)
     }
 

@@ -26,4 +26,7 @@ dependencies {
     api(project(":core:data"))
     api(libs.kotlinx.coroutines.core)
     api(libs.datastore.preferences)
+    // FakeDeviceIdentityDao runs the production mergeDevices, which builds merge_log JSON with
+    // org.json. android.jar has only stubs, so every consumer's plain-JVM tests need the real jar.
+    api(libs.org.json)
 }

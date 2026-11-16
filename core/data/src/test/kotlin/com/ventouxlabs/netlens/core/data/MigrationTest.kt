@@ -16,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Runs every real [DataModule] migration against the exported schema JSONs
  * (`core/data/schemas/com.ventouxlabs.netlens.core.data.NetLensDatabase/`) under Robolectric. This
- * is the only place any of the 15 migrations (4→5 … 18→19) get exercised — previously they were
+ * is the only place any of the 16 migrations (4→5 … 19→20) get exercised — previously they were
  * hand-checked only, per `.omc/skills/room-migration-schema-default-expertise.md`.
  *
  * Note: schema `3.json` is not exported (migrations start at 4→5), so the chain below starts at 4.
@@ -30,6 +30,7 @@ class MigrationTest {
         DataModule.MIGRATION_10_11, DataModule.MIGRATION_11_12, DataModule.MIGRATION_12_13,
         DataModule.MIGRATION_13_14, DataModule.MIGRATION_14_15, DataModule.MIGRATION_15_16,
         DataModule.MIGRATION_16_17, DataModule.MIGRATION_17_18, DataModule.MIGRATION_18_19,
+        DataModule.MIGRATION_19_20,
     )
 
     @get:Rule
@@ -44,9 +45,9 @@ class MigrationTest {
     // every step but does NOT exercise row-preserving migrations (e.g. MIGRATION_11_12's
     // known_devices rename-and-copy). That needs its own data-integrity test as a follow-up.
     @Test
-    fun `migrate full chain 4 through 19 preserves schema shape`() {
+    fun `migrate full chain 4 through 20 preserves schema shape`() {
         helper.createDatabase(TEST_DB, 4).close()
-        helper.runMigrationsAndValidate(TEST_DB, 19, true, *allMigrations)
+        helper.runMigrationsAndValidate(TEST_DB, 20, true, *allMigrations)
     }
 
     // v15 adds tags/notes/location to known_devices and the two wifi_survey_* tables — the
@@ -287,6 +288,55 @@ class MigrationTest {
         assertTrue(orphan.exceptionOrNull() is SQLiteConstraintException)
     }
 
+    // v20 only adds the merge_log audit table; every v19 table must come through byte-identical.
+    @Test
+    fun `migrate 19 to 20 creates merge_log and leaves every other table identical`() {
+        val before = helper.createDatabase(TEST_DB, 19).run {
+            seedV19Identity(this)
+            V19_TABLES.associateWith { rows(this, "SELECT * FROM $it ORDER BY 1, 2") }.also { close() }
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 20, true, DataModule.MIGRATION_19_20)
+
+        V19_TABLES.forEach { assertEquals(it, before.getValue(it), rows(migrated, "SELECT * FROM $it ORDER BY 1, 2")) }
+        assertEquals(listOf(listOf("0")), rows(migrated, "SELECT COUNT(*) FROM merge_log"))
+        assertEquals(
+            listOf(listOf("index_merge_log_mergedAt"), listOf("index_merge_log_survivorId")),
+            rows(migrated, "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'merge_log' ORDER BY name"),
+        )
+    }
+
+    @Test
+    fun `deleting a known_devices row never touches merge_log`() {
+        helper.createDatabase(TEST_DB, 19).apply { seedV19Identity(this); close() }
+        val db = helper.runMigrationsAndValidate(TEST_DB, 20, true, DataModule.MIGRATION_19_20)
+        db.setForeignKeyConstraintsEnabled(true)
+        db.execSQL(
+            "INSERT INTO merge_log (mergedAt, survivorId, loserId, kind, survivorIsKnownBefore, decisionScore, " +
+                "decisionReasons, snapshotVersion, loserRowJson, loserIdentifiersJson, loserSightingsJson, " +
+                "survivorUserFieldsBeforeJson) VALUES (5, 1, 2, 'USER', 0, NULL, NULL, 1, '{}', '[]', '[]', '{}')",
+        )
+
+        db.execSQL("DELETE FROM known_devices")
+
+        assertEquals(listOf(listOf("1", "2")), rows(db, "SELECT survivorId, loserId FROM merge_log"))
+        assertEquals(emptyList<List<String?>>(), rows(db, "PRAGMA foreign_key_list(merge_log)"))
+    }
+
+    private fun seedV19Identity(db: SupportSQLiteDatabase) {
+        (1..2).forEach { id ->
+            db.execSQL("INSERT INTO known_devices (id, ip, firstSeen, lastSeen, isKnown, customName) VALUES ($id, '10.0.0.$id', 0, 0, 0, 'n$id')")
+            db.execSQL(
+                "INSERT INTO device_identifiers (deviceId, kind, value, scopeKey, source, proven, firstSeen, lastSeen) " +
+                    "VALUES ($id, 'MAC_UNIVERSAL', 'v$id', '', 'ARP', 0, 0, 0)",
+            )
+            db.execSQL("INSERT INTO device_observations (deviceId, source, field, value, weight, detail, lastSeen) VALUES ($id, 'MDNS', 'OS', 'x', 1, NULL, 0)")
+            db.execSQL("INSERT INTO device_sightings (deviceId, networkKey, networkLabel, lastIp, firstSeen, lastSeen) VALUES ($id, 'n', NULL, '10.0.0.$id', 0, 0)")
+        }
+        db.execSQL("INSERT INTO device_merge_decisions VALUES (1, 2, 'SUGGESTED', 5, 'MAC', 0)")
+        db.execSQL("INSERT INTO network_key_aliases VALUES ('a', 'c', 0)")
+    }
+
     private fun seedV18Devices(): List<List<String?>> =
         helper.createDatabase(TEST_DB, 18).run {
             execSQL(
@@ -332,5 +382,9 @@ class MigrationTest {
         const val V17_COLUMNS = "id, macAddress, hostname, ip, vendor, firstSeen, lastSeen, isKnown, deviceType, " +
             "osGuess, fingerprintConfidence, fingerprintEvidence, customName, networkId, tags, notes, location"
         const val V18_COLUMNS = "$V17_COLUMNS, model, deviceTypeOverride, osOverride, modelOverride"
+        val V19_TABLES = listOf(
+            "known_devices", "device_identifiers", "device_observations", "device_sightings",
+            "device_merge_decisions", "network_key_aliases",
+        )
     }
 }

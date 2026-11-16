@@ -2,8 +2,11 @@ package com.ventouxlabs.netlens.core.data.testing
 
 import com.ventouxlabs.netlens.core.data.dao.DeviceIdentityDao
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceSightingEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeLogEntity
 
 /**
  * [DeviceIdentityDao] over the other in-memory fakes. Only the building-block statements are
@@ -12,6 +15,7 @@ import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
  *
  * Not atomic: a failure mid-transaction is not rolled back. That property is proven against real
  * SQLite in `DeviceIdentityDaoTest`. [deleteDevice] emulates `ON DELETE CASCADE` across the fakes.
+ * `merge_log` rows live in [FakeKnownDeviceDao.mergeLog].
  */
 class FakeDeviceIdentityDao(
     private val devices: FakeKnownDeviceDao,
@@ -38,6 +42,18 @@ class FakeDeviceIdentityDao(
     override suspend fun insertObservationRow(observation: DeviceObservationEntity): Long =
         observations.insertIgnoring(observation)
 
+    override suspend fun identifiersOf(id: Long): List<DeviceIdentifierEntity> =
+        identifiers.getForDevice(id).sortedBy { it.id }
+
+    override suspend fun sightingsOf(id: Long): List<DeviceSightingEntity> =
+        sightings.getForDevice(id).sortedBy { it.networkKey }
+
+    override suspend fun decisionFor(low: Long, high: Long): DeviceMergeDecisionEntity? = decisions.get(low, high)
+
+    override suspend fun insertMergeLogRow(entry: MergeLogEntity): Long = devices.insertMergeLog(entry)
+
+    override suspend fun pruneMergeLog() = devices.pruneMergeLog(DeviceIdentityDao.MERGE_LOG_CAP)
+
     override suspend fun moveIdentifiers(from: Long, to: Long) = identifiers.moveAll(from, to)
 
     override suspend fun moveObservations(from: Long, to: Long) = observations.moveAll(from, to)
@@ -57,8 +73,9 @@ class FakeDeviceIdentityDao(
 
     override suspend fun writeKnown(id: Long, isKnown: Boolean) = devices.setKnown(id, isKnown)
 
+    // The raw row delete, like the real `DELETE FROM known_devices`: a merge never touches merge_log.
     override suspend fun deleteDevice(id: Long) {
-        devices.delete(id)
+        devices.deleteRow(id)
         identifiers.removeForDevice(id)
         observations.removeForDevice(id)
         sightings.removeForDevice(id)

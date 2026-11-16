@@ -6,10 +6,15 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceObservationEntity
+import com.ventouxlabs.netlens.core.data.model.DeviceSightingEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeKind
+import com.ventouxlabs.netlens.core.data.model.MergeLogEntity
 import com.ventouxlabs.netlens.core.data.model.fillEmptyUserFieldsFrom
 import com.ventouxlabs.netlens.core.data.model.hasUserDetails
+import com.ventouxlabs.netlens.core.data.model.mergeLogEntry
 
 /**
  * The two multi-table writes of device identity, each one SQLite transaction (Room cannot span
@@ -42,6 +47,26 @@ interface DeviceIdentityDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertObservationRow(observation: DeviceObservationEntity): Long
+
+    @Query("SELECT * FROM device_identifiers WHERE deviceId = :id ORDER BY id")
+    suspend fun identifiersOf(id: Long): List<DeviceIdentifierEntity>
+
+    @Query("SELECT * FROM device_sightings WHERE deviceId = :id ORDER BY networkKey")
+    suspend fun sightingsOf(id: Long): List<DeviceSightingEntity>
+
+    @Query("SELECT * FROM device_merge_decisions WHERE deviceIdLow = :low AND deviceIdHigh = :high")
+    suspend fun decisionFor(low: Long, high: Long): DeviceMergeDecisionEntity?
+
+    @Insert
+    suspend fun insertMergeLogRow(entry: MergeLogEntity): Long
+
+    // Keeps the newest MERGE_LOG_CAP rows, USER rows ranked ahead of every AUTO row, so a flood of
+    // automatic merges evicts only AUTO history. Ordered by id: mergedAt can tie or go backwards.
+    @Query(
+        "DELETE FROM merge_log WHERE id NOT IN (SELECT id FROM merge_log " +
+            "ORDER BY CASE kind WHEN 'USER' THEN 0 ELSE 1 END, id DESC LIMIT $MERGE_LOG_CAP)",
+    )
+    suspend fun pruneMergeLog()
 
     @Query("UPDATE device_identifiers SET deviceId = :to WHERE deviceId = :from")
     suspend fun moveIdentifiers(from: Long, to: Long)
@@ -104,17 +129,31 @@ interface DeviceIdentityDao {
      * `isKnown` unless [isKnown] is given, and the loser row is deleted LAST (its children cascade
      * with it, so they must have moved first). Returns false, touching nothing, if either row is gone.
      *
+     * Once every check passes, and before anything moves, a `merge_log` row snapshots the loser, its
+     * identifiers and sightings, the pair's decision and the survivor's user fields, then the log is
+     * pruned to [MERGE_LOG_CAP]. A failure anywhere rolls the log row back with the merge.
+     *
      * [isKnown] == null means an AUTOMATIC merge, whose rules are re-checked here inside the
      * transaction because the user may have edited or decided since the resolver looked: refused when
      * the loser touches any DISTINCT decision (its decisions would cascade away), when both rows carry
      * user details, or when `isKnown` differs. A user-confirmed merge passes an explicit [isKnown].
+     * [kind] is what the log records; it must agree with [isKnown] (AUTO exactly when it is null).
      */
     @Transaction
-    suspend fun mergeDevices(survivorId: Long, loserId: Long, isKnown: Boolean?): Boolean {
+    suspend fun mergeDevices(survivorId: Long, loserId: Long, isKnown: Boolean?, kind: MergeKind): Boolean {
+        require((kind == MergeKind.AUTO) == (isKnown == null)) { "kind $kind contradicts isKnown $isKnown" }
         val survivor = deviceById(survivorId) ?: return false
         val loser = deviceById(loserId) ?: return false
         if (survivorId == loserId) return false
         if (isKnown == null && !automaticMergeAllowed(survivor, loser)) return false
+        val decision = decisionFor(minOf(survivorId, loserId), maxOf(survivorId, loserId))
+        insertMergeLogRow(
+            mergeLogEntry(
+                survivor, loser, identifiersOf(loserId), sightingsOf(loserId), decision, kind,
+                mergedAt = System.currentTimeMillis(),
+            ),
+        )
+        pruneMergeLog()
         moveIdentifiers(loserId, survivorId)
         moveObservations(loserId, survivorId)
         moveSightings(loserId, survivorId)
@@ -136,5 +175,8 @@ interface DeviceIdentityDao {
     companion object {
         /** What `insertDeviceWithIdentifiers` returns when it inserted nothing. */
         const val DUPLICATE = -1L
+
+        /** Most `merge_log` rows kept; see [pruneMergeLog]. */
+        const val MERGE_LOG_CAP = 200
     }
 }
