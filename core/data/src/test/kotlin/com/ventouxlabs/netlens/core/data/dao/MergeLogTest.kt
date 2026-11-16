@@ -122,7 +122,7 @@ class MergeLogTest {
 
     @Test
     fun `hostile text round-trips byte-exact through every snapshot`() = runBlocking {
-        val hostile = "line1\nline2 ‮evil‬  sep \"quoted\" back\\slash {\"x\":[1]} </script>"
+        val hostile = "line1\nline2 \u202Eevil\u202C \u2028sep \"quoted\" back\\slash {\"x\":[1]} </script>"
         val longHost = "h".repeat(4096)
         val survivor = insert(device("10.0.0.1").copy(notes = hostile))
         val loser = insert(
