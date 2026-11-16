@@ -197,6 +197,17 @@ class UserPreferencesRepositoryTest {
         assertEquals("", repository.dnsResolverOverride.first())
     }
 
+    @Test
+    fun `dns resolver override rejects malformed ipv6 and unicode digits`() = testScope.runTest {
+        listOf(":::", "::::", "abc:", "1:2", "1::2::3", "12345::1", "1:2:3:4:5:6:7:8:9", "\u0661.\u0662.\u0663.\u0664").forEach { bad ->
+            assertThrows(IllegalArgumentException::class.java, { kotlinx.coroutines.runBlocking { repository.setDnsResolverOverride(bad) } }, bad)
+        }
+        listOf("::", "::1", "fe80::1", "1:2:3:4:5:6:7:8", "::ffff:1.2.3.4").forEach { ok ->
+            repository.setDnsResolverOverride(ok)
+            assertEquals(ok, repository.dnsResolverOverride.first())
+        }
+    }
+
     companion object {
         // DataStore cleanup can outlive an individual test scope; keep the parent directory
         // available for the whole class while each test still receives its own store file.
