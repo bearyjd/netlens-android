@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ventouxlabs.netlens.core.data.dao.MdnsHistoryDao
 import com.ventouxlabs.netlens.core.data.model.MdnsHistoryEntry
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.feature.mdns.engine.MdnsScanner
 import com.ventouxlabs.netlens.feature.mdns.model.MdnsUiState
 import kotlinx.serialization.encodeToString
@@ -77,11 +78,17 @@ class MdnsViewModel @Inject constructor(
         val sb = StringBuilder()
         sb.appendLine("mDNS Browser:")
         sb.appendLine("Services found: ${current.services.size}")
+        // Names, hosts and TXT attributes are chosen by the advertising device; flatten them so
+        // an embedded newline cannot forge extra entries in the shared text. See DisplayText.
         current.services.forEach { s ->
-            sb.appendLine("${s.serviceName} (${s.serviceType})")
-            s.host?.let { sb.appendLine("  Host: $it:${s.port}") }
-            if (s.attributes.isNotEmpty()) {
-                s.attributes.forEach { (k, v) -> sb.appendLine("  $k=$v") }
+            val name = DisplayText.flatten(s.serviceName).orEmpty()
+            val type = DisplayText.flatten(s.serviceType).orEmpty()
+            sb.appendLine("$name ($type)")
+            s.host?.let { host ->
+                DisplayText.flatten(host)?.let { sb.appendLine("  Host: $it:${s.port}") }
+            }
+            s.attributes.forEach { (k, v) ->
+                sb.appendLine("  ${DisplayText.flatten(k).orEmpty()}=${DisplayText.flatten(v).orEmpty()}")
             }
         }
         return sb.toString().trimEnd()
