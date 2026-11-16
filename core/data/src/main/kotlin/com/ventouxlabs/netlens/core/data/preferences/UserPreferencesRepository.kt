@@ -157,6 +157,41 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[LATENCY_ALERT_THRESHOLD_MS] = ms }
     }
 
+    /** DNS server for the DNS lookup tool, as an IP literal. Blank means use the built-in default. */
+    val dnsResolverOverride: Flow<String> = safeData.map { it[DNS_RESOLVER_OVERRIDE] ?: "" }
+
+    suspend fun setDnsResolverOverride(server: String) {
+        val trimmed = server.trim()
+        require(trimmed.isEmpty() || isIpLiteral(trimmed)) { "DNS resolver must be an IP address: $trimmed" }
+        dataStore.edit { it[DNS_RESOLVER_OVERRIDE] = trimmed }
+    }
+
+    // Literal-only check so validation never triggers a DNS lookup of its own.
+    private fun isIpLiteral(value: String): Boolean = isIpv4Literal(value) || isIpv6Literal(value)
+
+    private fun isIpv4Literal(value: String): Boolean {
+        val octets = value.split('.')
+        return octets.size == 4 && octets.all { o ->
+            o.length in 1..3 && o.all { it in '0'..'9' } && o.toInt() in 0..255
+        }
+    }
+
+    private fun isIpv6Literal(value: String): Boolean {
+        if (':' !in value) return false
+        val halves = value.split("::")
+        if (halves.size > 2) return false
+        val groups = halves.map { half -> if (half.isEmpty()) emptyList() else half.split(':') }
+        val all = groups.flatten()
+        // Only the final group may be an embedded IPv4 literal (counts as two 16-bit groups).
+        val last = all.lastOrNull()
+        val hasV4Tail = last != null && '.' in last && groups.last().isNotEmpty()
+        if (hasV4Tail && !isIpv4Literal(last!!)) return false
+        val hexGroups = if (hasV4Tail) all.dropLast(1) else all
+        if (!hexGroups.all { g -> g.length in 1..4 && g.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' } }) return false
+        val count = hexGroups.size + if (hasV4Tail) 2 else 0
+        return if (halves.size == 2) count <= 7 else count == 8
+    }
+
     val abuseIpDbApiKey: Flow<String> = _abuseIpDbApiKeyFlow.asStateFlow()
 
     suspend fun setAbuseIpDbApiKey(key: String) {
@@ -216,6 +251,7 @@ class UserPreferencesRepository @Inject constructor(
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val WATCH_CADENCE_MINUTES = intPreferencesKey("watch_cadence_minutes")
         private val WATCH_MASTER_ENABLED = booleanPreferencesKey("watch_master_enabled")
+        private val DNS_RESOLVER_OVERRIDE = stringPreferencesKey("dns_resolver_override")
         private val AUTO_MERGE_DEVICES = booleanPreferencesKey("auto_merge_devices")
         const val DEFAULT_AUTO_MERGE_DEVICES = true
         const val DEFAULT_WATCH_CADENCE_MINUTES = 60
