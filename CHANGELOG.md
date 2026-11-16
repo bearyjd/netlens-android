@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-16
+
+### Fixed
+- LAN scans are now attributed to your Wi-Fi network while a VPN that cannot be bypassed (for example
+  Tailscale) is running. Before, such scans were filed under the VPN tunnel or under no network, so
+  scans started from a suggested-network chip had no network name. Scans already saved under the
+  tunnel keep that attribution.
+
 ## [1.5.0] - 2026-11-15
 
 ### Added

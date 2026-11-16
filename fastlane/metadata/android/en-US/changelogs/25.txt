@@ -1,0 +1,1 @@
+Fixed: LAN scans are now attributed to your Wi-Fi network while a VPN that cannot be bypassed (for example Tailscale) is running, instead of being filed under the VPN tunnel or no network.
