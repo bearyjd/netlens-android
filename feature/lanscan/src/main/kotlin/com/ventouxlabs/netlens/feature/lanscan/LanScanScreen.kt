@@ -105,7 +105,7 @@ fun LanScanScreen(
     viewModel: LanScanViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(initialCidr) {
-        if (initialCidr != null) viewModel.startScanWithCidr(initialCidr)
+        if (initialCidr != null) viewModel.prefillCidr(initialCidr)
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
