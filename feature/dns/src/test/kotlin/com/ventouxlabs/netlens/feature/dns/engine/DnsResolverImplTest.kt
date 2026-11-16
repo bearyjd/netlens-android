@@ -1,13 +1,24 @@
 package com.ventouxlabs.netlens.feature.dns.engine
 
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import com.ventouxlabs.netlens.feature.dns.model.DnsRecordType
 
 class DnsResolverImplTest {
 
-    private val resolver = DnsResolverImpl()
+    @Test
+    fun `blank override keeps the default resolver`() {
+        assertEquals("8.8.8.8", DnsResolverImpl.serverFor(""))
+    }
+
+    @Test
+    fun `non-blank override replaces the default resolver`() {
+        assertEquals("1.1.1.1", DnsResolverImpl.serverFor("1.1.1.1"))
+    }
+
+    private val resolver = DnsResolverImpl { "" }
 
     @Test
     fun `empty domain returns failure`() = runTest {

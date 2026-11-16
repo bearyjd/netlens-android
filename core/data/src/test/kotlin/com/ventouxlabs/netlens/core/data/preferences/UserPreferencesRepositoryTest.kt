@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -172,6 +173,28 @@ class UserPreferencesRepositoryTest {
         assertEquals(false, repository.watchMasterEnabled.first())
         repository.setWatchMasterEnabled(true)
         assertEquals(true, repository.watchMasterEnabled.first())
+    }
+
+    @Test
+    fun `dns resolver override defaults to blank and round-trips`() = testScope.runTest {
+        assertEquals("", repository.dnsResolverOverride.first())
+        repository.setDnsResolverOverride(" 1.1.1.1 ")
+        assertEquals("1.1.1.1", repository.dnsResolverOverride.first())
+        repository.setDnsResolverOverride("2606:4700:4700::1111")
+        assertEquals("2606:4700:4700::1111", repository.dnsResolverOverride.first())
+        repository.setDnsResolverOverride("")
+        assertEquals("", repository.dnsResolverOverride.first())
+    }
+
+    @Test
+    fun `dns resolver override rejects non-address values`() = testScope.runTest {
+        assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { repository.setDnsResolverOverride("dns.example.com") }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { repository.setDnsResolverOverride("999.1.1.1") }
+        }
+        assertEquals("", repository.dnsResolverOverride.first())
     }
 
     companion object {

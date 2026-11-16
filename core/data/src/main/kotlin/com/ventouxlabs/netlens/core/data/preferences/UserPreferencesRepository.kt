@@ -157,6 +157,22 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[LATENCY_ALERT_THRESHOLD_MS] = ms }
     }
 
+    /** DNS server for the DNS lookup tool, as an IP literal. Blank means use the built-in default. */
+    val dnsResolverOverride: Flow<String> = safeData.map { it[DNS_RESOLVER_OVERRIDE] ?: "" }
+
+    suspend fun setDnsResolverOverride(server: String) {
+        val trimmed = server.trim()
+        require(trimmed.isEmpty() || isIpLiteral(trimmed)) { "DNS resolver must be an IP address: $trimmed" }
+        dataStore.edit { it[DNS_RESOLVER_OVERRIDE] = trimmed }
+    }
+
+    // Literal-only check so validation never triggers a DNS lookup of its own.
+    private fun isIpLiteral(value: String): Boolean {
+        val octets = value.split('.')
+        if (octets.size == 4 && octets.all { o -> o.isNotEmpty() && o.all(Char::isDigit) && o.toInt() in 0..255 }) return true
+        return ':' in value && value.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' || it == ':' || it == '.' }
+    }
+
     val abuseIpDbApiKey: Flow<String> = _abuseIpDbApiKeyFlow.asStateFlow()
 
     suspend fun setAbuseIpDbApiKey(key: String) {
@@ -216,6 +232,7 @@ class UserPreferencesRepository @Inject constructor(
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val WATCH_CADENCE_MINUTES = intPreferencesKey("watch_cadence_minutes")
         private val WATCH_MASTER_ENABLED = booleanPreferencesKey("watch_master_enabled")
+        private val DNS_RESOLVER_OVERRIDE = stringPreferencesKey("dns_resolver_override")
         private val AUTO_MERGE_DEVICES = booleanPreferencesKey("auto_merge_devices")
         const val DEFAULT_AUTO_MERGE_DEVICES = true
         const val DEFAULT_WATCH_CADENCE_MINUTES = 60

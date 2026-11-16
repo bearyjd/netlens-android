@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.xbill.DNS.ARecord
 import org.xbill.DNS.AAAARecord
@@ -21,11 +22,17 @@ import org.xbill.DNS.SRVRecord
 import org.xbill.DNS.Section
 import org.xbill.DNS.SimpleResolver
 import org.xbill.DNS.TXTRecord
+import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.feature.dns.model.DnsRecordType
 import com.ventouxlabs.netlens.feature.dns.model.DnsResult
 import javax.inject.Inject
 
-class DnsResolverImpl @Inject constructor() : DnsResolver {
+class DnsResolverImpl internal constructor(
+    private val resolverOverride: suspend () -> String,
+) : DnsResolver {
+
+    @Inject
+    constructor(preferences: UserPreferencesRepository) : this({ preferences.dnsResolverOverride.first() })
 
     override suspend fun lookup(
         domain: String,
@@ -33,8 +40,9 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
     ): Result<List<DnsResult>> = try {
         require(domain.isNotBlank()) { "Domain must not be blank" }
         val results = withContext(Dispatchers.IO) {
+            val server = serverFor(resolverOverride())
             types.map { type ->
-                async { resolveType(domain, type) }
+                async { resolveType(domain, type, server) }
             }.awaitAll().flatten()
         }
         Result.success(results)
@@ -44,8 +52,8 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
         Result.failure(e)
     }
 
-    private fun resolveType(domain: String, type: DnsRecordType): List<DnsResult> {
-        val resolver = SimpleResolver(DEFAULT_DNS_SERVER).apply {
+    private fun resolveType(domain: String, type: DnsRecordType, server: String): List<DnsResult> {
+        val resolver = SimpleResolver(server).apply {
             setTimeout(java.time.Duration.ofSeconds(TIMEOUT_SECONDS))
         }
         val name = Name.fromString(if (domain.endsWith(".")) domain else "$domain.")
@@ -62,6 +70,8 @@ class DnsResolverImpl @Inject constructor() : DnsResolver {
     }
 
     companion object {
+        internal fun serverFor(override: String): String = override.ifBlank { DEFAULT_DNS_SERVER }
+
         private const val DEFAULT_DNS_SERVER = "8.8.8.8"
         private const val TIMEOUT_SECONDS = 10L
     }
