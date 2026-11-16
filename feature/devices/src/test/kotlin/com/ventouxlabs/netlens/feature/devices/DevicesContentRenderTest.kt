@@ -41,7 +41,7 @@ class DevicesContentRenderTest {
             onToggleTag = {},
             onClearTags = {},
             onSelectDevice = {},
-            onSaveDetails = { _, _ -> },
+            onSaveDetails = { _, _, _ -> },
             onToggleKnown = {},
             onDelete = {},
         )

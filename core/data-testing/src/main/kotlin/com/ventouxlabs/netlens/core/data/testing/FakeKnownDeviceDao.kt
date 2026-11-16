@@ -133,10 +133,18 @@ class FakeKnownDeviceDao : KnownDeviceDao {
 
     override suspend fun setMacAddress(id: Long, mac: String) = mutate(id) { it.copy(macAddress = mac) }
 
-    override suspend fun setKnown(id: Long, isKnown: Boolean) = mutate(id) { it.copy(isKnown = isKnown) }
+    /** For [FakeDeviceIdentityDao.writeKnown]: the merge's unconditional trust write. */
+    internal fun writeKnown(id: Long, isKnown: Boolean) = mutate(id) { it.copy(isKnown = isKnown) }
 
-    override suspend fun setCustomName(id: Long, customName: String?) =
-        mutate(id) { it.copy(customName = customName) }
+    override suspend fun setKnownIf(id: Long, isKnown: Boolean, expected: Boolean): Int {
+        if (byId(id)?.isKnown != expected) return 0
+        mutate(id) { it.copy(isKnown = isKnown) }
+        return 1
+    }
+
+    /** Same as the real query: the newest merge_log row (highest id) whose loser is [id]. */
+    override suspend fun survivorIdForLoser(id: Long): Long? =
+        mergeLogRows.filter { it.loserId == id }.maxByOrNull { it.id }?.survivorId
 
     override suspend fun getById(id: Long): KnownDeviceEntity? = byId(id)
 

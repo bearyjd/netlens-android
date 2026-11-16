@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import app.cash.turbine.TurbineTestContext
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.userDetails
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
 import com.ventouxlabs.netlens.core.data.secure.KeyValueStore
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
@@ -78,6 +79,8 @@ class DeviceTaggingTest {
         Dispatchers.resetMain()
     }
 
+    private fun base(id: Long) = knownDao.byId(id)!!.userDetails()
+
     private fun seed(
         id: Long,
         hostname: String? = null,
@@ -104,6 +107,7 @@ class DeviceTaggingTest {
 
         viewModel.saveDetails(
             1,
+            base(1),
             DeviceDetailsEdit(
                 customName = "  Office Printer  ",
                 tagsInput = "printer,  Paper , printer",
@@ -131,6 +135,7 @@ class DeviceTaggingTest {
 
         viewModel.saveDetails(
             2,
+            base(2),
             DeviceDetailsEdit(deviceTypeOverride = "  NAS ", osOverride = "TrueNAS", modelOverride = " Mine "),
         )
         val set = knownDao.byId(2)!!
@@ -139,7 +144,7 @@ class DeviceTaggingTest {
         assertEquals("Mine", set.modelOverride)
         assertEquals("Router", set.deviceType)
 
-        viewModel.saveDetails(2, DeviceDetailsEdit(deviceTypeOverride = "   "))
+        viewModel.saveDetails(2, base(2), DeviceDetailsEdit(deviceTypeOverride = "   "))
         val cleared = knownDao.byId(2)!!
         assertNull(cleared.deviceTypeOverride)
         assertNull(cleared.osOverride)
@@ -153,7 +158,7 @@ class DeviceTaggingTest {
     fun `saveDetails with empty fields clears them rather than storing blanks`() = runTest {
         seed(1, tags = "printer", location = "Study")
 
-        viewModel.saveDetails(1, DeviceDetailsEdit())
+        viewModel.saveDetails(1, base(1), DeviceDetailsEdit())
 
         val saved = knownDao.byId(1)!!
         assertNull(saved.customName)
@@ -166,7 +171,7 @@ class DeviceTaggingTest {
     fun `saveDetails leaves scan-derived columns untouched`() = runTest {
         seed(1, hostname = "printer", ip = "192.168.1.7")
 
-        viewModel.saveDetails(1, DeviceDetailsEdit(customName = "Office Printer"))
+        viewModel.saveDetails(1, base(1), DeviceDetailsEdit(customName = "Office Printer"))
 
         val saved = knownDao.byId(1)!!
         assertEquals("printer", saved.hostname)
@@ -217,7 +222,7 @@ class DeviceTaggingTest {
         viewModel.toggleTagFilter("printer")
 
         // The only device carrying "printer" loses the tag.
-        viewModel.saveDetails(1, DeviceDetailsEdit())
+        viewModel.saveDetails(1, base(1), DeviceDetailsEdit())
 
         viewModel.uiState.test {
             val state = awaitStateWhere {
@@ -258,6 +263,7 @@ class DeviceTaggingTest {
         seed(1, hostname = "printer", tags = "printer,paper", location = "Study")
         viewModel.saveDetails(
             1,
+            base(1),
             DeviceDetailsEdit(
                 customName = "Office Printer",
                 tagsInput = "printer, paper",

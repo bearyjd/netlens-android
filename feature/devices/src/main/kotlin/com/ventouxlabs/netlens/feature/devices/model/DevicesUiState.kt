@@ -13,6 +13,17 @@ data class DevicesUiState(
     /** The `autoMergeDevices` preference; null until it has loaded, so a stored "off" never shows as on. */
     val autoMergeEnabled: Boolean? = null,
     val selectedDeviceId: Long? = null,
+    /**
+     * The selected row, looked up in the unfiltered inventory (a search never closes the sheet). When
+     * the row vanishes (merged away, deleted) this keeps its last copy so the open editor, and what
+     * the user typed, survive until they save or close.
+     */
+    val selectedDevice: KnownDeviceEntity? = null,
+    /** A draft for the detail sheet after a save was redirected or refused; see [DetailDraft]. */
+    val detailDraft: DetailDraft? = null,
+    /** A guarded save is in flight: the sheet stays open and Save is disabled until it answers. */
+    val detailSaving: Boolean = false,
+    val detailNotice: DetailNotice? = null,
     /** Every tag in the inventory, for the filter-chip row — not just the ones in [devices]. */
     val availableTags: List<String> = emptyList(),
     /** Tags currently toggled on; empty means unfiltered. */

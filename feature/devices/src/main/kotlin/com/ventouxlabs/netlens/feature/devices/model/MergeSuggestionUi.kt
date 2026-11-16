@@ -2,7 +2,13 @@ package com.ventouxlabs.netlens.feature.devices.model
 
 import androidx.annotation.StringRes
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.FieldMerge
+import com.ventouxlabs.netlens.core.data.model.FieldMergeOutcome
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.UserDetailField
+import com.ventouxlabs.netlens.core.data.model.UserFieldLimits
+import com.ventouxlabs.netlens.core.data.model.mergeUserFields
+import com.ventouxlabs.netlens.core.data.model.userDetails
 import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.identity.MergePreview
 import com.ventouxlabs.netlens.core.scan.identity.MergeSuggestion
@@ -43,15 +49,20 @@ enum class SuggestionReason(@param:StringRes val label: Int) {
     }
 }
 
-/** The user-authored columns a merge keeps, fills or drops. */
-enum class UserField(@param:StringRes val label: Int, val read: (KnownDeviceEntity) -> String?) {
-    NAME(R.string.devices_field_name, { it.customName }),
-    TAGS(R.string.devices_field_tags, { it.tags }),
-    NOTES(R.string.devices_field_notes, { it.notes }),
-    LOCATION(R.string.devices_field_location, { it.location }),
-    TYPE_OVERRIDE(R.string.devices_field_type, { it.deviceTypeOverride }),
-    OS_OVERRIDE(R.string.devices_field_os, { it.osOverride }),
-    MODEL_OVERRIDE(R.string.devices_field_model, { it.modelOverride }),
+/** The user-authored columns a merge keeps, fills, combines or drops; [key] is the core:data column. */
+enum class UserField(@param:StringRes val label: Int, val key: UserDetailField) {
+    NAME(R.string.devices_field_name, UserDetailField.CUSTOM_NAME),
+    TAGS(R.string.devices_field_tags, UserDetailField.TAGS),
+    NOTES(R.string.devices_field_notes, UserDetailField.NOTES),
+    LOCATION(R.string.devices_field_location, UserDetailField.LOCATION),
+    TYPE_OVERRIDE(R.string.devices_field_type, UserDetailField.DEVICE_TYPE_OVERRIDE),
+    OS_OVERRIDE(R.string.devices_field_os, UserDetailField.OS_OVERRIDE),
+    MODEL_OVERRIDE(R.string.devices_field_model, UserDetailField.MODEL_OVERRIDE),
+    ;
+
+    companion object {
+        fun of(key: UserDetailField): UserField = entries.first { it.key == key }
+    }
 }
 
 /** One side of a pair, with every network-supplied string already flattened for display. */
@@ -68,6 +79,9 @@ data class MovedIdentifier(val kind: String, val value: String)
 /** A field both rows have with different values: the removed row's value is lost, so it is shown before merging. */
 data class DroppedValue(val field: UserField, val value: String)
 
+/** A field whose two values are combined (tags, notes): [value] is the sanitised result the kept row will hold. */
+data class CombinedValue(val field: UserField, val value: String)
+
 /**
  * A pending pair as the sheet shows it. [survivor] is the row that stays (mirrors
  * `DeviceInventoryRepositoryImpl.acceptSuggestion`: older `firstSeen`, then lower id); [loser] is
@@ -78,16 +92,20 @@ data class MergeSuggestionUi(
     val survivor: SuggestionRow,
     val loser: SuggestionRow,
     val reasons: List<SuggestionReason>,
-    /** Survivor's own non-blank values: they stay. */
+    /** Survivor's own non-blank values that stay exactly as they are. */
     val keptFields: List<UserField>,
     /** Fields only the loser has: copied onto the survivor. */
     val filledFields: List<UserField>,
-    /** Fields both have with different values: the loser's value is lost, with no undo. */
+    /** Fields both have that are combined into one value (tags, notes that fit). */
+    val unionedFields: List<UserField>,
+    /** Fields where (some of) the loser's value is lost, with no undo. */
     val droppedFields: List<UserField>,
     val movedIdentifiers: List<MovedIdentifier>,
     val movedIdentifierCount: Int,
-    /** The removed row's value for each of [droppedFields], sanitised, for the confirmation dialog. */
+    /** The removed row's lost value for each of [droppedFields], sanitised, for the confirmation dialog. */
     val droppedValues: List<DroppedValue>,
+    /** The combined value for each of [unionedFields], sanitised, for the confirmation dialog. */
+    val combinedValues: List<CombinedValue>,
     /** [MergePreview.hash] of what this preview was built from; the repository re-checks it at merge time. */
     val previewHash: Int,
 ) {
@@ -96,8 +114,8 @@ data class MergeSuggestionUi(
     /** The user must choose the merged trust value: it is never defaulted for them. */
     val trustDiffers: Boolean get() = survivor.isKnown != loser.isKnown
 
-    /** Dropping a value or choosing trust cannot be undone, so Merge asks first. */
-    val requiresConfirmation: Boolean get() = droppedFields.isNotEmpty() || trustDiffers
+    /** Dropping or combining a value, or choosing trust, cannot be undone, so Merge asks first. */
+    val requiresConfirmation: Boolean get() = droppedFields.isNotEmpty() || unionedFields.isNotEmpty() || trustDiffers
 
     /** Choosing "known" would carry the removed row's different MAC onto a trusted row. */
     val escalatesTrust: Boolean get() = trustDiffers && macsDiffer
@@ -111,7 +129,9 @@ fun suggestionKey(low: Long, high: Long): String = "suggestion:$low:$high"
 private const val MAX_SHOWN_IDENTIFIERS = 5
 private const val MAX_IDENTIFIER_DISPLAY = 64
 private const val MAX_NAME_DISPLAY = 63
-private const val MAX_DROPPED_DISPLAY = 120
+// Both at the notes cap: the confirm dialog scrolls, so a lost or combined value is never a silent prefix.
+private const val MAX_DROPPED_DISPLAY = UserFieldLimits.MAX_NOTES_LENGTH
+private const val MAX_COMBINED_DISPLAY = UserFieldLimits.MAX_NOTES_LENGTH
 
 // Format characters (bidi overrides and isolates, zero-width, BOM, tag characters) plus the Unicode
 // line and paragraph separators. DisplayText.flatten strips only C0/C1 controls, so these are mapped to
@@ -144,15 +164,19 @@ fun buildMergeSuggestionUi(
     loser: KnownDeviceEntity,
     loserIdentifiers: List<DeviceIdentifierEntity>,
 ): MergeSuggestionUi {
-    val fields = UserField.entries.map { it to (it.read(survivor).orBlankNull() to it.read(loser).orBlankNull()) }
+    // The same function the DAO's merge writes with, so the preview cannot disagree with the result.
+    val merge = mergeUserFields(survivor.userDetails(), loser.userDetails())
+    fun fieldsWhere(predicate: (FieldMerge) -> Boolean) =
+        merge.fields.filter(predicate).map { UserField.of(it.field) }
     return MergeSuggestionUi(
         pair = pair,
         survivor = survivor.toSuggestionRow(),
         loser = loser.toSuggestionRow(),
         reasons = pair.reasons.map(SuggestionReason::fromCode).distinct(),
-        keptFields = fields.filter { (_, v) -> v.first != null }.map { it.first },
-        filledFields = fields.filter { (_, v) -> v.first == null && v.second != null }.map { it.first },
-        droppedFields = fields.filter { (_, v) -> v.first != null && v.second != null && v.first != v.second }.map { it.first },
+        keptFields = fieldsWhere { it.outcome == FieldMergeOutcome.KEPT || it.outcome == FieldMergeOutcome.DROPPED },
+        filledFields = fieldsWhere { it.outcome == FieldMergeOutcome.FILLED },
+        unionedFields = fieldsWhere { it.outcome == FieldMergeOutcome.UNIONED },
+        droppedFields = fieldsWhere { it.dropped != null },
         movedIdentifiers = loserIdentifiers.take(MAX_SHOWN_IDENTIFIERS).map {
             MovedIdentifier(
                 kind = safeDisplay(it.kind, MAX_IDENTIFIER_DISPLAY).orEmpty(),
@@ -160,13 +184,15 @@ fun buildMergeSuggestionUi(
             )
         },
         movedIdentifierCount = loserIdentifiers.size,
-        droppedValues = fields.filter { (_, v) -> v.first != null && v.second != null && v.first != v.second }
-            .map { (field, v) -> DroppedValue(field, safeDisplay(v.second, MAX_DROPPED_DISPLAY).orEmpty()) },
+        droppedValues = merge.fields.mapNotNull { f ->
+            f.dropped?.let { DroppedValue(UserField.of(f.field), safeDisplay(it, MAX_DROPPED_DISPLAY).orEmpty()) }
+        },
+        combinedValues = merge.fields.filter { it.outcome == FieldMergeOutcome.UNIONED }.map {
+            CombinedValue(UserField.of(it.field), safeDisplay(merge.merged[it.field], MAX_COMBINED_DISPLAY).orEmpty())
+        },
         previewHash = MergePreview.hash(survivor, loser, loserIdentifiers),
     )
 }
-
-private fun String?.orBlankNull(): String? = if (isNullOrBlank()) null else this
 
 /** `customName ?: hostname ?: vendor ?: ip`, each candidate flattened first: device text is hostile. */
 private fun KnownDeviceEntity.toSuggestionRow() = SuggestionRow(

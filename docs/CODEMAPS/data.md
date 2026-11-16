@@ -65,15 +65,17 @@ core/data/src/main/kotlin/com/ventouxlabs/netlens/core/data/
 | DeviceSightingEntity | DeviceSightingDao | Identity (v19): which network a device was seen on |
 | DeviceMergeDecisionEntity | DeviceMergeDecisionDao | Identity (v19): persisted merge suggestions / 'distinct' decisions |
 | NetworkKeyAliasEntity | NetworkKeyAliasDao | Identity (v19): alias network key -> canonical key |
-| (no entity) | DeviceIdentityDao | Identity (v19): the two multi-table `@Transaction` writes, `mergeDevices` (move children, fill only empty user fields, delete loser last) and `insertDeviceWithIdentifiers` (replaces the dropped MAC unique index) |
+| (no entity) | DeviceIdentityDao | Identity (v19): the two multi-table `@Transaction` writes, `mergeDevices` (move children, combine user fields via `mergeUserFields`: tags/notes union, others fill only when empty; delete loser last) and `insertDeviceWithIdentifiers` (replaces the dropped MAC unique index) |
 | WifiSurveySessionEntity | WifiSurveyDao | WiFi coverage survey (v15) |
 | WifiSurveyPointEntity | WifiSurveyDao | WiFi coverage survey — aggregated capture spots (v15) |
 
 **Write-path ownership (`known_devices`):** scan-derived columns (`hostname`, `ip`,
 `vendor`, `deviceType`, `osGuess`) belong to `DeviceInventoryRepository.persistScan` via
 `KnownDeviceDao.updateLastSeen`; user-authored columns (`customName`, `tags`, `notes`,
-`location`) belong to the Devices detail sheet via `KnownDeviceDao.updateUserDetails`.
-Keep them disjoint — a re-scan must never clobber what the user typed. Tags are a
+`location`) belong to the Devices detail sheet via the guarded `KnownDeviceDao.saveUserDetails`
+(writes only the fields the user changed; returns Merged/Conflict/Gone instead of writing when the
+row was merged away or changed since the editor opened). `isKnown` toggles use the compare-and-set
+`setKnownIf`. Keep them disjoint — a re-scan must never clobber what the user typed. Tags are a
 normalised comma-separated column; always go through `DeviceTags` and `KnownDeviceSearch`.
 The disjointness invariant is pinned against the real SQL by `KnownDeviceDaoTest`.
 

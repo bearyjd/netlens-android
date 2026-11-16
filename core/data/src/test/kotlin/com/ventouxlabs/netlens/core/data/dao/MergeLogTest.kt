@@ -277,7 +277,7 @@ class MergeLogTest {
 
 internal fun mergeLogCount(db: NetLensDatabase): Int = mergeLog(db).size
 
-/** Raw read: production has no merge_log SELECT (the table is write-only until an undo UI exists). */
+/** Raw read: production reads only `survivorId` back (the edit guard), never the snapshots. */
 internal fun mergeLog(db: NetLensDatabase): List<MergeLogEntity> =
     db.openHelper.readableDatabase.query("SELECT * FROM merge_log ORDER BY id").use { c ->
         fun str(name: String) = c.getString(c.getColumnIndexOrThrow(name))

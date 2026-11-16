@@ -71,7 +71,7 @@ class FakeDeviceIdentityDao(
         modelOverride: String?,
     ) = devices.updateUserDetails(id, customName, tags, notes, location, deviceTypeOverride, osOverride, modelOverride)
 
-    override suspend fun writeKnown(id: Long, isKnown: Boolean) = devices.setKnown(id, isKnown)
+    override suspend fun writeKnown(id: Long, isKnown: Boolean) = devices.writeKnown(id, isKnown)
 
     // The raw row delete, like the real `DELETE FROM known_devices`: a merge never touches merge_log.
     override suspend fun deleteDevice(id: Long) {

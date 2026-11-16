@@ -437,10 +437,12 @@ class LanScanViewModel @Inject constructor(
         return NetworkContext(atEnd.keys(devices), networkIdentity.currentNetworkLabel())
     }
 
+    // Compare-and-set against the value on screen: when the row changed since (a merge, the Devices
+    // screen), nothing is written and the list's next emission shows the current state.
     fun toggleKnown(id: Long) {
         viewModelScope.launch {
             val device = _uiState.value.knownDevices.find { it.id == id } ?: return@launch
-            knownDeviceDao.setKnown(id, !device.isKnown)
+            knownDeviceDao.setKnownIf(id, !device.isKnown, device.isKnown)
         }
     }
 

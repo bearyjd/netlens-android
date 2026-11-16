@@ -26,16 +26,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.FingerprintEvidence
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.UserDetails
+import com.ventouxlabs.netlens.core.data.model.UserFieldLimits
+import com.ventouxlabs.netlens.core.data.model.userDetails
 import com.ventouxlabs.netlens.core.network.DisplayText
+import com.ventouxlabs.netlens.feature.devices.model.DetailDraft
+import com.ventouxlabs.netlens.feature.devices.model.DetailNotice
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
-import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_LOCATION_LENGTH
-import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
-import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NOTES_LENGTH
-import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_OVERRIDE_LENGTH
+import com.ventouxlabs.netlens.feature.devices.model.bidiIsolate
 import com.ventouxlabs.netlens.feature.devices.model.displayModel
 import com.ventouxlabs.netlens.feature.devices.model.displayName
 import com.ventouxlabs.netlens.feature.devices.model.displayOs
@@ -59,16 +64,26 @@ private fun formatSeenTimestamp(epochMillis: Long): String =
 fun DeviceDetailSheet(
     device: KnownDeviceEntity,
     onDismiss: () -> Unit,
-    onSaveDetails: (DeviceDetailsEdit) -> Unit,
+    /** Saves against `base`, the stored values captured when this editor (or its draft) opened. */
+    onSaveDetails: (base: UserDetails, edit: DeviceDetailsEdit) -> Unit,
     onToggleKnown: () -> Unit,
     onDelete: () -> Unit,
     /** Tags already used elsewhere in the inventory, offered as one-tap suggestions. */
     knownTags: List<String> = emptyList(),
+    /** A redirected or refused save's draft; used only when it belongs to [device]. */
+    draft: DetailDraft? = null,
+    saving: Boolean = false,
+    notice: DetailNotice? = null,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        // Keyed on the device id so reopening the sheet on a different row starts from that
-        // row's stored values instead of the previous device's half-typed edit.
-        var edit by remember(device.id) { mutableStateOf(DeviceDetailsEdit.from(device)) }
+        val ownDraft = draft?.takeIf { it.deviceId == device.id }
+        val draftToken = ownDraft?.token ?: 0
+        // Keyed on the device id and the draft token: reopening on a different row starts from that
+        // row's stored values, and a new draft replaces the editor. The base is captured HERE, once
+        // per editor session; the sheet recomposes with a fresh `device` on every database emission,
+        // so reading it at save time would make every save look current and defeat the guard.
+        val base = remember(device.id, draftToken) { ownDraft?.base ?: device.userDetails() }
+        var edit by remember(device.id, draftToken) { mutableStateOf(ownDraft?.edit ?: DeviceDetailsEdit.from(device)) }
         val enteredTags = remember(edit.tagsInput) { DeviceTags.parse(edit.tagsInput) }
         val suggestions = remember(knownTags, enteredTags) {
             knownTags.filterNot { known -> enteredTags.any { it.equals(known, ignoreCase = true) } }
@@ -82,6 +97,7 @@ fun DeviceDetailSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(device.displayName(), style = MaterialTheme.typography.titleLarge)
+            notice?.let { DetailNoticeText(it) }
             Text(device.ip, style = MaterialTheme.typography.labelSmall)
             Text(
                 device.macAddress ?: stringResource(R.string.devices_mac_unknown),
@@ -108,7 +124,7 @@ fun DeviceDetailSheet(
             // characters the user can still see on screen, with no hint that it happened.
             OutlinedTextField(
                 value = edit.customName,
-                onValueChange = { edit = edit.copy(customName = it.take(MAX_DEVICE_NAME_LENGTH)) },
+                onValueChange = { edit = edit.copy(customName = it.take(UserFieldLimits.MAX_NAME_LENGTH)) },
                 label = { Text(stringResource(R.string.devices_detail_rename)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_rename_hint)) },
                 singleLine = true,
@@ -117,26 +133,26 @@ fun DeviceDetailSheet(
 
             OverrideField(
                 value = edit.deviceTypeOverride,
-                onValueChange = { edit = edit.copy(deviceTypeOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                onValueChange = { edit = edit.copy(deviceTypeOverride = it.take(UserFieldLimits.MAX_OVERRIDE_LENGTH)) },
                 label = R.string.devices_detail_type_override,
                 detected = device.deviceType,
             )
             OverrideField(
                 value = edit.osOverride,
-                onValueChange = { edit = edit.copy(osOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                onValueChange = { edit = edit.copy(osOverride = it.take(UserFieldLimits.MAX_OVERRIDE_LENGTH)) },
                 label = R.string.devices_detail_os_override,
                 detected = device.osGuess,
             )
             OverrideField(
                 value = edit.modelOverride,
-                onValueChange = { edit = edit.copy(modelOverride = it.take(MAX_DEVICE_OVERRIDE_LENGTH)) },
+                onValueChange = { edit = edit.copy(modelOverride = it.take(UserFieldLimits.MAX_OVERRIDE_LENGTH)) },
                 label = R.string.devices_detail_model_override,
                 detected = device.model,
             )
 
             OutlinedTextField(
                 value = edit.location,
-                onValueChange = { edit = edit.copy(location = it.take(MAX_DEVICE_LOCATION_LENGTH)) },
+                onValueChange = { edit = edit.copy(location = it.take(UserFieldLimits.MAX_LOCATION_LENGTH)) },
                 label = { Text(stringResource(R.string.devices_detail_location)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_location_hint)) },
                 singleLine = true,
@@ -199,7 +215,7 @@ fun DeviceDetailSheet(
             OutlinedTextField(
                 value = edit.notes,
                 onValueChange = {
-                    edit = edit.copy(notes = it.take(MAX_DEVICE_NOTES_LENGTH))
+                    edit = edit.copy(notes = it.take(UserFieldLimits.MAX_NOTES_LENGTH))
                 },
                 label = { Text(stringResource(R.string.devices_detail_notes)) },
                 placeholder = { Text(stringResource(R.string.devices_detail_notes_hint)) },
@@ -209,8 +225,9 @@ fun DeviceDetailSheet(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { onSaveDetails(edit); onDismiss() }) {
-                    Text(stringResource(R.string.devices_detail_save))
+                // Stays open until the save answers: a redirected or refused save hands back a draft.
+                Button(onClick = { onSaveDetails(base, edit) }, enabled = !saving) {
+                    Text(stringResource(if (saving) R.string.devices_detail_saving else R.string.devices_detail_save))
                 }
                 OutlinedButton(onClick = onToggleKnown) {
                     Text(
@@ -227,6 +244,28 @@ fun DeviceDetailSheet(
                     Text(stringResource(R.string.devices_detail_close))
                 }
             }
+        }
+    }
+}
+
+/** Announced politely: it appears after a save, while focus is still on the Save button. */
+@Composable
+private fun DetailNoticeText(notice: DetailNotice) {
+    Column(
+        Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            if (notice.arg != null) stringResource(notice.message, notice.arg) else stringResource(notice.message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        notice.discarded.forEach {
+            Text(
+                stringResource(R.string.devices_detail_not_applied, stringResource(it.field.label), bidiIsolate(it.text)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

@@ -41,6 +41,15 @@
     <string name="devices_row_location">Location: %1$s</string>
     <string name="devices_detail_delete">Delete device</string>
     <string name="devices_detail_save">Save</string>
+    <string name="devices_detail_saving">Saving…</string>
+    <string name="devices_detail_merged">This device was merged into %1$s while you were editing. Your changes are shown; review and save.</string>
+    <string name="devices_detail_changed">This device changed while you were editing. Your changes are shown; review and save.</string>
+    <string name="devices_detail_not_applied">Kept the device\'s current %1$s. You typed: %2$s</string>
+    <string name="devices_detail_gone">Device removed; not saved.</string>
+    <string name="devices_detail_vanished_merged">This device was merged into %1$s. Save to review your changes on it.</string>
+    <string name="devices_detail_vanished_gone">This device was removed. Your changes cannot be saved.</string>
+    <string name="devices_detail_save_failed">Could not save. Your changes are still here.</string>
+    <string name="devices_detail_trust_changed">Trust was changed elsewhere; nothing was toggled.</string>
     <string name="devices_detail_close">Close</string>
     <string name="devices_cd_copy_results">Copy results</string>
     <string name="devices_cd_share">Share results</string>
@@ -63,6 +72,7 @@
     <string name="devices_suggestion_reasons">Why they look alike: %1$s</string>
     <string name="devices_suggestion_kept">Your details kept: %1$s</string>
     <string name="devices_suggestion_filled">Filled in from the removed device: %1$s</string>
+    <string name="devices_suggestion_unioned">Combined from both devices: %1$s</string>
     <string name="devices_suggestion_dropped">Dropped (the removed device\'s different value): %1$s</string>
     <string name="devices_suggestion_no_details">No saved details on either device.</string>
     <string name="devices_suggestion_moved">Identifiers moving to the kept device (%1$d):</string>
@@ -82,6 +92,7 @@
     <string name="devices_suggestion_confirm_required">Confirm the merge first.</string>
     <string name="devices_suggestion_confirm_title">Merge these devices?</string>
     <string name="devices_suggestion_confirm_irreversible">This cannot be undone. %1$s is removed.</string>
+    <string name="devices_suggestion_confirm_combined">Combined %1$s: %2$s</string>
     <string name="devices_suggestion_confirm_lost">Lost %1$s: %2$s</string>
     <string name="devices_suggestion_confirm_trust">The merged device will be: %1$s</string>
     <string name="devices_suggestion_confirm_mac">The MAC address %1$s moves onto %2$s.</string>

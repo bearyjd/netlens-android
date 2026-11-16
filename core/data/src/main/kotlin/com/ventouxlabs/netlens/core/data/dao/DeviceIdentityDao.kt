@@ -12,9 +12,10 @@ import com.ventouxlabs.netlens.core.data.model.DeviceSightingEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.MergeKind
 import com.ventouxlabs.netlens.core.data.model.MergeLogEntity
-import com.ventouxlabs.netlens.core.data.model.fillEmptyUserFieldsFrom
 import com.ventouxlabs.netlens.core.data.model.hasUserDetails
 import com.ventouxlabs.netlens.core.data.model.mergeLogEntry
+import com.ventouxlabs.netlens.core.data.model.mergeUserFields
+import com.ventouxlabs.netlens.core.data.model.userDetails
 
 /**
  * The two multi-table writes of device identity, each one SQLite transaction (Room cannot span
@@ -125,7 +126,8 @@ interface DeviceIdentityDao {
 
     /**
      * Folds [loserId] into [survivorId]: identifiers, observations and sightings move over, the
-     * loser's user-authored fields fill only the survivor's *empty* fields, the survivor keeps its
+     * user-authored fields combine per `mergeUserFields` (tags and notes union, every other field
+     * fills only when the survivor's is empty), the survivor keeps its
      * `isKnown` unless [isKnown] is given, and the loser row is deleted LAST (its children cascade
      * with it, so they must have moved first). Returns false, touching nothing, if either row is gone.
      *
@@ -157,10 +159,10 @@ interface DeviceIdentityDao {
         moveIdentifiers(loserId, survivorId)
         moveObservations(loserId, survivorId)
         moveSightings(loserId, survivorId)
-        val filled = survivor.fillEmptyUserFieldsFrom(loser)
+        val merged = mergeUserFields(survivor.userDetails(), loser.userDetails()).merged
         writeUserFields(
-            survivorId, filled.customName, filled.tags, filled.notes, filled.location,
-            filled.deviceTypeOverride, filled.osOverride, filled.modelOverride,
+            survivorId, merged.customName, merged.tags, merged.notes, merged.location,
+            merged.deviceTypeOverride, merged.osOverride, merged.modelOverride,
         )
         if (isKnown != null) writeKnown(survivorId, isKnown)
         deleteDevice(loserId)

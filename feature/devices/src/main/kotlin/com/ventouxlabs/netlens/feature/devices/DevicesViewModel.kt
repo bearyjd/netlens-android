@@ -15,14 +15,22 @@ import com.ventouxlabs.netlens.core.data.model.DeviceTags
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceSearch
+import com.ventouxlabs.netlens.core.data.model.SaveOutcome
+import com.ventouxlabs.netlens.core.data.model.UserDetails
+import com.ventouxlabs.netlens.core.data.model.userDetails
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.data.preferences.UserPreferencesRepository
+import com.ventouxlabs.netlens.feature.devices.model.DetailDraft
+import com.ventouxlabs.netlens.feature.devices.model.DetailNotice
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
+import com.ventouxlabs.netlens.feature.devices.model.DiscardedEdit
+import com.ventouxlabs.netlens.feature.devices.model.UserField
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
-import com.ventouxlabs.netlens.feature.devices.model.MAX_DEVICE_NAME_LENGTH
 import com.ventouxlabs.netlens.feature.devices.model.MergeSuggestionUi
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
+import com.ventouxlabs.netlens.feature.devices.model.bidiIsolate
 import com.ventouxlabs.netlens.feature.devices.model.buildMergeSuggestionUi
+import com.ventouxlabs.netlens.feature.devices.model.safeDisplay
 import com.ventouxlabs.netlens.feature.devices.model.survivorAndLoser
 import com.ventouxlabs.netlens.feature.devices.model.displayModel
 import com.ventouxlabs.netlens.feature.devices.model.displayName
@@ -31,6 +39,7 @@ import com.ventouxlabs.netlens.feature.devices.model.displayType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +71,18 @@ class DevicesViewModel @Inject constructor(
     /** Bumped after a refused action so the pair list is rebuilt from the database, not trusted from memory. */
     private val suggestionRefresh = MutableStateFlow(0)
 
+    /** Selected id whose disappearance was already looked up, so one vanish raises one notice. */
+    private var vanishHandledFor: Long? = null
+    private var draftToken = 0
+
+    /**
+     * Editor-session epoch: bumped on every (re)selection, close and rebase. A save captures it at
+     * launch and drops its outcome if it changed, so a slow save never closes, redirects or drafts
+     * over an editor the user opened after it.
+     */
+    private var editorSession = 0
+    private var saveJob: Job? = null
+
     private val _uiState = MutableStateFlow(DevicesUiState())
     val uiState: StateFlow<DevicesUiState> = _uiState.asStateFlow()
 
@@ -91,6 +112,7 @@ class DevicesViewModel @Inject constructor(
                     searchQuery = query,
                     watchedNetworks = watched,
                     selectedDeviceId = selectedId,
+                    selectedDevice = selectedId?.let { id -> allDevices.find { it.id == id } },
                     availableTags = available,
                     activeTags = liveTags,
                 )
@@ -100,6 +122,8 @@ class DevicesViewModel @Inject constructor(
                 // On a large inventory that is enough work per character to drop frames.
                 .flowOn(defaultDispatcher)
                 .collect { next ->
+                val previous = _uiState.value.selectedDevice?.takeIf { it.id == next.selectedDeviceId }
+                val vanished = next.selectedDeviceId != null && next.selectedDevice == null && previous != null
                 // Preserve cadence/masterWatchEnabled/autoMergeEnabled (folded in below from preferences), the
                 // suggestion state (own collector below) and the transient errors, which are set by
                 // user actions rather than these flows. This state is rebuilt from scratch on every
@@ -114,7 +138,17 @@ class DevicesViewModel @Inject constructor(
                         suggestionBusyKey = it.suggestionBusyKey,
                         suggestionMessage = it.suggestionMessage,
                         watchError = it.watchError,
+                        selectedDevice = next.selectedDevice ?: previous,
+                        detailDraft = it.detailDraft,
+                        detailSaving = it.detailSaving,
+                        detailNotice = it.detailNotice,
                     )
+                }
+                if (next.selectedDevice != null) vanishHandledFor = null
+                val id = next.selectedDeviceId
+                if (vanished && id != null && vanishHandledFor != id) {
+                    vanishHandledFor = id
+                    viewModelScope.launch { noticeVanished(id) }
                 }
             }
         }
@@ -231,7 +265,14 @@ class DevicesViewModel @Inject constructor(
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun selectDevice(id: Long?) { _selectedDeviceId.value = id }
+    /** A user (re)selection: any draft or notice belonged to the previous editor session. */
+    fun selectDevice(id: Long?) {
+        editorSession += 1
+        vanishHandledFor = null
+        // detailSaving stays true while an earlier save is still in flight: Save stays disabled.
+        _uiState.update { it.copy(detailDraft = null, detailNotice = null) }
+        _selectedDeviceId.value = id
+    }
 
     fun toggleTagFilter(tag: String) {
         _activeTags.update { current ->
@@ -242,42 +283,135 @@ class DevicesViewModel @Inject constructor(
 
     fun clearTagFilters() { _activeTags.value = emptySet() }
 
-    fun rename(id: Long, rawName: String) {
-        val trimmed = rawName.trim().take(MAX_DEVICE_NAME_LENGTH)
-        viewModelScope.launch {
-            knownDeviceDao.setCustomName(id, trimmed.ifBlank { null })
+    /**
+     * Guarded save of the detail editor. [base] is the row's stored values when the editor opened,
+     * [edit] what is on screen now. The sheet stays open until the outcome arrives:
+     *  - Saved closes it.
+     *  - Merged / Conflict NEVER write to another row automatically (a spoofed identifier could have
+     *    redirected the merge): the target row is selected and the sheet gets a draft of the user's
+     *    changed fields over the target's current values, to review and save again.
+     *  - Gone keeps what was typed and says it was not saved.
+     */
+    fun saveDetails(id: Long, base: UserDetails, edit: DeviceDetailsEdit) {
+        // One save at a time, across editor sessions: a reopened sheet cannot start a second one.
+        if (saveJob?.isActive == true) return
+        _uiState.update { it.copy(detailSaving = true, detailNotice = null) }
+        val changes = edit.changesOver(base)
+        val session = editorSession
+        saveJob = viewModelScope.launch {
+            val outcome = try {
+                knownDeviceDao.saveUserDetails(id, base, changes)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.log(Level.WARNING, "device details save failed", e)
+                null
+            }
+            if (session != editorSession) {
+                // The user closed or reopened the editor meanwhile: the result belongs to nobody.
+                _uiState.update { it.copy(detailSaving = false) }
+                return@launch
+            }
+            when (outcome) {
+                null -> notice(DetailNotice(R.string.devices_detail_save_failed))
+                SaveOutcome.Saved -> {
+                    editorSession += 1
+                    _uiState.update { it.copy(detailSaving = false, detailDraft = null, detailNotice = null) }
+                    _selectedDeviceId.value = null
+                }
+                is SaveOutcome.Merged -> rebaseOrFail(outcome.survivorId, base, changes, merged = true)
+                is SaveOutcome.Conflict -> rebaseOrFail(id, base, changes, merged = false)
+                SaveOutcome.Gone -> notice(DetailNotice(R.string.devices_detail_gone))
+            }
+        }
+    }
+
+    private fun notice(notice: DetailNotice) {
+        _uiState.update { it.copy(detailSaving = false, detailNotice = notice) }
+    }
+
+    // A failed lookup must not escape the launch with Save stuck disabled: same mapping as the save.
+    private suspend fun rebaseOrFail(targetId: Long, base: UserDetails, changes: UserDetails, merged: Boolean) {
+        try {
+            rebase(targetId, base, changes, merged)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.log(Level.WARNING, "redirecting a device details save failed", e)
+            notice(DetailNotice(R.string.devices_detail_save_failed))
         }
     }
 
     /**
-     * Saves the whole user-authored block for a device. Written in one statement so a save
-     * can't half-apply, and deliberately scoped to the columns the user owns — a later scan
-     * still refreshes hostname/ip/vendor underneath without touching any of this.
+     * Opens [targetId] with a draft and writes nothing. A changed field is applied only where the
+     * target still holds the value the user started from; where the target's value differs (a merge
+     * combined or filled it, someone else edited it) the target's value stays and the typed text is
+     * listed in the notice instead, so a draft never silently overwrites what the merge kept.
      */
-    fun saveDetails(id: Long, edit: DeviceDetailsEdit) {
-        val normalized = edit.normalized()
-        viewModelScope.launch {
-            knownDeviceDao.updateUserDetails(
-                id = id,
-                customName = normalized.customName,
-                tags = normalized.tags,
-                notes = normalized.notes,
-                location = normalized.location,
-                deviceTypeOverride = normalized.deviceTypeOverride,
-                osOverride = normalized.osOverride,
-                modelOverride = normalized.modelOverride,
+    private suspend fun rebase(targetId: Long, base: UserDetails, changes: UserDetails, merged: Boolean) {
+        val target = knownDeviceDao.getById(targetId) ?: return notice(DetailNotice(R.string.devices_detail_gone))
+        val current = target.userDetails()
+        val (applicable, blocked) = base.changedIn(changes).partition { current[it] == base[it] }
+        val draft = current.withFieldsFrom(changes, applicable.toSet())
+        val discarded = blocked.map { DiscardedEdit(UserField.of(it), safeDisplay(changes[it], MAX_DISCARDED_DISPLAY).orEmpty()) }
+        val message = if (merged) {
+            DetailNotice(R.string.devices_detail_merged, displayNameOf(target), discarded)
+        } else {
+            DetailNotice(R.string.devices_detail_changed, discarded = discarded)
+        }
+        editorSession += 1
+        draftToken += 1
+        vanishHandledFor = null
+        _uiState.update {
+            it.copy(
+                detailSaving = false,
+                detailNotice = message,
+                detailDraft = DetailDraft(targetId, current, DeviceDetailsEdit.from(draft), draftToken),
+                selectedDevice = target,
             )
         }
+        _selectedDeviceId.value = targetId
     }
 
+    /** The selected row vanished under an open editor: say where it went, keep the editor open. */
+    private suspend fun noticeVanished(id: Long) {
+        val target = try {
+            knownDeviceDao.mergedInto(id)?.let { knownDeviceDao.getById(it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.log(Level.WARNING, "merged-row lookup failed", e)
+            null
+        }
+        if (_selectedDeviceId.value != id) return
+        val message = target?.let { DetailNotice(R.string.devices_detail_vanished_merged, displayNameOf(it)) }
+            ?: DetailNotice(R.string.devices_detail_vanished_gone)
+        _uiState.update { it.copy(detailNotice = message) }
+    }
+
+    // Device names can carry a hostile hostname: flattened, format characters removed, isolated.
+    private fun displayNameOf(device: KnownDeviceEntity): String =
+        bidiIsolate(safeDisplay(device.displayName(), MAX_NOTICE_NAME) ?: device.ip)
+
+    /**
+     * Flips trust with a compare-and-set against the value the user saw, so a tap on stale state
+     * cannot undo a change made since (a merge's trust choice, another screen).
+     */
     fun toggleKnown(id: Long) {
+        val state = uiState.value
+        val device = state.selectedDevice?.takeIf { it.id == id } ?: state.devices.find { it.id == id } ?: return
         viewModelScope.launch {
-            val device = uiState.value.devices.find { it.id == id } ?: return@launch
-            knownDeviceDao.setKnown(id, !device.isKnown)
+            val missed = knownDeviceDao.setKnownIf(id, !device.isKnown, device.isKnown) == 0
+            // Only that row's open editor explains a miss; anywhere else the list simply refreshes.
+            if (missed && _selectedDeviceId.value == id) {
+                _uiState.update { it.copy(detailNotice = DetailNotice(R.string.devices_detail_trust_changed)) }
+            }
         }
     }
 
     fun delete(id: Long) {
+        // Close first, so the row's disappearance is not reported to an editor as a lost save.
+        if (_selectedDeviceId.value == id) selectDevice(null)
         viewModelScope.launch { knownDeviceDao.delete(id) }
     }
 
@@ -373,6 +507,8 @@ class DevicesViewModel @Inject constructor(
     internal companion object {
         /** How long taps stay ignored after a successful suggestion action. */
         const val SETTLE_MS = 400L
+        private const val MAX_NOTICE_NAME = 63
+        private const val MAX_DISCARDED_DISPLAY = 160
         private val logger: Logger = Logger.getLogger("DevicesViewModel")
     }
 }

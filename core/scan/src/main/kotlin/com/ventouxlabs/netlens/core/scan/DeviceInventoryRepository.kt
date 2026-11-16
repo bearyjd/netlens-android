@@ -44,8 +44,9 @@ interface DeviceInventoryRepository {
     val pendingMergeSuggestions: Flow<List<MergeSuggestion.BetweenRows>>
 
     /**
-     * Merges the suggested pair as a user-confirmed merge: the older row survives, its user-authored
-     * fields win, the other row's fill only empty ones. [isKnown] is the user's trust choice and
+     * Merges the suggested pair as a user-confirmed merge: the older row survives, tags and notes are
+     * combined (`mergeUserFields`), its other user-authored fields win and the other row's fill only
+     * empty ones. [isKnown] is the user's trust choice and
      * defaults to the survivor's. False (nothing changed) when the pair is no longer a pending
      * suggestion, a row is gone, the merge would delete a row the user marked DISTINCT, or the rows'
      * `isKnown` differ and no [isKnown] choice was passed (trust is never decided for the user).

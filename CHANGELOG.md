@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Merging two devices now keeps both devices' tags and notes. Tags are combined (up to 12) and each
+  note paragraph the kept device lacks is added when the result fits; anything that cannot be kept is
+  shown in full before you confirm the merge.
+
+### Fixed
+- Editing a device that was merged, or changed, while its details were open no longer loses your
+  changes. The editor moves to the device it was merged into (or stays on the changed one) with your
+  edits filled in where that device's details had not changed; any edit that would overwrite them is
+  listed with what you typed. Nothing is saved until you review it and tap Save again.
+
 ## [1.5.1] - 2026-11-16
 
 ### Fixed

@@ -315,8 +315,8 @@ class DevicesViewModelSuggestionsTest {
 
     @Test
     fun `dropping a value needs confirmation and the confirmed merge goes through`() = runTest {
-        seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20, notes = "theirs"))
-        assertEquals(listOf(UserField.NOTES), only().droppedFields)
+        seedPair(row(1, firstSeen = 10, customName = "mine"), row(2, firstSeen = 20, customName = "theirs"))
+        assertEquals(listOf(UserField.NAME), only().droppedFields)
         assertEquals("theirs", only().droppedValues.single().value)
 
         viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = false)
@@ -369,23 +369,60 @@ class DevicesViewModelSuggestionsTest {
     }
 
     @Test
-    fun `the merge preview matches what the repository really keeps, fills and drops`() = runTest {
+    fun `the merge preview matches what the repository really keeps, fills, combines and drops`() = runTest {
         seedPair(
-            row(1, firstSeen = 10, customName = "Mine", notes = "survivor note", tags = null),
-            row(2, firstSeen = 20, customName = "Other", notes = "loser note", tags = "a,b", location = "Garage"),
+            row(1, firstSeen = 10, customName = "Mine", notes = "survivor note", tags = "x"),
+            row(2, firstSeen = 20, customName = "Other", notes = "loser note", tags = "a,X", location = "Garage"),
         )
         val before = only()
-        assertEquals(listOf(UserField.NAME, UserField.NOTES), before.keptFields)
-        assertEquals(listOf(UserField.TAGS, UserField.LOCATION), before.filledFields)
-        assertEquals(listOf(UserField.NAME, UserField.NOTES), before.droppedFields)
+        assertEquals(listOf(UserField.NAME), before.keptFields)
+        assertEquals(listOf(UserField.LOCATION), before.filledFields)
+        assertEquals(listOf(UserField.TAGS, UserField.NOTES), before.unionedFields)
+        assertEquals(listOf(UserField.NAME), before.droppedFields)
+        assertEquals(listOf("x,a", "survivor note loser note"), before.combinedValues.map { it.value })
+        assertTrue(before.requiresConfirmation)
 
         viewModel.acceptSuggestion(before.key, isKnown = null, confirmed = true)
 
         val merged = fakes.known.byId(before.survivor.id)!!
         assertEquals("Mine", merged.customName)
-        assertEquals("survivor note", merged.notes)
-        assertEquals("a,b", merged.tags)
+        assertEquals("survivor note\n\nloser note", merged.notes)
+        assertEquals("x,a", merged.tags)
         assertEquals("Garage", merged.location)
+    }
+
+    @Test
+    fun `combining values alone needs confirmation`() = runTest {
+        seedPair(row(1, firstSeen = 10, tags = "a"), row(2, firstSeen = 20, tags = "b"))
+        assertTrue(only().droppedFields.isEmpty())
+
+        viewModel.acceptSuggestion(only().key, isKnown = null, confirmed = false)
+
+        assertTrue(spy.acceptCalls.isEmpty())
+        assertEquals(R.string.devices_suggestion_confirm_required, viewModel.uiState.value.suggestionMessage)
+    }
+
+    @Test
+    fun `a long combined value is shown in full, not as a silent prefix`() = runTest {
+        val theirs = "t".repeat(300)
+        seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20, notes = theirs))
+
+        assertEquals("mine $theirs", only().combinedValues.single().value)
+    }
+
+    @Test
+    fun `a long dropped value is shown in full`() = runTest {
+        val theirs = "t".repeat(450)
+        seedPair(row(1, firstSeen = 10, notes = "m".repeat(100)), row(2, firstSeen = 20, notes = theirs))
+
+        assertEquals(theirs, only().droppedValues.single().value)
+    }
+
+    @Test
+    fun `a combined value is shown flattened and with format characters removed`() = runTest {
+        seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20, notes = "a\u202Eb\nc"))
+
+        assertEquals("mine a b c", only().combinedValues.single().value)
     }
 
     @Test

@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -229,10 +231,12 @@ private fun RowSummary(title: String, row: SuggestionRow) {
 @Composable
 private fun MergePreview(suggestion: MergeSuggestionUi) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        val none = suggestion.keptFields.isEmpty() && suggestion.filledFields.isEmpty() && suggestion.droppedFields.isEmpty()
+        val none = suggestion.keptFields.isEmpty() && suggestion.filledFields.isEmpty() &&
+            suggestion.unionedFields.isEmpty() && suggestion.droppedFields.isEmpty()
         if (none) Text(stringResource(R.string.devices_suggestion_no_details), style = MaterialTheme.typography.bodySmall)
         FieldLine(R.string.devices_suggestion_kept, suggestion.keptFields)
         FieldLine(R.string.devices_suggestion_filled, suggestion.filledFields)
+        FieldLine(R.string.devices_suggestion_unioned, suggestion.unionedFields)
         FieldLine(R.string.devices_suggestion_dropped, suggestion.droppedFields)
         if (suggestion.movedIdentifierCount == 0) {
             Text(stringResource(R.string.devices_suggestion_moved_none), style = MaterialTheme.typography.bodySmall)
@@ -286,17 +290,22 @@ private fun TrustOption(label: Int, selected: Boolean, onClick: () -> Unit) {
 /** Body of the confirmation dialog, stateless so a composition smoke test can render it without a dialog window. */
 @Composable
 internal fun MergeConfirmContent(suggestion: MergeSuggestionUi, trustChoice: Boolean?) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Scrolls rather than clamps: combined and dropped values are shown in full (up to the notes cap).
+    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             stringResource(R.string.devices_suggestion_confirm_irreversible, bidiIsolate(suggestion.loser.name)),
             style = MaterialTheme.typography.bodyMedium,
         )
+        suggestion.combinedValues.forEach {
+            Text(
+                stringResource(R.string.devices_suggestion_confirm_combined, stringResource(it.field.label), bidiIsolate(it.value)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         suggestion.droppedValues.forEach {
             Text(
                 stringResource(R.string.devices_suggestion_confirm_lost, stringResource(it.field.label), bidiIsolate(it.value)),
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         if (suggestion.trustDiffers && trustChoice != null) {

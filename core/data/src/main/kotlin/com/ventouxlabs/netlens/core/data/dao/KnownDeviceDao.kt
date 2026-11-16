@@ -7,6 +7,9 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.SaveOutcome
+import com.ventouxlabs.netlens.core.data.model.UserDetails
+import com.ventouxlabs.netlens.core.data.model.userDetails
 
 @Dao
 interface KnownDeviceDao {
@@ -81,8 +84,12 @@ interface KnownDeviceDao {
     @Query("UPDATE known_devices SET macAddress = :mac WHERE id = :id")
     suspend fun setMacAddress(id: Long, mac: String)
 
-    @Query("UPDATE known_devices SET isKnown = :isKnown WHERE id = :id")
-    suspend fun setKnown(id: Long, isKnown: Boolean)
+    /**
+     * Compare-and-set for the trust flag: writes [isKnown] only while the row still holds [expected],
+     * so a tap on stale UI state cannot undo a change made since. Returns the rows changed (0 or 1).
+     */
+    @Query("UPDATE known_devices SET isKnown = :isKnown WHERE id = :id AND isKnown = :expected")
+    suspend fun setKnownIf(id: Long, isKnown: Boolean, expected: Boolean): Int
 
     @Query(
         "SELECT * FROM known_devices WHERE hostname LIKE '%' || :query || '%' " +
@@ -91,13 +98,14 @@ interface KnownDeviceDao {
     )
     fun search(query: String): Flow<List<KnownDeviceEntity>>
 
-    @Query("UPDATE known_devices SET customName = :customName WHERE id = :id")
-    suspend fun setCustomName(id: Long, customName: String?)
-
     @Query("SELECT * FROM known_devices WHERE id = :id")
     suspend fun getById(id: Long): KnownDeviceEntity?
 
-    // Writes the whole user-editable block in one statement so a save can't half-apply.
+    /**
+     * UNGUARDED: overwrites all seven user fields. Only [saveUserDetails] may call this (Room cannot
+     * make a DAO method internal, so `UserDetailsWritePathTest` pins the callers); a UI calling it
+     * with an editor's stale copy would silently undo a merge's fill or a newer edit.
+     */
     // Deliberately excludes the scan-derived columns (hostname/ip/vendor/deviceType/osGuess/model),
     // which updateLastSeen owns — a re-scan must never clobber what the user typed.
     @Query(
@@ -115,6 +123,50 @@ interface KnownDeviceDao {
         osOverride: String?,
         modelOverride: String?,
     )
+
+    // Newest merge that folded [id] away; merge_log keeps loser ids after the row is deleted.
+    @Query("SELECT survivorId FROM merge_log WHERE loserId = :id ORDER BY id DESC LIMIT 1")
+    suspend fun survivorIdForLoser(id: Long): Long?
+
+    /**
+     * The row that now holds a merged-away [id], following a chain (A->B->C) while each survivor is
+     * itself gone; null when the row was deleted, or its merge_log row was pruned or deleted with
+     * the chain. Bounded: the log holds at most MERGE_LOG_CAP rows.
+     */
+    @Transaction
+    suspend fun mergedInto(id: Long): Long? {
+        var current = id
+        repeat(DeviceIdentityDao.MERGE_LOG_CAP + 1) {
+            val next = survivorIdForLoser(current) ?: return null
+            if (getById(next) != null) return next
+            current = next
+        }
+        return null
+    }
+
+    /**
+     * Guarded save from the detail editor. [base] is the row's stored values when the editor opened;
+     * a field is the user's change when [edit] differs from [base]. Writes nothing and reports
+     * [SaveOutcome.Merged] / [SaveOutcome.Gone] when the row is gone, and [SaveOutcome.Conflict] when a
+     * changed field was also changed underneath (a merge fill, another save). Otherwise writes only
+     * the changed fields: a merge's fill of a field the user did not touch survives. The transaction
+     * serialises this against `DeviceIdentityDao.mergeDevices`.
+     */
+    @Transaction
+    suspend fun saveUserDetails(id: Long, base: UserDetails, edit: UserDetails): SaveOutcome {
+        val current = getById(id)?.userDetails()
+            ?: return mergedInto(id)?.let { SaveOutcome.Merged(it) } ?: SaveOutcome.Gone
+        val changed = base.changedIn(edit)
+        val conflicts = changed.filterTo(LinkedHashSet()) { current[it] != base[it] }
+        if (conflicts.isNotEmpty()) return SaveOutcome.Conflict(conflicts)
+        if (changed.isEmpty()) return SaveOutcome.Saved
+        val next = current.withFieldsFrom(edit, changed)
+        updateUserDetails(
+            id, next.customName, next.tags, next.notes, next.location,
+            next.deviceTypeOverride, next.osOverride, next.modelOverride,
+        )
+        return SaveOutcome.Saved
+    }
 
     @Query("UPDATE known_devices SET networkId = :networkId WHERE id = :id")
     suspend fun setNetworkId(id: Long, networkId: Long?)

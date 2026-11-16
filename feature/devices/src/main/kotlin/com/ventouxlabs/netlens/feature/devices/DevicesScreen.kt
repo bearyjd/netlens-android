@@ -63,6 +63,7 @@ import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
 import com.ventouxlabs.netlens.core.network.export.ResultExporter
 import com.ventouxlabs.netlens.core.ui.ResultActions
 import com.ventouxlabs.netlens.core.ui.StampChip
+import com.ventouxlabs.netlens.core.data.model.UserDetails
 import com.ventouxlabs.netlens.feature.devices.model.DeviceDetailsEdit
 import com.ventouxlabs.netlens.feature.devices.model.DevicesUiState
 import com.ventouxlabs.netlens.feature.devices.model.WatchCadence
@@ -155,20 +156,24 @@ internal fun DevicesContent(
     onToggleTag: (String) -> Unit,
     onClearTags: () -> Unit,
     onSelectDevice: (Long?) -> Unit,
-    onSaveDetails: (Long, DeviceDetailsEdit) -> Unit,
+    onSaveDetails: (Long, UserDetails, DeviceDetailsEdit) -> Unit,
     onToggleKnown: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val selected = state.devices.find { it.id == state.selectedDeviceId }
+    // From the unfiltered inventory, or the vanished row's last copy: see DevicesUiState.selectedDevice.
+    val selected = state.selectedDevice?.takeIf { it.id == state.selectedDeviceId }
     if (selected != null) {
         DeviceDetailSheet(
             device = selected,
             onDismiss = { onSelectDevice(null) },
-            onSaveDetails = { onSaveDetails(selected.id, it) },
+            onSaveDetails = { base, edit -> onSaveDetails(selected.id, base, edit) },
             onToggleKnown = { onToggleKnown(selected.id) },
             onDelete = { onDelete(selected.id) },
             knownTags = state.availableTags,
+            draft = state.detailDraft,
+            saving = state.detailSaving,
+            notice = state.detailNotice,
         )
     }
 
