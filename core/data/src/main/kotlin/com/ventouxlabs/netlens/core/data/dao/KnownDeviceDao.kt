@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
 
@@ -119,8 +120,37 @@ interface KnownDeviceDao {
     suspend fun setNetworkId(id: Long, networkId: Long?)
 
     @Query("DELETE FROM known_devices WHERE id = :id")
-    suspend fun delete(id: Long)
+    suspend fun deleteRow(id: Long)
+
+    // The device's merge chain: itself plus every loser folded into it, transitively (A->B->C).
+    @Query(
+        "WITH RECURSIVE chain(id) AS (SELECT :id UNION " +
+            "SELECT m.loserId FROM merge_log m JOIN chain c ON m.survivorId = c.id) " +
+            "DELETE FROM merge_log WHERE survivorId IN (SELECT id FROM chain)",
+    )
+    suspend fun deleteMergeLogChain(id: Long)
 
     @Query("DELETE FROM known_devices")
-    suspend fun deleteAll()
+    suspend fun deleteAllRows()
+
+    @Query("DELETE FROM merge_log")
+    suspend fun deleteAllMergeLog()
+
+    /**
+     * User delete of one device. Also drops every merge_log row whose survivor is the device or any
+     * loser reachable from it, so no snapshot of anything folded into it (directly or through an
+     * earlier merge) outlives it; merge_log has no foreign keys, so nothing cascades there.
+     */
+    @Transaction
+    suspend fun delete(id: Long) {
+        deleteMergeLogChain(id)
+        deleteRow(id)
+    }
+
+    /** "Clear inventory": every device and the whole merge_log, which snapshots their contents. */
+    @Transaction
+    suspend fun deleteAll() {
+        deleteAllMergeLog()
+        deleteAllRows()
+    }
 }

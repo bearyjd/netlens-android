@@ -27,7 +27,7 @@ import androidx.room.Index
 data class DeviceMergeDecisionEntity(
     val deviceIdLow: Long,
     val deviceIdHigh: Long,
-    // 'SUGGESTED' | 'DISTINCT' | 'MERGED'
+    // 'SUGGESTED' | 'DISTINCT' (an accepted merge deletes the row with the loser; see merge_log)
     val decision: String,
     val score: Int?,
     // Comma-joined reason codes, display only.

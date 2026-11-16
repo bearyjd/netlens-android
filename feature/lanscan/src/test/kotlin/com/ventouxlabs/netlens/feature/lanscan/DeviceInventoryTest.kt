@@ -28,6 +28,7 @@ import com.ventouxlabs.netlens.core.network.NetworkInterfaceProvider
 import com.ventouxlabs.netlens.core.scan.engine.DeviceFingerprinter
 import com.ventouxlabs.netlens.core.scan.engine.PortFingerprint
 import com.ventouxlabs.netlens.core.scan.testing.InventoryFakes
+import com.ventouxlabs.netlens.core.data.model.MergeKind
 import com.ventouxlabs.netlens.core.scan.NewDeviceNotifier
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.NetBiosInfo
@@ -145,6 +146,22 @@ class DeviceInventoryTest {
 
         val deleted = fakeKnownDeviceDao.getByMac("AA:BB:CC:DD:EE:06")
         assertEquals(null, deleted)
+    }
+
+    @Test
+    fun `clearInventory and deleteDevice also clear the merge log`() = runTest {
+        val identity = InventoryFakes(fakeKnownDeviceDao).identity
+        fun row(n: Int) = KnownDeviceEntity(macAddress = null, hostname = null, ip = "192.168.2.$n", vendor = null)
+        val ids = (1..4).map { identity.insertDeviceWithIdentifiers(row(it), emptyList(), emptyList(), false) }
+        identity.mergeDevices(ids[0], ids[1], isKnown = false, kind = MergeKind.USER)
+        identity.mergeDevices(ids[2], ids[3], isKnown = false, kind = MergeKind.USER)
+
+        viewModel.deleteDevice(ids[0])
+        assertEquals(listOf(ids[2]), fakeKnownDeviceDao.mergeLog.map { it.survivorId })
+
+        viewModel.clearInventory()
+        assertTrue(fakeKnownDeviceDao.mergeLog.isEmpty())
+        assertTrue(fakeKnownDeviceDao.allDevices.isEmpty())
     }
 
     @Test

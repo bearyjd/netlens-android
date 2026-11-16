@@ -238,6 +238,23 @@ object DataModule {
         }
     }
 
+    // v20: the write-only merge_log audit table (one row per merge, see MergeLogEntity). No foreign
+    // keys and no defaults; the SQL is copied verbatim from schemas/.../20.json. Touches no other table.
+    internal val MIGRATION_19_20 = object : Migration(19, 20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `merge_log` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`mergedAt` INTEGER NOT NULL, `survivorId` INTEGER NOT NULL, `loserId` INTEGER NOT NULL, " +
+                    "`kind` TEXT NOT NULL, `survivorIsKnownBefore` INTEGER NOT NULL, `decisionScore` INTEGER, " +
+                    "`decisionReasons` TEXT, `snapshotVersion` INTEGER NOT NULL, `loserRowJson` TEXT NOT NULL, " +
+                    "`loserIdentifiersJson` TEXT NOT NULL, `loserSightingsJson` TEXT NOT NULL, " +
+                    "`survivorUserFieldsBeforeJson` TEXT NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_merge_log_mergedAt` ON `merge_log` (`mergedAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_merge_log_survivorId` ON `merge_log` (`survivorId`)")
+        }
+    }
+
     private val IDENTITY_TABLE_SQL = listOf(
         "CREATE TABLE IF NOT EXISTS device_identifiers (" +
             "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -301,7 +318,7 @@ object DataModule {
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                 MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                 MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                MIGRATION_17_18, MIGRATION_18_19,
+                MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()

@@ -2,6 +2,8 @@ package com.ventouxlabs.netlens.core.data.testing
 
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeKind
+import com.ventouxlabs.netlens.core.data.model.MergeLogEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -23,12 +25,21 @@ import kotlinx.coroutines.flow.update
  *    caller's. Since v19 dropped the unique MAC index it no longer dedupes — two inserts of the same
  *    MAC both succeed, exactly like `INSERT OR IGNORE` against a non-unique index. Duplicate
  *    protection is `DeviceIdentityDao.insertDeviceWithIdentifiers`' job.
+ *
+ * Also holds the `merge_log` rows ([mergeLog]) that [FakeDeviceIdentityDao] writes, because the
+ * real [delete] / [deleteAll] clear them in the same transaction; those two are the interface's own
+ * default methods, run over the building blocks below.
  */
 class FakeKnownDeviceDao : KnownDeviceDao {
 
     private val devices = mutableListOf<KnownDeviceEntity>()
     private var nextId = 1L
     private val flow = MutableStateFlow<List<KnownDeviceEntity>>(emptyList())
+    private val mergeLogRows = mutableListOf<MergeLogEntity>()
+    private var nextMergeLogId = 1L
+
+    /** `merge_log` rows currently stored, oldest first. */
+    val mergeLog: List<MergeLogEntity> get() = mergeLogRows.toList()
 
     /** Rows currently stored, in insertion order. */
     val allDevices: List<KnownDeviceEntity> get() = devices.toList()
@@ -156,14 +167,44 @@ class FakeKnownDeviceDao : KnownDeviceDao {
     override fun search(query: String): Flow<List<KnownDeviceEntity>> =
         flowOf(devices.filter { it.hostname?.contains(query) == true || it.ip.contains(query) })
 
-    override suspend fun delete(id: Long) {
+    override suspend fun deleteRow(id: Long) {
         devices.removeAll { it.id == id }
         publish()
     }
 
-    override suspend fun deleteAll() {
+    /** Same closure as the real recursive query: [id] plus every loser reachable from it. */
+    override suspend fun deleteMergeLogChain(id: Long) {
+        val chain = mutableSetOf(id)
+        var frontier = setOf(id)
+        while (frontier.isNotEmpty()) {
+            frontier = mergeLogRows.filter { it.survivorId in frontier }.map { it.loserId }.toSet() - chain
+            chain += frontier
+        }
+        mergeLogRows.removeAll { it.survivorId in chain }
+    }
+
+    override suspend fun deleteAllRows() {
         devices.clear()
         publish()
+    }
+
+    override suspend fun deleteAllMergeLog() = mergeLogRows.clear()
+
+    /** For [FakeDeviceIdentityDao.insertMergeLogRow]: assigns the next AUTOINCREMENT id. */
+    internal fun insertMergeLog(entry: MergeLogEntity): Long {
+        val id = nextMergeLogId++
+        mergeLogRows += entry.copy(id = id)
+        return id
+    }
+
+    /** Same rule as the real `pruneMergeLog` query: keep the newest [cap], USER rows ranked first. */
+    internal fun pruneMergeLog(cap: Int) {
+        val keep = mergeLogRows
+            .sortedWith(compareBy<MergeLogEntity> { if (it.kind == MergeKind.USER.name) 0 else 1 }.thenByDescending { it.id })
+            .take(cap)
+            .map { it.id }
+            .toSet()
+        mergeLogRows.removeAll { it.id !in keep }
     }
 
     private inline fun mutate(id: Long, transform: (KnownDeviceEntity) -> KnownDeviceEntity) {

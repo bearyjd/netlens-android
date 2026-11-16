@@ -8,6 +8,7 @@ import com.ventouxlabs.netlens.core.data.dao.NetworkKeyAliasDao
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
 import com.ventouxlabs.netlens.core.data.model.DeviceMergeDecisionEntity
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeKind
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
 import com.ventouxlabs.netlens.core.scan.model.identity.DeviceIdentifier
 import com.ventouxlabs.netlens.core.scan.model.identity.IdentifierKind
@@ -310,7 +311,7 @@ class DeviceIdentityResolver @Inject constructor(
 
     /** Folds [loserIds] into [survivorId]; the DAO re-checks the rules, so a refusal just means "not merged". */
     private suspend fun merge(survivorId: Long, loserIds: List<Long>): Resolution.Existing {
-        val merged = loserIds.sorted().filter { identityDao.mergeDevices(survivorId, it, isKnown = null) }
+        val merged = loserIds.sorted().filter { identityDao.mergeDevices(survivorId, it, isKnown = null, kind = MergeKind.AUTO) }
         return Resolution.Existing(survivorId, merged)
     }
 

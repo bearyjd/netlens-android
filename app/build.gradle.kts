@@ -193,7 +193,7 @@ dependencies {
     testRuntimeOnly(libs.junit5.engine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
-    testImplementation("org.json:json:20231013")
+    testImplementation(libs.org.json)
 
     // AndroidX / Compose
     implementation(libs.activity.compose)

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Scan paths may only [suggest] / [updateSuggestion]; both are no-ops on a pair the user already
- * decided. Only [setDistinct] / [setMerged] (user actions) may change a stored decision.
+ * decided. Only [setDistinct] (a user action) may change a stored decision.
  */
 @Dao
 interface DeviceMergeDecisionDao {
@@ -42,10 +42,4 @@ interface DeviceMergeDecisionDao {
             "VALUES (:low, :high, 'DISTINCT', NULL, NULL, :decidedAt)",
     )
     suspend fun setDistinct(low: Long, high: Long, decidedAt: Long)
-
-    @Query(
-        "INSERT OR REPLACE INTO device_merge_decisions(deviceIdLow, deviceIdHigh, decision, score, reasons, decidedAt) " +
-            "VALUES (:low, :high, 'MERGED', NULL, NULL, :decidedAt)",
-    )
-    suspend fun setMerged(low: Long, high: Long, decidedAt: Long)
 }

@@ -37,6 +37,8 @@ class ResolverAutoMergeTest {
         assertEquals(Resolution.Existing(deviceId = 102, mergedFrom = listOf(101)), r)
         assertNull(h.known.byId(101))
         assertEquals(setOf("uuid:a", MAC1_ID), h.identifiers.getForDevice(102).map { it.value }.toSet())
+        val log = h.known.mergeLog.single()
+        assertEquals(listOf("AUTO", "102", "101"), listOf(log.kind, log.survivorId.toString(), log.loserId.toString()))
     }
 
     @Test

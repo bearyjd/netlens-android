@@ -45,6 +45,7 @@ import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WifiSurveyDao
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import com.ventouxlabs.netlens.core.data.model.KnownDeviceEntity
+import com.ventouxlabs.netlens.core.data.model.MergeLogEntity
 import com.ventouxlabs.netlens.core.data.model.WifiSurveyPointEntity
 import com.ventouxlabs.netlens.core.data.model.WifiSurveySessionEntity
 import com.ventouxlabs.netlens.core.data.model.WatchedNetworkEntity
@@ -84,8 +85,9 @@ import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
         DeviceSightingEntity::class,
         DeviceMergeDecisionEntity::class,
         NetworkKeyAliasEntity::class,
+        MergeLogEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 abstract class NetLensDatabase : RoomDatabase() {

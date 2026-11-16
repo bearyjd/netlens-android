@@ -8,6 +8,7 @@ import com.ventouxlabs.netlens.core.data.dao.DeviceObservationDao
 import com.ventouxlabs.netlens.core.data.dao.DeviceSightingDao
 import com.ventouxlabs.netlens.core.data.dao.KnownDeviceDao
 import com.ventouxlabs.netlens.core.data.model.DeviceIdentifierEntity
+import com.ventouxlabs.netlens.core.data.model.MergeKind
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentifierRecorder
 import com.ventouxlabs.netlens.core.scan.identity.DeviceIdentityResolver
 import com.ventouxlabs.netlens.core.scan.identity.IdentityPolicy
@@ -212,7 +213,7 @@ class DeviceInventoryRepositoryImpl @Inject constructor(
             if (decisionDao.touchesDistinct(listOf(loser.id))) return@run false
             // Differing trust is never decided for the user.
             if (isKnown == null && survivor.isKnown != loser.isKnown) return@run false
-            val merged = identityDao.mergeDevices(survivor.id, loser.id, isKnown ?: survivor.isKnown)
+            val merged = identityDao.mergeDevices(survivor.id, loser.id, isKnown ?: survivor.isKnown, MergeKind.USER)
             if (merged) observationDao.trimToStrongest(survivor.id, IdentityPolicy.MAX_OBSERVATIONS)
             merged
         }
