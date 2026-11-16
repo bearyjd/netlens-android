@@ -186,6 +186,17 @@ class LanScanViewModel @Inject constructor(
         startScan(location)
     }
 
+    /**
+     * Fills the range field from an externally supplied CIDR (the exported deep link) without
+     * scanning: a sweep of an arbitrary range must be started by the user's own tap.
+     */
+    fun prefillCidr(cidr: String) {
+        if (parseCidr(cidr) == null) return
+        _uiState.update {
+            it.copy(rangeMode = ScanRangeMode.CUSTOM, customRange = cidr.trim(), rangeError = null, selectedTab = LanScanTab.SCAN)
+        }
+    }
+
     fun selectTab(tab: LanScanTab) {
         _uiState.update { it.copy(selectedTab = tab) }
         if (tab == LanScanTab.SCAN) refreshSuggestedNetworks()
