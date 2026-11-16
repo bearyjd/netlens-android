@@ -85,14 +85,12 @@ class SsdpHostileInputTest {
     }
 
     @Test
-    fun `control characters are flattened at ingestion but bidi overrides survive`() {
-        // Contract inverted on 2026-08-17: extractTag now flattens through DisplayText, so a
-        // control character never reaches ANY sink (this test used to pin the opposite — "no
-        // sink can assume the parser sanitised anything"). Two things still hold: HostName
-        // guards the URI sink separately, and a bidi override is NOT a control character and
-        // survives — a sink rendering RTL-sensitive text still owns that concern.
+    fun `control characters and bidi overrides are removed at ingestion`() {
+        // extractTag flattens through DisplayText, so neither a control character nor a bidi
+        // override reaches any sink (a control becomes a space, a bidi override is removed).
+        // HostName still guards the URI sink separately.
         val device = parseXml("<friendlyName>a\u0000b\u202Ec</friendlyName>")
-        assertEquals("a b\u202Ec", device.friendlyName)
+        assertEquals("a bc", device.friendlyName)
     }
 
     @Test

@@ -162,7 +162,7 @@ class DevicesViewModelSuggestionsTest {
             row(2, firstSeen = 20, customName = null, hostname = "a\r\nb\tc"),
         )
 
-        assertEquals("nas 192.168.1.1 (Router) evil", only().survivor.name)
+        assertEquals("nas 192.168.1.1 (Router)evil", only().survivor.name)
         assertEquals("a b c", only().loser.name)
     }
 
@@ -174,15 +174,17 @@ class DevicesViewModelSuggestionsTest {
     }
 
     @Test
-    fun `every bidi and invisible format character becomes a space`() = runTest {
-        val specials = (0x202A..0x202E) + (0x2066..0x2069) + listOf(0x200B, 0x200C, 0x200D, 0xFEFF, 0x2028, 0x2029, 0x200E, 0x200F, 0x061C)
-        specials.forEach { code ->
+    fun `every bidi and invisible format character is stripped, except ZWNJ and ZWJ`() = runTest {
+        val specials = (0x202A..0x202E) + (0x2066..0x2069) + listOf(0x200B, 0xFEFF, 0x200E, 0x200F, 0x061C, 0x2060, 0x00AD)
+        val lineBreaks = listOf(0x2028, 0x2029)
+        (lineBreaks + specials).forEach { code ->
             val x = FakeKnownDeviceDao()
             x.seed(row(1, firstSeen = 10, customName = null, hostname = "nas${Char(code)}evil"), row(2, firstSeen = 20))
             val ui = buildMergeSuggestionUi(
                 MergeSuggestion.BetweenRows(1, 2, 70, emptyList()), x.byId(1)!!, x.byId(2)!!, emptyList(),
             )
-            assertEquals("nas evil", ui.survivor.name, "U+${code.toString(16)}")
+            val expected = if (code in lineBreaks) "nas evil" else "nasevil"
+            assertEquals(expected, ui.survivor.name, "U+${code.toString(16)}")
         }
     }
 
@@ -422,7 +424,7 @@ class DevicesViewModelSuggestionsTest {
     fun `a combined value is shown flattened and with format characters removed`() = runTest {
         seedPair(row(1, firstSeen = 10, notes = "mine"), row(2, firstSeen = 20, notes = "a\u202Eb\nc"))
 
-        assertEquals("mine a b c", only().combinedValues.single().value)
+        assertEquals("mine ab c", only().combinedValues.single().value)
     }
 
     @Test

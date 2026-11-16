@@ -51,23 +51,20 @@ object NetworkKeys {
         listOfNotNull(NetworkKey.gatewayMac(gatewayMac), gatewayId(gatewayIp, scanned), layer3(gatewayIp, subnet))
 
     /**
-     * The SSID when the platform will tell us, else the subnet. Both are attacker-influenced: control,
-     * bidi and zero-width characters are removed (a right-to-left override can reorder what the UI
-     * shows) and the result is capped by code point so a surrogate pair is never split.
+     * The SSID when the platform will tell us, else the subnet. Both are attacker-influenced, so they
+     * follow the shared [DisplayText.flatten] rule (control, bidi and invisible characters removed; a
+     * legitimate ZWJ/ZWNJ between non-ASCII characters is kept) and are capped by code point so a
+     * surrogate pair is never split. The capped text is flattened again so the cut cannot leave a
+     * dangling joiner.
      */
     fun label(ssid: String?, subnet: String?): String? = clean(ssid) ?: clean(subnet)
 
     private fun clean(raw: String?): String? {
         val flat = DisplayText.flatten(raw) ?: return null
-        val visible = flat.filterNot { isInvisibleFormat(it) }.trim()
-        if (visible.isEmpty()) return null
-        val end = if (visible.codePointCount(0, visible.length) <= MAX_LABEL_LENGTH) visible.length
-        else visible.offsetByCodePoints(0, MAX_LABEL_LENGTH)
-        return visible.substring(0, end)
+        val end = if (flat.codePointCount(0, flat.length) <= MAX_LABEL_LENGTH) flat.length
+        else flat.offsetByCodePoints(0, MAX_LABEL_LENGTH)
+        return DisplayText.flatten(flat.substring(0, end))
     }
-
-    // U+200B-200F zero-width/direction marks, U+202A-202E embeddings and overrides, U+2066-2069 isolates.
-    private fun isInvisibleFormat(c: Char) = c in '\u200B'..'\u200F' || c in '\u202A'..'\u202E' || c in '\u2066'..'\u2069'
 
     private fun gatewayId(gatewayIp: String?, scanned: List<LanDevice>): NetworkKey? {
         if (gatewayIp == null) return null
@@ -84,9 +81,21 @@ object NetworkKeys {
         return NetworkKey(NetworkKey.Kind.GATEWAY_ID, id)
     }
 
+    /**
+     * Rejects, rather than normalises, a value that flattening would change (the same rule as
+     * `IdentityPolicy.sanitizeIdentifiers`): normalising would let `uuid:a<WJ>b` and `uuid:ab` collide
+     * on one key. The check runs on the value as given and again on the exact text that becomes key
+     * material (lower-cased, then clamped by code point), because lower-casing can add a combining
+     * mark (U+0130) and a clamp can leave a dangling joiner.
+     */
     private fun DeviceIdentifier.clean(): String? {
-        val value = DisplayText.flatten(value)?.lowercase()?.take(MAX_GATEWAY_ID_LENGTH)?.trim().orEmpty()
-        return if (value.isEmpty()) null else "${kind.name.lowercase()}:$value"
+        if (DisplayText.flatten(value) != value) return null
+        val lower = value.lowercase()
+        val end = if (lower.codePointCount(0, lower.length) <= MAX_GATEWAY_ID_LENGTH) lower.length
+        else lower.offsetByCodePoints(0, MAX_GATEWAY_ID_LENGTH)
+        val cut = lower.substring(0, end)
+        if (DisplayText.flatten(cut) != cut) return null
+        return "${kind.name.lowercase()}:$cut"
     }
 
     private fun IdentifierKind.isMac() = this == IdentifierKind.MAC_UNIVERSAL || this == IdentifierKind.MAC_LOCAL

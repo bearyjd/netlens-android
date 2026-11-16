@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.core.scan.network
 
+import com.ventouxlabs.netlens.core.network.DisplayText
 import com.ventouxlabs.netlens.core.scan.identity.lan
 import com.ventouxlabs.netlens.core.scan.identity.universalMac
 import com.ventouxlabs.netlens.core.scan.model.LanDevice
@@ -96,11 +97,27 @@ class NetworkKeysTest {
     }
 
     @Test
-    fun `a hostile gateway identifier is flattened and clamped`() {
-        val hostile = lan("192.168.1.1", null, udn("uuid:\n\u0000EVIL\tX" + "z".repeat(10_000)))
-        val key = NetworkKeys.build(null, "192.168.1.1", null, listOf(hostile)).single().key
-        assertTrue(key.none { it.isISOControl() })
+    fun `a gateway identifier that flattening would change is rejected, not normalised`() {
+        // Normalising would let a hostile value collapse onto another device's key material.
+        val hostile = lan("192.168.1.1", null, udn("uuid:\n\u0000EVIL\tX"))
+        assertEquals(emptyList<NetworkKey>(), NetworkKeys.build(null, "192.168.1.1", null, listOf(hostile)))
+    }
+
+    @Test
+    fun `a long gateway identifier is clamped`() {
+        val long = lan("192.168.1.1", null, udn("uuid:" + "z".repeat(10_000)))
+        val key = NetworkKeys.build(null, "192.168.1.1", null, listOf(long)).single().key
         assertEquals("gw-id:upnp_udn:".length + NetworkKeys.MAX_GATEWAY_ID_LENGTH, key.length)
+    }
+
+    @Test
+    fun `identifiers differing only by invisible characters cannot collide on one key`() {
+        for (invisible in listOf("\u2060", "\u200B", "\u202E", "\u00AD", "\u200D")) {
+            val spoof = lan("192.168.1.1", null, udn("uuid:a" + invisible + "b"))
+            assertEquals(emptyList<NetworkKey>(), NetworkKeys.build(null, "192.168.1.1", null, listOf(spoof)), "U+" + invisible)
+        }
+        val real = lan("192.168.1.1", null, udn("uuid:ab"))
+        assertEquals("gw-id:upnp_udn:uuid:ab", NetworkKeys.build(null, "192.168.1.1", null, listOf(real)).single().key)
     }
 
     @Test
@@ -133,9 +150,38 @@ class NetworkKeysTest {
     }
 
     @Test
+    fun `legitimate joiners survive in a label and stray ones do not`() {
+        val family = "\uD83D\uDC68\u200D\uD83D\uDC69"
+        assertEquals("Wi-Fi " + family, NetworkKeys.label("Wi-Fi " + family, null))
+        assertEquals("admin", NetworkKeys.label("ad\u200Dmin", null))
+        assertNull(NetworkKeys.label("\u200D", null))
+    }
+
+    @Test
     fun `bidi and invisible format characters are stripped from the label`() {
         val hostile = "Ho\u202Eme\u200B\u200F\u2066Wi\u2069Fi\u202A"
         assertEquals("HomeWiFi", NetworkKeys.label(hostile, null))
         assertNull(NetworkKeys.label("\u200B\u202E", null))
+    }
+
+    @Test
+    fun `the gateway identifier clamp never splits a surrogate pair`() {
+        val value = "a".repeat(127) + "\uD83D\uDE00" + "b".repeat(126) // 255 chars, 128th unit is a high surrogate
+        val key = NetworkKeys.build(null, "192.168.1.1", null, listOf(lan("192.168.1.1", null, udn(value)))).single().key
+        assertEquals("gw-id:upnp_udn:" + "a".repeat(127) + "\uD83D\uDE00", key)
+    }
+
+    @Test
+    fun `a gateway identifier whose clamp would end on a joiner is rejected`() {
+        val value = "\u00E9".repeat(127) + "\u200D" + "\u00E9"
+        assertEquals(value, DisplayText.flatten(value)) // valid as a whole: the joiner has non-ASCII neighbours
+        assertEquals(emptyList<NetworkKey>(), NetworkKeys.build(null, "192.168.1.1", null, listOf(lan("192.168.1.1", null, udn(value)))))
+    }
+
+    @Test
+    fun `lowercasing that adds a combining mark past the cap is rejected`() {
+        val value = "\u0130" + "\u0301".repeat(4) // valid: one base and four marks; lowercase gives i + U+0307 + four marks
+        assertEquals(value, DisplayText.flatten(value))
+        assertEquals(emptyList<NetworkKey>(), NetworkKeys.build(null, "192.168.1.1", null, listOf(lan("192.168.1.1", null, udn(value)))))
     }
 }

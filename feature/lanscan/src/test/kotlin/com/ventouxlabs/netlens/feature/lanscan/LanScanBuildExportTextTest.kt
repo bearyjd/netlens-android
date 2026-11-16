@@ -127,6 +127,36 @@ class LanScanBuildExportTextTest {
     }
 
     @Test
+    fun `a Unicode line separator or bidi override in a hostname cannot forge or reorder an export row`() = runTest {
+        // U+2028/U+2029 break lines in many viewers without being C0/C1 controls; RLO reorders the
+        // rendered row. Neither may survive into text the user shares.
+        val ls = "\u2028"
+        val ps = "\u2029"
+        val rlo = "\u202E"
+        fakeSubnetScanner.devices = listOf(
+            LanDevice(
+                ip = "192.168.1.9",
+                hostname = "nas)" + ls + "192.168.1.1 (Router)" + ps + "Vendor=Cisco" + rlo + "gnp.exe",
+                latencyMs = 1,
+            ),
+        )
+
+        viewModel.onRangeModeChanged(ScanRangeMode.CUSTOM)
+        viewModel.onCustomRangeChanged("192.168.1.0/24")
+        viewModel.startScan()
+
+        val text = viewModel.buildExportText()
+
+        assertTrue(text.contains("Devices found: 1"), "one device was scanned")
+        // LS and PS become spaces and the RLO is removed, leaving exactly one row for the device.
+        assertTrue(
+            text.lines().any { it.trim() == "192.168.1.9 (nas) 192.168.1.1 (Router) Vendor=Ciscognp.exe)  1ms" },
+            "expected the single flattened row:\n$text",
+        )
+        assertFalse(text.lines().any { it.trim().startsWith("192.168.1.1 (Router)") }, "forged row:\n$text")
+    }
+
+    @Test
     fun `buildExportText with null hostname and present MAC`() = runTest {
         fakeSubnetScanner.devices = listOf(
             LanDevice(ip = "192.168.1.50", hostname = null, latencyMs = 3, macAddress = "11:22:33:44:55:66"),
