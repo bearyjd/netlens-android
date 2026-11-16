@@ -107,6 +107,18 @@ class MergeSuggestionsRenderTest {
     }
 
     @Test
+    fun `a pair whose tags and notes combine renders the combined row and its values`() {
+        val rlo = Char(0x202E)
+        val ui = suggestion(
+            entity(1, name = "Mine", notes = "mine").copy(tags = "iot,office"),
+            entity(2, name = "Other", notes = "theirs${rlo}\nline").copy(tags = "IOT,lab"),
+        )
+        check(ui.unionedFields.isNotEmpty() && ui.combinedValues.isNotEmpty())
+        render(listOf(ui))
+        paparazzi.snapshot { MergeConfirmContent(ui, trustChoice = null) }
+    }
+
+    @Test
     fun `a trust-escalating pair renders the warning above the choice`() {
         render(listOf(suggestion(entity(1, known = true), entity(2, known = false, mac = "aa:bb:cc:dd:ee:ff"))))
     }

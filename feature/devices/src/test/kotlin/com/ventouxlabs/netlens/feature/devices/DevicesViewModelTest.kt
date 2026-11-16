@@ -109,20 +109,6 @@ class DevicesViewModelTest {
     }
 
     @Test
-    fun `rename persists a trimmed custom name`() = runTest {
-        knownDao.seed(KnownDeviceEntity(id = 5, macAddress = "M1", hostname = "h", ip = "192.168.1.2", vendor = null))
-        viewModel.rename(5, "  Living Room TV  ")
-        assertEquals("Living Room TV", knownDao.byId(5)?.customName)
-    }
-
-    @Test
-    fun `rename with blank clears the custom name`() = runTest {
-        knownDao.seed(KnownDeviceEntity(id = 5, macAddress = "M1", hostname = "h", ip = "192.168.1.2", vendor = null, customName = "Old"))
-        viewModel.rename(5, "   ")
-        assertNull(knownDao.byId(5)?.customName)
-    }
-
-    @Test
     fun `toggleKnown flips the flag`() = runTest {
         knownDao.seed(KnownDeviceEntity(id = 7, macAddress = "M1", hostname = "h", ip = "192.168.1.2", vendor = null, isKnown = false))
         viewModel.toggleKnown(7)

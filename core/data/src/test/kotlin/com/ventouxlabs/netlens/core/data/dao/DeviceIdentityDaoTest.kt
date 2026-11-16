@@ -212,7 +212,7 @@ class DeviceIdentityDaoTest {
     }
 
     @Test
-    fun `a confirmed merge leaves a fully user-authored survivor row unchanged`() = runBlocking {
+    fun `a confirmed merge unions tags and notes and keeps the survivor's other user fields`() = runBlocking {
         fun mine() = device().copy(
             customName = "mine", tags = "mine", notes = "mine", location = "mine",
             deviceTypeOverride = "mine", osOverride = "mine", modelOverride = "mine",
@@ -220,7 +220,7 @@ class DeviceIdentityDaoTest {
         val survivor = dao.insertDeviceWithIdentifiers(mine(), emptyList(), emptyList(), true)
         val loser = dao.insertDeviceWithIdentifiers(
             mine().copy(
-                ip = "10.0.0.2", customName = "other", tags = "other", notes = "other", location = "other",
+                ip = "10.0.0.2", customName = "other", tags = "other,MINE", notes = "other", location = "other",
                 deviceTypeOverride = "other", osOverride = "other", modelOverride = "other",
             ),
             emptyList(), emptyList(), true,
@@ -229,15 +229,31 @@ class DeviceIdentityDaoTest {
 
         assertTrue(dao.mergeDevices(survivor, loser, isKnown = false, kind = MergeKind.USER))
 
+        assertEquals(before.copy(tags = "mine,other", notes = "mine\n\nother"), db.knownDeviceDao().getById(survivor))
+        // The audit row still snapshots the survivor's values from BEFORE the union.
+        val snapshot = org.json.JSONObject(mergeLog(db).single().survivorUserFieldsBeforeJson)
+        assertEquals("mine", snapshot.getString("tags"))
+        assertEquals("mine", snapshot.getString("notes"))
+    }
+
+    @Test
+    fun `an automatic merge never combines tags or notes that both rows carry`() = runBlocking {
+        val survivor = dao.insertDeviceWithIdentifiers(device().copy(tags = "a", notes = "mine"), emptyList(), emptyList(), true)
+        val loser = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2").copy(tags = "b", notes = "theirs"), emptyList(), emptyList(), true)
+        val before = db.knownDeviceDao().getById(survivor)
+
+        assertFalse(dao.mergeDevices(survivor, loser, isKnown = null, kind = MergeKind.AUTO))
+
         assertEquals(before, db.knownDeviceDao().getById(survivor))
+        assertNotNull(db.knownDeviceDao().getById(loser))
     }
 
     @Test
     fun `an automatic merge is refused inside the transaction when both rows now carry user details`() = runBlocking {
         val survivor = dao.insertDeviceWithIdentifiers(device(), listOf(ident(value = "uuid:s")), emptyList(), true)
         val loser = dao.insertDeviceWithIdentifiers(device(ip = "10.0.0.2"), listOf(ident(value = "uuid:l")), emptyList(), true)
-        db.knownDeviceDao().setCustomName(survivor, "named")
-        db.knownDeviceDao().setCustomName(loser, "also named")
+        db.knownDeviceDao().updateUserDetails(survivor, "named", null, null, null, null, null, null)
+        db.knownDeviceDao().updateUserDetails(loser, "also named", null, null, null, null, null, null)
 
         assertFalse(dao.mergeDevices(survivor, loser, isKnown = null, kind = MergeKind.AUTO))
 
