@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.wifi.WifiManager
 import com.ventouxlabs.netlens.core.network.calculateNetworkAddress
+import com.ventouxlabs.netlens.core.scan.engine.findLanNetwork
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.Inet4Address
 import javax.inject.Inject
@@ -17,6 +18,12 @@ data class LinkInfo(val gatewayIp: String?, val subnet: String?)
 interface NetworkLinkReader {
     /** The network this process is bound to (the LAN, while a scan holds the binding), if any. */
     fun boundLink(): LinkInfo?
+
+    /**
+     * The Wi-Fi or Ethernet (non-VPN) network, bound or not. A VPN that does not allow bypass makes
+     * the scan's process binding fail, leaving nothing bound; this still names the LAN.
+     */
+    fun lanLink(): LinkInfo?
 
     /** The system default network: the VPN whenever one is up. */
     fun activeLink(): LinkInfo?
@@ -33,6 +40,8 @@ class AndroidNetworkLinkReader @Inject constructor(
         get() = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     override fun boundLink(): LinkInfo? = cm.boundNetworkForProcess?.let(::link)
+
+    override fun lanLink(): LinkInfo? = cm.findLanNetwork()?.let(::link)
 
     override fun activeLink(): LinkInfo? = cm.activeNetwork?.let(::link)
 

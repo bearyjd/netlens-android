@@ -7,8 +7,9 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class NetworkIdentityImplTest {
-    private class FakeLinks(var bound: LinkInfo? = null, var active: LinkInfo? = null) : NetworkLinkReader {
+    private class FakeLinks(var bound: LinkInfo? = null, var active: LinkInfo? = null, var lanNet: LinkInfo? = null) : NetworkLinkReader {
         override fun boundLink() = bound
+        override fun lanLink() = lanNet
         override fun activeLink() = active
         override fun ssid(): String? = null
     }
@@ -24,6 +25,26 @@ class NetworkIdentityImplTest {
         assertEquals("192.168.1.1", identity.currentGatewayIp())
         assertEquals("192.168.1.0/24", identity.currentSubnet())
         assertEquals("AA:BB:CC:DD:EE:00", identity.currentGatewayMac())
+    }
+
+    @Test
+    fun `a VPN that refuses the LAN binding still yields the LAN network, not the tunnel`() = runTest {
+        // Device-observed: a non-bypassable VPN (tun1, 100.112.x/32) makes bindProcessToNetwork fail,
+        // so nothing is bound and the active network is the tunnel.
+        val tunnel = LinkInfo("0.0.0.0", "100.112.148.114/32")
+        val identity = NetworkIdentityImpl(FakeLinks(bound = null, active = tunnel, lanNet = lan), FakeArpTableReader())
+
+        assertEquals("192.168.1.1", identity.currentGatewayIp())
+        assertEquals("192.168.1.0/24", identity.currentSubnet())
+    }
+
+    @Test
+    fun `a bound network wins over the LAN fallback and the active network`() = runTest {
+        val bound = LinkInfo("172.16.0.1", "172.16.0.0/24")
+        val identity = NetworkIdentityImpl(FakeLinks(bound = bound, active = vpn, lanNet = lan), FakeArpTableReader())
+
+        assertEquals("172.16.0.1", identity.currentGatewayIp())
+        assertEquals("172.16.0.0/24", identity.currentSubnet())
     }
 
     @Test
