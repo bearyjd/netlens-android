@@ -36,19 +36,21 @@ class LanNetworkBinderImpl @Inject constructor(
         }
     }
 
-    /**
-     * Picks a network that carries the local subnet.
-     *
-     * `NOT_VPN` is the load-bearing part: a VPN network can also report `TRANSPORT_WIFI` when it
-     * runs over Wi-Fi, so matching on transport alone would happily select the tunnel this exists
-     * to avoid.
-     */
-    private fun ConnectivityManager.findLanNetwork(): Network? =
-        allNetworks.firstOrNull { network ->
-            val capabilities = getNetworkCapabilities(network) ?: return@firstOrNull false
-            val isLanTransport =
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-            isLanTransport && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-        }
 }
+
+/**
+ * Picks a network that carries the local subnet. Shared with the network-identity reader so the
+ * network a scan binds to and the one it is attributed to are chosen the same way.
+ *
+ * `NOT_VPN` is the load-bearing part: a VPN network can also report `TRANSPORT_WIFI` when it
+ * runs over Wi-Fi, so matching on transport alone would happily select the tunnel this exists
+ * to avoid.
+ */
+internal fun ConnectivityManager.findLanNetwork(): Network? =
+    allNetworks.firstOrNull { network ->
+        val capabilities = getNetworkCapabilities(network) ?: return@firstOrNull false
+        val isLanTransport =
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        isLanTransport && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+    }
