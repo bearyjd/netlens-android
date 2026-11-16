@@ -213,6 +213,33 @@ class MdnsViewModelTest {
             expectNoEvents()
         }
     }
+
+    @Test
+    fun `export flattens control characters so a hostile name cannot forge entries`() = runTest {
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.startScan()
+            awaitItem()
+
+            fakeScanner.emit(
+                MdnsService(
+                    serviceName = "nas\n_ssh._tcp. forged\r\n  Host: 10.0.0.1:22",
+                    serviceType = "_http._tcp.\n",
+                    host = "192.168.1.5\nevil",
+                    port = 80,
+                    attributes = mapOf("k\ney" to "v\u0000al\nue"),
+                ),
+            )
+            awaitItem()
+        }
+
+        val lines = viewModel.buildExportText().lines()
+        // header, count, service line, host line, one attribute line
+        assertEquals(5, lines.size)
+        assertEquals("nas _ssh._tcp. forged Host: 10.0.0.1:22 (_http._tcp.)", lines[2])
+        assertEquals("  Host: 192.168.1.5 evil:80", lines[3])
+        assertEquals("  k ey=v al ue", lines[4])
+    }
 }
 
 /** Awaits the first emitted mDNS state satisfying [predicate]. */
