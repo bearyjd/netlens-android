@@ -88,6 +88,15 @@ object PostureScoreEngine {
         )
     }
 
+    /**
+     * A network is trusted only when it uses password-protected WPA2/WPA3. No Wi-Fi
+     * (e.g. cellular), open, OWE, WEP, legacy WPA or unrecognised types are untrusted.
+     */
+    internal fun isUntrustedNetwork(encryptionType: String?): Boolean {
+        val normalized = encryptionType?.uppercase()?.trim() ?: return true
+        return !(normalized.contains("WPA3") || normalized.contains("WPA2"))
+    }
+
     internal fun evaluateVpn(state: VpnState, untrustedNetwork: Boolean): FactorResult {
         return when (state) {
             VpnState.FullTunnel -> FactorResult(

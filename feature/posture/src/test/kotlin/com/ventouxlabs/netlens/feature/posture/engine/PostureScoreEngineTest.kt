@@ -271,4 +271,21 @@ class PostureScoreEngineTest {
             assertEquals(Severity.Unavailable, encFactor?.severity)
         }
     }
+
+    @Nested
+    inner class UntrustedNetwork {
+        @Test
+        fun `no Wi-Fi, open, WEP, WPA and unknown are untrusted`() {
+            listOf(null, "", "OPEN", "WEP", "WPA", "OWE", "SOMETHING").forEach {
+                assertTrue(PostureScoreEngine.isUntrustedNetwork(it), "expected untrusted: $it")
+            }
+        }
+
+        @Test
+        fun `WPA2 and WPA3 are not untrusted`() {
+            listOf("WPA2", "WPA2-PSK", "WPA3", "WPA2/WPA3").forEach {
+                assertTrue(!PostureScoreEngine.isUntrustedNetwork(it), "expected trusted: $it")
+            }
+        }
+    }
 }

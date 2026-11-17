@@ -81,8 +81,7 @@ class PostureViewModel @Inject constructor(
                 .map { it.firstOrNull()?.deviceCount }
                 .first()
 
-            // TODO: integrate network trust model — for now treat all networks as untrusted.
-            val untrustedNetwork = true
+            val untrustedNetwork = PostureScoreEngine.isUntrustedNetwork(encryption)
 
             val score = PostureScoreEngine.compute(
                 encryptionType = encryption,
