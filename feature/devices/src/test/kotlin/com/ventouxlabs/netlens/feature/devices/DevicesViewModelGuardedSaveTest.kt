@@ -333,6 +333,6 @@ class DevicesViewModelGuardedSaveTest {
 
         viewModel.saveDetails(2, base, DeviceDetailsEdit.from(base).copy(customName = "x"))
 
-        assertEquals("\u2068evil name row\u2069", state.detailNotice?.arg)
+        assertEquals("\u2068evilname row\u2069", state.detailNotice?.arg)
     }
 }

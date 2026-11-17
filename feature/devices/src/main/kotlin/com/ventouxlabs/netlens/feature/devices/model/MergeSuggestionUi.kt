@@ -133,22 +133,21 @@ private const val MAX_NAME_DISPLAY = 63
 private const val MAX_DROPPED_DISPLAY = UserFieldLimits.MAX_NOTES_LENGTH
 private const val MAX_COMBINED_DISPLAY = UserFieldLimits.MAX_NOTES_LENGTH
 
-// Format characters (bidi overrides and isolates, zero-width, BOM, tag characters) plus the Unicode
-// line and paragraph separators. DisplayText.flatten strips only C0/C1 controls, so these are mapped to
-// a space first; they could otherwise reorder or hide text, or fake a line break.
-private val INVISIBLE = Regex("[\\p{Cf}" + Char(0x2028) + Char(0x2029) + "]")
-
 private val FSI = Char(0x2068)
 private val PDI = Char(0x2069)
 
-/** Flattened, format-character-free and clamped (never ending on half a surrogate pair); null when nothing is left. */
+/**
+ * [DisplayText.flatten] (the single sanitising rule), clamped to [max] UTF-16 chars, then flattened again so a
+ * clamp that left half a surrogate pair, a trailing ZWJ/ZWNJ or a dangling variation selector cannot leak:
+ * the result is always flatten-idempotent. Null when nothing is left.
+ */
 internal fun safeDisplay(value: String?, max: Int): String? =
-    DisplayText.flatten(value?.replace(INVISIBLE, " "))?.let { text ->
+    DisplayText.flatten(value)?.let { text ->
         val clamped = text.take(max)
-        (if (clamped.isNotEmpty() && clamped.last().isHighSurrogate()) clamped.dropLast(1) else clamped).trim().ifEmpty { null }
+        DisplayText.flatten(if (clamped.isNotEmpty() && clamped.last().isHighSurrogate()) clamped.dropLast(1) else clamped)
     }
 
-/** Wraps device-derived text so its direction cannot leak into the surrounding translated sentence. */
+/** Wraps already-flattened device-derived text (see [safeDisplay]) so its direction cannot leak into the surrounding translated sentence. */
 fun bidiIsolate(text: String): String = "$FSI$text$PDI"
 
 /** The row [pair] keeps when accepted, then the one folded into it; null if either row is missing. */

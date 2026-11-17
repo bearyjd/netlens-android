@@ -52,6 +52,23 @@ class ResolverHostileInputTest {
     }
 
     @Test
+    fun `identifier values carrying bidi or invisible format characters are dropped, not stripped`() = runTest {
+        val ids = setOf(
+            udn("uuid:ok"),
+            udn("uuid:a\u202Eb"),
+            udn("uuid:c\u200Bd"),
+            udn("uuid:e\u2060f"),
+            udn("uuid:g\uFEFFh"),
+            udn("uuid:i\u2028j"),
+            udn("uuid:k\u200Dl"),
+        )
+
+        val owned = h.resolve(LanDevice(ip = "10.0.0.5", identifiers = ids)).devices.single().ownedIdentifiers
+
+        assertEquals(setOf("uuid:ok"), owned.map { it.value }.toSet())
+    }
+
+    @Test
     fun `an identifier of exactly 256 characters is kept`() = runTest {
         val value = "x".repeat(256)
 
