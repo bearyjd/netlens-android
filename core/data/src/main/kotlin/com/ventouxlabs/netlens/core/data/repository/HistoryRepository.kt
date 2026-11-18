@@ -12,6 +12,7 @@ import com.ventouxlabs.netlens.core.data.dao.TracerouteHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.TlsHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.HttpTesterHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.MdnsHistoryDao
+import com.ventouxlabs.netlens.core.data.dao.SpeedTestHistoryDao
 import com.ventouxlabs.netlens.core.data.dao.WolHistoryDao
 import com.ventouxlabs.netlens.core.data.model.DnsHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.IpInfoHistoryEntry
@@ -74,6 +75,7 @@ class HistoryRepositoryImpl @Inject constructor(
     private val httpTesterDao: HttpTesterHistoryDao,
     private val mdnsDao: MdnsHistoryDao,
     private val wolHistoryDao: WolHistoryDao,
+    private val speedTestDao: SpeedTestHistoryDao,
 ) : HistoryRepository {
 
     override fun allRecent(limit: Int): Flow<CombinedHistoryResults> {
@@ -149,6 +151,7 @@ class HistoryRepositoryImpl @Inject constructor(
             httpTesterDao.deleteAll()
             mdnsDao.deleteAll()
             wolHistoryDao.deleteAll()
+            speedTestDao.deleteAll()
         }
     }
 
@@ -166,6 +169,7 @@ class HistoryRepositoryImpl @Inject constructor(
             httpTesterDao.deleteOlderThan(cutoff)
             mdnsDao.deleteOlderThan(cutoff)
             wolHistoryDao.deleteOlderThan(cutoff)
+            speedTestDao.deleteOlderThan(cutoff)
         }
     }
 
