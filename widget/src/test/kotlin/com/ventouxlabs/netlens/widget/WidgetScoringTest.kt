@@ -129,4 +129,50 @@ class WidgetScoringTest {
     // accept null and return true — fail-open on a security predicate — and the fix was to make
     // the case uncallable, not to flip the default. "Unknown" is expressed by removing the
     // IS_ENCRYPTION_SECURE key (see WidgetSnapshotTest's clearing tests), never by passing null.
+
+    @Test
+    fun `computeWidgetScore returns grade based on weighted average`() {
+        val score = computeWidgetScore(
+            encryptionType = "WPA3",
+            deviceCount = 3,
+            vpnState = VpnState.FullTunnel,
+        )
+        assertEquals("A", score.grade)
+        assertEquals(0xFF4CAF50.toInt(), score.colorArgb)
+    }
+
+    @Test
+    fun `computeWidgetScore flags issues for weak encryption and no vpn`() {
+        val score = computeWidgetScore(
+            encryptionType = "Open",
+            deviceCount = 50,
+            vpnState = VpnState.None,
+        )
+        assertEquals(3, score.issueCount)
+        assertEquals("Weak or no encryption", score.topIssue)
+        assertEquals("encryption", score.topIssueId)
+    }
+
+    @Test
+    fun `computeWidgetScore with null encryption and vpn active`() {
+        val score = computeWidgetScore(
+            encryptionType = null,
+            deviceCount = 10,
+            vpnState = VpnState.FullTunnel,
+        )
+        assertTrue(score.issueCount >= 1)
+        assertNotEquals("vpn", score.topIssueId)
+    }
+
+    @Test
+    fun `computeWidgetScore split tunnel scores between full and none`() {
+        val full = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.FullTunnel)
+        val split = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.SplitTunnel)
+        val none = computeWidgetScore(encryptionType = "WPA2", deviceCount = 10, vpnState = VpnState.None)
+        // SplitTunnel must NOT collapse to FullTunnel — that was the migrated HIGH bug.
+        assertNotEquals(full.grade, split.grade)
+        assertEquals("VPN is split-tunnel", split.topIssue)
+        assertEquals("vpn", split.topIssueId)
+        assertEquals("VPN not active", none.topIssue)
+    }
 }
