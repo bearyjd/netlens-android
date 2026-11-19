@@ -1,6 +1,8 @@
 package com.ventouxlabs.netlens.feature.posture.engine
 
 import com.ventouxlabs.netlens.core.network.VpnState
+import com.ventouxlabs.netlens.core.network.WPA3_TRANSITION_SCORE
+import com.ventouxlabs.netlens.core.network.isWpa3TransitionMode
 import com.ventouxlabs.netlens.feature.posture.model.FactorResult
 import com.ventouxlabs.netlens.feature.posture.model.PostureFactor
 import com.ventouxlabs.netlens.feature.posture.model.PostureScore
@@ -52,6 +54,11 @@ object PostureScoreEngine {
         }
         val normalized = type.uppercase().trim()
         val (score, severity, detail) = when {
+            isWpa3TransitionMode(normalized) -> Triple(
+                WPA3_TRANSITION_SCORE,
+                Severity.Moderate,
+                "WPA2/WPA3 transition mode still accepts WPA2 clients — use WPA3-only if possible",
+            )
             normalized.contains("WPA3") -> Triple(100, Severity.Good, "WPA3 is the strongest available encryption")
             normalized.contains("OWE") || normalized.contains("ENHANCED_OPEN") ->
                 Triple(80, Severity.Good, "Enhanced Open (OWE) encrypts traffic without requiring a password")

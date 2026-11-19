@@ -54,6 +54,20 @@ class PostureScoreEngineTest {
         }
 
         @Test
+        fun `WPA2 WPA3 transition is capped at 85 and is not Good`() {
+            listOf("WPA2/WPA3", "WPA3/WPA2").forEach {
+                val result = PostureScoreEngine.evaluateEncryption(it)
+                assertEquals(85, result.score, it)
+                assertEquals(Severity.Moderate, result.severity, it)
+            }
+        }
+
+        @Test
+        fun `WPA3-Enterprise still scores 100`() {
+            assertEquals(100, PostureScoreEngine.evaluateEncryption("WPA3-Enterprise").score)
+        }
+
+        @Test
         fun `WPA2 scores 70 with Moderate severity`() {
             val result = PostureScoreEngine.evaluateEncryption("WPA2")
             assertEquals(70, result.score)

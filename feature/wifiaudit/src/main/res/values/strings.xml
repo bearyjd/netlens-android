@@ -23,6 +23,9 @@
 
     <string name="wifiaudit_encryption_wpa3_title">WPA3 Encryption</string>
     <string name="wifiaudit_encryption_wpa3_description">This network uses WPA3, the strongest available Wi-Fi encryption standard.</string>
+    <string name="wifiaudit_encryption_wpa3_transition_title">WPA2/WPA3 Transition Mode</string>
+    <string name="wifiaudit_encryption_wpa3_transition_description">This network accepts both WPA3 and WPA2 clients. Devices can still connect with WPA2, so it is not as strong as WPA3 alone.</string>
+    <string name="wifiaudit_encryption_wpa3_transition_guidance">Switch the router to WPA3-only if all your devices support it.</string>
     <string name="wifiaudit_encryption_wpa2_title">WPA2 Encryption</string>
     <string name="wifiaudit_encryption_wpa2_description">This network uses WPA2. It is adequate but can be vulnerable to offline dictionary attacks.</string>
     <string name="wifiaudit_encryption_wpa2_guidance">Consider upgrading your router to WPA3 if supported.</string>
