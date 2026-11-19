@@ -60,6 +60,16 @@ class WifiAuditEngineTest {
     }
 
     @Test
+    fun `OWE is enhanced open info not critical open`() {
+        val encryption = WifiAuditEngine.audit(network(security = "OWE")).first { it.id == "encryption" }
+        assertEquals(AuditSeverity.Info, encryption.severity)
+        assertEquals(
+            UiText.Resource(R.string.wifiaudit_encryption_owe_title),
+            encryption.title,
+        )
+    }
+
+    @Test
     fun `open network is critical`() {
         val findings = WifiAuditEngine.audit(network(security = "Open"))
         val encryption = findings.first { it.id == "encryption" }

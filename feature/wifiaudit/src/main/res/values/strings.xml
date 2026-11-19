@@ -35,6 +35,9 @@
     <string name="wifiaudit_encryption_wep_title">WEP Encryption (Broken)</string>
     <string name="wifiaudit_encryption_wep_description">WEP can be cracked in minutes with freely available tools. Your traffic is effectively unprotected.</string>
     <string name="wifiaudit_encryption_wep_guidance">Switch to WPA2 or WPA3 immediately. If your router only supports WEP, replace it.</string>
+    <string name="wifiaudit_encryption_owe_title">Enhanced Open (OWE)</string>
+    <string name="wifiaudit_encryption_owe_description">This network encrypts your traffic without a password, so other users cannot read it. It does not verify the access point, so it cannot stop a fake network.</string>
+    <string name="wifiaudit_encryption_owe_guidance">Fine for public hotspots. Use a VPN for sensitive activity, or prefer a WPA3 network you trust.</string>
     <string name="wifiaudit_encryption_open_title">Open Network (No Encryption)</string>
     <string name="wifiaudit_encryption_open_description">This network has no encryption. Anyone nearby can intercept your traffic including passwords, emails, and browsing activity.</string>
     <string name="wifiaudit_encryption_open_guidance">Avoid transmitting sensitive data. Use a VPN, or connect to a password-protected network.</string>
