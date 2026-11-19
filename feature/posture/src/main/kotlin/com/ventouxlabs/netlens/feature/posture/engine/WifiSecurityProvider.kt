@@ -6,6 +6,8 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import com.ventouxlabs.netlens.core.network.parseWifiCapabilities
+import com.ventouxlabs.netlens.core.network.wifiSecurityTypeLabel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -33,18 +35,7 @@ class WifiSecurityProvider @Inject constructor(
             val info: WifiInfo = wm.connectionInfo ?: return null
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                when (info.currentSecurityType) {
-                    WifiInfo.SECURITY_TYPE_OPEN -> "Open"
-                    WifiInfo.SECURITY_TYPE_WEP -> "WEP"
-                    WifiInfo.SECURITY_TYPE_PSK -> "WPA2"
-                    WifiInfo.SECURITY_TYPE_SAE -> "WPA3"
-                    WifiInfo.SECURITY_TYPE_EAP -> "WPA2-Enterprise"
-                    WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE -> "WPA3-Enterprise"
-                    WifiInfo.SECURITY_TYPE_OWE -> "OWE"
-                    WifiInfo.SECURITY_TYPE_WAPI_PSK -> "WAPI"
-                    WifiInfo.SECURITY_TYPE_WAPI_CERT -> "WAPI-Cert"
-                    else -> "Unknown"
-                }
+                wifiSecurityTypeLabel(info.currentSecurityType)
             } else {
                 null
             }
@@ -66,25 +57,9 @@ class WifiSecurityProvider @Inject constructor(
             val scanResults = wm.scanResults ?: return null
             val info = wm.connectionInfo ?: return null
             val connected = scanResults.find { it.BSSID == info.bssid } ?: return null
-            parseCapabilities(connected.capabilities)
+            parseWifiCapabilities(connected.capabilities)
         } catch (_: SecurityException) {
             null
         }
-    }
-}
-
-internal fun parseCapabilities(capabilities: String): String {
-    val hasSae = capabilities.contains("SAE")
-    val hasPsk = capabilities.contains("PSK")
-    return when {
-        capabilities.contains("SUITE_B") -> "WPA3-Enterprise"
-        capabilities.contains("EAP") && !hasPsk -> "WPA2-Enterprise"
-        hasSae && hasPsk -> "WPA2/WPA3"
-        hasSae || capabilities.contains("WPA3") -> "WPA3"
-        capabilities.contains("OWE") -> "OWE"
-        capabilities.contains("WPA2") || capabilities.contains("RSN") -> "WPA2"
-        capabilities.contains("WPA") -> "WPA"
-        capabilities.contains("WEP") -> "WEP"
-        else -> "Open"
     }
 }

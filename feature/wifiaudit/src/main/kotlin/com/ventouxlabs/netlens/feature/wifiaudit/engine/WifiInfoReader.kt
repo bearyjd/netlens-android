@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.feature.wifiaudit.engine
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import com.ventouxlabs.netlens.core.network.parseWifiCapabilities
 import com.ventouxlabs.netlens.feature.wifiaudit.model.ConnectedNetworkInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -55,13 +56,7 @@ class WifiInfoReaderImpl @Inject constructor(
             ?.firstOrNull { it.BSSID == bssid }
             ?: return "Unknown" to ""
         val caps = result.capabilities ?: ""
-        val security = when {
-            caps.contains("WPA3") -> "WPA3"
-            caps.contains("WPA2") -> "WPA2"
-            caps.contains("WPA") -> "WPA"
-            caps.contains("WEP") -> "WEP"
-            else -> "Open"
-        }
+        val security = parseWifiCapabilities(caps)
         return security to caps
     }
 }

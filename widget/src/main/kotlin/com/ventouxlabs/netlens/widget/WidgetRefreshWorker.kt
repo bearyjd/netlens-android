@@ -9,6 +9,8 @@ import android.os.Build
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.core.network.detectVpnState
 import com.ventouxlabs.netlens.core.network.getPhysicalNetwork
+import com.ventouxlabs.netlens.core.network.parseWifiCapabilities
+import com.ventouxlabs.netlens.core.network.wifiSecurityTypeLabel
 import androidx.datastore.preferences.core.edit
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -317,18 +319,7 @@ internal fun detectEncryptionType(
     // API 31+: TransportInfo carries security type without location permission
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val wifiInfo = activeCaps.transportInfo as? WifiInfo ?: return null
-        return when (wifiInfo.currentSecurityType) {
-            WifiInfo.SECURITY_TYPE_OPEN -> "Open"
-            WifiInfo.SECURITY_TYPE_WEP -> "WEP"
-            WifiInfo.SECURITY_TYPE_PSK -> "WPA2"
-            WifiInfo.SECURITY_TYPE_SAE -> "WPA3"
-            WifiInfo.SECURITY_TYPE_EAP -> "WPA2-Enterprise"
-            WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE -> "WPA3-Enterprise"
-            WifiInfo.SECURITY_TYPE_OWE -> "OWE"
-            WifiInfo.SECURITY_TYPE_WAPI_PSK -> "WAPI"
-            WifiInfo.SECURITY_TYPE_WAPI_CERT -> "WAPI-Cert"
-            else -> "Unknown"
-        }
+        return wifiSecurityTypeLabel(wifiInfo.currentSecurityType)
     }
 
     // Pre-API 31 fallback using deprecated WifiManager APIs
@@ -339,16 +330,7 @@ internal fun detectEncryptionType(
     val scanResults = wm.scanResults ?: return null
     @Suppress("DEPRECATION") // Pre-S fallback; BSSID comparison
     val connected = scanResults.find { it.BSSID == info.bssid } ?: return null
-    return parseCapabilities(connected.capabilities)
-}
-
-internal fun parseCapabilities(capabilities: String): String = when {
-    capabilities.contains("WPA3") || capabilities.contains("SAE") -> "WPA3"
-    capabilities.contains("OWE") -> "OWE"
-    capabilities.contains("WPA2") || capabilities.contains("RSN") -> "WPA2"
-    capabilities.contains("WPA") -> "WPA"
-    capabilities.contains("WEP") -> "WEP"
-    else -> "Open"
+    return parseWifiCapabilities(connected.capabilities)
 }
 
 /**
