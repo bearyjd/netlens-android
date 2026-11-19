@@ -203,6 +203,30 @@ class PostureViewModelTest {
     }
 
     @Test
+    fun `no VPN penalty is softened only on WPA3 or enterprise networks`() = runTest {
+        suspend fun scoreFor(type: String): Int {
+            networkMonitor.online.value = true
+            networkMonitor.vpn.value = VpnState.None
+            encryptionProvider.encryptionType = type
+            val vm = createViewModel()
+            var result = -1
+            vm.uiState.test {
+                assertEquals(PostureUiState.Loading, awaitItem())
+                val scored = awaitItem() as PostureUiState.Scored
+                result = scored.score.factors
+                    .first { it.factor == com.ventouxlabs.netlens.feature.posture.model.PostureFactor.VpnStatus }
+                    .score
+                cancelAndIgnoreRemainingEvents()
+            }
+            return result
+        }
+        assertEquals(30, scoreFor("OPEN"))
+        assertEquals(30, scoreFor("WPA2"))
+        assertEquals(60, scoreFor("WPA3"))
+        assertEquals(60, scoreFor("WPA2-Enterprise"))
+    }
+
+    @Test
     fun `persist failure preserves Scored state`() = runTest {
         networkMonitor.online.value = true
         networkMonitor.vpn.value = VpnState.FullTunnel
