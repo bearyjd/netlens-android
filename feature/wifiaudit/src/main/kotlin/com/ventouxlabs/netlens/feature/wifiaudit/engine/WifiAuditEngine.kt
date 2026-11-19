@@ -50,6 +50,13 @@ object WifiAuditEngine {
                 description = UiText.Resource(R.string.wifiaudit_encryption_wpa_description),
                 guidance = UiText.Resource(R.string.wifiaudit_encryption_wpa_guidance),
             )
+            upper.contains("OWE") || upper.contains("ENHANCED_OPEN") -> AuditFinding(
+                id = "encryption",
+                severity = AuditSeverity.Info,
+                title = UiText.Resource(R.string.wifiaudit_encryption_owe_title),
+                description = UiText.Resource(R.string.wifiaudit_encryption_owe_description),
+                guidance = UiText.Resource(R.string.wifiaudit_encryption_owe_guidance),
+            )
             upper.contains("WEP") -> AuditFinding(
                 id = "encryption",
                 severity = AuditSeverity.Critical,
