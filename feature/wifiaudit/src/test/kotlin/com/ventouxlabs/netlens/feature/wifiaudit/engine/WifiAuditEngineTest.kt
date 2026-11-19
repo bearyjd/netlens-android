@@ -1,5 +1,7 @@
 package com.ventouxlabs.netlens.feature.wifiaudit.engine
 
+import com.ventouxlabs.netlens.core.ui.UiText
+import com.ventouxlabs.netlens.feature.wifiaudit.R
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditSeverity
 import com.ventouxlabs.netlens.feature.wifiaudit.model.ConnectedNetworkInfo
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,6 +26,16 @@ class WifiAuditEngineTest {
         val findings = WifiAuditEngine.audit(network(security = "WPA3"))
         val encryption = findings.first { it.id == "encryption" }
         assertEquals(AuditSeverity.Pass, encryption.severity)
+    }
+
+    @Test
+    fun `WPA2 WPA3 transition is informational not a WPA3 pass`() {
+        val encryption = WifiAuditEngine.audit(network(security = "WPA2/WPA3")).first { it.id == "encryption" }
+        assertEquals(AuditSeverity.Info, encryption.severity)
+        assertEquals(
+            UiText.Resource(R.string.wifiaudit_encryption_wpa3_transition_title),
+            encryption.title,
+        )
     }
 
     @Test

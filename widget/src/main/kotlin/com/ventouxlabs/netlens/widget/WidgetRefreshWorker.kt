@@ -7,6 +7,8 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import com.ventouxlabs.netlens.core.network.VpnState
+import com.ventouxlabs.netlens.core.network.WPA3_TRANSITION_SCORE
+import com.ventouxlabs.netlens.core.network.isWpa3TransitionMode
 import com.ventouxlabs.netlens.core.network.detectVpnState
 import com.ventouxlabs.netlens.core.network.getPhysicalNetwork
 import androidx.datastore.preferences.core.edit
@@ -272,6 +274,7 @@ internal fun encryptionScore(type: String?): Int {
     if (type == null) return 0
     val upper = type.uppercase()
     return when {
+        isWpa3TransitionMode(upper) -> WPA3_TRANSITION_SCORE
         upper.contains("WPA3") -> 100
         upper.contains("OWE") || upper.contains("ENHANCED_OPEN") -> 80
         upper.contains("WPA2") -> 70

@@ -47,6 +47,12 @@ class WidgetScoringTest {
     }
 
     @Test
+    fun `encryptionScore caps WPA2 WPA3 transition at 85`() {
+        assertEquals(85, encryptionScore("WPA2/WPA3"))
+        assertEquals(100, encryptionScore("WPA3"))
+    }
+
+    @Test
     fun `encryptionScore returns 80 for OWE`() {
         assertEquals(80, encryptionScore("OWE"))
         assertEquals(80, encryptionScore("ENHANCED_OPEN"))

@@ -1,5 +1,6 @@
 package com.ventouxlabs.netlens.feature.wifiaudit.engine
 
+import com.ventouxlabs.netlens.core.network.isWpa3TransitionMode
 import com.ventouxlabs.netlens.core.ui.UiText
 import com.ventouxlabs.netlens.feature.wifiaudit.R
 import com.ventouxlabs.netlens.feature.wifiaudit.model.AuditFinding
@@ -21,6 +22,13 @@ object WifiAuditEngine {
     private fun checkEncryption(security: String): AuditFinding {
         val upper = security.uppercase()
         return when {
+            isWpa3TransitionMode(upper) -> AuditFinding(
+                id = "encryption",
+                severity = AuditSeverity.Info,
+                title = UiText.Resource(R.string.wifiaudit_encryption_wpa3_transition_title),
+                description = UiText.Resource(R.string.wifiaudit_encryption_wpa3_transition_description),
+                guidance = UiText.Resource(R.string.wifiaudit_encryption_wpa3_transition_guidance),
+            )
             upper.contains("WPA3") -> AuditFinding(
                 id = "encryption",
                 severity = AuditSeverity.Pass,
