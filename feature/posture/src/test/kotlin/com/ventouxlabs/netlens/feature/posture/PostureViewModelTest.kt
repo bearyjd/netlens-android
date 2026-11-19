@@ -203,7 +203,7 @@ class PostureViewModelTest {
     }
 
     @Test
-    fun `no VPN on open network scores lower than on WPA3`() = runTest {
+    fun `no VPN penalty is softened only on WPA3 or enterprise networks`() = runTest {
         suspend fun scoreFor(type: String): Int {
             networkMonitor.online.value = true
             networkMonitor.vpn.value = VpnState.None
@@ -221,7 +221,9 @@ class PostureViewModelTest {
             return result
         }
         assertEquals(30, scoreFor("OPEN"))
+        assertEquals(30, scoreFor("WPA2"))
         assertEquals(60, scoreFor("WPA3"))
+        assertEquals(60, scoreFor("WPA2-Enterprise"))
     }
 
     @Test

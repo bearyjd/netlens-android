@@ -88,13 +88,18 @@ object PostureScoreEngine {
         )
     }
 
+    private val TRUSTED_ENCRYPTION_TYPES = setOf("WPA3", "WPA3-ENTERPRISE", "WPA2-ENTERPRISE")
+
     /**
-     * A network is trusted only when it uses password-protected WPA2/WPA3. No Wi-Fi
-     * (e.g. cellular), open, OWE, WEP, legacy WPA or unrecognised types are untrusted.
+     * Product decision (2026-11-18): only WPA3 (SAE) and enterprise (802.1X/EAP) networks are
+     * trusted. Plain WPA2-PSK, WPA2/WPA3 transition mode (a PSK client can still join, so SAE-only
+     * is not proven), WPA, WEP, open, OWE, WAPI, no Wi-Fi and unknown types are untrusted.
+     * Matches the whole normalized type exactly (no substring match) so text embedded in an
+     * unexpected value cannot make a network look trusted.
      */
     internal fun isUntrustedNetwork(encryptionType: String?): Boolean {
         val normalized = encryptionType?.uppercase()?.trim() ?: return true
-        return !(normalized.contains("WPA3") || normalized.contains("WPA2"))
+        return normalized !in TRUSTED_ENCRYPTION_TYPES
     }
 
     internal fun evaluateVpn(state: VpnState, untrustedNetwork: Boolean): FactorResult {

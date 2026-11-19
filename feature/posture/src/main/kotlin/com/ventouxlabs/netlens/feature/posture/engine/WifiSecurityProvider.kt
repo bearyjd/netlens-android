@@ -73,11 +73,18 @@ class WifiSecurityProvider @Inject constructor(
     }
 }
 
-internal fun parseCapabilities(capabilities: String): String = when {
-    capabilities.contains("WPA3") || capabilities.contains("SAE") -> "WPA3"
-    capabilities.contains("OWE") -> "OWE"
-    capabilities.contains("WPA2") || capabilities.contains("RSN") -> "WPA2"
-    capabilities.contains("WPA") -> "WPA"
-    capabilities.contains("WEP") -> "WEP"
-    else -> "Open"
+internal fun parseCapabilities(capabilities: String): String {
+    val hasSae = capabilities.contains("SAE")
+    val hasPsk = capabilities.contains("PSK")
+    return when {
+        capabilities.contains("SUITE_B") -> "WPA3-Enterprise"
+        capabilities.contains("EAP") && !hasPsk -> "WPA2-Enterprise"
+        hasSae && hasPsk -> "WPA2/WPA3"
+        hasSae || capabilities.contains("WPA3") -> "WPA3"
+        capabilities.contains("OWE") -> "OWE"
+        capabilities.contains("WPA2") || capabilities.contains("RSN") -> "WPA2"
+        capabilities.contains("WPA") -> "WPA"
+        capabilities.contains("WEP") -> "WEP"
+        else -> "Open"
+    }
 }

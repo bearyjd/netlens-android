@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.feature.posture.engine
 import com.ventouxlabs.netlens.core.network.VpnState
 import com.ventouxlabs.netlens.feature.posture.model.Severity
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
@@ -275,16 +276,44 @@ class PostureScoreEngineTest {
     @Nested
     inner class UntrustedNetwork {
         @Test
-        fun `no Wi-Fi, open, WEP, WPA and unknown are untrusted`() {
-            listOf(null, "", "OPEN", "WEP", "WPA", "OWE", "SOMETHING").forEach {
+        fun `no Wi-Fi, open, WEP, WPA, OWE, WAPI and unknown are untrusted`() {
+            listOf(null, "", "Open", "WEP", "WPA", "OWE", "WAPI", "WAPI-Cert", "Unknown", "SOMETHING").forEach {
                 assertTrue(PostureScoreEngine.isUntrustedNetwork(it), "expected untrusted: $it")
             }
         }
 
         @Test
-        fun `WPA2 and WPA3 are not untrusted`() {
-            listOf("WPA2", "WPA2-PSK", "WPA3", "WPA2/WPA3").forEach {
-                assertTrue(!PostureScoreEngine.isUntrustedNetwork(it), "expected trusted: $it")
+        fun `WPA2-PSK is untrusted`() {
+            listOf("WPA2", "WPA2-PSK", "wpa2").forEach {
+                assertTrue(PostureScoreEngine.isUntrustedNetwork(it), "expected untrusted: $it")
+            }
+        }
+
+        @Test
+        fun `WPA2 WPA3 transition mode is untrusted`() {
+            listOf("WPA2/WPA3", "WPA3/WPA2", "WPA2/WPA3-Transition").forEach {
+                assertTrue(PostureScoreEngine.isUntrustedNetwork(it), "expected untrusted: $it")
+            }
+        }
+
+        @Test
+        fun `WPA3 SAE is trusted`() {
+            listOf("WPA3", "wpa3", " WPA3 ").forEach {
+                assertFalse(PostureScoreEngine.isUntrustedNetwork(it), "expected trusted: $it")
+            }
+        }
+
+        @Test
+        fun `enterprise networks are trusted`() {
+            listOf("WPA2-Enterprise", "WPA3-Enterprise").forEach {
+                assertFalse(PostureScoreEngine.isUntrustedNetwork(it), "expected trusted: $it")
+            }
+        }
+
+        @Test
+        fun `strings merely containing a trusted keyword are untrusted`() {
+            listOf("WPA3 Free WiFi", "Open WPA3", "WPA2-Enterprise-Guest", "OPEN [WPA3]", "WPA3-PSK").forEach {
+                assertTrue(PostureScoreEngine.isUntrustedNetwork(it), "expected untrusted: $it")
             }
         }
     }

@@ -17,7 +17,7 @@ class ParseCapabilitiesTest {
 
     @Test
     fun `mixed SAE and RSN capabilities returns WPA3`() {
-        assertEquals("WPA3", parseCapabilities("[WPA2-PSK-CCMP][RSN-SAE+PSK-CCMP][ESS]"))
+        assertEquals("WPA2/WPA3", parseCapabilities("[WPA2-PSK-CCMP][RSN-SAE+PSK-CCMP][ESS]"))
     }
 
     @Test
@@ -61,7 +61,17 @@ class ParseCapabilitiesTest {
     }
 
     @Test
-    fun `WPA3 takes priority over WPA2 in mixed mode`() {
-        assertEquals("WPA3", parseCapabilities("[WPA2-PSK-CCMP][SAE-CCMP][ESS]"))
+    fun `WPA2 PSK plus SAE is reported as transition mode`() {
+        assertEquals("WPA2/WPA3", parseCapabilities("[WPA2-PSK-CCMP][SAE-CCMP][ESS]"))
+    }
+
+    @Test
+    fun `EAP is enterprise`() {
+        assertEquals("WPA2-Enterprise", parseCapabilities("[WPA2-EAP/SHA1-CCMP][RSN-EAP/SHA1-CCMP][ESS]"))
+    }
+
+    @Test
+    fun `Suite B is WPA3 enterprise`() {
+        assertEquals("WPA3-Enterprise", parseCapabilities("[RSN-EAP_SUITE_B_192-GCMP256][ESS]"))
     }
 }
