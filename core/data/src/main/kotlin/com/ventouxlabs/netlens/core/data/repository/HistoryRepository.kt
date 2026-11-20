@@ -24,6 +24,7 @@ import com.ventouxlabs.netlens.core.data.model.TracerouteHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.TlsHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.HttpTesterHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.MdnsHistoryEntry
+import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.WolHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.HistoryDetailData
 import androidx.room.withTransaction
@@ -43,6 +44,7 @@ data class CombinedHistoryResults(
     val httpTests: List<HttpTesterHistoryEntry> = emptyList(),
     val mdnsScans: List<MdnsHistoryEntry> = emptyList(),
     val wolSends: List<WolHistoryEntry> = emptyList(),
+    val speedTests: List<SpeedTestHistoryEntry> = emptyList(),
 )
 
 /**
@@ -105,6 +107,8 @@ class HistoryRepositoryImpl @Inject constructor(
             partial.copy(mdnsScans = mdns)
         }.combine(wolHistoryDao.getRecent(limit)) { partial, wol ->
             partial.copy(wolSends = wol)
+        }.combine(speedTestDao.getRecent(limit)) { partial, speed ->
+            partial.copy(speedTests = speed)
         }
     }
 
@@ -135,6 +139,8 @@ class HistoryRepositoryImpl @Inject constructor(
             partial.copy(mdnsScans = mdns)
         }.combine(wolHistoryDao.search(query)) { partial, wol ->
             partial.copy(wolSends = wol)
+        }.combine(speedTestDao.search(query)) { partial, speed ->
+            partial.copy(speedTests = speed)
         }
     }
 
@@ -186,6 +192,7 @@ class HistoryRepositoryImpl @Inject constructor(
             "HttpTester" -> httpTesterDao.getById(id)?.let { HistoryDetailData.HttpTest(it) }
             "Mdns" -> mdnsDao.getById(id)?.let { HistoryDetailData.Mdns(it) }
             "Wol" -> wolHistoryDao.getById(id)?.let { HistoryDetailData.Wol(it) }
+            "SpeedTest" -> speedTestDao.getById(id)?.let { HistoryDetailData.SpeedTest(it) }
             else -> null
         }
     }

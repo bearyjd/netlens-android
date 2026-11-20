@@ -16,4 +16,5 @@ enum class ToolFilter(@StringRes val labelRes: Int) {
     HttpTester(R.string.history_filter_http),
     Mdns(R.string.history_filter_mdns),
     Wol(R.string.history_filter_wol),
+    SpeedTest(R.string.history_filter_speedtest),
 }

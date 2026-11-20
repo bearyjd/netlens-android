@@ -12,4 +12,5 @@ sealed interface HistoryDetailData {
     data class HttpTest(val entry: HttpTesterHistoryEntry) : HistoryDetailData
     data class Mdns(val entry: MdnsHistoryEntry) : HistoryDetailData
     data class Wol(val entry: WolHistoryEntry) : HistoryDetailData
+    data class SpeedTest(val entry: SpeedTestHistoryEntry) : HistoryDetailData
 }
