@@ -45,8 +45,15 @@ fun NetLensNavHost(
         // The query is network-supplied (an mDNS name, a DNS answer, a traceroute hop), so it is
         // vetted for its destination before it becomes a route — encoding alone keeps the route
         // well-formed but still hands the target tool whatever the network said.
-        val encoded = Uri.encode(ToolQuery.sanitize(route, query))
-        navController.navigate("$route?query=$encoded") { launchSingleTop = true }
+        val destination = ToolDestination.fromRoute(route)
+        if (destination != null) {
+            val target = if (destination.acceptsQuery) {
+                "$route?query=${Uri.encode(ToolQuery.sanitize(route, query))}"
+            } else {
+                route
+            }
+            navController.navigate(target) { launchSingleTop = true }
+        }
     }
 
     NavHost(
@@ -102,7 +109,7 @@ fun NetLensNavHost(
         composable(ToolDestination.DnsLeak.route) { DnsLeakScreen(onBack = navController::popBackStack) }
         composable(ToolDestination.IpInfo.route) { IpInfoScreen(onBack = navController::popBackStack, onNavigateToTool = navigateToTool) }
         composable(
-            route = "${ToolDestination.LanScan.route}?query={query}",
+            route = ToolDestination.LanScan.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             LanScanScreen(
@@ -112,7 +119,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.Devices.route}?query={query}",
+            route = ToolDestination.Devices.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             DevicesScreen(
@@ -122,7 +129,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.PortScan.route}?query={query}",
+            route = ToolDestination.PortScan.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             PortScanScreen(
@@ -132,7 +139,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.Dns.route}?query={query}",
+            route = ToolDestination.Dns.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             DnsLookupScreen(
@@ -142,7 +149,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.Ping.route}?query={query}",
+            route = ToolDestination.Ping.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             PingScreen(
@@ -151,7 +158,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.Traceroute.route}?query={query}",
+            route = ToolDestination.Traceroute.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             TracerouteScreen(
@@ -162,7 +169,7 @@ fun NetLensNavHost(
         }
         composable(ToolDestination.Wol.route) { WolScreen(onBack = navController::popBackStack) }
         composable(
-            route = "${ToolDestination.Tls.route}?query={query}",
+            route = ToolDestination.Tls.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             TlsScreen(
@@ -172,7 +179,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.Whois.route}?query={query}",
+            route = ToolDestination.Whois.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             WhoisScreen(
@@ -182,7 +189,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.HttpTester.route}?query={query}",
+            route = ToolDestination.HttpTester.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             HttpTesterScreen(
@@ -191,7 +198,7 @@ fun NetLensNavHost(
             )
         }
         composable(
-            route = "${ToolDestination.IpCalc.route}?query={query}",
+            route = ToolDestination.IpCalc.navPattern,
             arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" }),
         ) { entry ->
             IpCalcScreen(

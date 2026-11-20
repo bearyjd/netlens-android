@@ -36,21 +36,9 @@ private val PATH_TO_ROUTE = mapOf(
     "scan" to ToolDestination.LanScan.route,
 )
 
-// Routes whose NavHost entry is declared as "<route>?query={query}". Only these
-// accept a deep-link query value — other routes get the bare route and the
-// query is dropped silently.
-private val ROUTES_WITH_QUERY = setOf(
-    ToolDestination.LanScan.route,
-    ToolDestination.PortScan.route,
-    ToolDestination.Dns.route,
-    ToolDestination.Ping.route,
-    ToolDestination.Traceroute.route,
-    ToolDestination.Tls.route,
-    ToolDestination.Whois.route,
-    ToolDestination.HttpTester.route,
-    ToolDestination.IpCalc.route,
-    ToolDestination.Devices.route,
-)
+// Routes whose NavHost entry takes "?query={query}", derived from ToolDestination.queryKind.
+// Other routes get the bare route and the query is dropped silently.
+internal val ROUTES_WITH_QUERY = ToolDestination.entries.filter { it.acceptsQuery }.map { it.route }.toSet()
 
 internal fun resolveRoute(
     scheme: String?,
