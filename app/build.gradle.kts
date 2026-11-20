@@ -195,6 +195,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.datastore.preferences)
     testImplementation(libs.org.json)
+    testImplementation(project(":core:data-testing"))
 
     // AndroidX / Compose
     implementation(libs.activity.compose)
