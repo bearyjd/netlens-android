@@ -21,6 +21,7 @@ class NetLensApplication : Application(), Configuration.Provider {
     @Inject lateinit var watchScheduler: WatchScheduler
     @Inject lateinit var userPreferences: UserPreferencesRepository
     @Inject lateinit var proStatus: ProStatus
+    @Inject lateinit var retentionPruner: RetentionPruner
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -49,5 +50,8 @@ class NetLensApplication : Application(), Configuration.Provider {
             val cadence = WatchCadence.fromMinutes(userPreferences.watchCadenceMinutes.first())
             watchScheduler.apply(proStatus.isPro.value, masterEnabled, cadence)
         }
+
+        // Fixed 90-day retention for tool history and the network event log.
+        appScope.launch { retentionPruner.prune() }
     }
 }
