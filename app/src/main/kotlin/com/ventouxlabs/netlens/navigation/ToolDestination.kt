@@ -36,6 +36,9 @@ enum class ToolCategory(val label: String) {
     Tools("Tools"),
 }
 
+/** What a tool's `query` navigation argument holds. [None] means the route takes no query. */
+enum class QueryKind { None, Host, Url, Cidr, Search }
+
 enum class ToolDestination(
     val route: String,
     val icon: ImageVector,
@@ -43,6 +46,7 @@ enum class ToolDestination(
     val description: String,
     val category: ToolCategory,
     val isVisibleInGrid: Boolean = true,
+    val queryKind: QueryKind = QueryKind.None,
 ) {
     Posture(
         route = "posture",
@@ -65,6 +69,7 @@ enum class ToolDestination(
         label = "WHOIS",
         description = "Domain & IP ownership",
         category = ToolCategory.NetworkInfo,
+        queryKind = QueryKind.Host,
     ),
     Ping(
         route = "ping",
@@ -72,6 +77,7 @@ enum class ToolDestination(
         label = "Ping",
         description = "Latency & reachability",
         category = ToolCategory.Connectivity,
+        queryKind = QueryKind.Host,
     ),
     Dns(
         route = "dns",
@@ -79,6 +85,7 @@ enum class ToolDestination(
         label = "DNS Lookup",
         description = "Query DNS records",
         category = ToolCategory.Connectivity,
+        queryKind = QueryKind.Host,
     ),
     Traceroute(
         route = "traceroute",
@@ -86,6 +93,7 @@ enum class ToolDestination(
         label = "Traceroute",
         description = "Trace network path",
         category = ToolCategory.Connectivity,
+        queryKind = QueryKind.Host,
     ),
     SpeedTest(
         route = "speedtest",
@@ -100,6 +108,7 @@ enum class ToolDestination(
         label = "LAN Scan",
         description = "Discover local devices",
         category = ToolCategory.Discovery,
+        queryKind = QueryKind.Cidr,
     ),
     Devices(
         route = "devices",
@@ -107,6 +116,7 @@ enum class ToolDestination(
         label = "Devices",
         description = "Inventory & watch alerts",
         category = ToolCategory.Discovery,
+        queryKind = QueryKind.Search,
     ),
     Mdns(
         route = "mdns",
@@ -128,6 +138,7 @@ enum class ToolDestination(
         label = "Port Scanner",
         description = "Scan open ports",
         category = ToolCategory.Discovery,
+        queryKind = QueryKind.Host,
     ),
     WifiAudit(
         route = "wifiaudit",
@@ -163,6 +174,7 @@ enum class ToolDestination(
         label = "TLS Inspector",
         description = "Inspect certificates",
         category = ToolCategory.Security,
+        queryKind = QueryKind.Host,
     ),
     HttpTester(
         route = "httptester",
@@ -170,6 +182,7 @@ enum class ToolDestination(
         label = "HTTP Tester",
         description = "Send HTTP requests",
         category = ToolCategory.Security,
+        queryKind = QueryKind.Url,
     ),
     Wol(
         route = "wol",
@@ -191,6 +204,7 @@ enum class ToolDestination(
         label = "IP Calculator",
         description = "Subnet & CIDR calculator",
         category = ToolCategory.Tools,
+        queryKind = QueryKind.Cidr,
     ),
     NetLog(
         route = "netlog",
@@ -224,7 +238,14 @@ enum class ToolDestination(
     ),
     ;
 
+    val acceptsQuery: Boolean get() = queryKind != QueryKind.None
+
+    /** NavHost pattern for routes that take a query; the bare route otherwise. */
+    val navPattern: String get() = if (acceptsQuery) "$route?query={query}" else route
+
     companion object {
+        fun fromRoute(route: String): ToolDestination? = entries.firstOrNull { it.route == route }
+
         val byCategory: Map<ToolCategory, List<ToolDestination>> =
             entries.groupBy { it.category }
     }

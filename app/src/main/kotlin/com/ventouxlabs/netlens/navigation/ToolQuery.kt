@@ -16,17 +16,14 @@ import com.ventouxlabs.netlens.core.network.HostName
  */
 object ToolQuery {
 
-    /** Tools whose query argument is a bare host or IP. */
-    private val HOST_ROUTES = setOf("ping", "traceroute", "whois", "dns", "tls", "portscan")
-
-    /** Tools whose query argument is a full URL built around a host. */
-    private val URL_ROUTES = setOf("httptester")
-
-    fun sanitize(route: String, query: String): String = when (route) {
-        in HOST_ROUTES -> HostName.sanitize(query).orEmpty()
-        in URL_ROUTES -> sanitizeUrl(query)
-        else -> query
-    }
+    /** Unknown routes and routes taking no query fail closed to an empty query. */
+    fun sanitize(route: String, query: String): String =
+        when (ToolDestination.fromRoute(route)?.queryKind) {
+            QueryKind.Host -> HostName.sanitize(query).orEmpty()
+            QueryKind.Url -> sanitizeUrl(query)
+            QueryKind.Cidr, QueryKind.Search -> query
+            QueryKind.None, null -> ""
+        }
 
     /**
      * Accepts `scheme://host[:port][/rest]` only when the host survives [HostName.sanitize].
