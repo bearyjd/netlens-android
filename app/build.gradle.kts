@@ -193,6 +193,7 @@ dependencies {
     testRuntimeOnly(libs.junit5.engine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.datastore.preferences)
     testImplementation(libs.org.json)
 
     // AndroidX / Compose

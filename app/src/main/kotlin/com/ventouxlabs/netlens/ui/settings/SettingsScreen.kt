@@ -11,21 +11,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +56,9 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val dnsResolver by viewModel.dnsResolver.collectAsStateWithLifecycle()
+    val dnsResolverError by viewModel.dnsResolverError.collectAsStateWithLifecycle()
+    var showDnsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -80,6 +88,15 @@ fun SettingsScreen(
                 onThemeModeSelected = viewModel::setThemeMode,
             )
 
+            SectionHeader(title = stringResource(R.string.settings_network))
+            DnsResolverCard(
+                resolver = dnsResolver,
+                onClick = {
+                    viewModel.clearDnsResolverError()
+                    showDnsDialog = true
+                },
+            )
+
             SectionHeader(title = stringResource(R.string.settings_widgets))
             WidgetSettingsCard(onClick = onOpenWidgetSettings)
 
@@ -87,6 +104,82 @@ fun SettingsScreen(
             AboutCard()
         }
     }
+
+    if (showDnsDialog) {
+        DnsResolverDialog(
+            initial = dnsResolver,
+            hasError = dnsResolverError,
+            onSave = { input -> viewModel.setDnsResolver(input) { showDnsDialog = false } },
+            onDismiss = { showDnsDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun DnsResolverCard(
+    resolver: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(
+                text = stringResource(R.string.settings_dns_resolver),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = resolver.ifEmpty { "8.8.8.8" },
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
+            Text(
+                text = stringResource(R.string.settings_dns_resolver_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DnsResolverDialog(
+    initial: String,
+    hasError: Boolean,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_dns_resolver)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                isError = hasError,
+                label = { Text(stringResource(R.string.settings_dns_resolver_hint)) },
+                supportingText = if (hasError) {
+                    { Text(stringResource(R.string.settings_dns_resolver_error)) }
+                } else {
+                    null
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.settings_dns_resolver_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_dns_resolver_cancel)) }
+        },
+    )
 }
 
 @Composable
