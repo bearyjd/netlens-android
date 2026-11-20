@@ -3,11 +3,14 @@ package com.ventouxlabs.netlens.core.data.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.ventouxlabs.netlens.core.data.NetLensDatabase
+import com.ventouxlabs.netlens.core.data.model.HistoryDetailData
 import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,5 +69,26 @@ class HistoryRepositorySpeedTestTest {
         db.speedTestHistoryDao().insert(entry(now))
         repo.clearOlderThan(30)
         assertEquals(1, count())
+    }
+
+    @Test
+    fun `allRecent includes speed tests`() = runBlocking {
+        db.speedTestHistoryDao().insert(entry(System.currentTimeMillis()))
+        assertEquals(1, repo.allRecent(50).first().speedTests.size)
+    }
+
+    @Test
+    fun `searchAll matches speed tests by server name`() = runBlocking {
+        db.speedTestHistoryDao().insert(entry(System.currentTimeMillis()))
+        assertEquals(1, repo.searchAll("sr").first().speedTests.size)
+        assertTrue(repo.searchAll("nomatch").first().speedTests.isEmpty())
+    }
+
+    @Test
+    fun `getEntry SpeedTest returns detail or null`() = runBlocking {
+        db.speedTestHistoryDao().insert(entry(System.currentTimeMillis()))
+        val id = db.speedTestHistoryDao().getRecent(1).first().single().id
+        assertTrue(repo.getEntry("SpeedTest", id) is HistoryDetailData.SpeedTest)
+        assertNull(repo.getEntry("SpeedTest", id + 1000))
     }
 }

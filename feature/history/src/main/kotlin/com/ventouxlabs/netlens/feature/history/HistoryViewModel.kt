@@ -255,6 +255,18 @@ class HistoryViewModel @Inject constructor(
             )
         }
 
+        results.speedTests.mapTo(items) { entry ->
+            HistoryItem(
+                id = entry.id,
+                toolName = "Speed Test",
+                primaryLabel = entry.serverName,
+                secondarySummary = "↓ ${entry.downloadMbps} / ↑ ${entry.uploadMbps} Mbps · ${entry.latencyMs}ms",
+                timestamp = entry.timestamp,
+                toolFilter = ToolFilter.SpeedTest,
+                toolRoute = "speedtest",
+            )
+        }
+
         return items.sortedByDescending { it.timestamp }.take(100)
     }
 }

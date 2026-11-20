@@ -3,6 +3,7 @@ package com.ventouxlabs.netlens.feature.history
 import com.ventouxlabs.netlens.core.data.model.DnsHistoryEntry
 import com.ventouxlabs.netlens.core.data.model.HistoryDetailData
 import com.ventouxlabs.netlens.core.data.model.PingHistoryEntry
+import com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry
 import com.ventouxlabs.netlens.core.data.repository.CombinedHistoryResults
 import com.ventouxlabs.netlens.feature.history.model.HistoryDetailState
 import com.ventouxlabs.netlens.feature.history.model.ToolFilter
@@ -262,4 +263,37 @@ class HistoryViewModelTest {
 
             assertEquals(listOf("Dns" to 1L), repo.getEntryCalls)
         }
+
+    private fun speedTest(id: Long, server: String, timestamp: Long) = SpeedTestHistoryEntry(
+        id = id, timestamp = timestamp, downloadMbps = 94.5f, uploadMbps = 20f, latencyMs = 12, serverName = server,
+    )
+
+    @Test
+    fun `speed tests appear in the timeline with the speedtest route`() = runTest {
+        repo.recent.value = CombinedHistoryResults(
+            pings = listOf(ping(1, "old-ping", 100)),
+            speedTests = listOf(speedTest(3, "srv.example", 200)),
+        )
+
+        val vm = HistoryViewModel(repo)
+
+        val item = vm.state.value.items.first()
+        assertEquals(ToolFilter.SpeedTest, item.toolFilter)
+        assertEquals("speedtest", item.toolRoute)
+        assertEquals("srv.example", item.primaryLabel)
+        assertTrue(item.secondarySummary.contains("94.5"), item.secondarySummary)
+    }
+
+    @Test
+    fun `selecting a speed test loads detail keyed on SpeedTest`() = runTest {
+        val entry = speedTest(9, "srv.example", 100)
+        repo.recent.value = CombinedHistoryResults(speedTests = listOf(entry))
+        repo.entry = HistoryDetailData.SpeedTest(entry)
+        val vm = HistoryViewModel(repo)
+
+        vm.selectEntry(vm.state.value.items.first())
+
+        assertTrue(vm.detailState.value is HistoryDetailState.Loaded)
+        assertEquals(listOf("SpeedTest" to 9L), repo.getEntryCalls.map { it.first to it.second })
+    }
 }

@@ -85,6 +85,7 @@ internal fun HistoryDetailSheet(
                     is HistoryDetailData.HttpTest -> HttpTestDetail(data.entry)
                     is HistoryDetailData.Mdns -> MdnsDetail(data.entry)
                     is HistoryDetailData.Wol -> WolDetail(data.entry)
+                    is HistoryDetailData.SpeedTest -> SpeedTestDetail(data.entry)
                 }
             }
 
@@ -343,5 +344,15 @@ private fun WolDetail(entry: com.ventouxlabs.netlens.core.data.model.WolHistoryE
         entry.label?.let { DetailRow("Label", it) }
         DetailRow("MAC Address", entry.mac)
         DetailRow("Broadcast IP", entry.broadcastIp)
+    }
+}
+
+@Composable
+private fun SpeedTestDetail(entry: com.ventouxlabs.netlens.core.data.model.SpeedTestHistoryEntry) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        DetailRow("Server", entry.serverName)
+        DetailRow("Download", "${entry.downloadMbps} Mbps")
+        DetailRow("Upload", "${entry.uploadMbps} Mbps")
+        DetailRow("Latency", "${entry.latencyMs} ms")
     }
 }

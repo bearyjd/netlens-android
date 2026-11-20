@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Http
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Wifi
@@ -322,6 +323,7 @@ private fun toolFilterIcon(filter: ToolFilter): ImageVector = when (filter) {
     ToolFilter.HttpTester -> Icons.Default.Http
     ToolFilter.Mdns -> Icons.Default.Wifi
     ToolFilter.Wol -> Icons.Default.Power
+    ToolFilter.SpeedTest -> Icons.Default.Speed
 }
 
 private fun groupByDate(items: List<HistoryItem>): List<Pair<String, List<HistoryItem>>> {
