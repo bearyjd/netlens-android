@@ -26,7 +26,7 @@ NetLens is a comprehensive network diagnostics toolkit for Android. Inspect, dia
 <b>Tools</b>
 - Wake-on-LAN — send magic packets to wake network devices
 - Endpoint Monitor — track uptime and latency of HTTP endpoints over time
-- Network Log — view connection history and network events
+- Network Change Log — timeline of connectivity changes (Wi-Fi/cellular up/down, capabilities); not per-app traffic capture
 - History — browse past scan results with search and filtering
 
 <b>Home Screen Widget</b>

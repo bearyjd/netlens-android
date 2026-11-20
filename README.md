@@ -40,9 +40,11 @@ cannot update a GitHub-signed APK, so use one source or the other.
 - **IP Calculator** — Subnet calculator with CIDR notation, host ranges, and network class
 - **Wake-on-LAN** — Send magic packets to wake network devices
 - **Endpoint Monitor** — Track uptime and latency of HTTP endpoints
-- **Network Log** — View connection history and network events
+- **Network Change Log** — Timeline of connectivity changes (Wi-Fi/cellular up/down, capabilities); not per-app traffic capture
 - **History** — Browse past scan results with search and filtering
 - **Home Screen Widget** — Configurable Glance widget (4×1 / 4×2) with refresh and quick-launch chips
+
+> NetLens does not capture packets or log per-app traffic; for that, see [PCAPdroid](https://github.com/emanuele-f/PCAPdroid).
 
 ## Building
 
