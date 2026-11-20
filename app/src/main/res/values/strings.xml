@@ -57,6 +57,13 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_description">System follows your device’s light/dark setting.</string>
+    <string name="settings_network">Network</string>
+    <string name="settings_dns_resolver">DNS resolver</string>
+    <string name="settings_dns_resolver_description">Server used by the DNS lookup tool. Leave blank to use the default (8.8.8.8).</string>
+    <string name="settings_dns_resolver_hint">IP address, e.g. 1.1.1.1</string>
+    <string name="settings_dns_resolver_error">Enter a valid IPv4 or IPv6 address.</string>
+    <string name="settings_dns_resolver_save">Save</string>
+    <string name="settings_dns_resolver_cancel">Cancel</string>
     <string name="settings_widgets">Home screen widgets</string>
     <string name="settings_widgets_description">Configure what your widgets show</string>
     <string name="settings_about">About</string>
