@@ -7,16 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-25
+
+### Added
+- **DNS resolver setting.** Settings now lets you choose the resolver the DNS Lookup tool queries
+  (an IP address; leave it blank for the 8.8.8.8 default). Invalid addresses are rejected with a
+  message.
+- **Speed tests in History.** Speed-test results now appear in the History timeline, in search and
+  in a detail view, with their own filter chip. Clear All and the retention limit now include them.
+- **Wi-Fi Audit reports Enhanced Open (OWE)** networks as their own finding, and reports WPA2/WPA3
+  transition mode as an informational finding instead of passing it as WPA3.
+
 ### Changed
 - Merging two devices now keeps both devices' tags and notes. Tags are combined (up to 12) and each
   note paragraph the kept device lacks is added when the result fits; anything that cannot be kept is
   shown in full before you confirm the merge.
+- **Stricter Wi-Fi trust in the security score.** Only WPA3 and enterprise Wi-Fi count as trusted;
+  plain WPA2-PSK and WPA2/WPA3 transition networks no longer do. The Wi-Fi encryption rating for
+  transition networks is capped at 85 in the posture score and the widget; the overall score can be
+  higher.
+- History and network-change events older than 90 days are removed automatically when the app
+  starts.
 
 ### Fixed
 - Editing a device that was merged, or changed, while its details were open no longer loses your
   changes. The editor moves to the device it was merged into (or stays on the changed one) with your
   edits filled in where that device's details had not changed; any edit that would overwrite them is
   listed with what you typed. Nothing is saved until you review it and tap Save again.
+
+### Security
+- Device and service names announced on the network can no longer hide or reorder text with
+  bidirectional-override or invisible characters, in the app or in exports. mDNS export fields are
+  also flattened so a hostile name cannot forge extra service entries.
+- A `netlens://feature/scan` link with a network range now only fills in the range; you start the
+  scan yourself. Before, it began sweeping the range as soon as the link opened.
 
 ## [1.5.1] - 2026-11-16
 
